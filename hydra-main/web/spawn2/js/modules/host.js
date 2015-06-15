@@ -138,9 +138,13 @@ function(
         model:Model,
         rebalanceSelected:function(hostIds){
             var count = hostIds.length;
+            var parameters = {};
+            parameters["id"] = hostIds.join();
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/host/rebalance?id="+hostIds,
+                url: "/host/rebalance",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 alertify.message(count+" host(s) rebalanced.",2)
@@ -150,9 +154,14 @@ function(
         },
         failSelected:function(hostIds, deadFs){
             var count = hostIds.length;
+            var parameters = {};
+            parameters["id"] = hostIds.join();
+            parameters["deadFs"] = deadFs;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/host/fail?id="+hostIds+"&deadFs="+deadFs,
+                url: "/host/fail",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 alertify.message(count+" host(s) failed.",2)
@@ -162,9 +171,13 @@ function(
         },
         dropSelected:function(self, hostIds){
             var count = hostIds.length;
+            var parameters = {};
+            parameters["id"] = hostIds.join();
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/host/drop?id="+hostIds,
+                url: "/host/drop",
                 type: "GET",
+                data: parameters,
                 dataType: "text"
             }).done(function(data){
                 self.collection.fetch();
@@ -173,11 +186,16 @@ function(
                 alertify.error("Error dropping: "+count+" hosts. <br/> "+e.responseText);
             });
         },
-        toggleSelected:function(hostIds,disable){
+        toggleSelected:function(hostIds, disable){
             var count = hostIds.length;
+            var parameters = {};
+            parameters["id"] = hostIds.join();
+            parameters["disable"] = disable;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/host/toggle?hosts="+hostIds+"&disable="+disable,
+                url: "/host/toggle",
                 type: "GET",
+                data: parameters,
                 dataType: "text"
             }).done(function(data){
                 alertify.success(count+" host(s) "+(disable?"dis":"en")+"abled successfully",2);
@@ -185,10 +203,16 @@ function(
                 alertify.error("Error "+(disable?"dis":"en")+"abling: "+count+" hosts. <br/> "+e.responseText);
             });
         },
-        getFailInfo:function(self, ids, deadFs){
+        getFailInfo:function(self, hostIds, deadFs){
+            var count = hostIds.length;
+            var parameters = {};
+            parameters["id"] = hostIds.join();
+            parameters["deadFs"] = deadFs;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/host/failinfo?id="+ids+"&deadFs="+(deadFs ? 1 : 0),
+                url: "/host/failinfo",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 uuids = data.uuids;
@@ -203,22 +227,27 @@ function(
 				}
 				alertify.confirm(msg,
                 	function(resp){
-                    	self.collection.failSelected(ids, data.deadFs);
+                    	self.collection.failSelected(hostIds, data.deadFs);
                 	}
             	);
             }).fail(function(e){
-                alertify.error("Error trying to fail: "+ids+" hosts. <br/> "+e.responseText);
+                alertify.error("Error trying to fail: "+count+" hosts. <br/> "+e.responseText);
             });
         },
-        cancelFailSelected:function(self, ids){
+        cancelFailSelected:function(self, hostIds){
+            var count = hostIds.length;
+            var parameters = {};
+            parameters["id"] = hostIds.join();
+            app.authQueryParameters(parameters);
         	$.ajax({
-        		url: "/host/failcancel?id="+ids,
+        		url: "/host/failcancel",
         		type: "GET",
+        		data: parameters,
         		dataType: "text"
         	}).done(function(data){
-        		alertify.success(ids.length+" host(s) removed from failure queue");
+        		alertify.success(count+" host(s) removed from failure queue");
         	}).fail(function(e){
-        		alertify.error("Error trying to remove: "+ids+" from failure queue. <br/> "+e.responseText);
+        		alertify.error("Error trying to remove: "+hostIds+" from failure queue. <br/> "+e.responseText);
         	});
         }
     });

@@ -794,8 +794,7 @@ public class JobsResource {
             if (success) {
                 return Response.ok("{\"id\":\"" + job.getId() + "\", \"action\":\"reverted\"}").build();
             } else {
-                return Response.status(Response.Status.UNAUTHORIZED).entity(
-                        "{\"id\":\"" + job.getId() + "\", \"action\":\"unauthorized\"}").build();
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Insufficient privileges to revert job").build();
             }
         } catch (Exception ex) {
             ex.printStackTrace();

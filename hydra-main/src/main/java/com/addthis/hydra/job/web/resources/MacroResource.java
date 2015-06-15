@@ -108,11 +108,12 @@ public class MacroResource {
     public Response saveMacro(@QueryParam("pairs") KVPairs kv,
                               @QueryParam("user")  String user,
                               @QueryParam("token") String token) {
+        String label = kv.getValue("label");
         try {
-            if (!kv.hasKey("label")) {
+            if (label == null) {
+                log.error("Macro submitted without label field");
                 throw new Exception("missing field");
             }
-            String label = kv.getValue("label");
             JobMacro oldMacro = jobMacroManager.getEntity(label);
             String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
             String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : user);
@@ -127,6 +128,7 @@ public class MacroResource {
             jobMacroManager.putEntity(label, jobMacro, true);
             return Response.ok().entity(jobMacro.toJSON().put("macro", "").put("name", label).toString()).build();
         } catch (Exception ex) {
+            log.error("Error while saving macro {}: ", label, ex);
             return Response.serverError().entity(ex.toString()).build();
         }
     }

@@ -172,7 +172,7 @@ function(
         },
         rebalance:function(){
             var self=this;
-            var parameters = {}
+            var parameters = {};
             parameters["id"] = self.id;
             app.authQueryParameters(parameters);
             $.ajax({
@@ -192,7 +192,7 @@ function(
         },
         enable : function(unsafe) {
             var self = this;
-            var parameters = {}
+            var parameters = {};
             parameters["jobs"] = self.id;
             parameters["enable"] = 1;
             parameters["unsafe"] = unsafe;
@@ -210,7 +210,7 @@ function(
         },
         disable : function() {
             var self = this;
-            var parameters = {}
+            var parameters = {};
             parameters["jobs"] = self.id;
             parameters["enable"] = 0;
             app.authQueryParameters(parameters);
@@ -258,7 +258,7 @@ function(
         fixDirs:function(node){
             var self=this;
             node = node || -1;
-            var parameters = {}
+            var parameters = {};
             parameters["id"] = self.id;
             parameters["node"] = node;
             app.authQueryParameters(parameters);
@@ -278,7 +278,7 @@ function(
         },
         delete : function(dontShowSuccessAlert){
             var self=this;
-            var parameters = {}
+            var parameters = {};
             parameters["id"] = self.id;
             app.authQueryParameters(parameters);
             $.ajax({
@@ -307,7 +307,7 @@ function(
         },
         kick : function(){
             var self = this;
-            var parameters = {}
+            var parameters = {};
             parameters["jobid"] = self.id;
             parameters["priority"] = 1;
             app.authQueryParameters(parameters);
@@ -324,7 +324,7 @@ function(
         },
         stop : function(){
             var self=this;
-            var parameters = {}
+            var parameters = {};
             parameters["id"] = self.id;
             app.authQueryParameters(parameters);
             $.ajax({
@@ -340,7 +340,7 @@ function(
         },
         kill : function(){
             var self=this;
-            var parameters = {}
+            var parameters = {};
             parameters["id"] = self.id;
             parameters["force"] = "true";
             app.authQueryParameters(parameters);
@@ -363,7 +363,7 @@ function(
             if (!_.isEmpty(this.commit)) {
                 data.commit=this.commit;
             }
-            var parameters = {}
+            var parameters = {};
             if (!this.isNew()) {
                 parameters['id'] = self.id;
             }
@@ -596,7 +596,7 @@ function(
         kickSelected:function(jobIds){
             var self = this;
             var count = jobIds.length;
-            var parameters = {}
+            var parameters = {};
             parameters["jobid"] = jobIds.join();
             parameters["priority"] = 1;
             app.authQueryParameters(parameters);
@@ -614,7 +614,7 @@ function(
         stopSelected:function(jobIds){
             var self = this;
             var count = jobIds.length;
-            var parameters = {}
+            var parameters = {};
             parameters["jobid"] = jobIds.join();
             app.authQueryParameters(parameters);
             $.ajax({
@@ -630,7 +630,7 @@ function(
         },
         killSelected:function(jobIds){
             var count = jobIds.length;
-            var parameters = {}
+            var parameters = {};
             parameters["jobid"] = jobIds.join();
             parameters["force"] = "true";
             app.authQueryParameters(parameters);
@@ -648,7 +648,7 @@ function(
         enableBatch:function(jobIds, unsafe){
             var self=this;
             var count = jobIds.length;
-            var parameters = {}
+            var parameters = {};
             parameters["jobs"] = jobIds.join();
             parameters["enable"] = 1;
             parameters["unsafe"] = unsafe;
@@ -667,7 +667,7 @@ function(
         disableBatch:function(jobIds){
             var self=this;
             var count = jobIds.length;
-            var parameters = {}
+            var parameters = {};
             parameters["jobs"] = jobIds.join();
             parameters["enable"] = 0;
             app.authQueryParameters(parameters);
@@ -1452,7 +1452,7 @@ function(
             return this;
         },
         handleSubmitButtonClick: function() {
-            var parameters = {}
+            var parameters = {};
             parameters["jobs"] = this.jobIds.join();
             parameters["creator"] = $('input[name="creatorModal"]').val();
             parameters["owner"] = $('input[name="chownModal"]').val();
@@ -1811,7 +1811,7 @@ function(
             app.router.trigger("route:showJobBackups",this.model.id);
         },
         handleSettingsChangePermissionClick:function(event){
-            var parameters = {}
+            var parameters = {};
             parameters["jobs"] = this.model.id;
             parameters["owner"] = $('#jobOwner').val();
             parameters["group"] = $('#jobGroup').val();

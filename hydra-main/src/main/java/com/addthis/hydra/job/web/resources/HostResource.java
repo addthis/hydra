@@ -20,10 +20,9 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.addthis.basis.util.LessStrings;
-
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.RebalanceOutcome;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.maljson.JSONArray;
@@ -39,8 +38,11 @@ public class HostResource {
 
     private final Spawn spawn;
 
+    private final PermissionsManager permissionsManager;
+
     public HostResource(Spawn spawn) {
         this.spawn = spawn;
+        this.permissionsManager = spawn.getPermissionsManager();
     }
 
     @GET
@@ -48,9 +50,13 @@ public class HostResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response rebalanceHost(@QueryParam("id") String hostUuid,
                                   @QueryParam("user") String user,
-                                  @QueryParam("token") String token) throws Exception {
+                                  @QueryParam("token") String token,
+                                  @QueryParam("sudo") String sudo) throws Exception {
         try {
-            String[] hostUuids = LessStrings.splitArray(hostUuid, ",");
+            if (!permissionsManager.adminAction(user, token, sudo)) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
+            }
+            String[] hostUuids = hostUuid.split(",");
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
                 emitLogLineForAction(user, "host rebalance on " + hostUuid);
@@ -72,8 +78,12 @@ public class HostResource {
     public Response failHost(@QueryParam("id") String hostUuids,
                              @QueryParam("deadFs") boolean filesystemDead,
                              @QueryParam("user") String user,
-                             @QueryParam("token") String token) throws Exception {
+                             @QueryParam("token") String token,
+                             @QueryParam("sudo") String sudo) throws Exception {
         try {
+            if (!permissionsManager.adminAction(user, token, sudo)) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
+            }
             emitLogLineForAction(user, "fail host on " + hostUuids);
             spawn.markHostsForFailure(hostUuids, filesystemDead);
             JSONObject json = new JSONObject();
@@ -90,8 +100,12 @@ public class HostResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response cancelFailHost(@QueryParam("id") String hostUuids,
                                    @QueryParam("user") String user,
-                                   @QueryParam("token") String token) throws Exception {
+                                   @QueryParam("token") String token,
+                                   @QueryParam("sudo") String sudo) throws Exception {
         try {
+            if (!permissionsManager.adminAction(user, token, sudo)) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
+            }
             spawn.unmarkHostsForFailure(hostUuids);
             JSONObject json = new JSONObject();
             json.put("success", hostUuids.split(",").length);
@@ -106,11 +120,15 @@ public class HostResource {
     @Path("/failinfo")
     @Produces(MediaType.APPLICATION_JSON)
     public Response hostFailInfo(@QueryParam("id") String hostUuids,
-                                 @QueryParam("deadFs") int filesystemDead,
+                                 @QueryParam("deadFs") boolean filesystemDead,
                                  @QueryParam("user") String user,
-                                 @QueryParam("token") String token) throws Exception {
+                                 @QueryParam("token") String token,
+                                 @QueryParam("sudo") String sudo) throws Exception {
         try {
-            return Response.ok(spawn.getHostFailWorker().getInfoForHostFailure(hostUuids, filesystemDead == 1).toString()).build();
+            if (!permissionsManager.adminAction(user, token, sudo)) {
+                Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
+            }
+            return Response.ok(spawn.getHostFailWorker().getInfoForHostFailure(hostUuids, filesystemDead).toString()).build();
         } catch (Exception ex)  {
             log.warn("", ex);
             return Response.serverError().entity("Host Fail Error: " + ex.getMessage()).build();
@@ -123,10 +141,13 @@ public class HostResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response dropHosts(@QueryParam("id") String hostUuid,
                               @QueryParam("user") String user,
-                              @QueryParam("token") String token) throws Exception {
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) throws Exception {
         try {
-            String[] hostUuids = LessStrings.splitArray(hostUuid, ",");
-            JSONArray outcomes = new JSONArray();
+            if (!permissionsManager.adminAction(user, token, sudo)) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
+            }
+            String[] hostUuids = hostUuid.split(",");
             for (String uuid : hostUuids) {
                 emitLogLineForAction(user, "delete host on " + uuid);
                 spawn.deleteHost(uuid);
@@ -142,13 +163,17 @@ public class HostResource {
     @GET
     @Path("/toggle")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response enableHosts(@QueryParam("hosts") String hosts,
+    public Response enableHosts(@QueryParam("id") String hostUuid,
                                 @QueryParam("user") String user,
                                 @QueryParam("token") String token,
+                                @QueryParam("sudo") String sudo,
                                 @QueryParam("disable") boolean disable) throws Exception {
         try {
+            if (!permissionsManager.adminAction(user, token, sudo)) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
+            }
             emitLogLineForAction(user, "toggle hosts");
-            spawn.toggleHosts(hosts, disable);
+            spawn.toggleHosts(hostUuid, disable);
             return Response.ok().build();
         } catch (Exception ex)  {
             log.warn("", ex);
