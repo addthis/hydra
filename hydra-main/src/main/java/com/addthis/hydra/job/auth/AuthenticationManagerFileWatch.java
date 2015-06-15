@@ -47,33 +47,30 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationManagerFileWatch.class);
 
+    @Nonnull
     private volatile AuthenticationManagerStatic manager;
 
+    @Nonnull
     private final WatchService watcher;
 
     @Nonnull
     private final Path path;
 
     @JsonCreator
-    public AuthenticationManagerFileWatch(@JsonProperty("path") Path path) {
+    public AuthenticationManagerFileWatch(@JsonProperty("path") Path path) throws IOException {
         this.path = path;
-        WatchService watcherValue = null;
-        try {
+        if (path != null) {
             @Syntax("HOCON") String content = new String(Files.readAllBytes(path));
-            watcherValue = FileSystems.getDefault().newWatchService();
+            this.watcher = FileSystems.getDefault().newWatchService();
             this.manager = Configs.decodeObject(AuthenticationManagerStatic.class, content);
-            path.getParent().register(watcherValue, StandardWatchEventKinds.ENTRY_MODIFY);
+            path.getParent().register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
             log.info("Registering file watch authentication");
-        } catch (Exception ex) {
-            log.error("Failure to initialize file watch authentication manager: ", ex);
+        } else {
+            watcher = null;
         }
-        this.watcher = watcherValue;
     }
 
     private void updateAuthenticationManager() {
-        if (watcher == null) {
-            return;
-        }
         WatchKey watchKey = null;
         try {
             watchKey = watcher.poll();
@@ -112,79 +109,41 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
 
     @Override String login(String username, String password, boolean ssl) {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager == null) {
-            return null;
-        } else {
-            return localManager.login(username, password, ssl);
-        }
+        return manager.login(username, password, ssl);
     }
 
     @Override public boolean verify(String username, String password, boolean ssl) {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager == null) {
-            return false;
-        } else {
-            return localManager.verify(username, password, ssl);
-        }
+        return manager.verify(username, password, ssl);
     }
 
     @Override User authenticate(String username, String secret) {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager == null) {
-            return null;
-        } else {
-            return localManager.authenticate(username, secret);
-        }
+        return manager.authenticate(username, secret);
     }
 
     @Override User getUser(String username) {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager == null) {
-            return null;
-        } else {
-            return localManager.getUser(username);
-        }
+        return manager.getUser(username);
     }
 
     @Override String sudoToken(String username) {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager == null) {
-            return null;
-        } else {
-            return localManager.sudoToken(username);
-        }
+        return manager.sudoToken(username);
     }
 
     @Override void logout(User user) {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager != null) {
-            localManager.logout(user);
-        }
+        manager.logout(user);
     }
 
     @Override ImmutableList<String> adminGroups() {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager == null) {
-            return ImmutableList.of();
-        } else {
-            return localManager.adminGroups();
-        }
+        return manager.adminGroups();
     }
 
     @Override ImmutableList<String> adminUsers() {
         updateAuthenticationManager();
-        AuthenticationManager localManager = manager;
-        if (localManager == null) {
-            return ImmutableList.of();
-        } else {
-            return localManager.adminUsers();
-        }
+        return manager.adminUsers();
     }
 }
