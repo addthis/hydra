@@ -34,6 +34,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.json.CodecJSON;
+import com.addthis.hydra.data.filter.lambda.StringWithValueFilter;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
 import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.maljson.JSONObject;
@@ -88,10 +89,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     @JsonProperty private String dateFormat = DEFAULT_DATE_FORMAT;
 
     /** files that have been created before this date will not be processed. Default is {{last}}. */
-    @JsonProperty private String startDate = TIME_NOW;
+    @JsonProperty private StringWithValueFilter startDate = new StringWithValueFilter(TIME_NOW, null);
 
     /** files that have been created after this date will not be processed. Default is {{now}}. */
-    @JsonProperty private String endDate = TIME_NOW;
+    @JsonProperty private StringWithValueFilter endDate = new StringWithValueFilter(TIME_NOW, null);
 
     /** If true then process the dates from the most recent date to the earliest date. Default is false. */
     @JsonProperty protected boolean reverse;
@@ -208,7 +209,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
                 String resumeDate = jo.optString("lastDate");
                 if (resumeDate != null) {
                     log.warn("auto resume from {}", jo);
-                    startDate = resumeDate;
+                    startDate = new StringWithValueFilter(resumeDate, null);
                 }
             } catch (Exception ex) {
                 log.warn("corrupted autoResume file: {}", autoResumeFile, ex);
@@ -220,12 +221,12 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
             return false;
         }
 
-        DateTime start = parseDateTime(startDate);
+        DateTime start = parseDateTime(startDate.get());
         if ((formatter != null) && (endDate == null)) {
-            endDate = NOW_PREFIX + NOW_POSTFIX;
+            endDate = new StringWithValueFilter(NOW_PREFIX + NOW_POSTFIX, null);
             log.warn("End Date not provided, using current time: {} as end date for job", endDate);
         }
-        DateTime end = parseDateTime(endDate);
+        DateTime end = parseDateTime(endDate.get());
         intervalUnit = timeIncrement(dateIncrements, dateFormat);
         if (!testFileDateExpansion()) {
             return false;
@@ -287,7 +288,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     public void setStartTime(long time) {
         if (formatter != null) {
-            startDate = formatter.print(time);
+            startDate = new StringWithValueFilter(formatter.print(time), null);
             log.warn("override start date with {}", startDate);
         }
     }
