@@ -92,7 +92,7 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
         if (keyAccess == null) {
             keyAccess = p.getFormat().getField(conf.key);
         }
-        long packetTime = ValueUtil.asNumber(p.getValue(keyAccess)).asLong().getLong();
+        long packetTime = ValueUtil.asNumberOrParseLong(p.getValue(keyAccess), 10).asLong().getLong();
         first = Math.min(first, packetTime);
         last = Math.max(last, packetTime);
         return true;
