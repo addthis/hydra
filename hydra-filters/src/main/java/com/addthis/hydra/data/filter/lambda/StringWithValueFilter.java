@@ -15,22 +15,14 @@ package com.addthis.hydra.data.filter.lambda;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
-
 import java.util.function.Supplier;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
-import com.google.common.base.Throwables;
-
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Supplies a string result. The input parameter is required and the
@@ -47,13 +39,19 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
  * </pre>
  * @user-reference
  */
-@JsonDeserialize(using = StringWithValueFilter.Deserializer.class)
 public class StringWithValueFilter implements Supplier<String>  {
 
     @Nullable
     private final String result;
 
-    public StringWithValueFilter(@Nullable final String input, @Nullable final ValueFilter filter) {
+    @JsonCreator
+    public StringWithValueFilter(@Nullable final String input) {
+        this(input, null);
+    }
+
+    @JsonCreator
+    public StringWithValueFilter(@JsonProperty("input") @Nullable final String input,
+                                 @JsonProperty("filter") @Nullable final ValueFilter filter) {
         if (filter == null) {
             result = input;
         } else {
@@ -64,33 +62,6 @@ public class StringWithValueFilter implements Supplier<String>  {
 
     @Override public String get() {
         return result;
-    }
-
-    static class Deserializer extends JsonDeserializer<StringWithValueFilter> {
-
-        @Override
-        public StringWithValueFilter deserialize(JsonParser jsonParser,
-                                                 DeserializationContext deserializationContext)
-                throws IOException {
-            JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-            if (node.isTextual()) {
-                return new StringWithValueFilter(node.asText(), null);
-            } else {
-                String input = node.get("input").asText();
-                JsonNode filterNode = node.get("filter");
-                ValueFilter filter = null;
-                if (filterNode != null) {
-                    try {
-                        filter = Jackson.defaultCodec().getObjectMapper()
-                                        .treeToValue(filterNode, ValueFilter.class);
-                    } catch (Exception ex) {
-                        throw Throwables.propagate(ex);
-                    }
-                }
-                return new StringWithValueFilter(input, filter);
-            }
-        }
-
     }
 
 }
