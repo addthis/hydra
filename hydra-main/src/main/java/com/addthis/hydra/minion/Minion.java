@@ -480,11 +480,9 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
             }
             // Iterate over the queue, looking for a job that can run using the current resources
             for (CommandTaskKick nextKick : jobQueue) {
-                // stop lower pri job to make room, if applicable
-                boolean lackCap;
                 capacityLock.lock();
                 try {
-                    lackCap = activeTaskKeys.size() >= maxActiveTasks;
+                    boolean lackCap = activeTaskKeys.size() >= maxActiveTasks;
                     if (lackCap) {
                         sendStatusMessage(new StatusTaskCantBegin(getUUID(), nextKick.getJobUuid(), nextKick.getNodeID()));
                         jobQueue.remove(nextKick);
