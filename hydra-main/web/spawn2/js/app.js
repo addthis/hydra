@@ -69,8 +69,9 @@ function(
                 (useSSL ? "5053" : "5052");
         },
         initialize:function() {
-            // delete legacy cookie
+            // delete legacy cookies
             Cookies.set("username", "", {expires:0, path:"/spawn2"});
+            Cookies.set("spawn", "", {expires:0, path:"/spawn2"});
             $.ajax({
                 url: '/update/settings',
                 dataType: 'json',
@@ -242,6 +243,7 @@ function(
             }
             Cookies.set("username", "", {expires:0});
             Cookies.set("username", "", {expires:0, path:"/spawn2"}); // delete legacy cookie
+            Cookies.set("spawn", "", {expires:0, path:"/spawn2"}); // delete legacy cookie
             Cookies.set("token", "", {expires:0});
             Cookies.set("tokenExpires", "", {expires:0});
             Cookies.set("sudo", "", {expires:0});
