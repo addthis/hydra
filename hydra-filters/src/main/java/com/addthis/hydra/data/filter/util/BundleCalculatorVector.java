@@ -48,6 +48,16 @@ class BundleCalculatorVector implements ValueCustom<Object>, Numeric {
     }
 
     @Override
+    public Numeric prod(Numeric val) {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public Numeric divide(Numeric val) {
+        throw new IllegalStateException();
+    }
+
+    @Override
     public Numeric diff(Numeric val) {
         throw new IllegalStateException();
     }

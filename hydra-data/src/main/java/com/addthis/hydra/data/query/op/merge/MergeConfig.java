@@ -47,14 +47,13 @@ public class MergeConfig {
             switch (ch) {
                 case ',':
                     continue;
-                    // next col is top
-                case 't':
-                    topColumn = conf.size();
-                    topper = new KeyTopper().init();
-                    continue;
-                    // average
+                // average
                 case 'a':
                     op = new AverageValue();
+                    break;
+                // cardinality
+                case 'c':
+                    op = new CardinalityValue();
                     break;
                 // diff/subtract value
                 case 'd':
@@ -62,20 +61,17 @@ public class MergeConfig {
                     break;
                 // ignore/drop
                 case 'i':
-//                  op = MergeOpEnums.IGNORE;
-//                  conf.add(null);
-//                  continue;
                     break;
                 case 'j':
                     op = new JoinedValue();
                     break;
-                // last value
-                case 'l':
-                    op = new LastValue();
-                    break;
                 // part of compound key
                 case 'k':
                     op = new KeyValue();
+                    break;
+                // last value
+                case 'l':
+                    op = new LastValue();
                     break;
                 // max value
                 case 'M':
@@ -85,14 +81,19 @@ public class MergeConfig {
                 case 'm':
                     op = new MinValue();
                     break;
+                // product
+                case 'p':
+                    op = new ProdValue();
+                    break;
                 // sum
                 case 's':
                     op = new SumValue();
                     break;
-                // cardinality
-                case 'c':
-                    op = new CardinalityValue();
-                    break;
+                // next col is top
+                case 't':
+                    topColumn = conf.size();
+                    topper = new KeyTopper().init();
+                    continue;
                 // add merged row count
                 case 'u':
                     mergeCount = true;

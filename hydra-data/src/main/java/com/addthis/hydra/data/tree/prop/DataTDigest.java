@@ -278,6 +278,10 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
             return sum(val).asDouble().diff(asDouble());
         }
 
+        @Override public ValueDouble prod(Numeric val) { return sum(val).asDouble().prod(asDouble()); }
+
+        @Override public ValueDouble divide(Numeric val) { return sum(val).asDouble().divide(asDouble()); }
+
         @Override
         public ValueDouble avg(int count) {
             return ValueFactory.create(asDouble().getDouble() / (double) count);

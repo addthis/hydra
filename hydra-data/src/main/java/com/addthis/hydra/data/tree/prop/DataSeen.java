@@ -197,6 +197,12 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
+        public Numeric prod(Numeric val) { return this; }
+
+        @Override
+        public Numeric divide(Numeric val) { return this; }
+
+        @Override
         public Numeric max(Numeric val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;

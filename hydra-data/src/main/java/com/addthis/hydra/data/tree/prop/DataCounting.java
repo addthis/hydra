@@ -451,6 +451,16 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
+        public Numeric prod(Numeric val) {
+            return sum(val).asLong().prod(asLong());
+        }
+
+        @Override
+        public Numeric divide(Numeric val) {
+            return sum(val).asLong().divide(asLong());
+        }
+
+        @Override
         public Numeric max(Numeric val) {
             if (val.asLong().getLong() > toLong()) {
                 return val;

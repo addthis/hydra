@@ -40,7 +40,7 @@ import io.netty.channel.ChannelProgressivePromise;
  * <li>s - generate sum values for this column</li>
  * <li>l - keep last value for this column</li>
  * <li>j - append all values for this column using "," as a separator</li>
- * <li>p - packs repeating values (not sure this does anything)</li>
+ * <li>p - generate product values for this column</li>
  * </ul>
  * <p/>
  * <p>Key columns are specified using the "k" parameter. If two or more columns are

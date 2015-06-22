@@ -385,6 +385,16 @@ public class OpPivot extends AbstractQueryOp {
             return val;
         }
 
+        @Override
+        public Numeric prod(Numeric val) {
+            return val;
+        }
+
+        @Override
+        public Numeric divide(Numeric val) {
+            return val;
+        }
+
         public Long toLong() {
             return Long.MAX_VALUE;
         }
@@ -496,6 +506,20 @@ public class OpPivot extends AbstractQueryOp {
         public PivotAvg sum(Numeric val) {
             ops++;
             orig = orig.sum(val);
+            return this;
+        }
+
+        @Override
+        public PivotAvg prod(Numeric val) {
+            ops++;
+            orig = orig.prod(val);
+            return this;
+        }
+
+        @Override
+        public PivotAvg divide(Numeric val) {
+            ops++;
+            orig = orig.divide(val);
             return this;
         }
 

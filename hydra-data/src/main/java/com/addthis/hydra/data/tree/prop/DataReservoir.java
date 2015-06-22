@@ -840,6 +840,16 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         }
 
         @Override
+        public Numeric prod(Numeric val) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Numeric divide(Numeric val) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Numeric avg(int count) {
             throw new UnsupportedOperationException();
         }
