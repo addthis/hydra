@@ -68,7 +68,7 @@ import io.netty.channel.ChannelProgressivePromise;
  * <tr>
  * <td>"range" or ":"</td>
  * <td>3</td>
- * <td>take the range of string c from offset a to offset b</td>
+ * <td>take the range of string c from offset b to offset a</td>
  * <td>1</td>
  * </tr>
  * <tr>
