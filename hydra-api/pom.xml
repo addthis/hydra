@@ -19,7 +19,7 @@
     <version>5.4.2-SNAPSHOT</version>
   </parent>
 
-  <artifactId>hydra-main-api</artifactId>
+  <artifactId>hydra-api</artifactId>
   <name>Hydra Main API</name>
   <description>
     Hydra core interfaces. Hydra provides default implementations. Optional/3rd party libraries can

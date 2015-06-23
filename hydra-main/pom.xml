@@ -30,7 +30,7 @@
     <!-- module deps -->
     <dependency>
       <groupId>com.addthis.hydra</groupId>
-      <artifactId>hydra-main-api</artifactId>
+      <artifactId>hydra-api</artifactId>
     </dependency>
     <dependency>
       <groupId>com.addthis.hydra</groupId>
