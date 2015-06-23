@@ -121,7 +121,6 @@ import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
-import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -321,9 +320,9 @@ public class Spawn implements Codable, AutoCloseable {
         hostFailWorker = new HostFailWorker(this, hostManager, scheduledExecutor);
         balancer = new SpawnBalancer(this, hostManager);
 
-        // connect to message broker or fail
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
+        // connect to message broker or fail
         if ("rabbit".equals(queueType)) {
             log.info("[init] connecting to rabbit message queue");
             this.spawnMQ = new SpawnMQImpl(zkClient, this);
@@ -376,20 +375,6 @@ public class Spawn implements Codable, AutoCloseable {
         } catch (Exception e) {
             log.warn("Failed to write spawn state to log file at {}", stateFile, e);
         }
-    }
-
-    public void markHostsForFailure(String hostId, HostFailWorker.FailState failState) {
-        hostFailWorker.markHostsToFail(hostId, failState);
-    }
-
-    public void markHostsForFailure(String hostId, boolean deadFileSystem) {
-        markHostsForFailure(hostId, deadFileSystem ?
-                                    HostFailWorker.FailState.FAILING_FS_DEAD :
-                                    HostFailWorker.FailState.FAILING_FS_OKAY);
-    }
-
-    public void unmarkHostsForFailure(String hostIds) {
-        hostFailWorker.removeHostsForFailure(hostIds);
     }
 
     public HostFailWorker getHostFailWorker() {
@@ -2355,11 +2340,10 @@ public class Spawn implements Codable, AutoCloseable {
             int numQueued = 0;
             int numQueuedWaitingOnSlot = 0;
             int numQueuedWaitingOnError = 0;
-            LinkedList<JobKey>[] queues = null;
             taskQueuesByPriority.lock();
             try {
-                //noinspection unchecked
-                queues = taskQueuesByPriority.values().toArray(new LinkedList[taskQueuesByPriority.size()]);
+                LinkedList<JobKey>[] queues =
+                        taskQueuesByPriority.values().toArray(new LinkedList[taskQueuesByPriority.size()]);
 
                 for (LinkedList<JobKey> queue : queues) {
                     numQueued += queue.size();
@@ -2384,8 +2368,8 @@ public class Spawn implements Codable, AutoCloseable {
                                              ",'sizeSlot':" + Integer.toString(numQueuedWaitingOnSlot) + "}");
             sendEventToClientListeners("task.queue.size", json);
         } catch (Exception e) {
-            log.warn("[task.queue.update] received exception while sending task queue update event (this is ok unless it happens repeatedly) " + e);
-            e.printStackTrace();
+            log.warn("[task.queue.update] received exception while sending task queue update event (this is ok unless" +
+                     " it happens repeatedly)", e);
         }
     }
 

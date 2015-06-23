@@ -21,6 +21,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.addthis.codec.json.CodecJSON;
+import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.spawn.Spawn;
@@ -37,11 +38,13 @@ public class HostResource {
     private static final Logger log = LoggerFactory.getLogger(HostResource.class);
 
     private final Spawn spawn;
+    private final HostFailWorker hostFailWorker;
 
     private final PermissionsManager permissionsManager;
 
     public HostResource(Spawn spawn) {
         this.spawn = spawn;
+        this.hostFailWorker = spawn.getHostFailWorker();
         this.permissionsManager = spawn.getPermissionsManager();
     }
 
@@ -85,7 +88,13 @@ public class HostResource {
                 return Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
             }
             emitLogLineForAction(user, "fail host on " + hostUuids);
-            spawn.markHostsForFailure(hostUuids, filesystemDead);
+            HostFailWorker.FailState failureMode;
+            if (filesystemDead) {
+                failureMode = HostFailWorker.FailState.FAILING_FS_DEAD;
+            } else {
+                failureMode = HostFailWorker.FailState.FAILING_FS_OKAY;
+            }
+            hostFailWorker.markHostsToFail(hostUuids, failureMode);
             JSONObject json = new JSONObject();
             json.put("success", hostUuids.split(",").length);
             return Response.ok(json.toString()).build();
@@ -106,7 +115,7 @@ public class HostResource {
             if (!permissionsManager.adminAction(user, token, sudo)) {
                 return Response.status(Response.Status.UNAUTHORIZED).entity("insufficient privileges").build();
             }
-            spawn.unmarkHostsForFailure(hostUuids);
+            hostFailWorker.removeHostsForFailure(hostUuids);
             JSONObject json = new JSONObject();
             json.put("success", hostUuids.split(",").length);
             return Response.ok(json.toString()).build();
