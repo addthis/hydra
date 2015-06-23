@@ -126,22 +126,19 @@ public class JobOnFinishStateHandlerImpl implements JobOnFinishStateHandler {
 
         final String jobId = job.getId();
         final byte[] jobJson = CodecJSON.encodeString(job).getBytes();
-        return new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpResponse response = HttpUtil.httpPost(url, "javascript/text", jobJson, timeoutMs);
-                    if (response.getStatus() >= 400) {
-                        String err = "HTTP POST to " + url + " in background task \"" + jobId + " "
-                                + state + "\" returned " + response.getStatus() + " " + response.getReason();
-                        log.error(err);
-                        emailNotification(jobId, state, err);
-                    }
-                } catch (IOException ex) {
-                    log.error("IOException when attempting to contact \"{}\" in background task \"{} {}\"",
-                            url, jobId, state, ex);
-                    emailNotification(jobId, state, Throwables.getStackTraceAsString(ex));
+        return () -> {
+            try {
+                HttpResponse response = HttpUtil.httpPost(url, "javascript/text", jobJson, timeoutMs);
+                if (response.getStatus() >= 400) {
+                    String err = "HTTP POST to " + url + " in background task \"" + jobId + " "
+                            + state + "\" returned " + response.getStatus() + " " + response.getReason();
+                    log.error(err);
+                    emailNotification(jobId, state, err);
                 }
+            } catch (IOException ex) {
+                log.error("IOException when attempting to contact \"{}\" in background task \"{} {}\"",
+                        url, jobId, state, ex);
+                emailNotification(jobId, state, Throwables.getStackTraceAsString(ex));
             }
         };
     }

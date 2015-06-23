@@ -73,11 +73,7 @@ public abstract class AvailableCache<T> {
              * The new value will be inserted into the cache when the load() operation completes.
              */
             public ListenableFuture<Optional<T>> reload(final String key, Optional<T> oldval) {
-                ListenableFutureTask<Optional<T>> task = ListenableFutureTask.create(new Callable<Optional<T>>() {
-                    public Optional<T> call() throws Exception {
-                        return load(key);
-                    }
-                });
+                ListenableFutureTask<Optional<T>> task = ListenableFutureTask.create(() -> load(key));
                 executor.execute(task);
                 return task;
             }

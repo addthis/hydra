@@ -38,12 +38,9 @@ public abstract class ScheduledBackupType {
     private static final long goldLifeTime = Parameter.longValue("backup.gold.life.time", 90 * 60 * 1000L);
     private static final Map<ScheduledBackupType, Long> protectedBackupTypes = ImmutableMap.of((ScheduledBackupType) new GoldBackup(), goldLifeTime);
     private static final Logger log = LoggerFactory.getLogger(ScheduledBackupType.class);
-    private static final Comparator<String> backupNameSorter = new Comparator<String>() {
-        @Override
-        public int compare(String o1, String o2) {
-            // Sort backups going from most recent to earliest
-            return Long.compare(getBackupCreationTimeMillis(o2), getBackupCreationTimeMillis(o1));
-        }
+    private static final Comparator<String> backupNameSorter = (o1, o2) -> {
+        // Sort backups going from most recent to earliest
+        return Long.compare(getBackupCreationTimeMillis(o2), getBackupCreationTimeMillis(o1));
     };
 
     protected static final String backupPrefix = "b-";

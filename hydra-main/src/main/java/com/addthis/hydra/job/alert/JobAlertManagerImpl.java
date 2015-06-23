@@ -56,7 +56,7 @@ public class JobAlertManagerImpl implements JobAlertManager {
 
     private void scheduleAlertScan(ScheduledExecutorService scheduledExecutorService) {
         if (scheduledExecutorService != null) {
-            scheduledExecutorService.scheduleWithFixedDelay(() -> jobAlertRunner.scanAlerts(),
+            scheduledExecutorService.scheduleWithFixedDelay(jobAlertRunner::scanAlerts,
                                                             ALERT_DELAY_MILLIS,
                                                             ALERT_REPEAT_MILLIS,
                                                             TimeUnit.MILLISECONDS);

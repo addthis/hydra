@@ -353,14 +353,11 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
             queuedHostMessages = new BlockingArrayQueue<>();
             MeshMessageConsumer jobConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchJob", uuid);
             jobConsumer.addRoutingKey(HostMessage.ALL_HOSTS);
-            jobConsumer.addMessageListener(new MessageListener() {
-                @Override
-                public void onMessage(Serializable message) {
-                    try {
-                        queuedHostMessages.put((HostMessage) message);
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
+            jobConsumer.addMessageListener(message -> {
+                try {
+                    queuedHostMessages.put((HostMessage) message);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
                 }
             });
             batchControlConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchControl", uuid).addRoutingKey(HostMessage.ALL_HOSTS);
@@ -740,12 +737,9 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         if (zkClient == null) {
             zkClient = ZkUtil.makeStandardClient();
         }
-        zkClient.getConnectionStateListenable().addListener(new ConnectionStateListener() {
-            @Override
-            public void stateChanged(CuratorFramework client, ConnectionState newState) {
-                if (newState == ConnectionState.RECONNECTED) {
-                    joinGroup();
-                }
+        zkClient.getConnectionStateListenable().addListener((client, newState) -> {
+            if (newState == ConnectionState.RECONNECTED) {
+                joinGroup();
             }
         });
         return zkClient;

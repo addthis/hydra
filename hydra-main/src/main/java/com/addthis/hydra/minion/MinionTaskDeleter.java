@@ -88,23 +88,20 @@ public class MinionTaskDeleter implements Codable {
      * Start a thread that will periodically check to see if any stored items can be deleted.
      */
     public synchronized void startDeletionThread() {
-        deletionThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(deleteCheckFrequency);
-                        deleteStoredItems();
-                    } catch (Exception e) {
-                        if (e instanceof InterruptedException) {
-                            break;
-                        } else {
-                            log.warn("Exception during MinionTaskDeleter execution: " + e, e);
-                        }
+        deletionThread = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(deleteCheckFrequency);
+                    deleteStoredItems();
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) {
+                        break;
+                    } else {
+                        log.warn("Exception during MinionTaskDeleter execution: " + e, e);
                     }
                 }
-
             }
+
         });
         deletionThread.setName("minion-deleter-thread");
         deletionThread.setDaemon(true);

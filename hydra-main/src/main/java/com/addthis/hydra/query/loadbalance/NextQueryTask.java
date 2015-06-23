@@ -65,12 +65,9 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
             final ChannelFuture queryFuture = HttpQueryCallHandler.handleQuery(
                     request.querySource, request.kv, request.request, request.ctx, executor);
             queryFuture.addListener(this);
-            queryFuture.channel().closeFuture().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (queryFuture.cancel(false)) {
-                        log.warn("cancelling query due to closed output channel");
-                    }
+            queryFuture.channel().closeFuture().addListener(future -> {
+                if (queryFuture.cancel(false)) {
+                    log.warn("cancelling query due to closed output channel");
                 }
             });
         } catch (Exception e) {

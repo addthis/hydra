@@ -49,11 +49,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import java.text.ParseException;
 
-import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
+import com.addthis.basis.util.LessFiles;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.RollingLog;
-import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
@@ -63,6 +63,7 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
+import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -90,7 +91,6 @@ import com.addthis.hydra.job.entity.JobCommandManager;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
 import com.addthis.hydra.job.entity.JobMacroManager;
-import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.hydra.job.mq.CommandTaskReplicate;
@@ -115,8 +115,8 @@ import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.SpawnService;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.task.run.TaskExitState;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
@@ -346,31 +346,17 @@ public class Spawn implements Codable, AutoCloseable {
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(this), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
-        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                drainJobTaskUpdateQueue();
-            }
-        }, taskQueueDrainInterval, taskQueueDrainInterval, MILLISECONDS);
-        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                jobTaskUpdateHeartbeatCheck();
-            }
-        }, jobTaskUpdateHeartbeatInterval, jobTaskUpdateHeartbeatInterval, MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(this::drainJobTaskUpdateQueue,
+                                                 taskQueueDrainInterval, taskQueueDrainInterval, MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(this::jobTaskUpdateHeartbeatCheck,
+                                                 jobTaskUpdateHeartbeatInterval, jobTaskUpdateHeartbeatInterval,
+                                                 MILLISECONDS);
         // request hosts to send their status
-        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                requestHostsUpdate();
-            }
-        }, hostStatusRequestInterval, hostStatusRequestInterval, MILLISECONDS);
-        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                kickJobsOnQueue();
-                writeSpawnQueue();
-            }
+        scheduledExecutor.scheduleWithFixedDelay(this::requestHostsUpdate,
+                                                 hostStatusRequestInterval, hostStatusRequestInterval, MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(() -> {
+            kickJobsOnQueue();
+            writeSpawnQueue();
         }, queueKickInterval, queueKickInterval, MILLISECONDS);
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();

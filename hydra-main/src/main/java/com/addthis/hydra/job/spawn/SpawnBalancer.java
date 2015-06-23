@@ -111,45 +111,32 @@ public class SpawnBalancer implements Codable {
 
     private final SpawnBalancerTaskSizer taskSizer;
 
-    private final Comparator<HostAndScore> hostAndScoreComparator = new Comparator<HostAndScore>() {
-        @Override
-        public int compare(HostAndScore firstHAS, HostAndScore secondHAS) {
-            return Double.compare(firstHAS.score, secondHAS.score);
+    private final Comparator<HostAndScore> hostAndScoreComparator =
+            (firstHAS, secondHAS) -> Double.compare(firstHAS.score, secondHAS.score);
+
+    private final Comparator<HostState> hostStateScoreComparator = (hostState, hostState1) -> Double.compare(
+            getHostScoreCached(hostState.getHostUuid()),
+            getHostScoreCached(hostState1.getHostUuid()));
+
+    private final Comparator<Job> jobAverageTaskSizeComparator = (job, job1) -> {
+        if (job == null || job1 == null) {
+            return 0;
+        } else {
+            return Double.compare(job.calcAverageTaskSizeBytes(), job1.calcAverageTaskSizeBytes());
         }
     };
 
-    private final Comparator<HostState> hostStateScoreComparator = new Comparator<HostState>() {
-        @Override
-        public int compare(HostState hostState, HostState hostState1) {
-            return Double.compare(getHostScoreCached(hostState.getHostUuid()), getHostScoreCached(hostState1.getHostUuid()));
+    private final Comparator<HostState> hostStateReplicationSuitabilityComparator = (hostState, hostState1) -> {
+        // Treat recently-replicated-to hosts as having fewer than their reported available bytes
+        long availBytes = getAvailDiskBytes(hostState);
+        long availBytes1 = getAvailDiskBytes(hostState1);
+        if (recentlyReplicatedToHosts.getIfPresent(hostState.getHostUuid()) != null) {
+            availBytes /= 2;
         }
-    };
-
-    private final Comparator<Job> jobAverageTaskSizeComparator = new Comparator<Job>() {
-        @Override
-        public int compare(Job job, Job job1) {
-            if (job == null || job1 == null) {
-                return 0;
-            } else {
-                return Double.compare(job.calcAverageTaskSizeBytes(), job1.calcAverageTaskSizeBytes());
-            }
+        if (recentlyReplicatedToHosts.getIfPresent(hostState1.getHostUuid()) != null) {
+            availBytes1 /= 2;
         }
-    };
-
-    private final Comparator<HostState> hostStateReplicationSuitabilityComparator = new Comparator<HostState>() {
-        @Override
-        public int compare(HostState hostState, HostState hostState1) {
-            // Treat recently-replicated-to hosts as having fewer than their reported available bytes
-            long availBytes = getAvailDiskBytes(hostState);
-            long availBytes1 = getAvailDiskBytes(hostState1);
-            if (recentlyReplicatedToHosts.getIfPresent(hostState.getHostUuid()) != null) {
-                availBytes /= 2;
-            }
-            if (recentlyReplicatedToHosts.getIfPresent(hostState1.getHostUuid()) != null) {
-                availBytes1 /= 2;
-            }
-            return -Double.compare(availBytes, availBytes1);
-        }
+        return -Double.compare(availBytes, availBytes1);
     };
 
     private final ScheduledExecutorService taskExecutor;
@@ -559,16 +546,13 @@ public class SpawnBalancer implements Codable {
 
         public List<String> generateHostsSorted() {
             List<String> rv = new ArrayList<>(this.keySet());
-            Collections.sort(rv, new Comparator<String>() {
-                @Override
-                public int compare(String s, String s1) {
-                    int count = get(s).size();
-                    int count1 = get(s1).size();
-                    if (count != count1) {
-                        return Double.compare(count, count1);
-                    } else {
-                        return Double.compare(getHostScoreCached(s), getHostScoreCached(s1));
-                    }
+            Collections.sort(rv, (s, s1) -> {
+                int count = get(s).size();
+                int count1 = get(s1).size();
+                if (count != count1) {
+                    return Double.compare(count, count1);
+                } else {
+                    return Double.compare(getHostScoreCached(s), getHostScoreCached(s1));
                 }
             });
             hostsSorted = rv;
@@ -930,12 +914,8 @@ public class SpawnBalancer implements Codable {
     protected List<HostState> sortHostsByActiveTasks(Collection<HostState> hosts) {
         List<HostState> hostList = new ArrayList<>(hosts);
         removeDownHosts(hostList);
-        Collections.sort(hostList, new Comparator<HostState>() {
-            @Override
-            public int compare(HostState hostState, HostState hostState1) {
-                return Double.compare(countTotalActiveTasksOnHost(hostState), countTotalActiveTasksOnHost(hostState1));
-            }
-        });
+        Collections.sort(hostList,
+                         (hostState, hostState1) -> Double.compare(countTotalActiveTasksOnHost(hostState), countTotalActiveTasksOnHost(hostState1)));
         return hostList;
     }
 
@@ -1550,12 +1530,8 @@ public class SpawnBalancer implements Codable {
     public void fixTasksForFailedHost(List<HostState> hosts, String failedHost) {
         List<JobTask> tasks = findAllTasksAssignedToHost(failedHost);
         ArrayList<JobTask> sortedTasks = new ArrayList<>(tasks);
-        Collections.sort(sortedTasks, new Comparator<JobTask>() {
-            @Override
-            public int compare(JobTask o1, JobTask o2) {
-                return Long.compare(taskSizer.estimateTrueSize(o1), taskSizer.estimateTrueSize(o2));
-            }
-        });
+        Collections.sort(sortedTasks,
+                         (o1, o2) -> Long.compare(taskSizer.estimateTrueSize(o1), taskSizer.estimateTrueSize(o2)));
         hosts = sortHostsByDiskSpace(hosts);
         HashSet<String> modifiedJobIds = new HashSet<>();
         for (JobTask task : sortedTasks) {

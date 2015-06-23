@@ -48,12 +48,7 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
         if (log.isTraceEnabled()) {
             log.trace("New socket connection {}", ch);
-            ch.closeFuture().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    log.trace("channel closed {}", ch);
-                }
-            });
+            ch.closeFuture().addListener(future -> log.trace("channel closed {}", ch));
         }
         pipeline.addLast("decoder", new HttpRequestDecoder(maxInitialLineLength,maxHeaderSize,maxChunkSize));
         pipeline.addLast("encoder", new HttpResponseEncoder());

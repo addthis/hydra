@@ -60,25 +60,18 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
 
     /* This comparator should only be used within a block that is synchronized on hostAvailSlots.
     It does not internally synchronize to save a bunch of extra lock operations.*/
-    private final Comparator<HostState> hostStateComparator = new Comparator<HostState>() {
-        @Override
-        public int compare(HostState o1, HostState o2) {
-            int hostAvailSlots1 = hostAvailSlots.containsKey(o1.getHostUuid()) ? hostAvailSlots.get(o1.getHostUuid()) : 0;
-            int hostAvailSlots2 = hostAvailSlots.containsKey(o2.getHostUuid()) ? hostAvailSlots.get(o2.getHostUuid()) : 0;
-            if (hostAvailSlots1 != hostAvailSlots2) {
-                return Integer.compare(-hostAvailSlots1, -hostAvailSlots2); // Return hosts with large number of slots first
-            } else {
-                return Double.compare(o1.getMeanActiveTasks(), o2.getMeanActiveTasks()); // Return hosts with small meanActiveTask value first
-            }
+    private final Comparator<HostState> hostStateComparator = (o1, o2) -> {
+        int hostAvailSlots1 = hostAvailSlots.containsKey(o1.getHostUuid()) ? hostAvailSlots.get(o1.getHostUuid()) : 0;
+        int hostAvailSlots2 = hostAvailSlots.containsKey(o2.getHostUuid()) ? hostAvailSlots.get(o2.getHostUuid()) : 0;
+        if (hostAvailSlots1 != hostAvailSlots2) {
+            return Integer.compare(-hostAvailSlots1, -hostAvailSlots2); // Return hosts with large number of slots first
+        } else {
+            return Double.compare(o1.getMeanActiveTasks(), o2.getMeanActiveTasks()); // Return hosts with small meanActiveTask value first
         }
     };
 
     public SpawnQueuesByPriority() {
-        super(new Comparator<Integer>() {
-            public int compare(Integer int1, Integer int2) {
-                return -int1.compareTo(int2);
-            }
-        });
+        super((int1, int2) -> -int1.compareTo(int2));
         migrateHosts = CacheBuilder.newBuilder().expireAfterWrite(TASK_MIGRATION_INTERVAL_PER_HOST, TimeUnit.MILLISECONDS).build();
     }
 

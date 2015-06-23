@@ -55,11 +55,7 @@ public class BundleReporterTest {
         units = AutoField.newAutoField("units");
         period = TimeUnit.SECONDS.toNanos(60);
         reporter = new BundleReporter(output, name, value, group, units, period);
-        when(output.createBundle()).thenAnswer(new Answer<Object>() {
-            @Override public Object answer(InvocationOnMock invocation) throws Throwable {
-                return new MapBundle();
-            }
-        });
+        when(output.createBundle()).thenAnswer(invocation -> new MapBundle());
     }
 
     @Test
