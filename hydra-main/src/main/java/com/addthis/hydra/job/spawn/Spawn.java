@@ -377,6 +377,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
+    @Nonnull
     public HostFailWorker getHostFailWorker() {
         return hostFailWorker;
     }
@@ -385,6 +386,7 @@ public class Spawn implements Codable, AutoCloseable {
         return balancer;
     }
 
+    @Nonnull
     public PermissionsManager getPermissionsManager() { return permissionsManager; }
 
     @Nonnull
@@ -472,18 +474,15 @@ public class Spawn implements Codable, AutoCloseable {
         } finally {
             jobLock.unlock();
         }
-        Thread loadDependencies = new Thread() {
-            @Override
-            public void run() {
-                Set<String> jobIds = spawnState.jobs.keySet();
-                for (String jobId : jobIds) {
-                    IJob job = getJob(jobId);
-                    if (job != null) {
-                        updateJobDependencies(jobId);
-                    }
+        Thread loadDependencies = new Thread(() -> {
+            Set<String> jobIds = spawnState.jobs.keySet();
+            for (String jobId : jobIds) {
+                IJob job = getJob(jobId);
+                if (job != null) {
+                    updateJobDependencies(jobId);
                 }
             }
-        };
+        }, "spawn job dependency calculator");
         loadDependencies.setDaemon(true);
         loadDependencies.start();
     }
@@ -3077,10 +3076,12 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
+    @Nonnull
     public SpawnState getSpawnState() {
         return spawnState;
     }
 
+    @Nonnull
     public SpawnDataStore getSpawnDataStore() {
         return spawnDataStore;
     }
