@@ -33,6 +33,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 
+import com.addthis.basis.jvm.Shutdown;
 import com.addthis.basis.util.Bench;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
@@ -275,14 +276,15 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         return pathIndex.getIndex(path);
     }
 
-    /**
-     * @throws IllegalStateException If the virtual machine is already in the process
-     *          of shutting down
-     */
     @Override
     public void open() {
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> closing.set(true), "TreeMapper shutdown hook"));
+            boolean success = Shutdown.tryAddShutdownHook(
+                    new Thread(() -> closing.set(true), "TreeMapper shutdown hook"));
+
+            if (!success) {
+                closing.set(true);
+            }
 
             mapstats = new TreeMapperStats();
             resolve();
