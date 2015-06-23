@@ -162,8 +162,6 @@ public class Spawn implements Codable, AutoCloseable {
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
     static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
 
-    private static final int requestHeaderBufferSize   = Parameter.intValue("spawn.http.bufsize", 8192);
-
     public static final long inputMaxNumberOfCharacters = Parameter.longValue("spawn.input.max.length", 1_000_000);
 
     private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60_000);
@@ -441,15 +439,6 @@ public class Spawn implements Codable, AutoCloseable {
         return spawnState.uuid;
     }
 
-    public MeshyClient getMeshyClient() {
-        spawnMesh.waitLinkUp();
-        return spawnMesh.getClient();
-    }
-
-    public CuratorFramework getZkClient() {
-        return zkClient;
-    }
-
     private void closeZkClients() {
         spawnDataStore.close();
         zkClient.close();
@@ -592,25 +581,6 @@ public class Spawn implements Codable, AutoCloseable {
         return spawnState.jobDependencies;
     }
 
-    //* returns the jobs that depend on a given job. dependency is established if the job's ID is used as a job parameter
-    public Collection<Job> listDependentJobs(String jobId) {
-        ArrayList<Job> dependents = new ArrayList<>();
-        jobLock.lock();
-        try {
-            for (Job job : spawnState.jobs.values()) {
-                for (JobParameter param : job.getParameters()) {
-                    if (param.getValue() != null && param.getValue().equals(jobId)) {
-                        dependents.add(job);
-                        break;
-                    }
-                }
-            }
-            return dependents;
-        } finally {
-            jobLock.unlock();
-        }
-    }
-
     /**
      * Gets the backup times for a given job and node of all backup types by using MeshyClient. If the nodeId is -1 it will
      * get the backup times for all nodes.
@@ -668,39 +638,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     public Collection<Job> listJobsConcurrentImmutable() {
         return Collections.unmodifiableCollection(spawnState.jobs.values());
-    }
-
-    public JSONArray getTaskQueueAsJSONArray() {
-        taskQueuesByPriority.lock();
-        try {
-            JSONArray jsonArray = new JSONArray();
-            for (Integer priority : taskQueuesByPriority.keySet()) {
-                Map<String, HashMap<String, Object>> jobToTaskMap = new HashMap<>();
-                LinkedList<SpawnQueueItem> jobQueue = taskQueuesByPriority.get(priority);
-                for (JobKey jobkey : jobQueue) {
-                    JobTask jobtask = getTask(jobkey.getJobUuid(), jobkey.getNodeNumber());
-
-                    String hostStr = "";
-                    hostStr += jobtask.getHostUUID() + " ";
-                    for (JobTaskReplica jobTaskReplica : jobtask.getReplicas()) {
-                        hostStr += jobTaskReplica.getHostUUID() + " ";
-                    }
-
-                    HashMap<String, Object> taskHostMap = (HashMap<String, Object>) jobToTaskMap.get(jobkey.getJobUuid());
-                    if (taskHostMap == null) {
-                        taskHostMap = new HashMap<>();
-                    }
-
-                    taskHostMap.put(Integer.toString(jobtask.getTaskID()), hostStr);
-                    jobToTaskMap.put(jobkey.getJobUuid(), taskHostMap);
-                }
-                JSONObject jobResult = new JSONObject(jobToTaskMap);
-                jsonArray.put(jobResult);
-            }
-            return jsonArray;
-        } finally {
-            taskQueuesByPriority.unlock();
-        }
     }
 
     public int getTaskQueuedCount() {
@@ -1317,25 +1254,6 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    public String checkTaskDirText(String jobId, int node) {
-        jobLock.lock();
-        try {
-            Job job = getJob(jobId);
-            if (job == null) {
-                return "NULL JOB";
-            }
-            StringBuilder sb = new StringBuilder();
-            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasksSorted()) : Arrays.asList(job.getTask(node));
-            sb.append("Directory check for job ").append(job.getId()).append("\n");
-            for (JobTask task : tasks) {
-                sb.append("Task ").append(task.getTaskID()).append(": ").append(matchTaskToDirectories(task, true)).append("\n");
-            }
-            return sb.toString();
-        } finally {
-            jobLock.unlock();
-        }
-    }
-
     public JSONArray checkTaskDirJSON(String jobId, int node) {
         JSONArray resultList = new JSONArray();
         jobLock.lock();
@@ -1744,16 +1662,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     public String expandJob(Job job) throws TokenReplacerOverflowException {
         return expandJob(job.getId(), job.getParameters(), getJobConfig(job.getId()));
-    }
-
-    public boolean moveTask(JobKey jobKey, String sourceUUID, String targetUUID) {
-        if (sourceUUID == null || targetUUID == null || sourceUUID.equals(targetUUID)) {
-            log.warn("[task.move] fail: invalid input " + sourceUUID + "," + targetUUID);
-            return false;
-        }
-        TaskMover tm = new TaskMover(this, hostManager, jobKey, targetUUID, sourceUUID);
-        log.warn("[task.move] attempting move for " + jobKey);
-        return tm.execute();
     }
 
     public String expandJob(String id, Collection<JobParameter> parameters, String rawConfig)
@@ -2640,10 +2548,6 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    public void autobalance() {
-        autobalance(SpawnBalancer.RebalanceType.HOST, SpawnBalancer.RebalanceWeight.HEAVY);
-    }
-
     protected void autobalance(SpawnBalancer.RebalanceType type, SpawnBalancer.RebalanceWeight weight) {
         executeReallocationAssignments(balancer.getAssignmentsForAutoBalance(type, weight), false);
     }
@@ -3160,24 +3064,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     public WebSocketManager getWebSocketManager() {
         return this.webSocketManager;
-    }
-
-    public List<String> getJobsToAutobalance() {
-        List<String> rv = new ArrayList<>();
-        List<Job> autobalanceJobs = balancer.getJobsToAutobalance(hostManager.listHostStatus(null));
-        if (autobalanceJobs == null) {
-            return rv;
-        }
-        for (Job job : autobalanceJobs) {
-            if (job.getId() != null) {
-                rv.add(job.getId());
-            }
-        }
-        return rv;
-    }
-
-    public long getTaskTrueSize(String jobId, int node) {
-        return balancer.getTaskTrueSize(getTask(jobId, node));
     }
 
     public void toggleHosts(String hosts, boolean disable) {
