@@ -326,11 +326,7 @@ public class Spawn implements Codable, AutoCloseable {
         // connect to message broker or fail
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
-        if ("mesh".equals(queueType)) {
-            log.info("[init] connecting to mesh message queue");
-            this.spawnMQ = new SpawnMQImplMesh(zkClient, this);
-            this.spawnMQ.connectToMQ(getUuid());
-        } else if ("rabbit".equals(queueType)) {
+        if ("rabbit".equals(queueType)) {
             log.info("[init] connecting to rabbit message queue");
             this.spawnMQ = new SpawnMQImpl(zkClient, this);
             this.spawnMQ.connectToMQ(getUuid());
