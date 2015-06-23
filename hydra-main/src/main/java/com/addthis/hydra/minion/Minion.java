@@ -67,8 +67,6 @@ import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.mq.JobMessage;
 import com.addthis.hydra.job.mq.StatusTaskCantBegin;
 import com.addthis.hydra.job.mq.StatusTaskEnd;
-import com.addthis.hydra.mq.MeshMessageConsumer;
-import com.addthis.hydra.mq.MeshMessageProducer;
 import com.addthis.hydra.mq.MessageConsumer;
 import com.addthis.hydra.mq.MessageListener;
 import com.addthis.hydra.mq.MessageProducer;
@@ -79,8 +77,6 @@ import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
-import com.addthis.meshy.MeshyClient;
-import com.addthis.meshy.MeshyClientConnector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -102,7 +98,6 @@ import com.yammer.metrics.core.Timer;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.state.ConnectionState;
-import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.KeeperException;
 
 import org.eclipse.jetty.server.Server;
@@ -122,9 +117,6 @@ import org.slf4j.LoggerFactory;
 public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
-    private static final String meshHost = Parameter.value("mesh.host", "localhost");
-    private static final int meshPort = Parameter.intValue("mesh.port", 5000);
-    private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
     private static final int webPort = Parameter.intValue("minion.web.port", 5051);
     private static final int minJobPort = Parameter.intValue("minion.job.baseport", 0);
     private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
@@ -181,7 +173,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     Counter sendStatusFailAfterRetriesCount;
     final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
     final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
-    private MeshyClientConnector mesh;
 
     final File rootDir;
     final File stateFile;
@@ -325,44 +316,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     private void connectToMQ(@Nullable String queueType) throws IOException, InterruptedException {
         zkBatchControlProducer = new ZKMessageProducer(getZkClient());
-        if ("mesh".equals(queueType)) {
-            log.info("[init] connecting to mesh message queue");
-            final AtomicBoolean up = new AtomicBoolean(false);
-            mesh = new MeshyClientConnector(meshHost, meshPort, 1000, meshRetryTimeout) {
-                @Override
-                public void linkUp(MeshyClient client) {
-                    log.info("connected to mesh on {}", client.toString());
-                    up.set(true);
-                    synchronized (this) {
-                        this.notify();
-                    }
-                }
-
-                @Override
-                public void linkDown(MeshyClient client) {
-                    log.info("disconnected from mesh on {}", client.toString());
-                }
-            };
-            while (!up.get()) {
-                synchronized (mesh) {
-                    mesh.wait(1000);
-                }
-            }
-            batchControlProducer = MeshMessageProducer.constructAndOpen(mesh.getClient(), "CSBatchControl");
-            queryControlProducer = MeshMessageProducer.constructAndOpen(mesh.getClient(), "CSBatchQuery");
-            queuedHostMessages = new BlockingArrayQueue<>();
-            MeshMessageConsumer jobConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchJob", uuid);
-            jobConsumer.addRoutingKey(HostMessage.ALL_HOSTS);
-            jobConsumer.addMessageListener(message -> {
-                try {
-                    queuedHostMessages.put((HostMessage) message);
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-            });
-            batchControlConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchControl", uuid).addRoutingKey(HostMessage.ALL_HOSTS);
-            batchControlConsumer.addMessageListener(Minion.this);
-        } else if ("rabbit".equals(queueType)) {
+        if ("rabbit".equals(queueType)) {
             log.info("[init] connecting to rabbit message queue");
             connectToRabbitMQ();
         } else if (Strings.isNullOrEmpty(queueType)) {
