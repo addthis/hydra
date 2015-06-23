@@ -36,6 +36,7 @@ import com.addthis.hydra.job.web.resources.TaskResource;
 import com.addthis.hydra.util.WebSocketManager;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
@@ -85,7 +86,9 @@ public class SpawnService {
         String keyStorePassword = spawn.keyStorePassword;
         String keyManagerPassword = spawn.keyManagerPassword;
 
-        if ((keyStorePassword != null) && (keyManagerPassword != null) && (keyStorePath != null)) {
+        if (!Strings.isNullOrEmpty(keyStorePassword) &&
+            !Strings.isNullOrEmpty(keyManagerPassword) &&
+            !Strings.isNullOrEmpty(keyStorePath)) {
             SslSelectChannelConnector sslSelectChannelConnector = new SslSelectChannelConnector();
             sslSelectChannelConnector.setPort(spawn.webPortSSL);
             SslContextFactory sslContextFactory = sslSelectChannelConnector.getSslContextFactory();
