@@ -238,7 +238,9 @@ public class JobConfigManager {
         List<String> jobNodes = spawnDataStore.getChildrenNames(SPAWN_JOB_CONFIG_PATH);
         if (jobNodes != null) {
             // Use multiple threads to query the database, and gather the results together
-            ExecutorService executorService = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(loadThreads, loadThreads, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+            ExecutorService executorService = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(loadThreads, loadThreads, 1000L, TimeUnit.MILLISECONDS,
+
+                                                                                                             new LinkedBlockingQueue<>()));
             for (List<String> jobIdChunk : Lists.partition(jobNodes, jobChunkSize)) {
                 executorService.submit(new MapChunkLoader(jobs, jobIdChunk));
             }

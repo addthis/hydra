@@ -577,7 +577,7 @@ public class Spawn implements Codable, AutoCloseable {
         for (ScheduledBackupType backupType : ScheduledBackupType.getBackupTypes().values()) {
             final String typePrefix = "*/" + jobUUID + "/" + ((nodeId < 0) ? "*" : Integer.toString(nodeId)) + "/" + backupType.getPrefix() + "*";
             List<FileReference> files = new ArrayList<>(spawnMesh.getClient().listFiles(new String[]{typePrefix}));
-            fileDates.put(backupType, new TreeSet<Long>(Collections.reverseOrder()));
+            fileDates.put(backupType, new TreeSet<>(Collections.reverseOrder()));
             for (FileReference file : files) {
                 String filename = file.name.split("/")[4];
                 fileDates.get(backupType).add(backupType.parseDateFromName(filename).getTime());
@@ -2736,7 +2736,7 @@ public class Spawn implements Codable, AutoCloseable {
         if (shouldBlockTaskKick(liveHost)) {
             unavailable.add(liveHost);
         }
-        List<JobTaskReplica> replicas = (task.getReplicas() != null ? task.getReplicas() : new ArrayList<JobTaskReplica>());
+        List<JobTaskReplica> replicas = (task.getReplicas() != null ? task.getReplicas() : new ArrayList<>());
         for (JobTaskReplica replica : replicas) {
             HostState replicaHost = hostManager.getHostState(replica.getHostUUID());
             if (shouldBlockTaskKick(replicaHost)) {

@@ -151,7 +151,9 @@ public class DataStoreUtil {
     }
 
     private static void importJobDataParallel(List<String> jobIds, SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
-        ExecutorService executorService = new ThreadPoolExecutor(numCutoverThreads, numCutoverThreads, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        ExecutorService executorService = new ThreadPoolExecutor(numCutoverThreads, numCutoverThreads, 60, TimeUnit.SECONDS,
+
+                                                                 new LinkedBlockingQueue<>());
         AtomicBoolean gotFailures = new AtomicBoolean(false);
         int partitionSize = Math.max((int) Math.ceil((double) jobIds.size() / numCutoverThreads), 1);
         for (List<String> partition : Lists.partition(jobIds, partitionSize)) {

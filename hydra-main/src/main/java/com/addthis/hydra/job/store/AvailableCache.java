@@ -64,7 +64,7 @@ public abstract class AvailableCache<T> {
         }
         fetchThreads = fetchThreads > 0 ? fetchThreads : 2;
         executor = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(fetchThreads, fetchThreads, 1000L,
-                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()));
         //noinspection unchecked
         this.loadingCache = cacheBuilder.build(new CacheLoader<String, Optional<T>>() {
             @Override

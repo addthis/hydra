@@ -533,7 +533,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     }
 
     private JobKey[] updateJobKeyArray(JobKey[] keys, JobKey newKey) {
-        List<JobKey> keyList = keys == null ? new ArrayList<JobKey>() : new ArrayList<>(Arrays.asList(keys));
+        List<JobKey> keyList = keys == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(keys));
         keyList.add(newKey);
         return keyList.toArray(new JobKey[]{});
     }

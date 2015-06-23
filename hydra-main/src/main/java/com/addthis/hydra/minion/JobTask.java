@@ -174,7 +174,8 @@ public class JobTask implements Codable {
 
     public void clearFailureReplicas() {
         // Merge all failureRecoveryReplicas into the master list, then clear failureRecoveryReplicas
-        List<ReplicaTarget> finalReplicas = replicas != null ? new ArrayList<>(Arrays.asList(replicas)) : new ArrayList<ReplicaTarget>();
+        List<ReplicaTarget> finalReplicas = replicas != null ? new ArrayList<>(Arrays.asList(replicas)) :
+                                            new ArrayList<>();
         if (failureRecoveryReplicas != null) {
             finalReplicas.addAll(Arrays.asList(failureRecoveryReplicas));
         }

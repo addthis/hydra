@@ -74,7 +74,7 @@ public class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder
     private static final ExecutorService executor = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(threadCount, threadCount,
                     0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
+                                   new LinkedBlockingQueue<>(),
                     new ThreadFactoryBuilder().setDaemon(true).setNameFormat("goodle-drive-%d").build()),
             5, TimeUnit.SECONDS);
 

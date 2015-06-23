@@ -37,11 +37,11 @@ public class CommandTaskUpdateReplicas extends AbstractJobMessage {
     }
 
     public Set<String> getFailedHosts() {
-        return failedHosts != null ? failedHosts : new HashSet<String>();
+        return failedHosts != null ? failedHosts : new HashSet<>();
     }
 
     public List<ReplicaTarget> getNewReplicaHosts() {
-        return newReplicaHosts != null ? newReplicaHosts : new ArrayList<ReplicaTarget>();
+        return newReplicaHosts != null ? newReplicaHosts : new ArrayList<>();
     }
 
     @Override

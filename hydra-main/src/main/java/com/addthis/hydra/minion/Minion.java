@@ -161,11 +161,11 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     final Set<String> activeTaskKeys;
     final AtomicBoolean shutdown = new AtomicBoolean(false);
     final ExecutorService messageTaskExecutorService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()));
     // This next executor service only serves promote/demote requests, so that these will be performed quickly and not
     // wait on a lengthy revert / delete / etc.
     final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()));
     final Lock minionStateLock = new ReentrantLock();
     // Historical metrics
     Timer fileStatsTimer;

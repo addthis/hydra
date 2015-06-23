@@ -32,7 +32,7 @@ public class SpawnQueuesByPriorityTest {
     @Test
     public void hostSortingTest() {
         SpawnQueuesByPriority spawnQueuesByPriority = new SpawnQueuesByPriority();
-        spawnQueuesByPriority.put(0, new LinkedList<SpawnQueueItem>());
+        spawnQueuesByPriority.put(0, new LinkedList<>());
         HostState noSlots = makeHostState("h1", 0, 0);
         HostState oneSlotHighMeanActive = makeHostState("h2", 1, .95);
         HostState oneSlotLowMeanActive = makeHostState("h3", 1, .03);
