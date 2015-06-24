@@ -72,9 +72,9 @@
     <hydra.dep.jetty.version>8.1.4.v20120524</hydra.dep.jetty.version>
     <hydra.dep.netty3.version>3.9.3.Final</hydra.dep.netty3.version>
     <hydra.dep.netty4.version>4.0.28.Final</hydra.dep.netty4.version>
-    <dep.jackson.version>2.5.3</dep.jackson.version>
-    <dep.jackson.etc.version>2.5.3</dep.jackson.etc.version>
-    <dep.jackson.api.version>2.5.3</dep.jackson.api.version>
+    <dep.jackson.version>2.5.4</dep.jackson.version>
+    <dep.jackson.etc.version>2.5.4</dep.jackson.etc.version>
+    <dep.jackson.api.version>2.5.4</dep.jackson.api.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
     <hydra.dep.hadoop.version>2.4.0.2.1.1.0-385</hydra.dep.hadoop.version>
 
@@ -208,6 +208,11 @@
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-core</artifactId>
         <version>1.3</version>
+      </dependency>
+      <dependency>
+        <groupId>com.typesafe</groupId>
+        <artifactId>config</artifactId>
+        <version>1.3.0</version>
       </dependency>
 
       <!-- property controlled versions -->
