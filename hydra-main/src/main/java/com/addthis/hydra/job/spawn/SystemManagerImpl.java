@@ -22,6 +22,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
+import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -111,7 +112,7 @@ public class SystemManagerImpl implements SystemManager {
                                      .setSpawnHost(spawnHost)
                                      .setDisabled(disabled)
                                      .setDefaultReplicaCount(Spawn.DEFAULT_REPLICA_COUNT)
-                                     .setSslDefault(sslEnabled && spawn.defaultSSL)
+                                     .setSslDefault(sslEnabled && SpawnServiceConfiguration.SINGLETON.defaultSSL)
                                      .setAuthTimeout(authenticationTokenTimeout)
                                      .setSudoTimeout(authenticationSudoTimeout)
                                      .build();

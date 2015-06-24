@@ -135,9 +135,10 @@ export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localh
 export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspawn.queryhost=localhost -Dspawn.status.interval=6000 \
 -Dspawn.chore.interval=3000 -Dhttp.post.max=327680  -Dspawn.polltime=10000 -Dspawnbalance.min.disk.percent.avail.replicas=0.01 \
 -Dspawn.auth.ldap=false -Dmesh.port=5000 -Djob.store.remote=false -Dspawn.queue.new.task.last.slot.delay=0 -Dspawn.defaultReplicaCount=0 \
--Dbatch.brokerAddresses=localhost -Dcom.addthis.hydra.job.spawn.Spawn.keyStorePassword=$HYDRA_LOCAL_DIR/cert/keystore.password \
--Dcom.addthis.hydra.job.spawn.Spawn.keyManagerPassword=$HYDRA_LOCAL_DIR/cert/keystore.password \
--Dcom.addthis.hydra.job.spawn.Spawn.keyStorePath=$HYDRA_LOCAL_DIR/cert/keystore.jks -Dcom.addthis.hydra.job.spawn.Spawn.defaultSSL=false"
+-Dbatch.brokerAddresses=localhost -Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.keyStorePassword=$HYDRA_LOCAL_DIR/cert/keystore.password \
+-Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.keyManagerPassword=$HYDRA_LOCAL_DIR/cert/keystore.password \
+-Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.keyStorePath=$HYDRA_LOCAL_DIR/cert/keystore.jks \
+-Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.defaultSSL=false"
 
 export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dmeshy.autoMesh=false -Dmeshy.throttleLog=true \
 -Dmeshy.buffers.enable=true -Dmeshy.stream.maxopen=10000"

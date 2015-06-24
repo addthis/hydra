@@ -27,6 +27,7 @@ import java.net.URI;
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.SpawnService;
+import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +39,11 @@ public class AuthenticationResource {
 
     private final Spawn spawn;
 
+    private final SpawnServiceConfiguration configuration;
+
     public AuthenticationResource(Spawn spawn) {
         this.spawn = spawn;
+        this.configuration = SpawnServiceConfiguration.SINGLETON;
     }
 
     @POST
@@ -49,13 +53,13 @@ public class AuthenticationResource {
                           @FormParam("password") String password,
                           @Context UriInfo uriInfo) {
         URI uri = uriInfo.getRequestUri();
-        boolean usingSSL = (uri.getPort() == spawn.webPortSSL);
+        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
         try {
             String token = spawn.getPermissionsManager().login(username, password, usingSSL);
             Response.ResponseBuilder builder = Response.ok(token);
             builder.header("Access-Control-Allow-Origin",
                            "http://" + uriInfo.getAbsolutePath().getHost() +
-                           ":" + spawn.webPort);
+                           ":" + configuration.webPort);
             builder.header("Access-Control-Allow-Methods", "POST");
             return builder.build();
         } catch (Exception ex)  {
@@ -71,13 +75,13 @@ public class AuthenticationResource {
                              @FormParam("token") String token,
                              @Context UriInfo uriInfo) {
         URI uri = uriInfo.getRequestUri();
-        boolean usingSSL = (uri.getPort() == spawn.webPortSSL);
+        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
         try {
             User user = spawn.getPermissionsManager().authenticate(username, token);
             Response.ResponseBuilder builder = Response.ok(Boolean.toString(user != null));
             builder.header("Access-Control-Allow-Origin",
                            "http://" + uriInfo.getAbsolutePath().getHost() +
-                           ":" + spawn.webPort);
+                           ":" + configuration.webPort);
             builder.header("Access-Control-Allow-Methods", "POST");
             return builder.build();
         } catch (Exception ex)  {
@@ -93,13 +97,13 @@ public class AuthenticationResource {
                          @FormParam("password") String password,
                          @Context UriInfo uriInfo) {
         URI uri = uriInfo.getRequestUri();
-        boolean usingSSL = (uri.getPort() == spawn.webPortSSL);
+        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
         try {
             String sudoToken = spawn.getPermissionsManager().sudo(username, password, usingSSL);
             Response.ResponseBuilder builder = Response.ok(sudoToken);
             builder.header("Access-Control-Allow-Origin",
                            "http://" + uriInfo.getAbsolutePath().getHost() +
-                           ":" + spawn.webPort);
+                           ":" + configuration.webPort);
             builder.header("Access-Control-Allow-Methods", "POST");
             return builder.build();
         } catch (Exception ex)  {
@@ -114,7 +118,7 @@ public class AuthenticationResource {
                        @FormParam("token") String token,
                        @Context UriInfo uriInfo) {
         URI uri = uriInfo.getRequestUri();
-        boolean usingSSL = (uri.getPort() == spawn.webPortSSL);
+        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
         try {
             spawn.getPermissionsManager().logout(username, token);
         } catch (Exception ex)  {

@@ -66,40 +66,40 @@ public class SpawnService {
     private static final String webDir = Parameter.value("spawn.web.dir", "web");
     private static final String indexFilename = Parameter.value("spawn.index.file", "index.html");
 
-    private final int webPort;
-    private final int webPortSSL;
+    private final SpawnServiceConfiguration configuration;
+
+    private final boolean sslEnabled;
     private final Server jetty;
-    private final SpawnConfig config;
+    private final SpawnConfig servlets;
     private final WebSocketManager webSocketManager;
 
     private static String readFile(String path) throws IOException {
         return Files.toString(new File(path), Charsets.UTF_8).trim();
     }
 
-    public SpawnService(final Spawn spawn) throws Exception {
+    public SpawnService(final Spawn spawn, SpawnServiceConfiguration configuration) throws Exception {
         this.jetty = new Server();
-        this.webPort = spawn.webPort;
+        this.configuration = configuration;
 
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
-        selectChannelConnector.setPort(webPort);
-        String keyStorePath = spawn.keyStorePath;
-        String keyStorePassword = spawn.keyStorePassword;
-        String keyManagerPassword = spawn.keyManagerPassword;
+        selectChannelConnector.setPort(configuration.webPort);
+        String keyStorePath = configuration.keyStorePath;
+        String keyStorePassword = configuration.keyStorePassword;
+        String keyManagerPassword = configuration.keyManagerPassword;
 
         if (!Strings.isNullOrEmpty(keyStorePassword) &&
             !Strings.isNullOrEmpty(keyManagerPassword) &&
             !Strings.isNullOrEmpty(keyStorePath)) {
             SslSelectChannelConnector sslSelectChannelConnector = new SslSelectChannelConnector();
-            sslSelectChannelConnector.setPort(spawn.webPortSSL);
+            sslSelectChannelConnector.setPort(configuration.webPortSSL);
             SslContextFactory sslContextFactory = sslSelectChannelConnector.getSslContextFactory();
             sslContextFactory.setKeyStorePath(keyStorePath);
             sslContextFactory.setKeyStorePassword(readFile(keyStorePassword));
             sslContextFactory.setKeyManagerPassword(readFile(keyManagerPassword));
             log.info("Registering ssl connector");
             jetty.setConnectors(new Connector[]{selectChannelConnector, sslSelectChannelConnector});
-            spawn.getSystemManager().updateSslEnabled(true);
-            this.webPortSSL = spawn.webPortSSL;
-        } else if (spawn.requireSSL) {
+            sslEnabled = true;
+        } else if (configuration.requireSSL) {
             String message = "Missing one or more of \"com.addthis.hydra.job.spawn.Spawn.keyStorePath\", " +
                              "\"com.addthis.hydra.job.spawn.Spawn.keyStorePassword\", " +
                              "and \"com.addthis.hydra.job.spawn.Spawn.keyManagerPassword\". " +
@@ -107,12 +107,12 @@ public class SpawnService {
             throw new IllegalStateException(message);
         } else {
             log.info("Not registering ssl connector");
-            spawn.getSystemManager().updateSslEnabled(false);
             jetty.setConnectors(new Connector[]{selectChannelConnector});
-            this.webPortSSL = 0;
+            sslEnabled = false;
         }
+        spawn.getSystemManager().updateSslEnabled(sslEnabled);
 
-        this.config = new SpawnConfig();
+        this.servlets = new SpawnConfig();
         this.webSocketManager = spawn.getWebSocketManager();
 
         //instantiate resources
@@ -128,29 +128,29 @@ public class SpawnService {
         AuthenticationResource authenticationResource = new AuthenticationResource(spawn);
 
         //register resources
-        config.addResource(systemResource);
-        config.addResource(listenResource);
-        config.addResource(jobsResource);
-        config.addResource(macroResource);
-        config.addResource(commandResource);
-        config.addResource(taskResource);
-        config.addResource(aliasResource);
-        config.addResource(hostResource);
-        config.addResource(alertResource);
-        config.addResource(authenticationResource);
+        servlets.addResource(systemResource);
+        servlets.addResource(listenResource);
+        servlets.addResource(jobsResource);
+        servlets.addResource(macroResource);
+        servlets.addResource(commandResource);
+        servlets.addResource(taskResource);
+        servlets.addResource(aliasResource);
+        servlets.addResource(hostResource);
+        servlets.addResource(alertResource);
+        servlets.addResource(authenticationResource);
 
         //register providers
-        config.addProvider(OptionalQueryParamInjectableProvider.class);
-        config.addProvider(KVPairsProvider.class);
-        config.addProvider(new JacksonJsonProvider(Jackson.defaultMapper()));
+        servlets.addProvider(OptionalQueryParamInjectableProvider.class);
+        servlets.addProvider(KVPairsProvider.class);
+        servlets.addProvider(new JacksonJsonProvider(Jackson.defaultMapper()));
 
         //Feature settings
-        config.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);
+        servlets.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);
     }
 
     public void start() throws Exception {
-        log.info("[init] running spawn2 on port " + webPort +
-                 ((webPortSSL > 0) ? (" and port " + webPortSSL) : ""));
+        log.info("[init] running spawn2 on port " + configuration.webPort +
+                 (sslEnabled ? (" and port " + configuration.webPortSSL) : ""));
 
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
@@ -163,7 +163,7 @@ public class SpawnService {
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[]{resourceHandler, webSocketManager});
 
-        ServletContainer servletContainer = new ServletContainer(config);
+        ServletContainer servletContainer = new ServletContainer(servlets);
         ServletHolder sh = new ServletHolder(servletContainer);
 
         handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");

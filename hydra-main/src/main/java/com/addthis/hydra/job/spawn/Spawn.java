@@ -115,6 +115,7 @@ import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.SpawnService;
+import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
@@ -221,14 +222,6 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final HostFailWorker hostFailWorker;
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
-    @Nullable public final String keyStorePath;
-    @Nullable public final String keyStorePassword;
-    @Nullable public final String keyManagerPassword;
-
-    public final int webPort;
-    public final int webPortSSL;
-    public final boolean requireSSL;
-    public final boolean defaultSSL;
 
     @Nullable private final JobStore jobStore;
 
@@ -236,13 +229,6 @@ public class Spawn implements Codable, AutoCloseable {
     private Spawn(@JsonProperty("debug") String debug,
                   @JsonProperty(value = "queryPort", required = true) int queryPort,
                   @JsonProperty("queryHttpHost") String queryHttpHost,
-                  @JsonProperty(value = "webPort", required = true) int webPort,
-                  @JsonProperty(value = "webPortSSL", required = true) int webPortSSL,
-                  @JsonProperty(value = "requireSSL", required = true) boolean requireSSL,
-                  @JsonProperty(value = "defaultSSL", required = true) boolean defaultSSL,
-                  @JsonProperty(value = "keyStorePath") String keyStorePath,
-                  @JsonProperty(value = "keyStorePassword") String keyStorePassword,
-                  @JsonProperty(value = "keyManagerPassword") String keyManagerPassword,
                   @JsonProperty("httpHost") String httpHost,
                   @JsonProperty("dataDir") File dataDir,
                   @JsonProperty("stateFile") File stateFile,
@@ -268,13 +254,6 @@ public class Spawn implements Codable, AutoCloseable {
         this.stateFile = stateFile;
         this.permissionsManager = permissionsManager;
         this.jobDefaults = jobDefaults;
-        this.webPort = webPort;
-        this.webPortSSL = webPortSSL;
-        this.requireSSL = requireSSL;
-        this.defaultSSL = defaultSSL;
-        this.keyStorePath = keyStorePath;
-        this.keyStorePassword = keyStorePassword;
-        this.keyManagerPassword = keyManagerPassword;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -298,7 +277,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         
         this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort,
-                httpHost + ":" + webPort, authenticationTimeout, sudoTimeout);
+                httpHost + ":" + SpawnServiceConfiguration.SINGLETON.webPort, authenticationTimeout, sudoTimeout);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
@@ -365,7 +344,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public void startWebInterface() throws Exception {
-        spawnService = new SpawnService(this);
+        spawnService = new SpawnService(this, SpawnServiceConfiguration.SINGLETON);
         spawnService.start();
     }
 
