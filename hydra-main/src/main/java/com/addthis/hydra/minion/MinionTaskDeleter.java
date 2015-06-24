@@ -93,12 +93,10 @@ public class MinionTaskDeleter implements Codable {
                 try {
                     Thread.sleep(deleteCheckFrequency);
                     deleteStoredItems();
+                } catch (InterruptedException ex) {
+                    break;
                 } catch (Exception e) {
-                    if (e instanceof InterruptedException) {
-                        break;
-                    } else {
-                        log.warn("Exception during MinionTaskDeleter execution: " + e, e);
-                    }
+                    log.warn("Exception during MinionTaskDeleter execution: ", e);
                 }
             }
 
