@@ -247,9 +247,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("queueType") String queueType,
                   @Nullable @JacksonInject CuratorFramework providedZkClient,
                   @JsonProperty(value = "permissionsManager", required = true) PermissionsManager permissionsManager,
-                  @JsonProperty(value = "jobDefaults", required = true) JobDefaults jobDefaults,
-                  @Time(SECONDS) @JsonProperty(value = "authTimeout", required = true) int authenticationTimeout,
-                  @Time(SECONDS) @JsonProperty(value = "sudoTimeout", required = true) int sudoTimeout) throws Exception {
+                  @JsonProperty(value = "jobDefaults", required = true) JobDefaults jobDefaults) throws Exception {
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
         this.permissionsManager = permissionsManager;
@@ -275,9 +273,11 @@ public class Spawn implements Codable, AutoCloseable {
         }
         this.hostManager = new HostManager(zkClient);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
-        
-        this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort,
-                httpHost + ":" + SpawnServiceConfiguration.SINGLETON.webPort, authenticationTimeout, sudoTimeout);
+        this.systemManager = new SystemManagerImpl(
+                this, debug, queryHttpHost + ":" + queryPort,
+                httpHost + ":" + SpawnServiceConfiguration.SINGLETON.webPort,
+                SpawnServiceConfiguration.SINGLETON.authenticationTimeout,
+                SpawnServiceConfiguration.SINGLETON.sudoTimeout);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");

@@ -18,10 +18,13 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+import com.addthis.codec.annotations.Time;
 import com.addthis.codec.config.Configs;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class SpawnServiceConfiguration {
 
@@ -29,6 +32,8 @@ public class SpawnServiceConfiguration {
     public final int webPortSSL;
     public final boolean requireSSL;
     public final boolean defaultSSL;
+    public final int authenticationTimeout;
+    public final int sudoTimeout;
 
     @Nullable public final String keyStorePath;
     @Nullable public final String keyStorePassword;
@@ -49,6 +54,8 @@ public class SpawnServiceConfiguration {
                                      @JsonProperty(value = "webPortSSL", required = true) int webPortSSL,
                                      @JsonProperty(value = "requireSSL", required = true) boolean requireSSL,
                                      @JsonProperty(value = "defaultSSL", required = true) boolean defaultSSL,
+                                     @Time(SECONDS) @JsonProperty(value = "authTimeout", required = true) int authenticationTimeout,
+                                     @Time(SECONDS) @JsonProperty(value = "sudoTimeout", required = true) int sudoTimeout,
                                      @JsonProperty(value = "keyStorePath") String keyStorePath,
                                      @JsonProperty(value = "keyStorePassword") String keyStorePassword,
                                      @JsonProperty(value = "keyManagerPassword") String keyManagerPassword) {
@@ -56,6 +63,8 @@ public class SpawnServiceConfiguration {
         this.webPortSSL = webPortSSL;
         this.requireSSL = requireSSL;
         this.defaultSSL = defaultSSL;
+        this.authenticationTimeout = authenticationTimeout;
+        this.sudoTimeout = sudoTimeout;
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword;
         this.keyManagerPassword = keyManagerPassword;
