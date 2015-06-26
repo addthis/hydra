@@ -13,96 +13,82 @@
 -->
 <!DOCTYPE html>
 <html>
-    <head>
-        <link rel="stylesheet" type="text/css" href="css/main.css">
-        <script data-main="js/main.js" src="js/vendor/require.js"></script>
-        <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.png">
-        <link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.png">
-        <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-72x72.png">
-        <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png">
-        <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114x114.png">
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png">
-        <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.png">
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png">
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png">
-        <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
-        <link rel="icon" type="image/png" href="/android-chrome-192x192.png" sizes="192x192">
-        <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
-        <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
-        <link rel="manifest" href="/manifest.json">
-        <meta name="msapplication-TileColor" content="#00aba9">
-        <meta name="msapplication-TileImage" content="/mstile-144x144.png">
-        <meta name="theme-color" content="#ffffff">
-    </head>
-    <body>
-        <div id="topNavbar" class="navbar" role="navigation">
-            <div>
-                <a class="navbar-brand" href="#">Spawn</a>
-                <ul class="nav navbar-nav">
-                    <li>
-                        <a href="#jobs">Jobs</a>
-                    </li>
-                    <li>
-                        <a href="#macros">Macros</a>
-                    </li>
-                    <li>
-                        <a href="#commands">Commands</a>
-                    </li>
-                    <li>
-                        <a href="#alias">Alias</a>
-                    </li>
-                    <li>
-                        <a href="#hosts">Hosts</a>
-                    </li>
-                    <li>
-                        <a href="#alerts">Alerts</a>
-                    </li>
-                    <li class="dropdown-toggle">
-                        <a href="#settings" id="settingsDropDown" class="dropdown-toggle" data-toggle="dropdown">
-                            System
-                            <span class="caret"></span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a href="#git">Git</a></li>
-                            <li><a href="#rebalanceParams">Rebalance Parameters</a></li>
-                            <li class="divider"></li>
-                            <li><a id="healthCheckLink" href="#">Health Check</a></li>
-                            <li><a id="quiesceLink" href="#">Quiesce</a></li>
-                        </ul>
-                    </li>
+<head>
+    <link rel="stylesheet" type="text/css" href="css/main.css">
+    <script data-main="js/main.js" src="js/vendor/require.js"></script>
+    <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png">
+    <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="/android-chrome-192x192.png" sizes="192x192">
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="msapplication-TileColor" content="#00aba9">
+    <meta name="msapplication-TileImage" content="/mstile-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Spawn</a>
+        <ul class="nav navbar-nav">
+            <li class="active"><a href="#jobs">Jobs</a></li>
+            <li><a href="#macros">Macros</a></li>
+            <li><a href="#commands">Commands</a></li>
+            <li><a href="#alias">Alias</a></li>
+            <li><a href="#hosts">Hosts</a></li>
+            <li><a href="#alerts">Alerts</a></li>
+            <li class="dropdown-toggle">
+                <a href="#settings" id="settingsDropDown" class="dropdown-toggle" data-toggle="dropdown">
+                    System
+                    <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a href="#git">Git</a></li>
+                    <li><a href="#rebalanceParams">Rebalance Parameters</a></li>
+                    <li class="divider"></li>
+                    <li><a id="healthCheckLink" href="#">Health Check</a></li>
+                    <li><a id="quiesceLink" href="#">Quiesce</a></li>
                 </ul>
-            </div>
-            <div>
-                <span id='quiescedLabel' style='margin-left:100px;display:none;' class='label label-warning'>CLUSTER QUIESCED</span>
-                <div class="btn-group btn-group-sm pull-right"  style="margin:0px 0px 0px 14px;">
-                   <button id="loginButton" class='btn btn-default btn-small bottomaligned'>
-                        login
-                    </button>
-                    <button id="logoutButton" class='btn btn-default btn-small bottomaligned'>
-                        logout
-                    </button>
-                    <label>
-                        <input id="sudoCheckbox" type="checkbox" style="margin-left:10px;margin-right:5px">sudo
-                    </label>
-                </div>
-                <span id="usernameBox" class="pull-right"></span>
-                <div id="infoMetricBox" class="pull-right"></div>
-            </div>
-        </div>
-        <div id="main"></div>
-        <div style="display:none">
-            <form id="loginForm">
-                <table>
-                    <tr>
-                        <td style="vertical-align:bottom"><label for="loginUsername">Username: </label>
-                        <input type="text" id="loginUsername" value=""/>
-                        <td style="vertical-align:bottom"><label for="loginPassword">Password: </label>
-                        <input type="password" id="loginPassword" value=""/>
-                        <td style="vertical-align:bottom"><input class="btn btn-default" type="submit" value="Authenticate"/>
-                        <input type="hidden" id="loginToken" value=""/>
-                    </tr>
-                </table>
-            </form>
-        </div>
-    </body>
+            </li>
+        </ul>
+        <div id="infoMetricBox" class="navbar-text"></div>
+        <div id="quiescedLabel" class="label label-warning navbar-text" style="diplay:none">CLUSTER QUIESCED</div>
+        <div id="usernameBox" class="navbar-text"></div>
+        <form class="navbar-form navbar-right">
+            <button id="loginButton" class='btn btn-sm btn-default'>
+                login
+            </button>
+            <button id="logoutButton" class='btn btn-sm btn-default'>
+                logout
+            </button>
+            <label class="checkbox-inline">
+                <input id="sudoCheckbox" type="checkbox">sudo
+            </label>
+        </form>
+    </div>
+</nav>
+<div id="main"></div>
+<div style="display:none">
+    <form id="loginForm">
+        <table>
+            <tr>
+                <td style="vertical-align:bottom"><label for="loginUsername">Username: </label>
+                    <input type="text" id="loginUsername" value=""/>
+                <td style="vertical-align:bottom"><label for="loginPassword">Password: </label>
+                    <input type="password" id="loginPassword" value=""/>
+                <td style="vertical-align:bottom"><input class="btn btn-default" type="submit" value="Authenticate"/>
+                    <input type="hidden" id="loginToken" value=""/>
+            </tr>
+        </table>
+    </form>
+</div>
+</body>
 </html>

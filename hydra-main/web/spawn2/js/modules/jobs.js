@@ -1979,23 +1979,6 @@ function(
             var name = input.attr("name");
             this.model.set(name,value);
         },
-        resize:function(event){
-            this.views.editor.$el.css({
-                position:"absolute",
-                top:'59px',
-                bottom:this.views.paramBox.$el.height(),
-                right:0,
-                left:0
-            });
-            this.views.paramBox.$el.css({
-                position:"absolute",
-                bottom:0,
-                right:0,
-                left:0,
-                "z-index":100,
-                "background-color":"white"
-            });
-        }
     });
     var SettingDetailView = DetailView.extend({
         template: _.template(jobSettingTemplate),
@@ -2174,14 +2157,6 @@ function(
                     readOnly:true
                 }).render()
             };
-            //adjust height
-            this.views.editor.$el.css({
-                position:"absolute",
-                top:0,
-                bottom:0,
-                right:0,
-                left:0
-            });
             detail.append(this.views.editor.$el);
             this.$el.find("ul.nav.nav-tabs li#expTab").addClass("active");
             return this;

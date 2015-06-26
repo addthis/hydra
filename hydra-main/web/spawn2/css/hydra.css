@@ -13,61 +13,6 @@
  */
 
 /*layout css*/
-#main{
-    position: absolute;
-    bottom: 0px;
-    right: 0px;
-    left: 0px;
-    top: 50px;
-    min-width: 1034px;
-    overflow-x:auto;
-    overflow-y: hidden;
-}
-div#topNavbar.navbar-inverse{
-    -webkit-box-sizing: border-box;
-}
-div#main div.left-view{
-    position:absolute;
-    left:0px;
-    bottom:0px;
-    top:0px;
-}
-div#main div.right-view{
-    position:absolute;
-    bottom:0px;
-    top:0px;
-    right:0px;
-}
-div#main div.top-view{
-    position:absolute;
-    top:0px;
-    right:0px;
-    left:0px;
-}
-div#main div.divider-view{
-    position:absolute;
-    right:0px;
-    left:0px;
-}
-div#main div.bottom-view{
-    position:absolute;
-    right:0px;
-    bottom:0px;
-    left:0px;
-    padding-top: 5px;
-    background-color: white;
-}
-.btn{
-    font-weight:normal;
-}
-button.btn-small{
-    padding:0px 4px !important;
-}
-a.btn-small{
-    margin-top:-2px;
-    padding: 0px 9px !important;
-}
-table.table tr:hover,
 table.dataTable tr:hover{
     background-color: #FFFFCC !important;
     cursor:pointer;
@@ -76,53 +21,8 @@ table.dataTable tr:hover td.sorting_1{
     background-color: #FFFFCC !important;
     cursor:pointer;
 }
-.form-control[disabled]{
-    cursor:text !important;
-}
-table.table tr td{
-    border-left:none;
-    border-right:none;
-}
-button.active{
-    background-color: lightblue !important;
-}
-div.tooltip div.tooltip-inner{
-    max-width:400px;
-}
-td div.tooltip div.tooltip-inner,
-td div.tooltip div.tooltip-arrow{
-    opacity: 0.8;
-}
-/*bootstrap annoyance*/
-.navbar{
-    margin-bottom:0px;
-    width:100%;
-    min-width: 1060px;
-}
-.label-inverse {
-    background-color: #000000;
-}
-a.btn-tiny, button.btn-tiny{
-    padding: 0px 4px;
-}
-a.btn-blue,button.btn-blue{
-    color:blue;
-}
-a.btn-red,button.btn-red{
-    color:red;
-}
-a.btn-green,button.btn-green{
-    color:green;
-}
 i.icon-remove{
     background-position: -312px 0;
-}
-table.form-table input[type='text'],
-table.form-table input[type='number']{
-    width:80%;
-}
-table.form-table tr.row td:nth-child(1){
-    padding-top:14px;
 }
 /*layouts*/
 /*data tables*/
@@ -302,65 +202,4 @@ div.filter_links ul.filter li{
 }
 .sorting_desc_disabled {
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NDNGQ0VGRjQyMkMxMTFFMUExRjFBREFENUIyQTUzOEMiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NDNGQ0VGRjUyMkMxMTFFMUExRjFBREFENUIyQTUzOEMiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDoxNEMwMzk2QjIyQzExMUUxQTFGMUFEQUQ1QjJBNTM4QyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDoxNEMwMzk2QzIyQzExMUUxQTFGMUFEQUQ1QjJBNTM4QyIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pnt2WfgAAACJSURBVHjaYvz//z8DtQATAxXBqGGjhtHDMBZsgnfv3o0EUguA+B8OB2QoKyvPJ9Zl64B4PxBzYMFHgXgNKd78CcQtQPwZTfw9EDdjEScYZiAXoHtlPRAfICcCQMXJJCC+A+U/AeJeqDhZsXkXiCcA8W+owddIjk00MBuIVYF4KiGFjIO2cAQIMAAzGSDTlIC38gAAAABJRU5ErkJggg==');
-}
-
-div.detail-view{
-    position:absolute;
-    top:0px;
-    right:0;
-    left:0;
-    bottom:0;
-}
-div.detail-view div.top-bar{
-    position:absolute;
-    right:0;
-    left:0;
-    padding-top:4px;
-}
-div.detail-view div.top-bar+ul.nav.nav-tabs{
-    position:absolute;
-    top:30px;
-    right:0;
-    left:0;
-}
-div.detail-view ul.nav.nav-tabs li a{
-    padding: 3px 0px;
-}
-/*main-container div that immediately follows tabs (for tabbed detail layout)*/
-div.detail-view ul.nav.nav-tabs+div.main-container{
-    position:absolute;
-    top:65px;
-    right:0;
-    left:0;
-    bottom:0;
-    overflow-y:auto;
-}
-/*main-container div that immediately follows top bar (for non-tabbed detail layout)*/
-div.detail-view div.top-bar+div.main-container{
-    position:absolute;
-    top:30px;
-    right:0;
-    left:0;
-    bottom:0;
-    overflow-y:auto;
-}
-span#usernameBox{
-    position:absolute;
-    right:14px;
-    top: 25px;
-}
-span.icon_clear:hover {
-    color: #f52;
-}
-span.icon_clear {
-    position: absolute;
-    right: 10px;
-    display: none;
-    cursor: pointer;
-    font: bold 1em sans-serif;
-    color: #38468F;
-    margin-top: 5px;
-    opacity: 1;
-    float:left;
-    /*display: inline;*/
 }

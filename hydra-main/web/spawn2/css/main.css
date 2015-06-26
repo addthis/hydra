@@ -22,84 +22,21 @@
 @import '../js/vendor/ace/theme/textmate.css';
 @import 'hydra.css';
 
-div.task-divider{
-    padding-right: 15px;
-    padding-left: 15px;
-    background-color: #eeeeee;
-    border-radius: 4px;
-}
-div.job-detail-actions button{
-    width:60px;
-    vertical-align:top;
-}
-td.job-state div.label{
-    width:80px !important;
-}
-div.navbar-inverse div#infoMetricBox span.value{
-    color:white;
-}
-div.navbar-inverse div#infoMetricBox span.key{
-    color:#999999;
-}
 span#selectedCount{
     font-size:11px;
 }
 .hist-actions button{
     font-size:12px;
-    width:40px;
-}
-#quiescedLabel{
-    right: 180px;
-    position: absolute;
-    top: 26px;
-}
-div#infoMetricBox div{
-    display:inline;
-    font-size: 12px;
-}
-div#infoMetricBox span.key{
-    font-weight: bold;
-    margin-left:6px;
-}
-div#infoMetricBox span.value{
 }
 #taskTable_wrapper th{
     margin:0 !important;
     padding:0 !important;
 }
-div.navbar-inverse span#usernameBox{
-    color:#999999;
+div#infoMetricBox div{
+    display:inline;
+    font-size:12px;
 }
-.task-action{
-    width:60px;
-}
-.log-action{
-    width: 50px;
-}
-pre.log-container{
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    bottom: 0;
-    overflow: auto;
-    margin:0px;
-}
-td.job-id div.tooltip{
-    left:84px !important;
-}
-td.job-desc div.tooltip{
-    right:170px !important;
-}
-div#comfyJobTable_wrapper > div.dataTables_header {
-    width:100%;
-    min-width: 1060px;
-}
-div#comfyJobTable_wrapper > div.dataTables_scroll{
-    width:100%;
-    min-width: 1060px;
-}
-div#comfyJobTable_wrapper >> div.dataTables_footer{
-    width:100%;
-    min-width: 1060px;
+div#infoMetricBox span.key{
+    font-weight:bold;
+    margin-left:6px;
 }

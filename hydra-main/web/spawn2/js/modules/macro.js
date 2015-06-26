@@ -200,14 +200,6 @@ function(
                     keyName:"macro"
                 }).render()
             };
-            //adjust height
-            this.views.editor.$el.css({
-                position:"absolute",
-                top:'59px',
-                bottom:0,
-                right:0,
-                left:0
-            })
             this.$el.find("div#detailContainer").append(this.views.editor.$el);
             return this;
         },

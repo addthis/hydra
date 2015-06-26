@@ -313,12 +313,12 @@ function(
         checkQuiesced:function(){
             if(app.isQuiesced){
                 $("#quiesceLink").text("Reactivate");
-                $("span#quiescedLabel").show();
+                $("div#quiescedLabel").show();
                 $("#topNavbar").addClass("navbar-inverse");
             }
             else{
                 $("#quiesceLink").text("Quiesce");
-                $("span#quiescedLabel").hide();
+                $("div#quiescedLabel").hide();
                 $("#topNavbar").removeClass("navbar-inverse");
             }
         }

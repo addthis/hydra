@@ -12,7 +12,7 @@
     limitations under the License.
 -->
 <div id="topStatusBar" class="top-bar">
-    <ul class="breadcrumb pull-left" style="display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;">
+    <ul class="breadcrumb pull-left">
         <li>
             <a href="#jobs">
                 All Jobs
@@ -23,36 +23,38 @@
         </li>
     </ul>
     <%if(!_.isUndefined(job.id)){%>
-        <div id="stateTextBox" class="label <%-job.stateLabel%>" style="margin-right:10px;">
+        <div id="stateTextBox" class="label <%-job.stateLabel%>">
             <%-job.stateText%>
         </div>
-        <span style="margin-right:10px;">
+        <span>
             <strong>nodes</strong>
             <%-job.nodes%>
         </span>
-        <span id="statusBox" style="margin-right:10px;">
+        <span id="statusBox">
             <%-job.status%>
         </span>
     <%}%>
     <div class="job-detail-actions pull-right">
         <%if(!_.isUndefined(job.id)){%>
-            <button id="queryJobButton" class="btn btn-default btn-small btn-blue" style="display:<%-(job.qc_canQuery?'inline':'none')%>;">
+            <button id="queryJobButton" class="btn btn-sm btn-info"
+                    style="display:<%-(job.qc_canQuery?'inline':'none')%>;">
                 Query
             </button>
-            <button id="kickJobButton" class="btn btn-default btn-small btn-green">
+            <button id="kickJobButton" class="btn btn-sm btn-success">
                 Kick
             </button>
-            <button id="stopJobButton" class="btn btn-default btn-small btn-red">
+            <button id="stopJobButton" class="btn btn-sm btn-warning">
                 Stop
             </button>
-            <button id="killJobButton" class="btn btn-default btn-small btn-red">
+            <button id="killJobButton" class="btn btn-sm btn-danger">
                 Kill
             </button>
-            <button id="deleteJobButton" class="btn btn-default btn-small btn-red">
+            <button id="deleteJobButton" class="btn btn-sm btn-danger">
                 Delete
             </button>
             <div class="btn-group">
-                <button type="button" class="btn btn-default btn-small dropdown-toggle" data-toggle="dropdown">
+                <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
                    More
                     <span class="caret"></span>
                 </button>
@@ -67,15 +69,15 @@
                 </ul>
             </div>
         <%}%>
-        <button id="saveJobButton" class="btn btn-default btn-small" style="margin-left:8px;">
+        <button id="saveJobButton" class="btn btn-sm btn-default">
             Save
         </button>
-        <button id="commitJobButton" class="btn btn-default btn-small <%-(_.isUndefined(job.id)?'disabled':'')%>" style="margin-right:8px;">
+        <button id="commitJobButton" class="btn btn-sm btn-default <%-(_.isUndefined(job.id)?'disabled':'')%>">
             Commit
         </button>
     </div>
 </div>
-<ul class="nav nav-tabs nav-justified" style="margin-left: 0px; margin-bottom: 0px;">
+<ul class="nav nav-tabs nav-justified">
     <li id="confTab">
         <a href="#jobs/<%-(_.isUndefined(job.id)?(isClone?cloneId+'/conf/clone':'create/conf'):job.id+'/conf')%>">
             Configuration
