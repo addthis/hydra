@@ -163,12 +163,15 @@ function(
                             Cookies.set("username", username, {expires: loginTimeout});
                             Cookies.set("token", token, {expires: loginTimeout});
                             Cookies.set("tokenExpires", loginTimeout, {expires: loginTimeout});
+                            Cookies.set("sudo", "", {expires:0});
                             if (app.loginTimeoutId) {
                                 clearTimeout(app.loginTimeoutId);
                             }
                             app.loginTimeoutId = setTimeout(app.loginTimeout, app.loginExpirationSeconds * 1000);
                             app.user.set("username", username);
                             app.user.set("token", token);
+                            app.user.set("sudo", "");
+                            $("#sudoCheckbox").prop("checked", false);
                         } else {
                             var sudoTimeout = new Date(new Date().getTime() + app.sudoExpirationSeconds * 1000);
                             Cookies.set("sudo", token, {expires: sudoTimeout});
