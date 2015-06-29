@@ -13,7 +13,10 @@
  */
 package com.addthis.hydra.query.util;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 
 import java.util.ArrayList;
@@ -21,6 +24,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
@@ -117,6 +124,17 @@ public class QueryChannelUtil {
         }
     }
 
+    private static File temporaryDirectory(@Nullable String location) throws IOException {
+        Path result;
+        if (location == null) {
+            result = Files.createTempDirectory("QueryChannelUtil");
+        } else {
+            Path parent = Files.createDirectories(Paths.get(location));
+            result = Files.createTempDirectory(parent, "QueryChannelUtil");
+        }
+        return result.toFile();
+    }
+
     /** */
     private static void runQuery(String[] args) throws Exception {
         HashMap<String, String> qparam = new HashMap<>();
@@ -130,11 +148,12 @@ public class QueryChannelUtil {
         String job = null;
         String data = null;
         String out = null;
+        String tmp = null;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             int eqpos;
             if (arg.equals("help")) {
-                System.out.println("job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
+                System.out.println("job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] tmp=[tmpdir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
                 return;
             }
             if (arg.equals("trace")) {
@@ -161,6 +180,8 @@ public class QueryChannelUtil {
                 paths.add(LessBytes.toString(LessFiles.read(new File(arg.substring(6)))).trim());
             } else if (arg.startsWith("data=")) {
                 data = arg.substring(5);
+            } else if (arg.startsWith("tmp=")) {
+                tmp = arg.substring(4);
             } else if (arg.startsWith("out=")) {
                 out = arg.substring(4);
             } else if ((eqpos = arg.indexOf("=")) > 0) {
@@ -196,17 +217,24 @@ public class QueryChannelUtil {
 
         while (iter-- > 0) {
             long start = System.currentTimeMillis();
-            File tempDir = LessFiles.createTempDir();
-            BlockingNullConsumer consumer = new BlockingNullConsumer();
-            QueryOpProcessor proc = new QueryOpProcessor.Builder(consumer, lops.toArray(new String[lops.size()]))
-                    .tempDir(tempDir).build();
-            proc.appendOp(new BundleOutputWrapper(new PrintOp(sep, out),
-                    new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE)));
-            client.query(query, proc);
-            consumer.waitComplete();
-            LessFiles.deleteDir(tempDir);
-            if (!quiet) {
-                System.out.println(">>> done " + proc + " in " + ((System.currentTimeMillis() - start) / 1000.0) + " sec");
+            File tempDir = temporaryDirectory(tmp);
+            try {
+                BlockingNullConsumer consumer = new BlockingNullConsumer();
+                QueryOpProcessor proc = new QueryOpProcessor.Builder(consumer, lops.toArray(new String[lops.size()]))
+                        .tempDir(tempDir).build();
+                proc.appendOp(new BundleOutputWrapper(
+                        new PrintOp(sep, out),
+                        new DefaultChannelProgressivePromise(
+                                null, ImmediateEventExecutor.INSTANCE)));
+                client.query(query, proc);
+                consumer.waitComplete();
+                if (!quiet) {
+                    System.out.println(">>> done " + proc + " in " + ((System.currentTimeMillis() - start) / 1000.0) + " sec");
+                }
+            } finally {
+                if (!LessFiles.deleteDir(tempDir)) {
+                    log.error("Failure to delete {}", tempDir);
+                }
             }
         }
         System.exit(0);
