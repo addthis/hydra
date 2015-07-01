@@ -55,24 +55,24 @@ public class JobsResourceTest {
     public void saveJob() throws Exception {
         // stub spawn calls
         Job job = new Job("new_job_id", "megatron");
-        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null)).thenReturn(job);
-        Response response = resource.saveJob(kv, "megatron", "megatron", null);
+        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null, false)).thenReturn(job);
+        Response response = resource.saveJob(kv, "megatron", "megatron", null, false);
         assertEquals(200, response.getStatus());
         verifyZeroInteractions(spawn);
     }
 
     @Test
     public void saveJob_BadParam() throws Exception {
-        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null)).thenThrow(new IllegalArgumentException("bad param"));
-        Response response = resource.saveJob(kv, "megatron", "megatron", null);
+        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null, false)).thenThrow(new IllegalArgumentException("bad param"));
+        Response response = resource.saveJob(kv, "megatron", "megatron", null, false);
         assertEquals(400, response.getStatus());
         verifyZeroInteractions(spawn);
     }
 
     @Test
     public void saveJob_InternalError() throws Exception {
-        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null)).thenThrow(new Exception("internal error"));
-        Response response = resource.saveJob(kv, "megatron", "megatron", null);
+        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null, false)).thenThrow(new Exception("internal error"));
+        Response response = resource.saveJob(kv, "megatron", "megatron", null, false);
         assertEquals(500, response.getStatus());
         verifyZeroInteractions(spawn);
     }

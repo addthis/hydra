@@ -18,6 +18,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyCollectionOf;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -70,12 +71,12 @@ public class JobRequestHandlerImplTest {
     public void createJob() throws Exception {
         // stub spawn calls
         Job job = new Job("new_job_id", "megatron");
-        when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task")).thenReturn(job);
+        when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
         when(spawn.getJob("new_job_id")).thenReturn(job);
 
         kv.add("config", "my job config");
         kv.add("command", "default-task");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
 
         // verify spawn calls
         verify(spawn).updateJob(job);
@@ -123,7 +124,7 @@ public class JobRequestHandlerImplTest {
         kv.add("id", "existing_job_id");
         kv.add("config", "my job config");
         kv.add("command", "default-task");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
         assertEquals("command is updated", "default-task", job.getCommand());
 
         verifyNoSpawnCreateJobCall();
@@ -153,7 +154,7 @@ public class JobRequestHandlerImplTest {
 
         kv.add("id", "existing_job_id");
         kv.add("config", "my job config");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
         assertEquals("command is unchanged", "old-task", job.getCommand());
     }
 
@@ -184,7 +185,7 @@ public class JobRequestHandlerImplTest {
         when(spawn.getJobConfig("existing_job_id")).thenReturn("old job config");
 
         kv.add("id", "existing_job_id");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
 
         verify(spawn, never()).setJobConfig(anyString(), anyString());
         verify(spawn, never()).submitConfigUpdate(anyString(), anyString());
@@ -211,7 +212,7 @@ public class JobRequestHandlerImplTest {
         kv.add("sp_end-date", "140908"); // should be removed
         kv.add("sp_foo", "foo");
         kv.add("sp_bar", "bar"); // should be ignored
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
         assertEquals("# of parameters", 2, job.getParameters().size());
         JobParameter foo = null;
         JobParameter startDate = null;
@@ -229,12 +230,13 @@ public class JobRequestHandlerImplTest {
     }
 
     private void verifyNoSpawnCreateJobCall() throws Exception {
-        verify(spawn, never()).createJob(anyString(), anyInt(), anyCollectionOf(String.class), anyString(), anyString());
+        verify(spawn, never()).createJob(anyString(), anyInt(), anyCollectionOf(String.class),
+                                         anyString(), anyString(), anyBoolean());
     }
 
     private void callAndVerifyBadRequest() throws Exception {
         try {
-            impl.createOrUpdateJob(kv, username, token, sudo);
+            impl.createOrUpdateJob(kv, username, token, sudo, false);
             fail("IllegalArgumentException expected but was not thrown");
         } catch (IllegalArgumentException e) {
             // GOOD!

@@ -673,24 +673,27 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    public Job createJob(String creator, int taskCount, Collection<String> taskHosts, String minionType, String command) throws Exception {
+    public Job createJob(String creator, int taskCount, Collection<String> taskHosts,
+                         String minionType, String command, boolean defaults) throws Exception {
         jobLock.lock();
         try {
             Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
             job.setMinionType(minionType);
             job.setCommand(command);
             job.setState(JobState.IDLE);
-            job.setOwnerWritable(jobDefaults.ownerWritable);
-            job.setGroupWritable(jobDefaults.groupWritable);
-            job.setWorldWritable(jobDefaults.worldWritable);
-            job.setOwnerExecutable(jobDefaults.ownerExecutable);
-            job.setGroupExecutable(jobDefaults.groupExecutable);
-            job.setWorldExecutable(jobDefaults.worldExecutable);
-            job.setDailyBackups(jobDefaults.dailyBackups);
-            job.setWeeklyBackups(jobDefaults.weeklyBackups);
-            job.setMonthlyBackups(jobDefaults.monthlyBackups);
-            job.setHourlyBackups(jobDefaults.hourlyBackups);
-            job.setReplicas(jobDefaults.replicas);
+            if (defaults) {
+                job.setOwnerWritable(jobDefaults.ownerWritable);
+                job.setGroupWritable(jobDefaults.groupWritable);
+                job.setWorldWritable(jobDefaults.worldWritable);
+                job.setOwnerExecutable(jobDefaults.ownerExecutable);
+                job.setGroupExecutable(jobDefaults.groupExecutable);
+                job.setWorldExecutable(jobDefaults.worldExecutable);
+                job.setDailyBackups(jobDefaults.dailyBackups);
+                job.setWeeklyBackups(jobDefaults.weeklyBackups);
+                job.setMonthlyBackups(jobDefaults.monthlyBackups);
+                job.setHourlyBackups(jobDefaults.hourlyBackups);
+                job.setReplicas(jobDefaults.replicas);
+            }
             List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
             List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
             job.setTasks(tasksAssignedToHosts);
@@ -3059,6 +3062,9 @@ public class Spawn implements Codable, AutoCloseable {
     public SpawnState getSpawnState() {
         return spawnState;
     }
+
+    @Nonnull
+    public JobDefaults getJobDefaults() { return jobDefaults; }
 
     @Nonnull
     public SpawnDataStore getSpawnDataStore() {

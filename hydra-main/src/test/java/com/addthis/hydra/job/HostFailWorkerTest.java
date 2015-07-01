@@ -72,7 +72,8 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
     }
 
     private Job makeSingleTaskJob(String liveHost, String replicaHost) throws Exception {
-        Job job = spawn.createJob("a", 0, Arrays.asList(liveHost, replicaHost), "default", "dummy");
+        Job job = spawn.createJob("a", 0, Arrays.asList(liveHost, replicaHost), "default", "dummy", false);
+        job.setReplicas(spawn.getJobDefaults().replicas);
         JobTask task = new JobTask(liveHost, 0, 0);
         task.setReplicas(Arrays.asList(new JobTaskReplica(replicaHost, job.getId(), 0, 0)));
         job.setTasks(Arrays.asList(task));

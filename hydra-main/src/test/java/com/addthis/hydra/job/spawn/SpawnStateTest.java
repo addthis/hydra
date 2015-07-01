@@ -81,7 +81,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             host.setUp(true);
             host.setDead(false);
             spawn.hostManager.updateHostState(host);
-            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
+            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             job.setReplicas(0);
             spawn.setJobConfig(job.getId(), config);
             spawn.updateJob(job);
@@ -99,7 +99,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             host.setUp(true);
             host.setDead(false);
             spawn.hostManager.updateHostState(host);
-            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
+            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost",
                                                         ImmutableList.of(job.getId()),
                                                         SuppressChanges.FALSE, 0, null, null);
@@ -121,7 +121,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             host.setUp(true);
             host.setDead(false);
             spawn.hostManager.updateHostState(host);
-            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
+            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost",
                                                         ImmutableList.of(job.getId(), "foobar"),
                                                         SuppressChanges.FALSE, 0, null, null);

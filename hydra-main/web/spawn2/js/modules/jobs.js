@@ -149,7 +149,7 @@ function(
             return data;
         },
         defaults: function() {
-            return {
+            result = {
                 description:"(no title)",
                 state:4,
                 creator: app.user.get("username"),
@@ -168,7 +168,8 @@ function(
                 stateText:"",
                 stateLabel:"",
                 minionType:"default"
-            }
+            };
+            return $.extend(result, app.jobDefaults);
         },
         rebalance:function(){
             var self=this;
@@ -368,6 +369,7 @@ function(
                 parameters['id'] = self.id;
             }
             app.authQueryParameters(parameters);
+            parameters['defaults'] = false;
             return $.ajax({
                 url: "/job/save?" + $.param(parameters),
                 data: data,

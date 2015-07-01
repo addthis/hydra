@@ -41,6 +41,7 @@ function(
         loginDialog:null,
         loginTimeoutId:null,
         sudoTimeoutId:null,
+        jobDefaults: {},
         activeModels:[],
         showView:function(view,link,activeModels){
             var self=this;
@@ -72,6 +73,13 @@ function(
             // delete legacy cookies
             Cookies.set("username", "", {expires:0, path:"/spawn2"});
             Cookies.set("spawn", "", {expires:0, path:"/spawn2"});
+            $.ajax({
+                url: '/job/defaults',
+                dataType: 'json',
+                success: function(response) {
+                    app.jobDefaults = response;
+                }
+            });
             $.ajax({
                 url: '/update/settings',
                 dataType: 'json',

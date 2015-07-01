@@ -46,7 +46,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo) throws Exception {
+    public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo, boolean defaults) throws Exception {
         User user = spawn.getPermissionsManager().authenticate(username, token);
         if (user == null) {
             throw new InsufficientPrivilegesException(username, "invalid credentials provided");
@@ -67,7 +67,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", Minion.defaultMinionType),
-                    command);
+                    command, defaults);
             updateOwnership(job, user);
         } else {
             job = spawn.getJob(id);

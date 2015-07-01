@@ -46,6 +46,7 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobState;
@@ -117,6 +118,13 @@ public class JobsResource {
         } else {
             validationCodec = defaultCodec;
         }
+    }
+
+    @GET
+    @Path("/defaults")
+    @Produces(MediaType.APPLICATION_JSON)
+    public JobDefaults defaults() {
+        return spawn.getJobDefaults();
     }
 
     @POST
@@ -712,6 +720,17 @@ public class JobsResource {
         }
     }
 
+    /**
+     *
+     * @param kv          Horrible untyped key/value pairs for job configuration
+     * @param user        username for authentication
+     * @param token       users current token for authentication
+     * @param sudo        optional sudo token. Currently unused by this endpoint.
+     * @param defaults    If true then preserve legacy behavior of assigning defaults.
+     *                    This parameter is temporary is will be removed from the API shortly.
+     *                    The legacy behavior will no longer be supported.
+     * @return
+     */
     @POST
     @Path("/save")
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.WILDCARD})
@@ -719,10 +738,11 @@ public class JobsResource {
     public Response saveJob(@QueryParam("pairs") KVPairs kv,
                             @QueryParam("user") String user,
                             @QueryParam("token") String token,
-                            @QueryParam("sudo") String sudo) {
+                            @QueryParam("sudo") String sudo,
+                            @DefaultValue("true") @QueryParam("defaults") boolean defaults) {
         String id = KVUtils.getValue(kv, "", "id", "job");
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo);
+            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo, defaults);
             log.info("[job/save][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));
             return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
         } catch (IllegalArgumentException e) {
@@ -758,7 +778,7 @@ public class JobsResource {
         String id = KVUtils.getValue(kv, "", "id", "job");
         log.warn("[job/submit][user={}][id={}] This end point is deprecated", user, id);
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo);
+            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo, true);
             // optionally kicks the job/task
             requestHandler.maybeKickJobOrTask(kv, job);
             log.info("[job/submit][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));

@@ -36,7 +36,7 @@ public interface JobRequestHandler {
      * @throws Exception                If any other error occurred, typically an internal one 
      *                                  (500 response code)
      */
-    Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo) throws Exception;
+    Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo, boolean defaults) throws Exception;
 
     /**
      * Kicks the specified job if the right parameters are set. (THIS IS A LEGACY METHOD!)

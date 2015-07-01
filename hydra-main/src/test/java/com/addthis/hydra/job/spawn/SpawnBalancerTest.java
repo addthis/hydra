@@ -472,7 +472,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             installHostStateWithUUID(host, spawn, true);
         }
         spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
-        Job job = spawn.createJob("fsm", 3, hosts, "default", "a");
+        Job job = spawn.createJob("fsm", 3, hosts, "default", "a", false);
         JobTask task0 = job.getTask(0);
         JobTask task1 = job.getTask(1);
         job.setTaskState(task0, JobTaskState.BUSY);
@@ -503,7 +503,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
 
-        Job job = spawn.createJob("fsm", numTasks, hosts, Minion.defaultMinionType, "foo");
+        Job job = spawn.createJob("fsm", numTasks, hosts, Minion.defaultMinionType, "foo", false);
         job.setReplicas(numReplicas);
         for (JobTask task : job.getCopyOfTasks()) {
             task.setByteCount(taskSizeBytes);
