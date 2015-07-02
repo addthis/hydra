@@ -1119,6 +1119,12 @@ function(
                     "aTargets":[15]
                 },
                 {
+                    "mData": "priority",
+                    "bSearchable":true,
+                    //"bVisible":false, // this doesn't seem to do anything (for any column) -- guessing broken supers
+                    "sWidth":"0%" // does a decent job of emulating not being visible I guess
+                },
+                {
                     "sTitle":"",
                     "sClass":"job-actions center",
                     "mData": null,
