@@ -15,17 +15,25 @@ package com.addthis.hydra.job.mq;
 
 import com.addthis.hydra.task.run.TaskExitState;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = StatusTaskEnd.class)
 public class StatusTaskEnd extends AbstractJobMessage {
 
-    private static final long serialVersionUID = -2600124052404240597L;
+    @JsonProperty private int exitCode;
+    @JsonProperty private long fileCount;
+    @JsonProperty private long byteCount;
+    @JsonProperty private TaskExitState exitState;
+    @JsonProperty private String rebalanceSource;
+    @JsonProperty private String rebalanceTarget;
+    @JsonProperty private boolean wasQueued;
 
-    private int exitCode;
-    private long fileCount;
-    private long byteCount;
-    private TaskExitState exitState;
-    private String rebalanceSource;
-    private String rebalanceTarget;
-    private boolean wasQueued;
+    @JsonCreator
+    private StatusTaskEnd() {
+        super();
+    }
 
     public StatusTaskEnd(String host, String job, Integer node, int exit, long files, long bytes) {
         super(host, job, node);
@@ -53,11 +61,6 @@ public class StatusTaskEnd extends AbstractJobMessage {
     public StatusTaskEnd setExitState(TaskExitState exitState) {
         this.exitState = exitState;
         return this;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.STATUS_TASK_END;
     }
 
     public int getExitCode() {

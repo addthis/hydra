@@ -13,11 +13,10 @@
  */
 package com.addthis.hydra.mq;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+
+import com.addthis.codec.jackson.Jackson;
 
 import com.rabbitmq.client.BlockedListener;
 import com.rabbitmq.client.Channel;
@@ -26,7 +25,7 @@ import com.rabbitmq.client.Connection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RabbitMessageProducer implements MessageProducer {
+public class RabbitMessageProducer<T> implements MessageProducer<T> {
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMessageProducer.class);
 
@@ -52,10 +51,10 @@ public class RabbitMessageProducer implements MessageProducer {
     /**
      * Returns an {@link Closeable} object that must be closed.
      */
-    public static RabbitMessageProducer constructAndOpen(String exchangeName, String brokerAddresses,
+    public static <T> RabbitMessageProducer<T> constructAndOpen(String exchangeName, String brokerAddresses,
                                                          String brokerUsername, String brokerPassword,
                                                          BlockedListener blockedListener) throws IOException {
-        RabbitMessageProducer producer = new RabbitMessageProducer(exchangeName, brokerAddresses,
+        RabbitMessageProducer<T> producer = new RabbitMessageProducer<T>(exchangeName, brokerAddresses,
                                                                    brokerUsername, brokerPassword,
                                                                    blockedListener);
         producer.open();
@@ -81,12 +80,8 @@ public class RabbitMessageProducer implements MessageProducer {
         }
     }
 
-    @Override public void sendMessage(Serializable message, String routingKey) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(bos);
-        out.writeObject(message);
-        out.close();
-        channel.basicPublish(exchangeName, routingKey, null, bos.toByteArray());
+    @Override public void sendMessage(T message, String routingKey) throws IOException {
+        channel.basicPublish(exchangeName, routingKey, null, Jackson.defaultMapper().writeValueAsBytes(message));
         log.debug("[rabbit.producer] Sent '{}'", message);
     }
 }

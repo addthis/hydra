@@ -18,17 +18,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.addthis.codec.annotations.FieldConfig;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = CommandTaskUpdateReplicas.class)
 public class CommandTaskUpdateReplicas extends AbstractJobMessage {
 
-    private static final long serialVersionUID = -293871238710982L;
+    @JsonProperty private Set<String> failedHosts;
 
-    @FieldConfig(codable = true)
-    private final Set<String> failedHosts;
+    @JsonProperty private List<ReplicaTarget> newReplicaHosts;
 
-    @FieldConfig(codable = true)
-    private final List<ReplicaTarget> newReplicaHosts;
+    @JsonCreator
+    private CommandTaskUpdateReplicas() {
+        super();
+    }
 
     public CommandTaskUpdateReplicas(String hostUuid, String job, Integer node, Set<String> failedHosts, List<ReplicaTarget> newReplicaHosts) {
         super(hostUuid, job, node);
@@ -42,10 +46,5 @@ public class CommandTaskUpdateReplicas extends AbstractJobMessage {
 
     public List<ReplicaTarget> getNewReplicaHosts() {
         return newReplicaHosts != null ? newReplicaHosts : new ArrayList<>();
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.CMD_TASK_UPDATE_REPLICAS;
     }
 }

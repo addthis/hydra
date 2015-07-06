@@ -13,20 +13,23 @@
  */
 package com.addthis.hydra.job.mq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = StatusTaskPort.class)
 public class StatusTaskPort extends AbstractJobMessage {
 
-    private static final long serialVersionUID = 8452018350634440050L;
+    @JsonProperty private int port;
 
-    private int port;
+    @JsonCreator
+    private StatusTaskPort() {
+        super();
+    }
 
     public StatusTaskPort(String host, String job, Integer node, int port) {
         super(host, job, node);
         this.port = port;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.STATUS_TASK_PORT;
     }
 
     public int getPort() {

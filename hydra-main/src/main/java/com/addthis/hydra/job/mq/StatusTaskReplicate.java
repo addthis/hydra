@@ -13,10 +13,19 @@
  */
 package com.addthis.hydra.job.mq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = StatusTaskReplicate.class)
 public class StatusTaskReplicate extends AbstractJobMessage {
 
-    private static final long serialVersionUID = 3232052848594886109L;
-    private boolean isFullReplication;
+    @JsonProperty private boolean isFullReplication;
+
+    @JsonCreator
+    private StatusTaskReplicate() {
+        super();
+    }
 
     public StatusTaskReplicate(String host, String job, int node, boolean isFullReplication) {
         super(host, job, node);
@@ -25,10 +34,5 @@ public class StatusTaskReplicate extends AbstractJobMessage {
 
     public boolean isFullReplication() {
         return isFullReplication;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.STATUS_TASK_REPLICATE;
     }
 }

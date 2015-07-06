@@ -13,17 +13,18 @@
  */
 package com.addthis.hydra.job.mq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = CommandTaskNew.class)
 public class CommandTaskNew extends AbstractJobMessage {
 
-    private static final long serialVersionUID = 1117109955580588580L;
+    @JsonCreator
+    private CommandTaskNew() {
+        super();
+    }
 
     public CommandTaskNew(String hostUuid, String job, int node) {
         super(hostUuid, job, node);
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.CMD_TASK_NEW;
     }
 }

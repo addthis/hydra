@@ -15,10 +15,9 @@ package com.addthis.hydra.mq;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.Serializable;
 
-public interface MessageProducer extends Closeable {
+public interface MessageProducer<T> extends Closeable {
 
-    void sendMessage(Serializable message, String routingKey) throws IOException;
+    void sendMessage(T message, String routingKey) throws IOException;
 
 }

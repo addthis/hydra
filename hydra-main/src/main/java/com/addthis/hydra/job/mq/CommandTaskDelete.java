@@ -13,20 +13,23 @@
  */
 package com.addthis.hydra.job.mq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = CommandTaskDelete.class)
 public class CommandTaskDelete extends AbstractJobMessage {
 
-    private static final long serialVersionUID = 4855355176382463012L;
+    @JsonProperty private int runCount;
 
-    private int runCount;
+    @JsonCreator
+    private CommandTaskDelete() {
+        super();
+    }
 
     public CommandTaskDelete(String hostUuid, String job, Integer node, int runCount) {
         super(hostUuid, job, node);
         this.runCount = runCount;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.CMD_TASK_DELETE;
     }
 
     public int getRunCount() {

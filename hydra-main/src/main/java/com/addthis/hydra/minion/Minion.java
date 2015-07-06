@@ -17,7 +17,6 @@ import javax.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
 
 import java.lang.management.ManagementFactory;
 
@@ -58,7 +57,13 @@ import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.job.JobTaskErrorCode;
+import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
+import com.addthis.hydra.job.mq.CommandTaskNew;
+import com.addthis.hydra.job.mq.CommandTaskReplicate;
+import com.addthis.hydra.job.mq.CommandTaskRevert;
+import com.addthis.hydra.job.mq.CommandTaskStop;
+import com.addthis.hydra.job.mq.CommandTaskUpdateReplicas;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostMessage;
@@ -114,7 +119,7 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-public class Minion implements MessageListener, Codable, AutoCloseable {
+public class Minion implements MessageListener<CoreMessage>, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
     private static final int webPort = Parameter.intValue("minion.web.port", 5051);
@@ -192,11 +197,11 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     int minionPid = -1;
 
     RabbitQueueingConsumer batchJobConsumer;
-    BlockingArrayQueue<HostMessage> queuedHostMessages;
-    private MessageConsumer batchControlConsumer;
-    private MessageProducer queryControlProducer;
-    private MessageProducer zkBatchControlProducer;
-    private MessageProducer batchControlProducer;
+    BlockingArrayQueue<CoreMessage> queuedHostMessages;
+    private MessageConsumer<CoreMessage> batchControlConsumer;
+    private MessageProducer<CoreMessage> queryControlProducer;
+    private MessageProducer<CoreMessage> zkBatchControlProducer;
+    private MessageProducer<CoreMessage> batchControlProducer;
     Channel channel;
     private CuratorFramework zkClient;
     private ZkGroupMembership minionGroupMembership;
@@ -342,8 +347,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
             channel.queueBind(queueName, "CSBatchJob", HostMessage.ALL_HOSTS);
             batchJobConsumer = new RabbitQueueingConsumer(channel);
             channel.basicConsume(queueName, false, batchJobConsumer);
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + batchControlQueueSuffix,
-                                                             Minion.this, routingKeys, closeUnbindKeys);
+            batchControlConsumer = new RabbitMessageConsumer<CoreMessage>(channel, "CSBatchControl", uuid + batchControlQueueSuffix,
+                                                             Minion.this, routingKeys, closeUnbindKeys, CoreMessage.class);
             return true;
         } catch (IOException e) {
             log.error("Error connecting to rabbitmq at {}", batchBrokerAddresses, e);
@@ -479,7 +484,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     @Override
-    public void onMessage(Serializable message) {
+    public void onMessage(CoreMessage message) {
         try {
             handleMessage(message);
         } catch (Exception ex) {
@@ -487,50 +492,24 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         }
     }
 
-    private void handleMessage(Serializable message) throws Exception {
-        if (message instanceof CoreMessage) {
-            CoreMessage core;
-            try {
-                core = (CoreMessage) message;
-            } catch (Exception ex) {
-                log.warn("", ex);
-                return;
-            }
-            switch (core.getMessageType()) {
-                case STATUS_HOST_INFO:
-                    log.debug("[host.status] request for {}", uuid);
-                    sendHostStatus();
-                    break;
-                case CMD_TASK_STOP:
-                    messageTaskExecutorService.execute(new CommandTaskStopRunner(Minion.this, core));
-                    break;
-                case CMD_TASK_REVERT:
-                    messageTaskExecutorService.execute(new CommandTaskRevertRunner(Minion.this, core));
-                    break;
-                case CMD_TASK_DELETE:
-                    messageTaskExecutorService.execute(new CommandTaskDeleteRunner(Minion.this, core));
-                    break;
-                case CMD_TASK_REPLICATE:
-                    messageTaskExecutorService.execute(new CommandTaskReplicateRunner(Minion.this, core));
-                    break;
-                case CMD_TASK_PROMOTE_REPLICA:
-                    // Legacy; ignore
-                    break;
-                case CMD_TASK_NEW:
-                    messageTaskExecutorService.execute(new CommandCreateNewTask(Minion.this, core));
-                    break;
-                case CMD_TASK_DEMOTE_REPLICA:
-                    // Legacy; ignore
-                    break;
-                case CMD_TASK_UPDATE_REPLICAS:
-                    promoteDemoteTaskExecutorService.execute(new CommandTaskUpdateReplicasRunner(Minion.this, core));
-                    break;
-                case STATUS_TASK_JUMP_SHIP:
-                    break;
-                default:
-                    log.warn("[mq.core] unhandled type = {}", core.getMessageType());
-                    break;
-            }
+    private void handleMessage(CoreMessage message) throws Exception {
+        if(message instanceof HostState) {
+            log.debug("[host.status] request for {}", uuid);
+            sendHostStatus();
+        } else if(message instanceof CommandTaskStop) {
+            messageTaskExecutorService.execute(new CommandTaskStopRunner(Minion.this, message));
+        } else if(message instanceof CommandTaskRevert) {
+            messageTaskExecutorService.execute(new CommandTaskRevertRunner(Minion.this, message));
+        } else if(message instanceof CommandTaskDelete) {
+            messageTaskExecutorService.execute(new CommandTaskDeleteRunner(Minion.this, message));
+        } else if(message instanceof CommandTaskReplicate) {
+            messageTaskExecutorService.execute(new CommandTaskReplicateRunner(Minion.this, message));
+        } else if(message instanceof CommandTaskNew) {
+            messageTaskExecutorService.execute(new CommandCreateNewTask(Minion.this, message));
+        } else if(message instanceof CommandTaskUpdateReplicas) {
+            promoteDemoteTaskExecutorService.execute(new CommandTaskUpdateReplicasRunner(Minion.this, message));
+        } else {
+            log.warn("[mq.core] unhandled type = {}", message.getClass().toString());
         }
     }
 

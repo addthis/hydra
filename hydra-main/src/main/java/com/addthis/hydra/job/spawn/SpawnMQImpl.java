@@ -14,17 +14,16 @@
 package com.addthis.hydra.job.spawn;
 
 import java.io.IOException;
-import java.io.Serializable;
 
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.CoreMessage;
-import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.mq.MessageConsumer;
+import com.addthis.hydra.mq.MessageListener;
 import com.addthis.hydra.mq.MessageProducer;
 import com.addthis.hydra.mq.RabbitMQUtil;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
@@ -49,10 +48,10 @@ public class SpawnMQImpl implements SpawnMQ {
     private static final String batchBrokerUsername = Parameter.value("batch.brokerUsername", "guest");
     private static final String batchBrokerPassword = Parameter.value("batch.brokerPassword", "guest");
 
-    private MessageProducer batchJobProducer;
-    private MessageProducer batchControlProducer;
-    private MessageConsumer hostStatusConsumer;
-    private MessageConsumer batchControlConsumer;
+    private MessageProducer<CoreMessage> batchJobProducer;
+    private MessageProducer<CoreMessage> batchControlProducer;
+    private MessageConsumer<HostState> hostStatusConsumer;
+    private MessageConsumer<CoreMessage> batchControlConsumer;
     private Channel channel;
     private Spawn spawn;
     private final CuratorFramework zkClient;
@@ -87,8 +86,9 @@ public class SpawnMQImpl implements SpawnMQ {
 
     @Override
     public void connectToMQ(String hostUUID) throws IOException {
+        final MessageListener<HostState> hostStateListener = SpawnMQImpl.this::onMessage;
         QuiesceOnRabbitMQBlockedListener blockedListener = new QuiesceOnRabbitMQBlockedListener(spawn);
-        hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
+        hostStatusConsumer = new ZkMessageConsumer<HostState>(zkClient, "/minion", hostStateListener, HostState.class);
         batchJobProducer = RabbitMessageProducer.constructAndOpen("CSBatchJob", batchBrokeAddresses,
                                                                   batchBrokerUsername, batchBrokerPassword,
                                                                   blockedListener);
@@ -101,41 +101,37 @@ public class SpawnMQImpl implements SpawnMQ {
         batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl",
                                                          hostUUID + Minion.batchControlQueueSuffix,
                                                          this, ImmutableList.of("SPAWN"),
-                                                         ImmutableList.of());
+                                                         ImmutableList.of(), CoreMessage.class);
     }
 
     /**
      * wraps mq handler and looks for concurrent use
+     * @param message
      */
     @Override
-    public void onMessage(Serializable message) {
-        if (message instanceof CoreMessage) {
-            CoreMessage coreMessage = (CoreMessage) message;
-            lock.lock();
-            try {
-                spawn.handleMessage(coreMessage);
-            } catch (Exception ex)  {
-                log.warn("Error sending message {} to host {}: ", coreMessage.getMessageType(),
-                        coreMessage.getHostUuid(), ex);
-            } finally {
-                lock.unlock();
-            }
-        } else {
-            log.warn("[spawn.mq] received unknown message type:{}", message);
+    public void onMessage(CoreMessage message) {
+        lock.lock();
+        try {
+            spawn.handleMessage(message);
+        } catch (Exception ex)  {
+            log.warn("Error sending message {} to host {}: ", message.getClass(),
+                    message.getHostUuid(), ex);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
-    public void sendControlMessage(HostMessage msg) {
+    public void sendControlMessage(CoreMessage msg) {
         sendMessage(msg, batchControlProducer);
     }
 
     @Override
-    public void sendJobMessage(HostMessage msg) {
+    public void sendJobMessage(CoreMessage msg) {
         sendMessage(msg, batchJobProducer);
     }
 
-    private void sendMessage(HostMessage msg, MessageProducer producer) {
+    private void sendMessage(CoreMessage msg, MessageProducer<CoreMessage> producer) {
         try {
             producer.sendMessage(msg, msg.getHostUuid());
         } catch (IOException e)  {

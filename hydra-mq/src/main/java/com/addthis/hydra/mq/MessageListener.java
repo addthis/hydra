@@ -13,9 +13,7 @@
  */
 package com.addthis.hydra.mq;
 
-import java.io.Serializable;
+public interface MessageListener<T> {
 
-public interface MessageListener {
-
-    void onMessage(Serializable message);
+    void onMessage(T message);
 }

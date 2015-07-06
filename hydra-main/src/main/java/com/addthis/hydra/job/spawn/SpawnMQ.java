@@ -13,8 +13,7 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import java.io.Serializable;
-
+import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.mq.MessageListener;
 
@@ -22,7 +21,7 @@ import com.addthis.hydra.mq.MessageListener;
 /**
  * interface for Spawn messaging
  */
-public interface SpawnMQ extends MessageListener {
+public interface SpawnMQ extends MessageListener<CoreMessage> {
 
     /**
      * connect to messaging infrastructure
@@ -38,21 +37,21 @@ public interface SpawnMQ extends MessageListener {
      * @param message - the incoming message
      */
     @Override
-    void onMessage(Serializable message);
+    void onMessage(CoreMessage message);
 
     /**
      * Send a message to the control channel
      *
      * @param msg - the message to send
      */
-    void sendControlMessage(HostMessage msg);
+    void sendControlMessage(CoreMessage msg);
 
     /**
      * Send a message to the job channel
      *
      * @param msg - the message to send
      */
-    void sendJobMessage(HostMessage msg);
+    void sendJobMessage(CoreMessage msg);
 
     /**
      * closes all of the connections

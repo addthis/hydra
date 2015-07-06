@@ -13,12 +13,18 @@
  */
 package com.addthis.hydra.job.mq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 @SuppressWarnings("serial")
 public abstract class AbstractJobMessage implements JobMessage {
 
-    private String hostUuid;
-    private String jobUuid;
-    private Integer nodeId;
+    @JsonProperty private String hostUuid;
+    @JsonProperty private String jobUuid;
+    @JsonProperty private Integer nodeId;
+
+    @JsonCreator
+    protected AbstractJobMessage() {}
 
     public AbstractJobMessage(String hostUuid, String job, Integer node) {
         this.hostUuid = hostUuid;

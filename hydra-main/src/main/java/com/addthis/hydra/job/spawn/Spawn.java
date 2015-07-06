@@ -1878,76 +1878,64 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[mq.core] ignoring message from host: " + core.getHostUuid() + " because it is dead");
             return;
         }
-        switch (core.getMessageType()) {
-            default:
-                log.warn("[mq.core] unhandled type = " + core.getMessageType());
-                break;
-            case CMD_TASK_NEW:
-                // ignore these replication-related messages sent by minions
-                break;
-            case STATUS_HOST_INFO:
-                Set<String> upMinions = hostManager.minionMembers.getMemberSet();
-                HostState state = (HostState) core;
-                HostState oldState = hostManager.getHostState(state.getHostUuid());
-                if (oldState == null) {
-                    log.warn("[host.status] from unmonitored " + state.getHostUuid() + " = " + state.getHost() + ":" + state.getPort());
-                    taskQueuesByPriority.updateHostAvailSlots(state);
-                }
-                boolean hostEnabled = true;
-                if (spawnState.disabledHosts.contains(state.getHost()) ||
-                    spawnState.disabledHosts.contains(state.getHostUuid())) {
-                    hostEnabled = false;
-                    state.setDisabled(true);
+        if (core instanceof HostState) {
+            Set<String> upMinions = hostManager.minionMembers.getMemberSet();
+            HostState state = (HostState) core;
+            HostState oldState = hostManager.getHostState(state.getHostUuid());
+            if (oldState == null) {
+                log.warn("[host.status] from unmonitored " + state.getHostUuid() + " = " + state.getHost() + ":" + state.getPort());
+                taskQueuesByPriority.updateHostAvailSlots(state);
+            }
+            boolean hostEnabled = true;
+            if (spawnState.disabledHosts.contains(state.getHost()) ||
+                spawnState.disabledHosts.contains(state.getHostUuid())) {
+                hostEnabled = false;
+                state.setDisabled(true);
+            } else {
+                state.setDisabled(false);
+            }
+            // Propagate minion state for ui
+            if (upMinions.contains(state.getHostUuid()) && hostEnabled) {
+                state.setUp(true);
+            }
+            state.setUpdated();
+            sendHostUpdateEvent(state);
+            hostManager.updateHostState(state);
+        } else if (core instanceof StatusTaskBegin) {
+            StatusTaskBegin begin = (StatusTaskBegin) core;
+            SpawnMetrics.tasksStartedPerHour.mark();
+            if (systemManager.debug("-begin-")) {
+                log.info("[task.begin] :: " + begin.getJobKey());
+            }
+            try {
+                job = getJob(begin.getJobUuid());
+                if (job == null) {
+                    log.warn("[task.begin] on dead job " + begin.getJobKey() + " from " + begin.getHostUuid());
                 } else {
-                    state.setDisabled(false);
-                }
-                // Propagate minion state for ui
-                if (upMinions.contains(state.getHostUuid()) && hostEnabled) {
-                    state.setUp(true);
-                }
-                state.setUpdated();
-                sendHostUpdateEvent(state);
-                hostManager.updateHostState(state);
-                break;
-            case STATUS_TASK_BEGIN:
-                StatusTaskBegin begin = (StatusTaskBegin) core;
-                SpawnMetrics.tasksStartedPerHour.mark();
-                if (systemManager.debug("-begin-")) {
-                    log.info("[task.begin] :: " + begin.getJobKey());
-                }
-                try {
-                    job = getJob(begin.getJobUuid());
-                    if (job == null) {
-                        log.warn("[task.begin] on dead job " + begin.getJobKey() + " from " + begin.getHostUuid());
-                        break;
-                    }
                     if (job.getStartTime() == null) {
                         job.setStartTime(System.currentTimeMillis());
                     }
                     task = job.getTask(begin.getNodeID());
-                    if (!checkTaskMessage(task, begin.getHostUuid())) {
-                        break;
+                    if (checkTaskMessage(task, begin.getHostUuid())) {
+                        if (task != null) {
+                            job.setTaskState(task, JobTaskState.BUSY);
+                            task.incrementStarts();
+                            queueJobTaskUpdateEvent(job);
+                        } else {
+                            log.warn("[task.begin] done report for missing node " + begin.getJobKey());
+                        }
                     }
-                    if (task != null) {
-                        job.setTaskState(task, JobTaskState.BUSY);
-                        task.incrementStarts();
-                        queueJobTaskUpdateEvent(job);
-                    } else {
-                        log.warn("[task.begin] done report for missing node " + begin.getJobKey());
-                    }
-                } catch (Exception ex) {
-                    log.warn("", ex);
                 }
-                break;
-            case STATUS_TASK_CANT_BEGIN:
-                StatusTaskCantBegin cantBegin = (StatusTaskCantBegin) core;
-                log.info("[task.cantbegin] received cantbegin from " + cantBegin.getHostUuid() + " for task " + cantBegin.getJobUuid() + "," + cantBegin.getNodeID());
-                job = getJob(cantBegin.getJobUuid());
-                task = getTask(cantBegin.getJobUuid(), cantBegin.getNodeID());
-                if (job != null && task != null) {
-                    if (!checkTaskMessage(task, cantBegin.getHostUuid())) {
-                        break;
-                    }
+            } catch (Exception ex) {
+                log.warn("", ex);
+            }
+        } else if (core instanceof StatusTaskCantBegin) {
+            StatusTaskCantBegin cantBegin = (StatusTaskCantBegin) core;
+            log.info("[task.cantbegin] received cantbegin from " + cantBegin.getHostUuid() + " for task " + cantBegin.getJobUuid() + "," + cantBegin.getNodeID());
+            job = getJob(cantBegin.getJobUuid());
+            task = getTask(cantBegin.getJobUuid(), cantBegin.getNodeID());
+            if (job != null && task != null) {
+                if (checkTaskMessage(task, cantBegin.getHostUuid())) {
                     try {
                         job.setTaskState(task, JobTaskState.IDLE);
                         log.info("[task.cantbegin] kicking " + task.getJobKey());
@@ -1955,38 +1943,34 @@ public class Spawn implements Codable, AutoCloseable {
                     } catch (Exception ex) {
                         log.warn("[task.schedule] failed to reschedule task for " + task.getJobKey(), ex);
                     }
-                } else {
-                    log.warn("[task.cantbegin] received cantbegin from " + cantBegin.getHostUuid() + " for nonexistent job " + cantBegin.getJobUuid());
                 }
-                break;
-            case STATUS_TASK_PORT:
-                StatusTaskPort port = (StatusTaskPort) core;
-                job = getJob(port.getJobUuid());
-                task = getTask(port.getJobUuid(), port.getNodeID());
-                if (task != null) {
-                    log.info("[task.port] " + job.getId() + "/" + task.getTaskID() + " @ " + port.getPort());
-                    task.setPort(port.getPort());
-                    queueJobTaskUpdateEvent(job);
-                }
-                break;
-            case STATUS_TASK_BACKUP:
-                StatusTaskBackup backup = (StatusTaskBackup) core;
-                job = getJob(backup.getJobUuid());
-                task = getTask(backup.getJobUuid(), backup.getNodeID());
-                if (task != null && task.getState() != JobTaskState.REBALANCE && task.getState() != JobTaskState.MIGRATING) {
-                    log.info("[task.backup] " + job.getId() + "/" + task.getTaskID());
-                    job.setTaskState(task, JobTaskState.BACKUP);
-                    queueJobTaskUpdateEvent(job);
-                }
-                break;
-            case STATUS_TASK_REPLICATE:
-                StatusTaskReplicate replicate = (StatusTaskReplicate) core;
-                job = getJob(replicate.getJobUuid());
-                task = getTask(replicate.getJobUuid(), replicate.getNodeID());
-                if (task != null) {
-                    if (!checkTaskMessage(task, replicate.getHostUuid())) {
-                        break;
-                    }
+            } else {
+                log.warn("[task.cantbegin] received cantbegin from " + cantBegin.getHostUuid() + " for nonexistent job " + cantBegin.getJobUuid());
+            }
+        } else if (core instanceof StatusTaskPort) {
+            StatusTaskPort port = (StatusTaskPort) core;
+            job = getJob(port.getJobUuid());
+            task = getTask(port.getJobUuid(), port.getNodeID());
+            if (task != null) {
+                log.info("[task.port] " + job.getId() + "/" + task.getTaskID() + " @ " + port.getPort());
+                task.setPort(port.getPort());
+                queueJobTaskUpdateEvent(job);
+            }
+        } else if (core instanceof StatusTaskBackup) {
+            StatusTaskBackup backup = (StatusTaskBackup) core;
+            job = getJob(backup.getJobUuid());
+            task = getTask(backup.getJobUuid(), backup.getNodeID());
+            if (task != null && task.getState() != JobTaskState.REBALANCE && task.getState() != JobTaskState.MIGRATING) {
+                log.info("[task.backup] " + job.getId() + "/" + task.getTaskID());
+                job.setTaskState(task, JobTaskState.BACKUP);
+                queueJobTaskUpdateEvent(job);
+            }
+        } else if (core instanceof StatusTaskReplicate) {
+            StatusTaskReplicate replicate = (StatusTaskReplicate) core;
+            job = getJob(replicate.getJobUuid());
+            task = getTask(replicate.getJobUuid(), replicate.getNodeID());
+            if (task != null) {
+                if (checkTaskMessage(task, replicate.getHostUuid())) {
                     log.info("[task.replicate] " + job.getId() + "/" + task.getTaskID());
                     JobTaskState taskState = task.getState();
                     if (taskState != JobTaskState.REBALANCE && taskState != JobTaskState.MIGRATING) {
@@ -1994,59 +1978,56 @@ public class Spawn implements Codable, AutoCloseable {
                     }
                     queueJobTaskUpdateEvent(job);
                 }
-                break;
-            case STATUS_TASK_REVERT:
-                StatusTaskRevert revert = (StatusTaskRevert) core;
-                job = getJob(revert.getJobUuid());
-                task = getTask(revert.getJobUuid(), revert.getNodeID());
-                if (task != null) {
-                    if (!checkTaskMessage(task, revert.getHostUuid())) {
-                        break;
-                    }
+            }
+        } else if (core instanceof StatusTaskRevert) {
+            StatusTaskRevert revert = (StatusTaskRevert) core;
+            job = getJob(revert.getJobUuid());
+            task = getTask(revert.getJobUuid(), revert.getNodeID());
+            if (task != null) {
+                if (checkTaskMessage(task, revert.getHostUuid())) {
                     log.info("[task.revert] " + job.getId() + "/" + task.getTaskID());
                     job.setTaskState(task, JobTaskState.REVERT, true);
                     queueJobTaskUpdateEvent(job);
                 }
-                break;
-            case STATUS_TASK_REPLICA:
-                StatusTaskReplica replica = (StatusTaskReplica) core;
-                job = getJob(replica.getJobUuid());
-                task = getTask(replica.getJobUuid(), replica.getNodeID());
-                if (task != null) {
-                    if (task.getReplicas() != null) {
-                        for (JobTaskReplica taskReplica : task.getReplicas()) {
-                            if (taskReplica.getHostUUID().equals(replica.getHostUuid())) {
-                                taskReplica.setVersion(replica.getVersion());
-                                taskReplica.setLastUpdate(replica.getUpdateTime());
-                            }
+            }
+        } else if (core instanceof StatusTaskReplica) {
+            StatusTaskReplica replica = (StatusTaskReplica) core;
+            job = getJob(replica.getJobUuid());
+            task = getTask(replica.getJobUuid(), replica.getNodeID());
+            if (task != null) {
+                if (task.getReplicas() != null) {
+                    for (JobTaskReplica taskReplica : task.getReplicas()) {
+                        if (taskReplica.getHostUUID().equals(replica.getHostUuid())) {
+                            taskReplica.setVersion(replica.getVersion());
+                            taskReplica.setLastUpdate(replica.getUpdateTime());
                         }
-                        log.info("[task.replica] version updated for " + job.getId() + "/" + task.getTaskID() + " ver " + task.getRunCount() + "/" + replica.getVersion());
-                        queueJobTaskUpdateEvent(job);
                     }
+                    log.info("[task.replica] version updated for " + job.getId() + "/" + task.getTaskID() + " ver " + task.getRunCount() + "/" + replica.getVersion());
+                    queueJobTaskUpdateEvent(job);
                 }
-                break;
-            case STATUS_TASK_END:
-                StatusTaskEnd end = (StatusTaskEnd) core;
-                log.info("[task.end] :: " + end.getJobUuid() + "/" + end.getNodeID() + " exit=" + end.getExitCode());
-                SpawnMetrics.tasksCompletedPerHour.mark();
-                try {
-                    job = getJob(end.getJobUuid());
-                    if (job == null) {
-                        log.warn("[task.end] on dead job " + end.getJobKey() + " from " + end.getHostUuid());
-                        break;
-                    }
+            }
+        } else if (core instanceof StatusTaskEnd) {
+            StatusTaskEnd end = (StatusTaskEnd) core;
+            log.info("[task.end] :: " + end.getJobUuid() + "/" + end.getNodeID() + " exit=" + end.getExitCode());
+            SpawnMetrics.tasksCompletedPerHour.mark();
+            try {
+                job = getJob(end.getJobUuid());
+                if (job == null) {
+                    log.warn("[task.end] on dead job " + end.getJobKey() + " from " + end.getHostUuid());
+                } else {
                     task = job.getTask(end.getNodeID());
-                    if (!checkTaskMessage(task, end.getHostUuid())) {
-                        break;
+                    if (checkTaskMessage(task, end.getHostUuid())) {
+                        if (task.isRunning()) {
+                            taskQueuesByPriority.incrementHostAvailableSlots(end.getHostUuid());
+                        }
+                        handleStatusTaskEnd(job, task, end);
                     }
-                    if (task.isRunning()) {
-                        taskQueuesByPriority.incrementHostAvailableSlots(end.getHostUuid());
-                    }
-                    handleStatusTaskEnd(job, task, end);
-                } catch (Exception ex) {
-                    log.warn("Failed to handle end message: " + ex, ex);
                 }
-                break;
+            } catch (Exception ex) {
+                log.warn("Failed to handle end message: " + ex, ex);
+            }
+        } else {
+            log.warn("[mq.core] unhandled type = " + core.getClass().toString());
         }
     }
 

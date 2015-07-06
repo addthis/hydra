@@ -15,13 +15,13 @@ package com.addthis.hydra.mq;
 
 import java.io.IOException;
 
-public interface MessageConsumer {
+public interface MessageConsumer<T> {
 
     void open() throws IOException;
 
     void close() throws IOException;
 
-    boolean addMessageListener(MessageListener messageListener);
+    boolean addMessageListener(MessageListener<T> messageListener);
 
-    boolean removeMessageListener(MessageListener messageListener);
+    boolean removeMessageListener(MessageListener<T> messageListener);
 }
