@@ -81,7 +81,7 @@ public class JobRequestHandlerImplTest {
         // verify spawn calls
         verify(spawn).updateJob(job);
         verify(spawn).setJobConfig("new_job_id", "my job config");
-        verify(spawn).submitConfigUpdate("new_job_id", null);
+        verify(spawn).submitConfigUpdate("new_job_id", "megatron", null);
     }
 
     @Test
@@ -131,7 +131,7 @@ public class JobRequestHandlerImplTest {
         // verify other spawn calls
         verify(spawn).updateJob(job);
         verify(spawn).setJobConfig("existing_job_id", "my job config");
-        verify(spawn).submitConfigUpdate("existing_job_id", null);
+        verify(spawn).submitConfigUpdate("existing_job_id", "megatron", null);
     }
 
     @Test
@@ -188,7 +188,7 @@ public class JobRequestHandlerImplTest {
         assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
 
         verify(spawn, never()).setJobConfig(anyString(), anyString());
-        verify(spawn, never()).submitConfigUpdate(anyString(), anyString());
+        verify(spawn, never()).submitConfigUpdate(anyString(), anyString(), anyString());
     }
 
     /**

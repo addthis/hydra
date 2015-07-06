@@ -677,7 +677,7 @@ public class Spawn implements Codable, AutoCloseable {
                          String minionType, String command, boolean defaults) throws Exception {
         jobLock.lock();
         try {
-            Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
+            Job job = new Job(UUID.randomUUID().toString(), creator);
             job.setMinionType(minionType);
             job.setCommand(command);
             job.setState(JobState.IDLE);
@@ -706,7 +706,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
             putJobInSpawnState(job);
             jobConfigManager.addJob(job);
-            submitConfigUpdate(job.getId(), null);
+            submitConfigUpdate(job.getId(), creator, null);
             return job;
         } finally {
             jobLock.unlock();
@@ -1485,13 +1485,13 @@ public class Spawn implements Codable, AutoCloseable {
      * @param jobId         The job to submit
      * @param commitMessage If specified, the commit message to use
      */
-    public void submitConfigUpdate(String jobId, String commitMessage) {
+    public void submitConfigUpdate(String jobId, String user, String commitMessage) {
         Job job;
         if (jobId == null || jobId.isEmpty() || (job = getJob(jobId)) == null) {
             return;
         }
         if (jobStore != null) {
-            jobStore.submitConfigUpdate(job.getId(), job.getOwner(), getJobConfig(jobId), commitMessage);
+            jobStore.submitConfigUpdate(job.getId(), user, getJobConfig(jobId), commitMessage);
         }
     }
 

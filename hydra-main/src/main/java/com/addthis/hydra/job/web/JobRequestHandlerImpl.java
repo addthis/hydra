@@ -38,7 +38,7 @@ import com.google.common.base.Strings;
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class JobRequestHandlerImpl implements JobRequestHandler {
-    
+
     private final Spawn spawn;
     
     public JobRequestHandlerImpl(Spawn spawn) {
@@ -96,7 +96,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         if (configMayHaveChanged) {
             // only update config if it may have changed
             spawn.setJobConfig(job.getId(), config);
-            spawn.submitConfigUpdate(job.getId(), kv.getValue("commit"));
+            spawn.submitConfigUpdate(job.getId(), username, kv.getValue("commit"));
         }
         return job;
     }

@@ -741,6 +741,9 @@ public class JobsResource {
                             @QueryParam("sudo") String sudo,
                             @DefaultValue("true") @QueryParam("defaults") boolean defaults) {
         String id = KVUtils.getValue(kv, "", "id", "job");
+        if (user == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Missing required parameter 'user'").build();
+        }
         try {
             Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo, defaults);
             log.info("[job/save][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));
@@ -777,6 +780,9 @@ public class JobsResource {
                               @QueryParam("sudo") String sudo) {
         String id = KVUtils.getValue(kv, "", "id", "job");
         log.warn("[job/submit][user={}][id={}] This end point is deprecated", user, id);
+        if (user == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Missing required parameter 'user'").build();
+        }
         try {
             Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo, true);
             // optionally kicks the job/task
