@@ -64,6 +64,15 @@ function(
                 self[modelName]=undefined;
             });
         },
+        redirectToLogin:function() {
+            var redirect;
+            if (window.location.hash) {
+                redirect = window.location.hash.substring(1);
+            } else {
+                redirect = "jobs";
+            }
+            window.location=app.authprefix() + "/spawn2/login.html?redirect=" + redirect;
+        },
         authprefix:function() {
             var useSSL = app.loginSSLDefault || (window.location.href.lastIndexOf("https", 0) == 0);
             return (useSSL ? "https://" : "http://") + window.location.hostname + ":" +
@@ -98,7 +107,7 @@ function(
                     }
                     if (window.location.href.search("login.html") == -1) {
                         if (!username || !token) {
-                            window.location=app.authprefix() + "/spawn2/login.html";
+                            app.redirectToLogin();
                         } else {
                             $.ajax({
                                 type: 'POST',
@@ -113,7 +122,7 @@ function(
                                         app.user.set("username", username);
                                         app.user.set("token", token);
                                     } else {
-                                        window.location=app.authprefix() + "/spawn2/login.html";
+                                        app.redirectToLogin();
                                     }
                                 },
                                 error: function(error) {
@@ -189,8 +198,16 @@ function(
                             }
                             app.sudoTimeoutId = setTimeout(app.sudoTimeout, app.sudoExpirationSeconds * 1000);
                         }
-                        if (window.location.href.search("login.html") > -1) {
-                            window.location="http://" + window.location.hostname + ":5052/spawn2/index.html#jobs";
+                        var currentUrl = window.location.href;
+                        if (currentUrl.indexOf("login.html") > -1) {
+                            var redirectLoc = currentUrl.indexOf("redirect=");
+                            var redirectHash;
+                            if (redirectLoc > -1) {
+                                redirectHash = currentUrl.substring(redirectLoc + 9);
+                            } else {
+                                redirectHash = "jobs";
+                            }
+                            window.location="http://" + window.location.hostname + ":5052/spawn2/index.html#" + redirectHash;
                         }
                     }
                 },
