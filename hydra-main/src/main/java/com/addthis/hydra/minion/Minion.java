@@ -275,7 +275,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
             }
             writeState();
             if (!Strings.isNullOrEmpty(queueType)) {
-                runner = new TaskRunner(this, "mesh".equals(queueType));
+                runner = new TaskRunner(this);
                 runner.start();
             }
             diskHealthCheck = new MinionWriteableDiskCheck(this);
