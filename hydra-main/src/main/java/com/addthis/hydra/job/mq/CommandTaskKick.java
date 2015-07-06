@@ -21,10 +21,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties({"killSignal", "retries"})
 public class CommandTaskKick implements JobMessage {
 
-    private static final long serialVersionUID = -7588140676324569250L;
+    private static final long serialVersionUID = -7588140676324569251L;
 
     @FieldConfig private String hostUuid;
     @FieldConfig private JobKey jobKey;
+    @FieldConfig private String owner;
+    @FieldConfig private String userGroup;
     @FieldConfig private int priority;
     @FieldConfig private int jobNodes;
     @FieldConfig private long runTime;
@@ -51,12 +53,14 @@ public class CommandTaskKick implements JobMessage {
 
     public CommandTaskKick() {}
 
-    public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, long runTime,
+    public CommandTaskKick(String host, JobKey jobKey, String owner, String userGroup, int priority, int jobNodes, long runTime,
                            int runCount, String config, String command, int hourlyBackups,
                            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas,
                            boolean autoRetry, int starts) {
         this.hostUuid = host;
         this.jobKey = jobKey;
+        this.owner = owner;
+        this.userGroup = userGroup;
         this.priority = priority;
         this.jobNodes = jobNodes;
         this.runTime = runTime;
@@ -96,6 +100,13 @@ public class CommandTaskKick implements JobMessage {
         return jobKey;
     }
 
+    public String getOwner() {
+        return this.owner;
+    }
+
+    public String getUserGroup() {
+        return this.userGroup;
+    }
     public int getJobNodes() {
         return jobNodes;
     }

@@ -831,8 +831,10 @@ public class JobTask implements Codable {
                                    .replace("{{node}}", String.valueOf(jobNode))
                                    .replace("{{nodes}}", String.valueOf(jobNodes));
             String setEnvironmentPrefix = String.format(
-                    "HYDRA_JOBDIR='%s' HYDRA_JOBID='%s' HYDRA_NODE='%s' HYDRA_NODES='%s' HYDRA_PORT='%s'",
-                    jobDir.getPath(), jobId, jobNode, jobNodes, portString);
+                    "HYDRA_JOBDIR='%s' HYDRA_JOBID='%s' HYDRA_NODE='%s' HYDRA_NODES='%s' " +
+                    "HYDRA_OWNER='%s' HYDRA_USERGROUP='%s' HYDRA_PORT='%s'",
+                    jobDir.getPath(), jobId, jobNode, jobNodes,
+                    kickMessage.getOwner(), kickMessage.getUserGroup(), portString);
             log.warn("[task.exec] starting {} with autoRetry={}", jobDir.getPath(), autoRetry);
             // create shell wrapper
             require(minion.deleteFiles(jobPid, jobPort, jobDone, jobStopped), "failed to delete files");

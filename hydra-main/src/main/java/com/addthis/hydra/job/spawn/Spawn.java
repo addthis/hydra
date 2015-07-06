@@ -2618,6 +2618,8 @@ public class Spawn implements Codable, AutoCloseable {
         CommandTaskKick kick = new CommandTaskKick(
                 task.getHostUUID(),
                 task.getJobKey(),
+                job.getOwner(),
+                job.getGroup(),
                 job.getPriority(),
                 job.getCopyOfTasks().size(),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
@@ -2674,9 +2676,11 @@ public class Spawn implements Codable, AutoCloseable {
                 task.setRebalanceTarget(null);
             }
         }
-        CommandTaskKick kick = new CommandTaskKick(
+        final CommandTaskKick kick = new CommandTaskKick(
                 task.getHostUUID(),
                 task.getJobKey(),
+                job.getOwner(),
+                job.getGroup(),
                 job.getPriority(),
                 job.getCopyOfTasks().size(),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
