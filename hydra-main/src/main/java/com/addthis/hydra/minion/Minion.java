@@ -22,7 +22,6 @@ import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 
 import java.net.InetAddress;
-import java.net.ServerSocket;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -118,8 +117,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
     private static final int webPort = Parameter.intValue("minion.web.port", 5051);
-    private static final int minJobPort = Parameter.intValue("minion.job.baseport", 0);
-    private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
     private static final String group = System.getProperty("minion.group", "none");
     private static final String localHost = System.getProperty("minion.localhost");
     private static final String batchBrokerAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
@@ -179,7 +176,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     final File liveEverywhereMarkerFile;
     final String myHost;
     long startTime;
-    int nextPort;
     String user;
     String path;
     TaskRunner runner;
@@ -213,7 +209,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
         // null placeholder for now
         rootDir = null;
-        nextPort = 0;
         startTime = 0;
         stateFile = null;
         liveEverywhereMarkerFile = null;
@@ -231,7 +226,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private Minion(@JsonProperty("dataDir") File rootDir,
                    @Nullable @JsonProperty("queueType") String queueType) throws Exception {
         this.rootDir = rootDir;
-        nextPort = minJobPort;
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
         liveEverywhereMarkerFile = new File(rootDir, "liveeverywhere.marker");
@@ -782,30 +776,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
             log.error("[mq.ctrl.send] fail after retrying <INITIATING JVM SHUTDOWN>");
             shutdown();
         }
-    }
-
-    synchronized int findNextPort() {
-        if (minJobPort == 0) {
-            return 0;
-        }
-        int startPort = nextPort;
-        while (true) {
-            if (nextPort > maxJobPort) {
-                nextPort = minJobPort;
-            }
-            try {
-                ServerSocket ss = new ServerSocket(nextPort++);
-//              ss.setReuseAddress(true);
-                ss.close();
-                break;
-            } catch (Exception ex) {
-                if (startPort == nextPort) {
-                    throw new RuntimeException("unable to find any free ports");
-                }
-                log.warn("[nextport] skipping port {}", nextPort, ex);
-            }
-        }
-        return nextPort;
     }
 
     void removeJobFromQueue(JobKey key, boolean sendToSpawn) {

@@ -180,8 +180,7 @@ class MinionHandler extends AbstractHandler {
             int count = minion.updateJobsMeta(new File(kv.getValue("dir", ".")));
             response.getWriter().write("imported " + count + " jobs");
         } else if (target.equals("/xdebug/findnextport")) {
-            int port = minion.findNextPort();
-            response.getWriter().write("port: " + port);
+            response.getWriter().write("port: " + 0);
         } else if (target.equals("/active.tasks")) {
             Minion.capacityLock.lock();
             try {

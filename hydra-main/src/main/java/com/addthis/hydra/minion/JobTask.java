@@ -823,7 +823,7 @@ public class JobTask implements Codable {
             if (jobConfig != null) {
                 LessFiles.write(new File(jobDir, "job.conf"), LessBytes.toBytes(jobConfig), false);
             }
-            String portString = String.valueOf(minion.findNextPort());
+            String portString = String.valueOf(0);
             // create exec command
             jobCommand = jobCommand.replace("{{jobdir}}", jobDir.getPath())
                                    .replace("{{jobid}}", jobId)
