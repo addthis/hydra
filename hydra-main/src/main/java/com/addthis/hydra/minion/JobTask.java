@@ -334,10 +334,10 @@ public class JobTask implements Codable {
     /* If minion detects that a task was running when the minion was shut down, attempt to recover by looking for the pid */
     private void recoverWorkItem() {
         try {
-            if (isRunning()) {
+            if ((startTime > 0) && (replicateStartTime == 0) && (backupStartTime == 0)) {
                 log.warn("[restore] {} as running", getName());
                 exec(this.kick, false);
-            } else if (isReplicating()) {
+            } else if ((replicateStartTime > 0) && (backupStartTime == 0)) {
                 log.warn("[restore] {} as replicating", getName());
                 execReplicate(null, null, false, false, false);
             } else if (isBackingUp()) {
