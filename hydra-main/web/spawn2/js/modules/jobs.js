@@ -1915,9 +1915,6 @@ function(
             'change select#command':'handleCommandInputChange'
         }, DetailView.prototype.events),
         initialize:function(options){
-            if (options.isClone) {
-                delete options.model.attributes.creator;
-            }
             DetailView.prototype.initialize.apply(this,[options]);
             _.bindAll(this,'render','template');
             this.configModel=options.configModel;
