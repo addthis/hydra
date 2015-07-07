@@ -761,21 +761,22 @@ function(
             var data= app.jobCollection.get(jobId).pick([
                 "backups",
                 'command',
-                'creator',
                 'dailyBackups',
                 'description',
-                'dontDeleteMe',
                 'dontCloneMe',
                 'dontAutoBalanceMe',
+                'group',
+                'groupExecutable',
+                'groupWritable',
                 'hourlyBackups',
                 'maxRunTime',
                 'maxSimulRunning',
                 'minionType',
                 'monthlyBackups',
                 'nodes',
-                'onComplete',
-                'onError',
                 'owner',
+                'ownerExecutable',
+                'ownerWritable',
                 'parameters',
                 'priority',
                 'qc_canQuery',
@@ -786,11 +787,12 @@ function(
                 'rekickTimeout',
                 'replicas',
                 'replicationFactor',
-                'weeklyBackups'
+                'weeklyBackups',
+                'worldExecutable',
+                'worldWritable',
             ]);
             data.description = "CLONE "+data.description;
             app.job = new Jobs.Model(data);
-            //app.job = app.jobCollection.get(jobId).clone();
             app.job.cloneId=jobId;
         }
         if(_.isUndefined(app.configModel) || !_.isEqual(app.configModel.get("jobUuid"),jobId)){

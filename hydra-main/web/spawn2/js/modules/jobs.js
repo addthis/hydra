@@ -1917,13 +1917,6 @@ function(
         initialize:function(options){
             if (options.isClone) {
                 delete options.model.attributes.creator;
-                delete options.model.attributes.owner;
-                delete options.model.attributes.group;
-                options.model.attributes.dontDeleteMe = false;
-                options.model.attributes.onComplete = "";
-                options.model.attributes.onCompleteTimeout = 0;
-                options.model.attributes.onError = "";
-                options.model.attributes.onErrorTimeout = 0;
             }
             DetailView.prototype.initialize.apply(this,[options]);
             _.bindAll(this,'render','template');
