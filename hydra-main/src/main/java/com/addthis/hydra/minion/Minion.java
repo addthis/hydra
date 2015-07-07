@@ -42,9 +42,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.addthis.basis.jvm.Shutdown;
+import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
-import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.LessNumbers;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
@@ -351,7 +352,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     static void shutdown() {
-        System.exit(1);
+        Shutdown.exit(1);
     }
 
     void disconnectFromMQ() {

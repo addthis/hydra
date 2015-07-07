@@ -28,8 +28,8 @@ import java.nio.file.Paths;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
-import com.addthis.basis.util.SimpleExec;
 import com.addthis.basis.util.LessStrings;
+import com.addthis.basis.util.SimpleExec;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
@@ -90,6 +90,9 @@ public class JobTask implements Codable {
     @FieldConfig String rebalanceSource;
     @FieldConfig String rebalanceTarget;
 
+    @FieldConfig volatile ReplicaTarget[] failureRecoveryReplicas;
+    @FieldConfig volatile ReplicaTarget[] replicas;
+
     Minion minion;
     Process process;
     Thread workItemThread;
@@ -112,9 +115,6 @@ public class JobTask implements Codable {
     File backupPid;
     File jobPort;
     Integer port;
-
-    volatile ReplicaTarget[] failureRecoveryReplicas;
-    volatile ReplicaTarget[] replicas;
 
     public JobTask(Minion minion) {this.minion = minion;}
 
@@ -343,9 +343,9 @@ public class JobTask implements Codable {
             } else if (isBackingUp()) {
                 log.warn("[restore] {} as backing up", getName());
                 execBackup(null, null, false);
-            } else if ((startTime > 0 || replicateStartTime > 0 || backupStartTime > 0)) {
+            } else if ((startTime > 0) || (replicateStartTime > 0) || (backupStartTime > 0)) {
                 // Minion had a process running that finished during the downtime; notify Spawn
-                log.warn("[restore]{} as previously active; now finished", getName());
+                log.warn("[restore] {} as previously active; now finished", getName());
                 startTime = 0;
                 replicateStartTime = 0;
                 backupStartTime = 0;
@@ -864,12 +864,11 @@ public class JobTask implements Codable {
             bash.append(") >" + logOutTmp + " 2>" + logErrTmp + " &\n");
             LessFiles.write(jobRun, LessBytes.toBytes(bash.toString()), false);
             runCount++;
+            this.startTime = System.currentTimeMillis();
         }
-        this.startTime = System.currentTimeMillis();
-        // save it
         save();
         minion.sendHostStatus();
-        // mark it active
+        // mark it active TODO: should this occur before sending updated host state?
         Minion.capacityLock.lock();
         try {
             minion.activeTaskKeys.add(getName());
@@ -882,27 +881,30 @@ public class JobTask implements Codable {
         workItemThread.start();
     }
 
-    public void execReplicate(String rebalanceSource, String rebalanceTarget, boolean replicateAllBackups, boolean execute, boolean wasQueued) throws Exception {
+    public void execReplicate(String rebalanceSource,
+                              String rebalanceTarget,
+                              boolean replicateAllBackups,
+                              boolean execute,
+                              boolean wasQueued) throws Exception {
         setRebalanceSource(rebalanceSource);
         setRebalanceTarget(rebalanceTarget);
         setWasQueued(wasQueued);
         if (log.isDebugEnabled()) {
             log.debug("[task.execReplicate] {}", this.getJobKey());
         }
-        require(testTaskIdle(), "task is not idle");
+        require(!execute || testTaskIdle(), "task is not idle");
         if (((replicas == null) || (replicas.length == 0))
             && ((failureRecoveryReplicas == null) || (failureRecoveryReplicas.length == 0))) {
             execBackup(rebalanceSource, rebalanceTarget, true);
             return;
         }
-        if (ProcessUtils.findActiveRsync(id, node) != null) {
+        if (execute && (ProcessUtils.findActiveRsync(id, node) != null)) {
             String msg = "Replicate failed because an existing rsync process was found for " + getName();
             log.warn("[task.execReplicate] {}", msg);
             sendEndStatus(JobTaskErrorCode.EXIT_REPLICATE_FAILURE);
             ProcessUtils.shell(Minion.echoWithDate_cmd + msg + " >> " + logErr.getCanonicalPath(), minion.rootDir);
             return;
         }
-        minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
         try {
             jobDir = LessFiles.initDirectory(
                     new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
@@ -920,10 +922,10 @@ public class JobTask implements Codable {
                 LessFiles.write(replicateRun, LessBytes.toBytes(replicateRunScript), false);
                 String replicateSHScript = generateReplicateSHScript(replicateAllBackups);
                 LessFiles.write(replicateSH, LessBytes.toBytes(replicateSHScript), false);
+                replicateStartTime = System.currentTimeMillis();
+                minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
+                save();
             }
-            replicateStartTime = System.currentTimeMillis();
-            // save it
-            save();
             // start watcher
             Runnable workItem = new ReplicateWorkItem(replicatePid, replicateRun, replicateDone, this,
                                                       rebalanceSource, rebalanceTarget, execute);
@@ -939,8 +941,7 @@ public class JobTask implements Codable {
         if (log.isDebugEnabled()) {
             log.debug("[task.execBackup] {}", this.getJobKey());
         }
-        require(testTaskIdle(), "task is not idle");
-        minion.sendStatusMessage(new StatusTaskBackup(minion.uuid, id, node));
+        require(!execute || testTaskIdle(), "task is not idle");
         try {
             log.info("[task.execBackup] backing up {}", jobDir.getPath());
             File configDir = getConfigDir();
@@ -955,9 +956,10 @@ public class JobTask implements Codable {
                 LessFiles.write(backupSH, LessBytes.toBytes(backupSHScript), false);
                 String backupRunScript = generateRunScript(backupSH.getCanonicalPath(), backupPid.getCanonicalPath(), backupDone.getCanonicalPath());
                 LessFiles.write(backupRun, LessBytes.toBytes(backupRunScript), false);
+                minion.sendStatusMessage(new StatusTaskBackup(minion.uuid, id, node));
+                backupStartTime = System.currentTimeMillis();
+                save();
             }
-            backupStartTime = System.currentTimeMillis();
-            save();
             workItemThread = new Thread(new BackupWorkItem(backupPid, backupRun, backupDone, this, rebalanceSource, rebalanceTarget, execute));
             workItemThread.setName("Backup-WorkItem-" + getName());
             workItemThread.start();
@@ -1277,7 +1279,7 @@ public class JobTask implements Codable {
             try {
                 return LessBytes.toString(LessFiles.read(profile));
             } catch (IOException e) {
-                e.printStackTrace();
+                log.warn("IO problem while trying to read job.profile", e);
             }
         }
         return "";
