@@ -159,9 +159,9 @@ public class OutputWriter extends AbstractOutputWriter {
      * safe.
      */
     @Override
-    protected boolean dequeueWrite(List<WriteTuple> outputTuples) throws IOException {
+    protected void dequeueWrite(List<WriteTuple> outputTuples) throws IOException {
         if (outputTuples == null || outputTuples.size() == 0) {
-            return false;
+            return;
         }
         ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
         for (WriteTuple writeTuple : outputTuples) {
@@ -193,10 +193,7 @@ public class OutputWriter extends AbstractOutputWriter {
                     out.unlock();
                 }
             }
-
-
         }
-        return true;
     }
 
     @Override

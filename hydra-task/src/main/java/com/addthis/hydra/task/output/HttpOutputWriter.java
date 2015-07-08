@@ -146,9 +146,9 @@ public class HttpOutputWriter extends AbstractOutputWriter {
     }
 
     @Override
-    protected boolean dequeueWrite(List<WriteTuple> outputTuples) throws IOException {
+    protected void dequeueWrite(List<WriteTuple> outputTuples) throws IOException {
         if (outputTuples == null || outputTuples.size() == 0) {
-            return false;
+            return;
         }
         Map<String, List<Map<String, Object>>> batches = new HashMap<>();
         for (WriteTuple tuple : outputTuples) {
@@ -219,8 +219,6 @@ public class HttpOutputWriter extends AbstractOutputWriter {
                 throw new IOException("Max retries exceeded");
             }
         }
-
-        return true;
     }
 
 }

@@ -360,7 +360,7 @@ public abstract class AbstractOutputWriter implements WritableRootPaths {
      * called by multiple thread consumers of the input queue. must be thread
      * safe.
      */
-    protected abstract boolean dequeueWrite(List<WriteTuple> outputTuples) throws IOException;
+    protected abstract void dequeueWrite(List<WriteTuple> outputTuples) throws IOException;
 
     private void shutdownMaintenanceThreads() {
         writerMaintenanceThread.shutdown();
