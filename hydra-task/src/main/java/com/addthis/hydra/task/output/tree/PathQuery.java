@@ -55,8 +55,8 @@ public final class PathQuery extends PathOp {
      * When traversing the tree in search of the target node,
      * if this parameter is a positive integer then begin
      * the traversal this many levels higher than the
-     * current location. Default is zero.
-     * Default is zero.
+     * current location. A negative value will begin traversal
+     * at the current location. Default is zero.
      */
     @FieldConfig(codable = true)
     private int relativeUp;
@@ -159,6 +159,8 @@ public final class PathQuery extends PathOp {
         DataTreeNode reference;
         if (relativeUp > 0) {
             reference = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), pathValues);
+        } else if (relativeUp < 0) {
+            reference = DataTreeUtil.pathLocateFrom(state.current(), pathValues);
         } else {
             reference = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), pathValues);
         }
