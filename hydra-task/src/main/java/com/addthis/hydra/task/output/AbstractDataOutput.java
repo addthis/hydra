@@ -68,7 +68,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     private TokenIndex[] varToken;
     private CompletableFuture<Void> purgeFuture;
 
-    abstract AbstractOutputWriter getWriter();
+    protected abstract AbstractOutputWriter getWriter();
 
     @Override
     public void open() {

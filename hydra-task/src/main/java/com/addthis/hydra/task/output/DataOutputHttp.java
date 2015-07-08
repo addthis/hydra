@@ -49,7 +49,7 @@ public class DataOutputHttp extends AbstractDataOutput {
         return this;
     }
 
-    @Override AbstractOutputWriter getWriter() {
+    @Override protected AbstractOutputWriter getWriter() {
         return writer;
     }
 }

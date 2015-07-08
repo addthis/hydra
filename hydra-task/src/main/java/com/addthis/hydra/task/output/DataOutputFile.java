@@ -97,7 +97,7 @@ public class DataOutputFile extends AbstractDataOutput {
     }
 
     @Override
-    AbstractOutputWriter getWriter() {
+    protected AbstractOutputWriter getWriter() {
         return writer;
     }
 
