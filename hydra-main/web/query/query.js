@@ -215,6 +215,27 @@ function renderNavQuery(rpc) {
     }
 }
 
+function toJobConfig() {
+    query_string = location.search.slice(1);
+    query_dict = query_string.parseQuery();
+
+    job = query_dict['job'] || window.localStorage['job'];
+
+    if (!job) {
+        alert("no job id found");
+        return false;
+    }
+
+    hostname = location.hostname;
+
+    base_loc = 'http://' + hostname + ':5052/spawn2/index.html';
+    hash_loc = '#jobs/' + job + '/conf';
+    loc = base_loc + hash_loc;
+
+    window.open(loc);
+    return false;
+}
+
 /* get the real query url */
 function queryRaw() {
     var query = fieldsToQuery();
@@ -784,6 +805,7 @@ window.QM = {
     queryCodec : queryCodec,
     queryRaw : queryRaw,
     queryGoogleDrive : queryGoogleDrive,
+    toJobConfig : toJobConfig,
     queryCSV : queryCSV,
     querySave : querySave,
     querySet : querySet,

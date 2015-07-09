@@ -107,6 +107,7 @@
                 <tr><th width=5%>tasks</th><td><input id="qtasks" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
             </table>
             <div class="buttonbar">
+                <button onclick="return QM.toJobConfig()">job config</button>
                 <button onclick="return QM.queryCSV()">csv export</button>
                 <button onclick="return QM.queryGoogleDrive()">google drive export</button>
                 <button onclick="return QM.querySave()">save query</button>
