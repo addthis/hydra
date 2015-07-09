@@ -121,8 +121,8 @@ function storedQueriesDecode() {
         lsq = lsq.split(',');
         for (var j=0; j<lsq.length; j++) {
             var q = unesc(lsq[j]).split(':');
-            if (q.length == 4) {
-                queries.push({name:unesc(q[0]),query:unesc(q[1]),ops:unesc(q[2]),rops:unesc(q[3])});
+            if (q.length == 5) {
+                queries.push({name:unesc(q[0]),query:unesc(q[1]),ops:unesc(q[2]),rops:unesc(q[3]),tasks:unesc(q[4])});
             }
         }
     }
