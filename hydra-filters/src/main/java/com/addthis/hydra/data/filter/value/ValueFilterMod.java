@@ -45,21 +45,14 @@ public class ValueFilterMod extends AbstractValueFilter {
 
     @Override
     public ValueObject filterValue(ValueObject value) {
-        try {
-            Numeric lv = ValueUtil.asNumber(value);
-            if (lv != null) {
-                long v = lv.asLong().getLong();
-                if (abs) {
-                    v = Math.abs(v);
-                }
-                return ValueFactory.create(v % mod);
+        Numeric lv = ValueUtil.asNumber(value);
+        if (lv != null) {
+            long v = lv.asLong().getLong();
+            if (abs) {
+                v = Math.abs(v);
             }
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            return ValueFactory.create(v % mod);
         }
         return value;
     }
-
 }
