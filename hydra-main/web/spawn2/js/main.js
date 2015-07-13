@@ -790,6 +790,7 @@ function(
                 'weeklyBackups',
                 'worldExecutable',
                 'worldWritable',
+                'autoRetry'
             ]);
             data.description = "CLONE "+data.description;
             app.job = new Jobs.Model(data);

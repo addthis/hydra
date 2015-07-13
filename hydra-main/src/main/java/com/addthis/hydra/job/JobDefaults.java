@@ -46,6 +46,8 @@ public class JobDefaults {
 
     public final int replicas;
 
+    public final boolean autoRetry;
+
     @JsonCreator
     JobDefaults(@JsonProperty(value = "ownerWritable", required = true) boolean ownerWritable,
                 @JsonProperty(value = "groupWritable", required = true) boolean groupWritable,
@@ -57,7 +59,8 @@ public class JobDefaults {
                 @JsonProperty(value = "dailyBackups", required = true) int dailyBackups,
                 @JsonProperty(value = "weeklyBackups", required = true) int weeklyBackups,
                 @JsonProperty(value = "monthlyBackups", required = true) int monthlyBackups,
-                @JsonProperty(value = "replicas", required = true) int replicas) {
+                @JsonProperty(value = "replicas", required = true) int replicas,
+                @JsonProperty(value = "autoRetry", required = true) boolean autoRetry) {
         this.ownerWritable = ownerWritable;
         this.groupWritable = groupWritable;
         this.worldWritable = worldWritable;
@@ -69,6 +72,7 @@ public class JobDefaults {
         this.weeklyBackups = weeklyBackups;
         this.monthlyBackups = monthlyBackups;
         this.replicas = replicas;
+        this.autoRetry = autoRetry;
     }
 
 

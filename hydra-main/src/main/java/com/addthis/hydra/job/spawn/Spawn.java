@@ -692,6 +692,7 @@ public class Spawn implements Codable, AutoCloseable {
                 job.setMonthlyBackups(jobDefaults.monthlyBackups);
                 job.setHourlyBackups(jobDefaults.hourlyBackups);
                 job.setReplicas(jobDefaults.replicas);
+                job.setAutoRetry(jobDefaults.autoRetry);
             }
             List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
             List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
