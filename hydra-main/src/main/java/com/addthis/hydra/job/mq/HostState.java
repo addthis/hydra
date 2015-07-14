@@ -18,64 +18,60 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.minion.Minion;
 
 import com.google.common.base.Objects;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonIgnoreProperties({"messageType", "totalLive", "readOnly"})
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = HostState.class)
 public class HostState implements HostMessage {
 
-    private static final long serialVersionUID = 7252930788607795642L;
-
-    @FieldConfig private String host;
-    @FieldConfig private int port;
-    @FieldConfig private String uuid;
-    @FieldConfig private String user;
-    @FieldConfig private String path;
-    @FieldConfig private String group;
+    @JsonProperty private String host;
+    @JsonProperty private int port;
+    @JsonProperty private String uuid;
+    @JsonProperty private String user;
+    @JsonProperty private String path;
+    @JsonProperty private String group;
     // Host State is determined by others zk group membership, by
     // definition it can not persist.
-    @FieldConfig private boolean up;
-    @FieldConfig private long time;
-    @FieldConfig private long uptime;
-    @FieldConfig private int availableTaskSlots;
-    @FieldConfig private int maxTaskSlots;
-    @FieldConfig private JobKey[] running;
-    @FieldConfig private JobKey[] replicating;
-    @FieldConfig private JobKey[] backingup;
-    @FieldConfig private JobKey[] stopped;
-    @FieldConfig private JobKey[] replicas;
-    @FieldConfig private JobKey[] incompleteReplicas;
-    @FieldConfig private JobKey[] queued;
-    @FieldConfig private HostCapacity used;
-    @FieldConfig private HostCapacity max;
-    @FieldConfig private boolean dead;
-    @FieldConfig private long lastUpdateTime;
-    @FieldConfig private double histQueueSize;
-    @FieldConfig private double histWaitTime;
+    @JsonProperty private boolean up;
+    @JsonProperty private long time;
+    @JsonProperty private long uptime;
+    @JsonProperty private int availableTaskSlots;
+    @JsonProperty private int maxTaskSlots;
+    @JsonProperty private JobKey[] running;
+    @JsonProperty private JobKey[] replicating;
+    @JsonProperty private JobKey[] backingup;
+    @JsonProperty private JobKey[] stopped;
+    @JsonProperty private JobKey[] replicas;
+    @JsonProperty private JobKey[] incompleteReplicas;
+    @JsonProperty private JobKey[] queued;
+    @JsonProperty private HostCapacity used;
+    @JsonProperty private HostCapacity max;
+    @JsonProperty private boolean dead;
+    @JsonProperty private long lastUpdateTime;
+    @JsonProperty private double histQueueSize;
+    @JsonProperty private double histWaitTime;
     //TODO:  remove but need this in for now because de-serialization fails without it
-    @FieldConfig private HashMap<String, Double> jobRuntimes = new HashMap<>();
-    @FieldConfig private boolean diskReadOnly;
-    @FieldConfig private boolean disabled;
-    @FieldConfig private double meanActiveTasks;
-    @FieldConfig private String minionTypes;
+    @JsonProperty private HashMap<String, Double> jobRuntimes = new HashMap<>();
+    @JsonProperty private boolean diskReadOnly;
+    @JsonProperty private boolean disabled;
+    @JsonProperty private double meanActiveTasks;
+    @JsonProperty private String minionTypes;
 
     // Do not encode this derived, internal, non-typesafe field
     private HashMap<String, Integer> jobTaskCountMap;
 
-    public HostState() {
-    }
+    @JsonCreator
+    private HostState() {}
 
-    public HostState(String uuid) {
-        this.uuid = uuid;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.STATUS_HOST_INFO;
+    public HostState(String hostUuid) {
+        this.uuid = hostUuid;
     }
 
     @Override
@@ -83,9 +79,15 @@ public class HostState implements HostMessage {
         return uuid;
     }
 
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    @JsonProperty
     public void setHostUuid(String uuid) {
         this.uuid = uuid;
     }
+
 
     public void setUpdated() {
         lastUpdateTime = System.currentTimeMillis();
@@ -196,7 +198,6 @@ public class HostState implements HostMessage {
     @Override
     public String toString() {
         return Objects.toStringHelper(this)
-                .add("type", getMessageType())
                 .add("uuid", getHostUuid())
                 .add("last-update-time", getLastUpdateTime())
                 .add("host", getHost())

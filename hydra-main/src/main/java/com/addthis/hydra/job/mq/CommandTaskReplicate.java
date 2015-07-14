@@ -15,11 +15,35 @@ package com.addthis.hydra.job.mq;
 
 import java.util.Arrays;
 
-import com.addthis.codec.annotations.FieldConfig;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = CommandTaskReplicate.class)
 public class CommandTaskReplicate extends AbstractJobMessage {
 
-    private static final long serialVersionUID = 3232052848594886109L;
+    @JsonProperty
+    private ReplicaTarget[] replicas;
+    @JsonProperty
+    private String choreWatcherKey;
+    // not all jobs replicate on every execution, if this value is true it will force the replica to occur
+    @JsonProperty
+    private boolean force;
+    /* Whether the task was queued when the replication was done. If so, it will be re-queued on completion */
+    @JsonProperty
+    private boolean wasQueued;
+    @JsonProperty
+    private String jobCommand;
+    /* For rebalances, these are the hosts that are gaining/losing a replica */
+    @JsonProperty
+    private String rebalanceSource;
+    @JsonProperty
+    private String rebalanceTarget;
+
+    @JsonCreator
+    private CommandTaskReplicate() {
+        super();
+    }
 
     public CommandTaskReplicate(String hostUuid,
                                 String job,
@@ -37,37 +61,12 @@ public class CommandTaskReplicate extends AbstractJobMessage {
         this.wasQueued = wasQueued;
     }
 
-    @FieldConfig(codable = true)
-    private ReplicaTarget[] replicas;
-    @FieldConfig(codable = true)
-    private String choreWatcherKey;
-    // not all jobs replicate on every execution, if this value is true it will force the replica to occur
-    @FieldConfig(codable = true)
-    private boolean force;
-    @FieldConfig(codable = true)
-    /* Whether the task was queued when the replication was done. If so, it will be re-queued on completion */
-    private boolean wasQueued;
-
-    @FieldConfig(codable = true)
-    private String jobCommand;
-
-    /* For rebalances, these are the hosts that are gaining/losing a replica */
-    @FieldConfig(codable = true)
-    private String rebalanceSource;
-    @FieldConfig(codable = true)
-    private String rebalanceTarget;
-
     public ReplicaTarget[] getReplicas() {
         return replicas;
     }
 
     public String getChoreWatcherKey() {
         return choreWatcherKey;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.CMD_TASK_REPLICATE;
     }
 
     public String getJobCommand() {

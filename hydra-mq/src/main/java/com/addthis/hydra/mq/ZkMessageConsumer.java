@@ -14,16 +14,13 @@
 package com.addthis.hydra.mq;
 
 import java.io.IOException;
-import java.io.Serializable;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import com.addthis.bark.StringSerializer;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.addthis.codec.jackson.Jackson;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -33,32 +30,24 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ZkMessageConsumer<T extends Serializable> implements MessageConsumer {
+public class ZkMessageConsumer<T> implements MessageConsumer<T> {
 
     private static final Logger log = LoggerFactory.getLogger(ZkMessageConsumer.class);
 
     private CuratorFramework zkClient;
-    private ObjectMapper mapper;
     private String path;
     private Class<T> clazz;
-    private TypeReference typeReference;
-    private final Set<MessageListener> messageListeners = new HashSet<>();
+    private final Set<MessageListener<T>> messageListeners = new HashSet<>();
     private PathChildrenCache cache;
 
-    public ZkMessageConsumer(CuratorFramework zkClient, String path, MessageListener messageListener, final TypeReference<T> typeReference) {
-        this.typeReference = typeReference;
-        init(zkClient, path, messageListener);
-    }
-
-    public ZkMessageConsumer(CuratorFramework zkClient, String path, MessageListener messageListener, final Class<T> clazz) {
+    public ZkMessageConsumer(CuratorFramework zkClient, String path, MessageListener<T> messageListener, final Class<T> clazz) {
         this.clazz = clazz;
         init(zkClient, path, messageListener);
     }
 
-    private void init(final CuratorFramework zkClient, final String path, MessageListener messageListener) {
+    private void init(final CuratorFramework zkClient, final String path, MessageListener<T> messageListener) {
         this.zkClient = zkClient;
         this.path = path;
-        mapper = new ObjectMapper();
         addMessageListener(messageListener);
         try {
             open();
@@ -102,14 +91,9 @@ public class ZkMessageConsumer<T extends Serializable> implements MessageConsume
             log.warn("got null notification.  Ignoring");
             return;
         }
-        T message;
-        if (clazz != null) {
-            message = mapper.readValue(json, clazz);
-        } else {
-            message = mapper.readValue(json, typeReference);
-        }
+        T message = Jackson.defaultMapper().readValue(json, clazz);
 
-        for (MessageListener listener : messageListeners) {
+        for (MessageListener<T> listener : messageListeners) {
             listener.onMessage(message);
         }
     }
@@ -124,11 +108,11 @@ public class ZkMessageConsumer<T extends Serializable> implements MessageConsume
         // Whomever passed us the client needs to shut it down.
     }
 
-    @Override public boolean addMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean addMessageListener(MessageListener<T> hostMessageListener) {
         return messageListeners.add(hostMessageListener);
     }
 
-    @Override public boolean removeMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean removeMessageListener(MessageListener<T> hostMessageListener) {
         return messageListeners.remove(hostMessageListener);
     }
 }

@@ -13,16 +13,18 @@
  */
 package com.addthis.hydra.job.mq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = StatusTaskBegin.class)
 public class StatusTaskBegin extends AbstractJobMessage {
 
-    private static final long serialVersionUID = -4209250141708137377L;
+    @JsonCreator
+    private StatusTaskBegin() {
+        super();
+    }
 
     public StatusTaskBegin(String host, String job, int node) {
         super(host, job, node);
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.STATUS_TASK_BEGIN;
     }
 }

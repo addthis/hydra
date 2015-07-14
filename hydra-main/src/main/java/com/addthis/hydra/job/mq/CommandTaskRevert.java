@@ -13,14 +13,23 @@
  */
 package com.addthis.hydra.job.mq;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = CommandTaskRevert.class)
 public class CommandTaskRevert extends AbstractJobMessage {
 
-    private static final long serialVersionUID = -4421561753136928922L;
-    private final int revision;
-    private final long time;
-    private final String backupType;
-    private final ReplicaTarget[] replicas;
-    private boolean skipMove;
+    @JsonProperty private int revision;
+    @JsonProperty private long time;
+    @JsonProperty private String backupType;
+    @JsonProperty private ReplicaTarget[] replicas;
+    @JsonProperty private boolean skipMove;
+
+    @JsonCreator
+    private CommandTaskRevert() {
+        super();
+    }
 
     public CommandTaskRevert(String host, String job, Integer node, String backupType, int rev, long time, ReplicaTarget[] replicas, boolean skipMove) {
         super(host, job, node);
@@ -57,10 +66,5 @@ public class CommandTaskRevert extends AbstractJobMessage {
     /* Whether to skip the mv gold live step and just rerun the replicate/backup */
     public boolean getSkipMove() {
         return skipMove;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.CMD_TASK_REVERT;
     }
 }

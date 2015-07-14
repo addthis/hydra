@@ -13,50 +13,46 @@
  */
 package com.addthis.hydra.job.mq;
 
-import com.addthis.codec.annotations.FieldConfig;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonIgnoreProperties({"killSignal", "retries"})
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = CommandTaskKick.class)
 public class CommandTaskKick implements JobMessage {
 
-    private static final long serialVersionUID = -7588140676324569250L;
+    @JsonProperty private String hostUuid;
+    @JsonProperty private JobKey jobKey;
+    @JsonProperty private String owner;
+    @JsonProperty private String userGroup;
+    @JsonProperty private int priority;
+    @JsonProperty private int jobNodes;
+    @JsonProperty private long runTime;
+    @JsonProperty private Long submitTime;
+    @JsonProperty private int runCount;
+    @JsonProperty private int starts;
+    @JsonProperty private String config;
+    @JsonProperty private String command;
+    @JsonProperty private int hourlyBackups;
+    @JsonProperty private int dailyBackups;
+    @JsonProperty private int weeklyBackups;
+    @JsonProperty private int monthlyBackups;
+    @JsonProperty private ReplicaTarget[] replicas;
+    @JsonProperty private boolean autoRetry;
 
-    @FieldConfig private String hostUuid;
-    @FieldConfig private JobKey jobKey;
-    @FieldConfig private int priority;
-    @FieldConfig private int jobNodes;
-    @FieldConfig private long runTime;
-    @FieldConfig private Long submitTime;
-    @FieldConfig private int runCount;
-    @FieldConfig private int starts;
-    @FieldConfig private String config;
-    @FieldConfig private String command;
-    @FieldConfig private int hourlyBackups;
-    @FieldConfig private int dailyBackups;
-    @FieldConfig private int weeklyBackups;
-    @FieldConfig private int monthlyBackups;
-    @FieldConfig private ReplicaTarget[] replicas;
-    @FieldConfig private boolean autoRetry;
+    @JsonCreator
+    private CommandTaskKick() {}
 
-    @Override
-    public String toString() {
-        return "[K|" + jobKey + "|" + jobNodes + "|" + priority + "]";
-    }
-
-    public String key() {
-        return getJobKey().toString();
-    }
-
-    public CommandTaskKick() {}
-
-    public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, long runTime,
+    public CommandTaskKick(String host, JobKey jobKey, String owner, String userGroup, int priority, int jobNodes, long runTime,
                            int runCount, String config, String command, int hourlyBackups,
                            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas,
                            boolean autoRetry, int starts) {
         this.hostUuid = host;
         this.jobKey = jobKey;
+        this.owner = owner;
+        this.userGroup = userGroup;
         this.priority = priority;
         this.jobNodes = jobNodes;
         this.runTime = runTime;
@@ -83,11 +79,6 @@ public class CommandTaskKick implements JobMessage {
         return jobKey.getNodeNumber();
     }
 
-    @Override @JsonIgnore
-    public TYPE getMessageType() {
-        return TYPE.CMD_TASK_KICK;
-    }
-
     @Override public String getHostUuid() {
         return hostUuid;
     }
@@ -96,6 +87,13 @@ public class CommandTaskKick implements JobMessage {
         return jobKey;
     }
 
+    public String getOwner() {
+        return this.owner;
+    }
+
+    public String getUserGroup() {
+        return this.userGroup;
+    }
     public int getJobNodes() {
         return jobNodes;
     }
@@ -166,5 +164,14 @@ public class CommandTaskKick implements JobMessage {
 
     public int getStarts() {
         return starts;
+    }
+
+    @Override
+    public String toString() {
+        return "[K|" + jobKey + "|" + jobNodes + "|" + priority + "]";
+    }
+
+    public String key() {
+        return getJobKey().toString();
     }
 }

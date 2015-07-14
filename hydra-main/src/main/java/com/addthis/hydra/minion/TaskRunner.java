@@ -13,15 +13,12 @@
  */
 package com.addthis.hydra.minion;
 
-import java.io.ByteArrayInputStream;
-import java.io.ObjectInputStream;
+import java.io.IOException;
 
 import com.addthis.basis.util.Backoff;
 
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.mq.CommandTaskKick;
-import com.addthis.hydra.job.mq.CoreMessage;
-import com.addthis.hydra.job.mq.HostMessage;
-import com.addthis.hydra.mq.RabbitQueueingConsumer;
 
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.ShutdownSignalException;
@@ -51,13 +48,13 @@ class TaskRunner extends Thread {
             QueueingConsumer.Delivery delivery = null;
             try {
                 delivery = minion.batchJobConsumer.nextDelivery();
-                ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(delivery.getBody()));
-                HostMessage hostMessage = (HostMessage) ois.readObject();
-                if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {
-                    log.warn("[task.runner] unknown command type : {}", hostMessage.getMessageType());
+                CommandTaskKick kick = null;
+                try {
+                    kick = Jackson.defaultMapper().readValue(delivery.getBody(), CommandTaskKick.class);
+                } catch(IOException e) {
+                    log.warn("[task.runner] unknown command type : {}", e);
                     continue;
                 }
-                CommandTaskKick kick = (CommandTaskKick) hostMessage;
                 minion.insertJobKickMessage(kick);
                 minion.kickNextJob();
                 minion.channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);

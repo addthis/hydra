@@ -13,35 +13,17 @@
  */
 package com.addthis.hydra.job.mq;
 
-import java.io.Serializable;
-
 import com.addthis.codec.codables.Codable;
 
-public interface CoreMessage extends Codable, Serializable {
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-    enum TYPE {
-        STATUS_HOST_INFO,
-        STATUS_TASK_BEGIN,
-        STATUS_TASK_PORT,
-        STATUS_TASK_END,
-        STATUS_TASK_BACKUP,
-        STATUS_TASK_REPLICATE,
-        STATUS_TASK_REPLICA,
-        CMD_TASK_KICK,
-        CMD_TASK_STOP,
-        CMD_TASK_DELETE,
-        CMD_TASK_REVERT,
-        CMD_TASK_REPLICATE,
-        CMD_TASK_NEW,
-        CMD_TASK_PROMOTE_REPLICA,
-        STATUS_TASK_JUMP_SHIP,
-        STATUS_TASK_REVERT,
-        CMD_TASK_DEMOTE_REPLICA,
-        STATUS_TASK_CANT_BEGIN,
-        CMD_TASK_UPDATE_REPLICAS
-    }
 
-    TYPE getMessageType();
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility=JsonAutoDetect.Visibility.NONE,
+                setterVisibility=JsonAutoDetect.Visibility.NONE)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+public interface CoreMessage extends Codable {
 
     String getHostUuid();
 }

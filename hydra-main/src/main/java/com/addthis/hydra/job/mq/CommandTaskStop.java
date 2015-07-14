@@ -13,18 +13,21 @@
  */
 package com.addthis.hydra.job.mq;
 
-import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-public class CommandTaskStop extends AbstractJobMessage implements Serializable {
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = CommandTaskStop.class)
+public class CommandTaskStop extends AbstractJobMessage {
 
-    private static final long serialVersionUID = 4855355176382463012L;
-    private int runCount;
-    private boolean force;
-    private String choreWatcherKey = null;
-    private boolean onlyIfQueued = false;
+    @JsonProperty private int runCount;
+    @JsonProperty private boolean force;
+    @JsonProperty private String choreWatcherKey = null;
+    @JsonProperty private boolean onlyIfQueued = false;
 
-    public boolean getOnlyIfQueued() {
-        return onlyIfQueued;
+    @JsonCreator
+    private CommandTaskStop() {
+        super();
     }
 
     public CommandTaskStop(String host, String job, Integer node, int runCount, boolean force, boolean onlyIfQueued) {
@@ -32,11 +35,6 @@ public class CommandTaskStop extends AbstractJobMessage implements Serializable 
         this.runCount = runCount;
         this.force = force;
         this.onlyIfQueued = onlyIfQueued;
-    }
-
-    @Override
-    public TYPE getMessageType() {
-        return TYPE.CMD_TASK_STOP;
     }
 
     public int getRunCount() {
@@ -65,6 +63,10 @@ public class CommandTaskStop extends AbstractJobMessage implements Serializable 
         int result = runCount;
         result = 31 * result + (force ? 1 : 0);
         return result;
+    }
+
+    public boolean getOnlyIfQueued() {
+        return onlyIfQueued;
     }
 
     public String getChoreWatcherKey() {

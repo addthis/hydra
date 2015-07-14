@@ -15,13 +15,12 @@ package com.addthis.hydra.mq;
 
 import javax.annotation.Nonnull;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import com.addthis.codec.jackson.Jackson;
 
 import com.google.common.collect.ImmutableList;
 
@@ -33,7 +32,7 @@ import com.rabbitmq.client.Envelope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RabbitMessageConsumer extends DefaultConsumer implements MessageConsumer {
+public class RabbitMessageConsumer<T> extends DefaultConsumer implements MessageConsumer<T> {
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMessageConsumer.class);
 
@@ -45,17 +44,20 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
     private final ImmutableList<String> closeUnbindKeys;
     @Nonnull
     private final String queueName;
-    private final Set<MessageListener> messageListeners = new HashSet<>();
+    private final Set<MessageListener<T>> messageListeners = new HashSet<>();
+    private final Class<T> messageType;
 
     public RabbitMessageConsumer(@Nonnull Channel channel, @Nonnull String exchange,
-                                 @Nonnull String queueName, @Nonnull MessageListener messageListener,
+                                 @Nonnull String queueName, @Nonnull MessageListener<T> messageListener,
                                  @Nonnull ImmutableList<String> routingKey,
-                                 @Nonnull ImmutableList<String> closeUnbindKeys) {
+                                 @Nonnull ImmutableList<String> closeUnbindKeys,
+                                 @Nonnull Class<T> messageType) {
         super(channel);
         this.exchange = exchange;
         this.queueName = queueName;
         this.routingKeys = routingKey;
         this.closeUnbindKeys = closeUnbindKeys;
+        this.messageType = messageType;
         addMessageListener(messageListener);
         try {
             open();
@@ -78,24 +80,23 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
     @Override
     public void handleDelivery(String consumerTag, Envelope envelope,
                                AMQP.BasicProperties properties, byte[] body) throws IOException {
-        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(body));
         try {
-            Serializable message = (Serializable) ois.readObject();
+            T message = Jackson.defaultMapper().readValue(body, messageType);
             if (messageListeners.size() > 0) {
-                for (MessageListener messageListener : messageListeners) {
+                for (MessageListener<T> messageListener : messageListeners) {
                     messageListener.onMessage(message);
                 }
             }
-        } catch (ClassNotFoundException e) {
+        } catch (IOException e) {
             log.warn("[rabbitConsumer] error reading message", e);
         }
     }
 
-    @Override public boolean addMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean addMessageListener(MessageListener<T> hostMessageListener) {
         return messageListeners.add(hostMessageListener);
     }
 
-    @Override public boolean removeMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean removeMessageListener(MessageListener<T> hostMessageListener) {
         return messageListeners.remove(hostMessageListener);
     }
 
