@@ -13,11 +13,23 @@
  */
 package com.addthis.hydra.query;
 
+import javax.annotation.Nullable;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+import java.net.InetSocketAddress;
+
+import com.addthis.basis.jvm.Shutdown;
+import com.addthis.basis.util.LessStrings;
+
 import com.addthis.codec.config.Configs;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.data.query.source.MeshQuerySource;
 import com.addthis.hydra.data.query.source.SearchRunner;
 import com.addthis.hydra.query.web.QueryServer;
+import com.addthis.meshy.MeshyServer;
+import com.addthis.meshy.MeshyServerGroup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -47,6 +59,8 @@ public class MeshQueryWorker implements AutoCloseable {
      */
     private final int webPort;
 
+    private final MeshyServer meshyServer;
+
     /** server listens for query requests using HTML protoc */
     private final transient Server htmlQueryServer;
 
@@ -54,32 +68,58 @@ public class MeshQueryWorker implements AutoCloseable {
     private final transient ThreadPool queuedThreadPool = new QueuedThreadPool(20);
 
     public static void main(String[] args) throws Exception {
-        final MeshQueryWorker queryWorker = Configs.newDefault(MeshQueryWorker.class);
-        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(queryWorker), "Query Worker Shutdown Hook"));
-
-        // execute meshy main method and rely on system properties to register query file system
-        com.addthis.meshy.Main.main(args);
+        Shutdown.createWithShutdownHook(() -> {
+            try {
+                return Configs.newDefault(MeshQueryWorker.class);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, MeshQueryWorker::close);
     }
 
     @JsonCreator
-    private MeshQueryWorker(@JsonProperty(value = "webPort", required = true) int webPort) throws Exception {
+    private MeshQueryWorker(@JsonProperty(value = "webPort", required = true) int webPort,
+                            @JsonProperty(value = "bindAddress", required = true) String bindAddress,
+                            @JsonProperty(value = "root", required = true) File root,
+                            @JsonProperty(value = "peers", required = true) String peers) throws Exception {
         // start jetty for metrics servlet
         this.webPort = webPort;
         this.htmlQueryServer = startHtmlQueryServer();
-        log.info("[init]  web port={}", webPort);
+
+        String[] portInfo = LessStrings.splitArray(bindAddress, ":");
+        int portNum = Integer.parseInt(portInfo[0]);
+        @Nullable String[] netIf;
+        if (portInfo.length > 1) {
+            netIf = new String[portInfo.length - 1];
+            System.arraycopy(portInfo, 1, netIf, 0, netIf.length);
+        } else {
+            netIf = null;
+        }
+        this.meshyServer = new MeshyServer(portNum, root, netIf, new MeshyServerGroup());
+        for (String peer : LessStrings.splitArray(peers, ",")) {
+            String[] hostPort = LessStrings.splitArray(peer, ":");
+            int port;
+            if (hostPort.length > 1) {
+                port = Integer.parseInt(hostPort[1]);
+            } else {
+                port = meshyServer.getLocalAddress().getPort();
+            }
+            meshyServer.connectPeer(new InetSocketAddress(hostPort[0], port));
+        }
+        log.info("[init]  web port={}, mesh server={}", webPort, meshyServer);
     }
 
-    @Override public void close() throws Exception {
-        htmlQueryServer.stop();
+    @Override public void close() {
         SearchRunner.shutdownSearchPool();
+        meshyServer.close();
+        try {
+            htmlQueryServer.stop();
+        } catch (Throwable e) {
+            log.error("Error closing http server for mqworker", e);
+        }
     }
 
-    /**
-     * Starts the jetty server, makes the metrics servlet, and registers it with jetty
-     *
-     * @return Jetty Server
-     * @throws Exception
-     */
+    /** Starts the jetty server, makes the metrics servlet, and registers it with jetty */
     private Server startHtmlQueryServer() throws Exception {
         Server newHtmlServer = new Server(webPort);
 

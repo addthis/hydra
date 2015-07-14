@@ -126,7 +126,9 @@ export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dcs.j
 -Dmeshy.stream.prefetch=true -Dqmaster.mesh.peer.port=5101"
 
 export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource \
--Dmeshy.stream.prefetch=true -Dmeshy.senders=1"
+-Dmeshy.stream.prefetch=true -Dmeshy.senders=1 -Dcom.addthis.hydra.query.MeshQueryWorker.bindAddress=5101 \
+-Dcom.addthis.hydra.query.MeshQueryWorker.root=${HYDRA_LOCAL_DIR} \
+-Dcom.addthis.hydra.query.MeshQueryWorker.peers=localhost:5100"
 
 export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local \
 -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 \
@@ -186,7 +188,7 @@ function startOthers() {
     if [ ! -f pid/pid.mqworker ]; then
         export HYDRA_LOG=log/worker
         echo "starting mesh query worker"
-        ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker server 5101 ${HYDRA_LOCAL_DIR} localhost:5100 > log/mqworker.log 2>&1 &
+        ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker > log/mqworker.log 2>&1 &
         echo "$!" > pid/pid.mqworker
     fi
     if [ ! -f pid/pid.mqmaster ]; then

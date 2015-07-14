@@ -50,16 +50,16 @@ public class SearchRunner implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(SearchRunner.class);
 
-    static final int querySearchThreads = Parameter.intValue("meshQuerySource.searchThreads", 3);
-    static final int SHUTDOWN_WAIT = Parameter.intValue("meshQuerySource.searchShutdownWait", 60);
+    static final int SEARCH_THREADS = Parameter.intValue("meshQuerySource.searchThreads", 3);
+    static final int SHUTDOWN_WAIT = Parameter.intValue("meshQuerySource.searchShutdownWait", 30);
     static final ExecutorService querySearchPool =
-            new ThreadPoolExecutor(querySearchThreads, querySearchThreads, 0L, TimeUnit.MILLISECONDS,
+            new ThreadPoolExecutor(SEARCH_THREADS, SEARCH_THREADS, 0L, TimeUnit.MILLISECONDS,
                                    new LinkedBlockingQueue<>(),
                                    new ThreadFactoryBuilder().setNameFormat("querySearch-%d").setDaemon(true).build());
 
     public static void shutdownSearchPool() {
-        log.info("Going to wait up to {} seconds for any queries still running.", SHUTDOWN_WAIT);
-        boolean shutdownFinished = shutdownAndAwaitTermination(querySearchPool, SHUTDOWN_WAIT, TimeUnit.SECONDS);
+        log.info("Going to wait up to {} minutes for any queries still running.", SHUTDOWN_WAIT);
+        boolean shutdownFinished = shutdownAndAwaitTermination(querySearchPool, (long) SHUTDOWN_WAIT, TimeUnit.MINUTES);
         log.info("Shutdown was successful: {}", shutdownFinished);
     }
 
@@ -76,8 +76,9 @@ public class SearchRunner implements Runnable {
     private QueryOpProcessor queryOpProcessor = null;
     private QueryEngine finalEng = null;
 
-    public SearchRunner(final Map<String, String> options, final String dirString,
-            final DataChannelToInputStream bridge) throws Exception {
+    public SearchRunner(final Map<String, String> options,
+                        final String dirString,
+                        final DataChannelToInputStream bridge) throws Exception {
         // Get the canonical path and store it in the canonicalDirString. Typically, we will receive a gold path
         // here, which is a symlink.
         this.goldDirString = dirString;

@@ -63,7 +63,7 @@ public class Main {
                         String meshyPorts = Parameter.value("mss.mesh.ports", "5000");
                         String meshyPeers = Parameter.value("mss.mesh.peers", "");
                         for (String portGroup : LessStrings.splitArray(meshyPorts, ";")) {
-                            log.info("[mss] starting meshy with port group: " + portGroup);
+                            log.info("[mss] starting meshy with port group: {}", portGroup);
                             com.addthis.meshy.Main.main(new String[]{"server", portGroup, mssRoot, meshyPeers});
                         }
                         break;

@@ -92,7 +92,7 @@ public class MeshQuerySource implements LocalFileHandler {
 
     public MeshQuerySource() {
         log.info("[MeshQuerySource] started.  base directory={}", QueryReference.queryRoot);
-        log.info("Max concurrent queries (thread count):{}", SearchRunner.querySearchThreads);
+        log.info("Max concurrent queries (thread count):{}", SearchRunner.SEARCH_THREADS);
 
         // Initialize the tmp dir
         try {
