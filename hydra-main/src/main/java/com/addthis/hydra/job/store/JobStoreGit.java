@@ -279,12 +279,9 @@ public class JobStoreGit {
             throw new IllegalArgumentException(name);
         }
         final CanonicalTreeParser p = new CanonicalTreeParser();
-        final ObjectReader or = repository.newObjectReader();
-        try {
-            p.reset(or, new RevWalk(repository).parseTree(id));
+        try (ObjectReader or = repository.newObjectReader(); RevWalk walk = new RevWalk(repository)) {
+            p.reset(or, walk.parseTree(id));
             return p;
-        } finally {
-            or.release();
         }
     }
 
