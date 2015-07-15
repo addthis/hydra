@@ -364,3 +364,24 @@ span.icon_clear {
     float:left;
     /*display: inline;*/
 }
+
+td.hist-time, th.hist-time.sorting {
+    width: 150px;
+}
+
+td.hist-commit, th.hist-commit.sorting {
+    width: 200px;
+}
+
+td.hist-user, th.hist-user.sorting {
+    width: 200px;
+}
+
+td.hist-delta, th.hist-delta.sorting {
+    width: 220px;
+}
+
+td.hist-actions, th.sorting_disabled.hist-actions {
+    width: 100px;
+    text-align: center;
+}

@@ -475,6 +475,15 @@ function(
             time:"",
             msg:""
         },
+        parseMessage: function() {
+            var val = this.get("msg");
+            this.set("user", val.split(":")[0]);
+            var non_user = val.split(":")[1];
+            var non_user_parts = non_user.split("(");
+            non_user_parts.pop();
+            this.set("message", non_user_parts.join("("));
+            this.set("delta", "(" + val.split(":")[1].split("(").pop());
+        },
         diff:function(){
             var self=this;
             var data = {
@@ -520,6 +529,7 @@ function(
                         _.each(data,function(history){
                             var model = new HistoryModel(history);
                             model.set("jobUuid",self.jobUuid);
+                            model.parseMessage();
                             models.push(model);
                         });
                         self.reset(models);
@@ -528,7 +538,7 @@ function(
                         throw new Error(e.error());
                     },
                     dataType: "json"
-                })
+                });
                 return ajax;
             }
             else{
@@ -998,10 +1008,10 @@ function(
                     "bSortable":false,
                     "mRender":function(val,type,data){
                         if(self.selectedIds[data.id]){
-                            return "<input checked class='row_selectable' type='checkbox'></input>";
+                            return "<input checked class='row_selectable' type='checkbox'>";
                         }
                         else{
-                            return "<input class='row_selectable' type='checkbox'></input>";
+                            return "<input class='row_selectable' type='checkbox'>";
                         }
                     }
                 },
@@ -1203,10 +1213,10 @@ function(
                     "bSortable":false,
                     "mRender":function(val,type,data){
                         if(self.selectedIds[data.id]){
-                            return "<input checked class='row_selectable' type='checkbox'></input>";
+                            return "<input checked class='row_selectable' type='checkbox'>";
                         }
                         else{
-                            return "<input class='row_selectable' type='checkbox'></input>";
+                            return "<input class='row_selectable' type='checkbox'>";
                         }
                     }
                 },
@@ -2288,30 +2298,36 @@ function(
                     "sTitle":"Commit",
                     "sClass":"hist-commit",
                     "mData": "commit",
-                    "sWidth":"25%",
                     "mRender":function(val,type,data){
-                        return "<a href='#jobs/"+self.collection.jobUuid+"/history/"+val+"'>"+val+"</a>";
+                        return "<a href='#jobs/"+self.collection.jobUuid+"/history/"+val+"'>"+val.substring(0, 20)+"</a>";
                     }
                 },
                 {
                     "sTitle":"Time",
                     "sClass":"hist-time",
                     "mData": "time",
-                    "sWidth":"25%",
                     "mRender":function(val,type,data){
                         return util.convertToDateTimeText(val);
                     }
                 },
                 {
+                    "sTitle":"User",
+                    "sClass":"hist-user",
+                    "mData": "user"
+                },
+                {
                     "sTitle":"Message",
                     "sClass":"hist-msg",
-                    "mData": "msg",
-                    "sWidth":"40%"
+                    "mData": "message"
+                },
+                {
+                    "sTitle":"Delta",
+                    "sClass":"hist-delta",
+                    "mData": "delta"
                 },
                 {
                     "sTitle":"",
                     "sClass":"hist-actions",
-                    "sWidth":"10%",
                     "mData":"commit",
                     "bSearchable":false,
                     "bSortable":false,
