@@ -884,18 +884,22 @@ public class SpawnBalancer implements Codable {
         HashMap<String, Boolean> snapshot = new HashMap<>(recentlyBalancedHosts.asMap());
         for (JobTaskMoveAssignment assignment : candidateAssignments) {
             String newHostID = assignment.getTargetUUID();
+            JobKey jobKey = assignment.getJobKey();
+            String jobID = (jobKey == null) ? null : jobKey.getJobUuid();
             if (isExtremeHost(newHostID, true, true)) {
-                log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it is already heavily loaded");
+                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                         "because it is already heavily loaded", jobID, newHostID);
                 continue;
             }
             HostState newHost = hostManager.getHostState(newHostID);
-            JobKey jobKey = assignment.getJobKey();
             if (newHost == null || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
-                log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it cannot receive the new task");
+                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                         "because it cannot receive the new task", jobID, newHostID);
                 continue;
             }
             if (snapshot.containsKey(newHostID)) {
-                log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it already received a different task recently");
+                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                         "because it already received a different task recently", jobID, newHostID);
                 continue;
             }
             rv.add(assignment);
