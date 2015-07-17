@@ -972,7 +972,7 @@ public class Spawn implements Codable, AutoCloseable {
         if (host == null) {
             return new RebalanceOutcome(hostUUID, "missing host", null, null);
         }
-        log.warn("[job.reallocate] starting reallocation for host: {} host is not a read only host", hostUUID);
+        log.info("[job.reallocate] starting reallocation for host: {} host is not a read only host", hostUUID);
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host,
                                                                                        hostManager.getLiveHosts(null));
         return new RebalanceOutcome(hostUUID, null, null,
@@ -1158,7 +1158,8 @@ public class Spawn implements Codable, AutoCloseable {
                 }
             }
         }
-        log.trace("fixTaskDirs found expectedWithTask {} expectedMissingTask {} unexpectedWithTask {} ", expectedHostsWithTask, expectedHostsMissingTask, unexpectedHostsWithTask);
+        log.trace("fixTaskDirs found expectedWithTask {} expectedMissingTask {} unexpectedWithTask {} ",
+                  expectedHostsWithTask, expectedHostsMissingTask, unexpectedHostsWithTask);
         if (deleteOrphansOnly) {
             // If we're only deleting orphans, ignore any expected hosts missing the task
             expectedHostsMissingTask = new HashSet<>();
@@ -1802,6 +1803,16 @@ public class Spawn implements Codable, AutoCloseable {
 
     public void killTask(String jobUUID, int taskID) throws Exception {
         stopTask(jobUUID, taskID, true, false);
+    }
+
+    public boolean moveTask(JobKey jobKey, String sourceUUID, String targetUUID) {
+        if (sourceUUID == null || targetUUID == null || sourceUUID.equals(targetUUID)) {
+            log.warn("[task.move] fail: invalid input " + sourceUUID + "," + targetUUID);
+            return false;
+        }
+        TaskMover tm = new TaskMover(this, hostManager, jobKey, targetUUID, sourceUUID);
+        log.info("[task.move] attempting move for " + jobKey);
+        return tm.execute();
     }
 
     public boolean revertJobOrTask(String jobUUID,

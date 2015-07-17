@@ -53,6 +53,28 @@ public class TaskResource {
     }
 
     @GET
+    @Path("/move")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response moveTask(@QueryParam("job") String jobId,
+                             @QueryParam("task") Integer task,
+                             @QueryParam("target") String target) {
+        if (jobId == null) {
+            return Response.serverError().entity("Missing required parameter 'job'").build();
+        } else if (task == null) {
+            return Response.serverError().entity("Missing required parameter 'task'").build();
+        } else if (target == null) {
+            return Response.serverError().entity("Missing required parameter 'target'").build();
+        }
+        JobTask jobTask = spawn.getTask(jobId, task);
+        if (jobTask == null) {
+            return Response.serverError().entity("Failure to find job " + jobId + " and task " + target).build();
+        } else {
+            boolean success = spawn.moveTask(jobTask.getJobKey(), jobTask.getHostUUID(), target);
+            return Response.ok(Boolean.toString(success)).build();
+        }
+    }
+
+    @GET
     @Path("/stop")
     @Produces(MediaType.APPLICATION_JSON)
     public Response stopTask(@QueryParam("job") Optional<String> jobId,

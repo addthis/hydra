@@ -666,17 +666,17 @@ public class SpawnBalancer implements Codable {
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
         if (failState == HostFailWorker.FailState.FAILING_FS_OKAY || isExtremeHost(hostID, true, true) || getUsedDiskPercent(host) > 1 - config.getMinDiskPercentAvailToReceiveNewTasks()) {
             // Host disk is overloaded
-            log.warn("[spawn.balancer] " + hostID + " categorized as overloaded host; looking for tasks to push off of it");
+            log.info("[spawn.balancer] " + hostID + " categorized as overloaded host; looking for tasks to push off of it");
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
             rv.addAll(pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true));
         } else if (isExtremeHost(hostID, true, false)) {
             // Host disk is underloaded
-            log.warn("[spawn.balancer] " + hostID + " categorized as underloaded host; looking for tasks to pull onto it");
+            log.info("[spawn.balancer] " + hostID + " categorized as underloaded host; looking for tasks to pull onto it");
             List<HostState> heavyHosts = Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
             pushTasksOntoDisk(host, heavyHosts);
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
-            log.warn("[spawn.balance] " + hostID + " categorized as overworked host; looking for tasks to push off it");
+            log.info("[spawn.balance] " + hostID + " categorized as overworked host; looking for tasks to push off it");
             rv.addAll(balanceActiveJobsOnHost(host, hosts));
         }
         if (rv.isEmpty()) {
