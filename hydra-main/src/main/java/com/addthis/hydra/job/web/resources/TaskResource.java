@@ -57,19 +57,24 @@ public class TaskResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response moveTask(@QueryParam("job") String jobId,
                              @QueryParam("task") Integer task,
+                             @QueryParam("source") String source,
                              @QueryParam("target") String target) {
         if (jobId == null) {
             return Response.serverError().entity("Missing required parameter 'job'").build();
         } else if (task == null) {
             return Response.serverError().entity("Missing required parameter 'task'").build();
+        } else if (source == null) {
+            return Response.serverError().entity("Missing required parameter 'source'").build();
         } else if (target == null) {
             return Response.serverError().entity("Missing required parameter 'target'").build();
+        } else if (source.equals(target)) {
+            return Response.serverError().entity("source and target cannot be identical").build();
         }
         JobTask jobTask = spawn.getTask(jobId, task);
         if (jobTask == null) {
             return Response.serverError().entity("Failure to find job " + jobId + " and task " + target).build();
         } else {
-            boolean success = spawn.moveTask(jobTask.getJobKey(), jobTask.getHostUUID(), target);
+            boolean success = spawn.moveTask(jobTask.getJobKey(), source, target);
             return Response.ok(Boolean.toString(success)).build();
         }
     }

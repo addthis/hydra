@@ -1806,10 +1806,6 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public boolean moveTask(JobKey jobKey, String sourceUUID, String targetUUID) {
-        if (sourceUUID == null || targetUUID == null || sourceUUID.equals(targetUUID)) {
-            log.warn("[task.move] fail: invalid input " + sourceUUID + "," + targetUUID);
-            return false;
-        }
         TaskMover tm = new TaskMover(this, hostManager, jobKey, targetUUID, sourceUUID);
         log.info("[task.move] attempting move for " + jobKey);
         return tm.execute();
