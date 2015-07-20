@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.addthis.bundle.util.AutoField;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
@@ -70,6 +71,13 @@ public abstract class PathElement implements Codable, TreeDataParent {
      */
     @FieldConfig(codable = true)
     protected boolean count = defCountHit;
+
+    /**
+     * If non-null then use this bundle field to assign
+     * a value to the hits property. Default is null.
+     */
+    @FieldConfig(codable = true)
+    protected AutoField hitsField;
 
     /**
      * If true then continue processing child path elements
@@ -249,6 +257,9 @@ public abstract class PathElement implements Codable, TreeDataParent {
     public final boolean countHits() {
         return count;
     }
+
+    @Override
+    public final boolean assignHits() { return hitsField != null; }
 
     @SuppressWarnings("unchecked")
     @Override

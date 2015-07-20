@@ -23,4 +23,6 @@ public interface TreeDataParent {
     public HashMap<String, TreeDataParameters> dataConfig();
 
     public boolean countHits();
+
+    public boolean assignHits();
 }

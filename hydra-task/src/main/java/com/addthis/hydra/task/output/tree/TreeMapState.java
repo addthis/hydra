@@ -81,6 +81,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     private boolean lastWasNew;
     private int touched;
     private int countValue;
+    private long assignmentValue;
 
     private void checkThread() {
         if (Thread.currentThread() != thread) {
@@ -99,6 +100,16 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
 
     public void setCountValue(int v) {
         countValue = v;
+    }
+
+    @Override
+    public long getAssignmentValue() {
+        return assignmentValue;
+    }
+
+    public TreeMapState setAssignmentValue(long assignmentValue) {
+        this.assignmentValue = assignmentValue;
+        return this;
     }
 
     public boolean getAndClearLastWasNew() {

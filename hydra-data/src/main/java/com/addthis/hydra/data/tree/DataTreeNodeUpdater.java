@@ -27,4 +27,6 @@ public interface DataTreeNodeUpdater {
      * @return
      */
     public int getCountValue();
+
+    public long getAssignmentValue();
 }

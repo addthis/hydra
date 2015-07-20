@@ -281,6 +281,9 @@ public class PathValue extends PathElement {
         }
         try {
             /** child node accounting and custom data updates */
+            if (assignHits()) {
+                state.setAssignmentValue(hitsField.getLong(state.getBundle()).orElse(0l));
+            }
             child.updateChildData(state, this);
             /** update node data accounting */
             parent.updateParentData(state, child, isnew);

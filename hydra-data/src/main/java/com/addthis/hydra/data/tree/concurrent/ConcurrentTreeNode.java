@@ -391,7 +391,10 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         HashMap<String, TreeDataParameters> dataconf = path.dataConfig();
         lock.writeLock().lock();
         try {
-            if (path.countHits()) {
+            if (path.assignHits()) {
+                hits = state.getAssignmentValue();
+                updated = true;
+            } else if (path.countHits()) {
                 hits += state.getCountValue();
                 updated = true;
             }
