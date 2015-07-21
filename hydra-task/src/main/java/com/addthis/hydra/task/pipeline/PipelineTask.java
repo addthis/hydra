@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * numbering of the phases.</p>
  * <p>Example:</p>
  * <pre>
- *  {pipleine.phases:[]}
+ *  {pipeline.phases:[]}
  * </pre>
  *
  * @user-reference
