@@ -24,6 +24,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.addthis.basis.annotations.Scaling;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
@@ -41,6 +42,7 @@ import com.yammer.metrics.core.TimerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.basis.annotations.Scaling.Scale.APPLICATION;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
 
 /**
@@ -233,6 +235,7 @@ public class JobConfigManager {
      *
      * @return A map of all jobs found in the SpawnDataStore
      */
+    @Scaling(APPLICATION)
     public Map<String, IJob> getJobs() {
         final Map<String, IJob> jobs = new HashMap<>();
         List<String> jobNodes = spawnDataStore.getChildrenNames(SPAWN_JOB_CONFIG_PATH);
