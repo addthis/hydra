@@ -42,7 +42,6 @@
     <module>hydra-mq</module>
     <module>hydra-store</module>
     <module>hydra-task</module>
-    <module>hydra-hdfs</module>
     <module>hydra-uber</module>
   </modules>
 
