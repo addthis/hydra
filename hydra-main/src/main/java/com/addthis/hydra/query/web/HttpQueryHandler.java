@@ -14,12 +14,9 @@
 
 package com.addthis.hydra.query.web;
 
-import java.io.InputStream;
-import java.io.StringWriter;
-
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import java.nio.CharBuffer;
 
@@ -28,8 +25,6 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.job.IJob;
-import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.loadbalance.QueryQueue;
 import com.addthis.hydra.query.loadbalance.WorkerData;
@@ -39,11 +34,8 @@ import com.addthis.hydra.query.tracker.QueryEntryInfo;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.util.MetricsServletShim;
 import com.addthis.maljson.JSONArray;
-import com.addthis.maljson.JSONObject;
 
-import com.google.common.base.Optional;
-
-import com.fasterxml.jackson.core.JsonGenerator;
+import com.typesafe.config.ConfigFactory;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 
@@ -52,8 +44,6 @@ import org.apache.commons.io.output.StringBuilderWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.query.web.HttpUtils.sendError;
-import static com.addthis.hydra.query.web.HttpUtils.sendRedirect;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
@@ -70,7 +60,13 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
+
+import static com.addthis.hydra.query.web.HttpUtils.sendError;
+import static com.addthis.hydra.query.web.HttpUtils.sendRedirect;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.util.CharsetUtil.UTF_8;
+import static java.util.stream.Collectors.toMap;
 
 @ChannelHandler.Sharable
 public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -131,7 +127,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         String target = urlDecoder.path();
         if (request.getMethod() == HttpMethod.POST) {
             log.trace("POST Method handling triggered for {}", request);
-            String postBody = request.content().toString(CharsetUtil.UTF_8);
+            String postBody = request.content().toString(UTF_8);
             log.trace("POST body {}", postBody);
             urlDecoder = new QueryStringDecoder(postBody, false);
         }
@@ -156,58 +152,92 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         }
         log.trace("kv pairs {}", kv);
         switch (target) {
-            case "/":
+            case "/": {
                 sendRedirect(ctx, "/query/index.html");
                 break;
-            case "/q/":
-                sendRedirect(ctx, "/query/call?" + kv.toString());
+            }
+            case "/q/": {
+                sendRedirect(ctx, "/query/call?" + kv);
                 break;
+            }
             case "/query/call":
-            case "/query/call/":
+            case "/query/call/": {
                 rawQueryCalls.inc();
                 queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 break;
-            case "/query/google/authorization":
+            }
+            case "/query/google/authorization": {
                 GoogleDriveAuthentication.gdriveAuthorization(kv, ctx);
                 break;
-            case "/query/google/submit":
+            }
+            case "/query/google/submit": {
                 boolean success = GoogleDriveAuthentication.gdriveAccessToken(kv, ctx);
                 if (success) {
                     queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 }
                 break;
+            }
             default:
                 fastHandle(ctx, request, target, kv);
                 break;
         }
     }
 
-    private void fastHandle(ChannelHandlerContext ctx, FullHttpRequest request, String target,
-            KVPairs kv) throws Exception {
+    private void fastHandle(ChannelHandlerContext ctx, FullHttpRequest request, String target, KVPairs kv)
+            throws Exception {
         StringBuilderWriter writer = new StringBuilderWriter(50);
         HttpResponse response = HttpUtils.startResponse(writer);
         response.headers().add("Access-Control-Allow-Origin", "*");
 
         switch (target) {
-            case "/metrics":
+            case "/metrics": {
                 fakeMetricsServlet.writeMetrics(writer, kv);
                 break;
+            }
+            case "/running":
             case "/query/list":
-                writer.write("[\n");
-                for (QueryEntryInfo stat : tracker.getRunning()) {
-                    writer.write(CodecJSON.encodeString(stat).concat(",\n"));
-                }
-                writer.write("]");
+            case "/query/running":
+            case "/v2/queries/running.list": {
+                Jackson.defaultMapper().writerWithDefaultPrettyPrinter().writeValue(writer, tracker.getRunning());
                 break;
+            }
+            case "/done":
+            case "/complete":
+            case "/query/done":
+            case "/query/complete":
             case "/completed/list":
-                writer.write("[\n");
-                for (QueryEntryInfo stat : tracker.getCompleted()) {
-                    writer.write(CodecJSON.encodeString(stat).concat(",\n"));
-                }
-                writer.write("]");
+            case "/v2/queries/finished.list": {
+                Jackson.defaultMapper().writerWithDefaultPrettyPrinter().writeValue(writer, tracker.getCompleted());
                 break;
-            case "/v2/host/list":
+            }
+            case "/query/all":
+            case "/v2/queries/list": {
+                Collection<QueryEntryInfo> aggregatingSnapshot = tracker.getRunning();
+                aggregatingSnapshot.addAll(tracker.getCompleted());
+                Jackson.defaultMapper().writerWithDefaultPrettyPrinter().writeValue(writer, aggregatingSnapshot);
+                break;
+            }
+            case "/cancel":
+            case "/query/cancel": {
+                if (tracker.cancelRunning(kv.getValue("uuid"))) {
+                    writer.write("canceled " + kv.getValue("uuid"));
+                } else {
+                    writer.write("canceled failed for " + kv.getValue("uuid"));
+                    response.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                }
+                break;
+            }
+            case "/workers":
+            case "/query/workers":
+            case "/v2/queries/workers": {
+                Map<String, Integer> workerSnapshot = meshQueryMaster.worky().values().stream().collect(
+                        toMap(WorkerData::hostName, WorkerData::queryLeases));
+                Jackson.defaultMapper().writerWithDefaultPrettyPrinter().writeValue(writer, workerSnapshot);
+                break;
+            }
+            case "/host":
             case "/host/list":
+            case "/v2/host/list":
                 String queryStatusUuid = kv.getValue("uuid");
                 QueryEntry queryEntry = tracker.getQueryEntry(queryStatusUuid);
                 if (queryEntry != null) {
@@ -218,25 +248,28 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 } else {
                     QueryEntryInfo queryEntryInfo = tracker.getCompletedQueryInfo(queryStatusUuid);
                     if (queryEntryInfo != null) {
-                        JSONObject entryJSON = CodecJSON.encodeJSON(queryEntryInfo);
-                        writer.write(entryJSON.toString());
+                        Jackson.defaultMapper().writerWithDefaultPrettyPrinter().writeValue(writer, queryEntryInfo);
                     } else {
                         log.trace("could not find query for status");
                         if (ctx.channel().isActive()) {
-                            sendError(ctx, new HttpResponseStatus(404, "could not find query"));
+                            sendError(ctx, new HttpResponseStatus(NOT_FOUND.code(), "could not find query"));
                         }
                         return;
                     }
                     break;
                 }
-            case "/query/cancel":
-                if (tracker.cancelRunning(kv.getValue("uuid"))) {
-                    writer.write("canceled " + kv.getValue("uuid"));
-                } else {
-                    writer.write("canceled failed for " + kv.getValue("uuid"));
-                    response.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            case "/git":
+            case "/v2/settings/git.properties": {
+                try {
+                    Jackson.defaultMapper().writeValue(
+                            writer, ConfigFactory.parseResourcesAnySyntax("/hydra-git.properties").getConfig("git"));
+                } catch (Exception ex) {
+                    String noGitWarning = "Error loading git.properties, possibly jar was not compiled with maven.";
+                    log.warn(noGitWarning);
+                    writer.write(noGitWarning);
                 }
                 break;
+            }
             case "/query/encode": {
                 Query q = new Query(null,
                                     new String[]{kv.getValue("query", kv.getValue("path", ""))},
@@ -251,104 +284,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write(q.getPaths()[0]);
                 break;
             }
-            case "/v2/queries/finished.list": {
-                JSONArray runningEntries = new JSONArray();
-                for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
-                    JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    //TODO: replace this with some high level summary
-                    entryJSON.put("hostInfoSet", "");
-                    runningEntries.put(entryJSON);
-                }
-                writer.write(runningEntries.toString());
-                break;
-            }
-            case "/v2/queries/running.list": {
-                JSONArray runningEntries = new JSONArray();
-                for (QueryEntryInfo entryInfo : tracker.getRunning()) {
-                    JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    //TODO: replace this with some high level summary
-                    entryJSON.put("hostInfoSet", "");
-                    runningEntries.put(entryJSON);
-                }
-                writer.write(runningEntries.toString());
-                break;
-            }
-            case "/v2/queries/workers": {
-                JSONObject jsonObject = new JSONObject();
-                for (WorkerData workerData : meshQueryMaster.worky().values()) {
-                    jsonObject.put(workerData.hostName, workerData.queryLeases.availablePermits());
-                }
-                writer.write(jsonObject.toString());
-                break;
-            }
-            case "/v2/queries/list":
-                JSONArray queries = new JSONArray();
-                for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
-                    JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("state", 0);
-                    queries.put(entryJSON);
-                }
-                for (QueryEntryInfo entryInfo : tracker.getRunning()) {
-                    JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("state", 3);
-                    queries.put(entryJSON);
-                }
-                writer.write(queries.toString());
-                break;
-            case "/v2/job/list": {
-                StringWriter swriter = new StringWriter();
-                final JsonGenerator json = Jackson.defaultMapper().getFactory().createGenerator(swriter);
-                json.writeStartArray();
-                for (IJob job : meshQueryMaster.getSpawnDataStoreHandler().getJobs()) {
-                    if (job.getQueryConfig() != null && job.getQueryConfig().getCanQuery()) {
-                        List<JobTask> tasks = job.getCopyOfTasks();
-                        String uuid = job.getId();
-                        json.writeStartObject();
-                        json.writeStringField("id", uuid);
-                        json.writeStringField("description", Optional.fromNullable(job.getDescription()).or(""));
-                        json.writeNumberField("state", job.getState().ordinal());
-                        json.writeStringField("creator", job.getCreator());
-                        json.writeNumberField("submitTime", Optional.fromNullable(job.getSubmitTime()).or(-1L));
-                        json.writeNumberField("startTime", Optional.fromNullable(job.getStartTime()).or(-1L));
-                        json.writeNumberField("endTime", Optional.fromNullable(job.getStartTime()).or(-1L));
-                        json.writeNumberField("replicas", Optional.fromNullable(job.getReplicas()).or(0));
-                        json.writeNumberField("nodes", tasks.size());
-                        json.writeEndObject();
-                    }
-                }
-                json.writeEndArray();
-                json.close();
-                writer.write(swriter.toString());
-                break;
-            }
-            case "/v2/settings/git.properties": {
-                StringWriter swriter = new StringWriter();
-                final JsonGenerator json = Jackson.defaultMapper().getFactory().createGenerator(swriter);
-                Properties gitProperties = new Properties();
-                json.writeStartObject();
-                try {
-                    InputStream in = getClass().getResourceAsStream("/hydra-git.properties");
-                    gitProperties.load(in);
-                    in.close();
-                    json.writeStringField("commitIdAbbrev", gitProperties.getProperty("git.commit.id.abbrev"));
-                    json.writeStringField("commitUserEmail", gitProperties.getProperty("git.commit.user.email"));
-                    json.writeStringField("commitMessageFull", gitProperties.getProperty("git.commit.message.full"));
-                    json.writeStringField("commitId", gitProperties.getProperty("git.commit.id"));
-                    json.writeStringField("commitUserName", gitProperties.getProperty("git.commit.user.name"));
-                    json.writeStringField("buildUserName", gitProperties.getProperty("git.build.user.name"));
-                    json.writeStringField("commitIdDescribe", gitProperties.getProperty("git.commit.id.describe"));
-                    json.writeStringField("buildUserEmail", gitProperties.getProperty("git.build.user.email"));
-                    json.writeStringField("branch", gitProperties.getProperty("git.branch"));
-                    json.writeStringField("commitTime", gitProperties.getProperty("git.commit.time"));
-                    json.writeStringField("buildTime", gitProperties.getProperty("git.build.time"));
-                } catch (Exception ex) {
-                    log.warn("Error loading git.properties, possibly jar was not compiled with maven.");
-                }
-                json.writeEndObject();
-                json.close();
-                writer.write(swriter.toString());
-                break;
-            }
             default:
                 // forward to static file server
                 ctx.pipeline().addLast(staticFileHandler);
@@ -357,8 +292,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 return; // don't do text response clean up
         }
         log.trace("response being sent {}", writer);
-        ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
-                CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
+        ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(writer.getBuilder()), UTF_8);
         HttpContent content = new DefaultHttpContent(textResponse);
         response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, textResponse.readableBytes());
         if (HttpHeaders.isKeepAlive(request)) {
@@ -370,7 +304,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         log.trace("response pending");
         if (!HttpHeaders.isKeepAlive(request)) {
             log.trace("Setting close listener");
-            lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+            ((Future<Void>) lastContentFuture).addListener(ChannelFutureListener.CLOSE);
         }
     }
 }

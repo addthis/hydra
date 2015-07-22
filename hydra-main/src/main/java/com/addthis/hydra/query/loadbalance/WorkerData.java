@@ -29,4 +29,8 @@ public class WorkerData {
         this.queryLeases = queryLeases;
         this.hostName = hostName;
     }
+
+    public Semaphore semaphore() { return this.queryLeases; }
+    public int queryLeases() { return this.queryLeases.availablePermits(); }
+    public String hostName() { return this.hostName; }
 }
