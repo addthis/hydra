@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.pipeline;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 
@@ -68,6 +69,8 @@ public class PipelineTask implements TaskRunnable {
 
     @Nonnull private final StreamMapper[] phases;
 
+    @Nullable private final boolean[] disable;
+
     /**
      * If true then ensure that writable directories are all unique.
      **/
@@ -81,9 +84,14 @@ public class PipelineTask implements TaskRunnable {
 
     @JsonCreator
     public PipelineTask(@JsonProperty("phases") @Nonnull StreamMapper[] phases,
+                        @JsonProperty("disable") boolean[] disable,
                         @JsonProperty("validateDirs") boolean validateDirs) {
         this.phases = phases;
         this.validateDirs = validateDirs;
+        this.disable = disable;
+        if ((disable != null) && (disable.length != phases.length)) {
+            throw new IllegalStateException("disable array is not of equal length as phases array");
+        }
         int futures = Math.max(phases.length - 1, 0);
         ImmutableList.Builder<CompletableFuture<Void>> complete = new ImmutableList.Builder<>();
         ImmutableList.Builder<CompletableFuture<Void>> next = new ImmutableList.Builder<>();
@@ -141,7 +149,13 @@ public class PipelineTask implements TaskRunnable {
      * initialization.
      */
     private void beginPhase(int pos) {
-        if (pos < phases.length) {
+        if (pos >= phases.length) {
+            return;
+        }
+        if ((disable != null) && (disable[pos])) {
+            log.info("Skipping phase {} because it is disabled.", pos + 1);
+            beginPhase(pos + 1);
+        } else {
             log.info("Initializing phase {} for execution.", pos + 1);
             currentPhase = null;
             phases[pos].start();
