@@ -35,9 +35,14 @@ import com.addthis.hydra.job.spawn.Spawn;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class JobRequestHandlerImpl implements JobRequestHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(JobRequestHandlerImpl.class);
 
     private final Spawn spawn;
     
@@ -73,6 +78,8 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
             if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
+                log.warn("User {} (sudo = {}) had insufficient privileges to modify job {}", username,
+                         (sudo != null), id);
                 throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + id);
             }
             if (config == null) {
