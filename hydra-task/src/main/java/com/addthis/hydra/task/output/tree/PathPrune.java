@@ -27,6 +27,8 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.prop.DataTime;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Runnables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -68,6 +70,14 @@ public class PathPrune extends PathElement {
     @FieldConfig private int relativeDown = 0;
 
     /**
+     * Optionally specify a path for traversal before pruning is initiated.
+     * This parameter is incompatible the relativeDown parameter. The recognized
+     * path types are "*" for matching all values and "foo" for matching a specific
+     * value.
+     */
+    @Nullable private ImmutableList<String> treePath;
+
+    /**
      * If true then terminate the pruning process when the job is shutting down.
      * Default is false. Note that specifying a prune in the "post" section and
      * setting preempt to true can prevent job pruning from happening if the
@@ -85,14 +95,23 @@ public class PathPrune extends PathElement {
      */
     @Nullable private final DateTimeFormatter nameFormat;
 
+    private Splitter SLASH_SPLITTER = Splitter.on('/').omitEmptyStrings();
+
     public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat,
-                     @Nullable @JsonProperty("timezone") String timezone) {
+                     @Nullable @JsonProperty("timezone") String timezone,
+                     @Nullable @JsonProperty("treePath") String treePath) {
         if (nameFormat != null && timezone != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat).withZone(DateTimeZone.forID(timezone));
         } else if (nameFormat != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat);
         } else {
             this.nameFormat = null;
+        }
+        if ((treePath != null) && (relativeDown != 0)) {
+            throw new IllegalStateException("cannot use both treePath and relativeDown parameters");
+        }
+        if (treePath != null) {
+            this.treePath = ImmutableList.copyOf(SLASH_SPLITTER.splitToList(treePath));
         }
     }
 
@@ -107,18 +126,36 @@ public class PathPrune extends PathElement {
             log.info("Path pruning is not executing due to JVM shutdown.");
             return result;
         }
-        findAndPruneChildren(state, root, now, relativeDown);
+        findAndPruneChildren(state, root, now, relativeDown, treePath);
         return result;
     }
 
-    public void findAndPruneChildren(final TreeMapState state, final DataTreeNode root, long now, int depth) {
-        if (depth == 0) {
+    public void findAndPruneChildren(final TreeMapState state, final DataTreeNode root, long now, int depth, List<String> treePaths) {
+        if ((depth == 0) && ((treePaths == null) || (treePaths.size() == 0))) {
             pruneChildren(state, root, now);
+        } else if (treePaths != null) {
+            String current = treePaths.get(0);
+            List<String> next = treePaths.subList(1, treePaths.size());
+            if ("*".equals(current)) {
+                ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
+                try {
+                    while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
+                        findAndPruneChildren(state, keyNodeItr.next(), now, 0, next);
+                    }
+                } finally {
+                    keyNodeItr.close();
+                }
+            } else {
+                DataTreeNode nextNode = root.getNode(current);
+                if (nextNode != null) {
+                    findAndPruneChildren(state, nextNode, now, 0, next);
+                }
+            }
         } else {
             ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
             try {
                 while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
-                    findAndPruneChildren(state, keyNodeItr.next(), now, depth - 1);
+                    findAndPruneChildren(state, keyNodeItr.next(), now, depth - 1, null);
                 }
             } finally {
                 keyNodeItr.close();
