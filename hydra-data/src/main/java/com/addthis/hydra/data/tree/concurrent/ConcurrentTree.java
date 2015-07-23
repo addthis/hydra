@@ -86,6 +86,12 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Configuration.Parameter
     static final int deletionLogInterval = Parameter.intValue("hydra.tree.clean.logging", 100000);
 
+
+    @Configuration.Parameter
+    // when false the node cache is bypassed and all tree puts and gets go directly to the
+    // backing IPageDB source
+    static final boolean nodeCacheEnable = Parameter.boolValue("hydra.tree.node.cache.enable", true);
+
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
 
     private final String scope = "ConcurrentTree" + Integer.toString(scopeGenerator.getAndIncrement());
@@ -158,10 +164,14 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);
         // create cache
-        cache = new MediatedEvictionConcurrentHashMap.
-                Builder<CacheKey, ConcurrentTreeNode>().
-                mediator(new CacheMediator(source)).
-                maximumWeightedCapacity(cleanQSize).build();
+        if (nodeCacheEnable) {
+            cache = new MediatedEvictionConcurrentHashMap.
+                    Builder<CacheKey, ConcurrentTreeNode>().
+                    mediator(new CacheMediator(source)).
+                    maximumWeightedCapacity(cleanQSize).build();
+        } else {
+            cache = null;
+        }
 
         // get stored next db id
         idFile = new File(root, "nextID");
@@ -246,7 +256,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
          */
 
         while (true) {
-            ConcurrentTreeNode node = cache.get(key);
+            ConcurrentTreeNode node = null;
+            if (nodeCacheEnable) {
+                node = cache.get(key);
+            }
             if (node != null) {
                 if (node.isDeleted()) {
                     cache.remove(key, node);
@@ -254,6 +267,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     reportCacheHit();
                     return node; // (1)
                 }
+
             } else {// (2)
                 DBKey dbkey = key.dbkey();
                 reportCacheMiss();
@@ -269,11 +283,18 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 } else {
                     node.initIfDecoded(this, dbkey, key.name);
 
-                    ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
-                    if (prev == null) {
+                    if (nodeCacheEnable) {
+                        ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
+                        if (prev == null) {
+                            node.reactivate();
+                            if (setLease(node, lease)) {
+                                return node; // (4)
+                            }
+                        }
+                    } else {
                         node.reactivate();
                         if (setLease(node, lease)) {
-                            return node; // (4)
+                            return node;
                         }
                     }
                 }
@@ -288,10 +309,15 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         ConcurrentTreeNode newNode = null;
 
         while (true) {
-            ConcurrentTreeNode node = cache.get(key);
+            ConcurrentTreeNode node = null;
+            if (nodeCacheEnable) {
+                node = cache.get(key);
+            }
             if (node != null) {
                 if (node.isDeleted()) {
-                    cache.remove(key, node);
+                    if (nodeCacheEnable) {
+                        cache.remove(key, node);
+                    }
                 } else if (setLease(node, true)) {
                     reportCacheHit();
                     return node;
@@ -306,8 +332,15 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                         source.remove(dbkey);
                     } else {
                         node.initIfDecoded(this, dbkey, key.name);
-                        ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
-                        if (prev == null) {
+                        if (nodeCacheEnable) {
+                            ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
+                            if (prev == null) {
+                                node.reactivate();
+                                if (setLease(node, true)) {
+                                    return node;
+                                }
+                            }
+                        } else {
                             node.reactivate();
                             if (setLease(node, true)) {
                                 return node;
@@ -325,12 +358,18 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                         }
                     }
                     node = newNode;
-                    if (cache.putIfAbsent(key, node) == null) {
-                        /**
-                         * We must insert the new node into the external storage
-                         * because our iterators traverse this data
-                         * structure to search for nodes.
-                         */
+                    if (nodeCacheEnable) {
+                        if (cache.putIfAbsent(key, node) == null) {
+                            /**
+                             * We must insert the new node into the external storage
+                             * because our iterators traverse this data
+                             * structure to search for nodes.
+                             */
+                            source.put(dbkey, node);
+                            parent.updateNodeCount(1);
+                            return node;
+                        }
+                    } else {
                         source.put(dbkey, node);
                         parent.updateNodeCount(1);
                         return node;
@@ -360,7 +399,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             if (node.markDeleted()) {
                 // node could have already been dropped from the cache, and then re-created (sharing the same cache
                 // key equality). That is a fresh node that needs its own deletion, so only try to remove our instance.
-                cache.remove(key, node);
+                if (nodeCacheEnable) {
+                    cache.remove(key, node);
+                }
                 parent.updateNodeCount(-1);
                 if (node.hasNodes() && !node.isAlias()) {
                     markForChildDeletion(node);
@@ -460,9 +501,11 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Override
     public void sync() throws IOException {
         log.debug("[sync] start");
-        for (ConcurrentTreeNode node : cache.values()) {
-            if (!node.isDeleted() && node.isChanged()) {
-                source.put(node.dbkey, node);
+        if (nodeCacheEnable) {
+            for (ConcurrentTreeNode node : cache.values()) {
+                if (!node.isDeleted() && node.isChanged()) {
+                    source.put(node.dbkey, node);
+                }
             }
         }
         log.debug("[sync] end nextdb={}", nextDBID);
@@ -476,7 +519,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     @Override
     public int getCacheSize() {
-        return cache.size();
+        return nodeCacheEnable ? cache.size() : 0;
     }
 
     @Override
@@ -705,12 +748,14 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 }
                 String name = entry.getKey().rawKey().toString();
                 CacheKey key = new CacheKey(nodeDB, name);
-                ConcurrentTreeNode cacheNode = cache.remove(key);
+                if (nodeCacheEnable) {
+                    ConcurrentTreeNode cacheNode = cache.remove(key);
                 /* Mark the node as deleted so that it will not be
                  * pushed to disk when removed from the eviction queue.
                  */
-                if (cacheNode != null) {
-                    cacheNode.markDeleted();
+                    if (cacheNode != null) {
+                        cacheNode.markDeleted();
+                    }
                 }
             }
             if (range.hasNext()) {
