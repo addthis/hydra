@@ -56,10 +56,16 @@ public class AuthenticationResource {
         boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
         try {
             String token = spawn.getPermissionsManager().login(username, password, usingSSL);
-            Response.ResponseBuilder builder = Response.ok(token);
+            Response.ResponseBuilder builder;
+            if (token == null) {
+                builder = Response.status(Response.Status.UNAUTHORIZED);
+                builder.entity("Invalid credentials provided");
+            } else {
+                builder = Response.ok(token);
+            }
             builder.header("Access-Control-Allow-Origin",
-                           "http://" + uriInfo.getAbsolutePath().getHost() +
-                           ":" + configuration.webPort);
+                               "http://" + uriInfo.getAbsolutePath().getHost() +
+                               ":" + configuration.webPort);
             builder.header("Access-Control-Allow-Methods", "POST");
             return builder.build();
         } catch (Exception ex)  {
@@ -100,7 +106,13 @@ public class AuthenticationResource {
         boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
         try {
             String sudoToken = spawn.getPermissionsManager().sudo(username, password, usingSSL);
-            Response.ResponseBuilder builder = Response.ok(sudoToken);
+            Response.ResponseBuilder builder;
+            if (sudoToken == null) {
+                builder = Response.status(Response.Status.UNAUTHORIZED);
+                builder.entity("Invalid credentials provided");
+            } else {
+                builder = Response.ok(sudoToken);
+            }
             builder.header("Access-Control-Allow-Origin",
                            "http://" + uriInfo.getAbsolutePath().getHost() +
                            ":" + configuration.webPort);
