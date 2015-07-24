@@ -72,6 +72,15 @@ public class PathPruneTest {
     }
 
     @Test
+    public void allLeaves() throws IOException {
+        TreeMapState state = new TreeMapState(new ListBundle());
+        DataTreeNode parent = mockParent();
+        PathPrune pathPrune = Configs.decodeObject(PathPrune.class, "allLeaves = true");
+        pathPrune.pruneChildren(state, parent, System.currentTimeMillis());
+        verify(parent).deleteNode("140101");
+    }
+
+    @Test
     public void daylightSavingsTime() throws IOException {
         boolean error = false;
         try {

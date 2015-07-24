@@ -64,6 +64,13 @@ public class PathPrune extends PathElement {
     @FieldConfig private boolean ignoreMissingTimeProp = false;
 
     /**
+     * If true then delete all nodes at the leaf level of matching.
+     * Otherwise perform the default date matching behavior.
+     * Default is false.
+     */
+    @FieldConfig private boolean allLeaves = false;
+
+    /**
      * When traversing the tree in search of the nodes to prune, if this parameter is a positive integer then begin
      * the traversal this many levels lower than the current location. Default is zero.
      */
@@ -72,8 +79,8 @@ public class PathPrune extends PathElement {
     /**
      * Optionally specify a path for traversal before pruning is initiated.
      * This parameter is incompatible the relativeDown parameter. The recognized
-     * path types are "*" for matching all values and "foo" for matching a specific
-     * value.
+     * path types are "*" for matching all values, "{{date}}" for date matching,
+     * and "foo" for matching a specific value.
      */
     @Nullable private ImmutableList<String> treePath;
 
@@ -145,6 +152,19 @@ public class PathPrune extends PathElement {
                 } finally {
                     keyNodeItr.close();
                 }
+            } else if ("{{date}}".equals(current)) {
+                ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
+                try {
+                    while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
+                        DataTreeNode treeNode = keyNodeItr.next();
+                        long nodeTime = getNodeTime(treeNode);
+                        if ((nodeTime > 0) && ((now - nodeTime) > ttl)) {
+                            findAndPruneChildren(state, treeNode, now, 0, next);
+                        }
+                    }
+                } finally {
+                    keyNodeItr.close();
+                }
             } else {
                 DataTreeNode nextNode = root.getNode(current);
                 if (nextNode != null) {
@@ -171,8 +191,14 @@ public class PathPrune extends PathElement {
         try {
             while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
                 DataTreeNode treeNode = keyNodeItr.next();
-                long nodeTime = getNodeTime(treeNode);
-                if ((nodeTime > 0) && ((now - nodeTime) > ttl)) {
+                boolean delete;
+                if (allLeaves) {
+                    delete = true;
+                } else {
+                    long nodeTime = getNodeTime(treeNode);
+                    delete = ((nodeTime > 0) && ((now - nodeTime) > ttl));
+                }
+                if (delete) {
                     root.deleteNode(treeNode.getName());
                     deleted++;
                 } else {
