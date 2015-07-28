@@ -16,7 +16,6 @@ package com.addthis.hydra.query.spawndatastore;
 
 import java.io.IOException;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -86,10 +85,6 @@ public class SpawnDataStoreHandler {
 
     public void close() {
         spawnDataStore.close();
-    }
-
-    public Collection<IJob> getJobs() {
-        return jobConfigManager.getJobs().values();
     }
 
     public void validateJobForQuery(String job) {
