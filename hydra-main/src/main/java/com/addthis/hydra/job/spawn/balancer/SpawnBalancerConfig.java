@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.spawn;
+package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.concurrent.TimeUnit;
 

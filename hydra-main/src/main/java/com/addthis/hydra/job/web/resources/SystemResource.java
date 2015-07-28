@@ -27,8 +27,8 @@ import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.spawn.HealthCheckResult;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.spawn.SpawnBalancer;
-import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
+import com.addthis.hydra.job.spawn.balancer.SpawnBalancer;
+import com.addthis.hydra.job.spawn.balancer.SpawnBalancerConfig;
 import com.addthis.hydra.job.spawn.SystemManager;
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
 

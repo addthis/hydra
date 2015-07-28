@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.spawn;
+package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,6 +25,8 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.job.spawn.HostManager;
+import com.addthis.hydra.job.spawn.Spawn;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;

@@ -88,7 +88,7 @@ public class HostManager {
         }
     }
 
-    public List<HostState> getLiveHosts(String minionType) {
+    public List<HostState> getLiveHosts(@Nullable String minionType) {
         List<HostState> allHosts = listHostStatus(minionType);
         List<HostState> rv = new ArrayList<>(allHosts.size());
         for (HostState host : allHosts) {

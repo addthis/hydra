@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.spawn;
+package com.addthis.hydra.job.spawn.balancer;
 
 import java.io.File;
 
@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
@@ -34,10 +34,13 @@ import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.entity.JobCommand;
-import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.spawn.HostManager;
+import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.spawn.SpawnMQ;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
@@ -49,10 +52,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @Category(SlowTest.class)
 public class SpawnBalancerTest extends ZkCodecStartUtil {

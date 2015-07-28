@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job;
 
+import javax.annotation.Nullable;
+
 import com.addthis.hydra.job.mq.JobKey;
 
 /**
@@ -26,7 +28,7 @@ public class JobTaskMoveAssignment {
     private final boolean delete;
     private final boolean fromReplica;
 
-    public JobTaskMoveAssignment(JobKey jobKey, String sourceUUID, String targetUUID, boolean fromReplica, boolean delete) {
+    public JobTaskMoveAssignment(JobKey jobKey, String sourceUUID, @Nullable String targetUUID, boolean fromReplica, boolean delete) {
         this.jobKey = jobKey;
         this.sourceUUID = sourceUUID;
         this.targetUUID = targetUUID;
