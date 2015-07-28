@@ -2494,6 +2494,8 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("Unable to cleanly shutdown membership listeners", ex);
         }
 
+        jobOnFinishStateHandler.close();
+
         try {
             closeZkClients();
         } catch (Exception ex) {

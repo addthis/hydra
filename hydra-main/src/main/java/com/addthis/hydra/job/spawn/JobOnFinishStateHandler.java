@@ -16,7 +16,7 @@ package com.addthis.hydra.job.spawn;
 import com.addthis.hydra.job.Job;
 
 /** Handles callback on job finish. */
-public interface JobOnFinishStateHandler {
+public interface JobOnFinishStateHandler extends AutoCloseable {
 
     public static enum JobOnFinishState {
         OnComplete, OnError
@@ -24,4 +24,6 @@ public interface JobOnFinishStateHandler {
 
     void handle(Job job, JobOnFinishState state);
 
+    /** No exception in signature. **/
+    @Override void close();
 }

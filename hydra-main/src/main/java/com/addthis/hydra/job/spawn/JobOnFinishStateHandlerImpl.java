@@ -36,6 +36,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
@@ -57,23 +58,24 @@ public class JobOnFinishStateHandlerImpl implements JobOnFinishStateHandler {
     private static final String clusterName = Parameter.value("cluster.name", "localhost");
 
     private final Spawn spawn;
-
-    private final BlockingQueue<Runnable> backgroundTaskQueue = new LinkedBlockingQueue<>(backgroundQueueSize);
-    private final ExecutorService backgroundService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L, TimeUnit.MILLISECONDS, backgroundTaskQueue),
-            100, TimeUnit.MILLISECONDS);
-    private final AtomicLong emailLastFired = new AtomicLong();
-
-    @SuppressWarnings("unused")
-    private final Gauge<Integer> backgroundQueueGauge = Metrics.newGauge(
-            Spawn.class, "backgroundExecutorQueue", new Gauge<Integer>() {
-                public Integer value() {
-                    return backgroundTaskQueue.size();
-                }
-            });
+    private final BlockingQueue<Runnable> backgroundTaskQueue;
+    private final ExecutorService backgroundService;
+    private final AtomicLong emailLastFired;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"}) private final Gauge<Integer> backgroundQueueGauge;
 
     public JobOnFinishStateHandlerImpl(Spawn spawn) {
         this.spawn = spawn;
+        backgroundTaskQueue = new LinkedBlockingQueue<>(backgroundQueueSize);
+        backgroundService = new ThreadPoolExecutor(
+                backgroundThreads, backgroundThreads, 0L, TimeUnit.MILLISECONDS, backgroundTaskQueue,
+                new ThreadFactoryBuilder().setDaemon(true).build());
+        emailLastFired = new AtomicLong();
+        backgroundQueueGauge = Metrics.newGauge(
+                Spawn.class, "backgroundExecutorQueue", new Gauge<Integer>() {
+                    @Override public Integer value() {
+                        return backgroundTaskQueue.size();
+                    }
+                });
     }
 
     @Override
@@ -167,4 +169,7 @@ public class JobOnFinishStateHandlerImpl implements JobOnFinishStateHandler {
         }
     }
 
+    @Override public void close() {
+        MoreExecutors.shutdownAndAwaitTermination(backgroundService, 120, TimeUnit.SECONDS);
+    }
 }
