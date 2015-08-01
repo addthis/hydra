@@ -90,7 +90,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Configuration.Parameter
     // when false the node cache is bypassed and all tree puts and gets go directly to the
     // backing IPageDB source
-    static final boolean nodeCacheEnable = Parameter.boolValue("hydra.tree.node.cache.enable", true);
+    static final boolean nodeCacheEnable = Parameter.boolValue("hydra.tree.node.cache.enable", false);
 
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
 
