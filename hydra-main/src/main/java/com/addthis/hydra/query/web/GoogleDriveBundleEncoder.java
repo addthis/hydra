@@ -39,7 +39,6 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.maljson.JSONObject;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.http.HttpEntity;
@@ -58,10 +57,11 @@ import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+
+import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 
 public class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
@@ -71,12 +71,9 @@ public class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder
 
     private static final int threadCount = Parameter.intValue("qmaster.export.gdrive.threads", 4);
 
-    private static final ExecutorService executor = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(threadCount, threadCount,
-                    0L, TimeUnit.MILLISECONDS,
-                                   new LinkedBlockingQueue<>(),
-                    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("goodle-drive-%d").build()),
-            5, TimeUnit.SECONDS);
+    private static final ExecutorService executor = new ThreadPoolExecutor(
+            threadCount, threadCount, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setDaemon(true).setNameFormat("goodle-drive-%d").build());
 
     /**
      * Name of the new file in the Google filesystem.

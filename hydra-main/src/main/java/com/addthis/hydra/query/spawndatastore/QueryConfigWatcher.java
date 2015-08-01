@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.query.spawndatastore;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.concurrent.ExecutionException;
@@ -20,7 +21,6 @@ import java.util.concurrent.ExecutionException;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bark.StringSerializer;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.store.AvailableCache;
 import com.addthis.hydra.job.store.SpawnDataStore;
@@ -28,6 +28,7 @@ import com.addthis.hydra.job.store.SpawnDataStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.codec.json.CodecJSON.INSTANCE;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
 
 
@@ -38,16 +39,12 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PA
 @ThreadSafe
 public class QueryConfigWatcher {
 
-    private static final CodecJSON codec = CodecJSON.INSTANCE;
+    private static final Logger log = LoggerFactory.getLogger(QueryConfigWatcher.class);
 
     /* How long job config data can live in the cache before being refreshed */
-    private static final long queryConfigRefreshMillis =
-            Parameter.longValue("query.config.refresh.millis", 15000);
+    private static final long QUERY_CONFIG_REFRESH_MILLIS = Parameter.longValue("query.config.refresh.millis", 15000);
     /* How many jobIds should be stored in the cache */
-    private static final int  queryConfigCacheSize     =
-            Parameter.intValue("query.config.cache.size", 100);
-
-    private static final Logger log = LoggerFactory.getLogger(QueryConfigWatcher.class);
+    private static final int QUERY_CONFIG_CACHE_SIZE = Parameter.intValue("query.config.cache.size", 100);
 
     /* A SpawnDataStore used to fetch the config data. Should be the same type (zookeeper/priam)
     as the one used by Spawn to store job data */
@@ -58,14 +55,25 @@ public class QueryConfigWatcher {
 
     public QueryConfigWatcher(SpawnDataStore spawnDataStore) {
         this.spawnDataStore = spawnDataStore;
-        // This cache will not block on queryconfig fetches unless no data has been fetched for
-        // that job before
-        this.configCache = new AvailableCache<JobQueryConfig>(queryConfigRefreshMillis, -1, queryConfigCacheSize, 2) {
-            @Override
-            public JobQueryConfig fetchValue(String id) {
-                return fetchJobQueryConfig(id);
-            }
-        };
+        // This cache will not block on queryconfig fetches unless no data has been fetched for that job before
+        this.configCache =
+                new AvailableCache<JobQueryConfig>(QUERY_CONFIG_REFRESH_MILLIS, -1, QUERY_CONFIG_CACHE_SIZE, 2) {
+                    @Nullable @Override public JobQueryConfig fetchValue(String id) {
+                        JobQueryConfig jobQueryConfig = new JobQueryConfig();
+                        String jobConfigPath = SPAWN_JOB_CONFIG_PATH + "/" + id + "/queryconfig";
+                        String raw = QueryConfigWatcher.this.spawnDataStore.get(jobConfigPath);
+                        if (raw == null) {
+                            return null;
+                        }
+                        try {
+                            INSTANCE.decode(jobQueryConfig, StringSerializer.deserialize(raw.getBytes()).getBytes());
+                            return jobQueryConfig;
+                        } catch (Exception e) {
+                            log.warn("Failed to decode query config", e);
+                            return null;
+                        }
+                    }
+                };
     }
 
     /**
@@ -74,7 +82,7 @@ public class QueryConfigWatcher {
      * @param jobId The jobId to fetch
      * @return A (possibly null) JobQueryConfig
      */
-    public JobQueryConfig getJobQueryConfig(String jobId) {
+    @Nullable public JobQueryConfig getJobQueryConfig(String jobId) {
         try {
             return configCache.get(jobId);
         } catch (ExecutionException e) {
@@ -90,29 +98,6 @@ public class QueryConfigWatcher {
     }
 
     /**
-     * Query the SpawnDataStore for the config for a job. This method should not block getJobQueryConfig unless the
-     * config has never been queried before
-     *
-     * @param jobId The jobId to fetch
-     * @return The JobQueryConfig if one was found, or null otherwise
-     */
-    private JobQueryConfig fetchJobQueryConfig(String jobId) {
-        JobQueryConfig jobQueryConfig = new JobQueryConfig();
-        String jobConfigPath = SPAWN_JOB_CONFIG_PATH + "/" + jobId + "/queryconfig";
-        String raw = spawnDataStore.get(jobConfigPath);
-        if (raw == null) {
-            return null;
-        }
-        try {
-            codec.decode(jobQueryConfig, StringSerializer.deserialize(raw.getBytes()).getBytes());
-            return jobQueryConfig;
-        } catch (Exception e) {
-            log.warn("Failed to decode query config", e);
-            return null;
-        }
-    }
-
-    /**
      * Check whether a job is safe to query, using the cache if possible
      *
      * @param jobID The jobId to check
@@ -120,6 +105,6 @@ public class QueryConfigWatcher {
      */
     public boolean safeToQuery(String jobID) {
         JobQueryConfig jqc = getJobQueryConfig(jobID);
-        return jqc != null && jqc.getCanQuery();
+        return (jqc != null) && jqc.getCanQuery();
     }
 }

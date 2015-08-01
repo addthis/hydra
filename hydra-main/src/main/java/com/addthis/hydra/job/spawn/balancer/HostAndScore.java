@@ -11,19 +11,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.spawn;
+package com.addthis.hydra.job.spawn.balancer;
 
-import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.mq.HostState;
 
-/** Handles callback on job finish. */
-public interface JobOnFinishStateHandler extends AutoCloseable {
+final class HostAndScore {
 
-    public static enum JobOnFinishState {
-        OnComplete, OnError
+    final HostState host;
+    final double score;
+
+    HostAndScore(HostState host, double score) {
+        this.host = host;
+        this.score = score;
     }
-
-    void handle(Job job, JobOnFinishState state);
-
-    /** No exception in signature. **/
-    @Override void close();
 }

@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,6 +34,7 @@ import com.addthis.hydra.job.store.SpawnDataStore;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Histogram;
@@ -56,17 +59,11 @@ public class JobConfigManager {
 
     private static final Codec codec = CodecJSON.INSTANCE;
 
-    private SpawnDataStore spawnDataStore;
-
     /* metrics */
-    private final Histogram jobSizePersistHisto     =
+    private static final Histogram jobSizePersistHisto =
             Metrics.newHistogram(JobConfigManager.class, "jobSizePersistHisto");
-    private final Histogram jobTaskSizePersistHisto =
-            Metrics.newHistogram(JobConfigManager.class, "jobTaskSizePersistHisto");
-    private final Timer     addJobTimer             =
-            Metrics.newTimer(JobConfigManager.class, "addJobTimer");
-    private final Timer     updateJobTimer          =
-            Metrics.newTimer(JobConfigManager.class, "updateJobTimer");
+    private static final Timer addJobTimer = Metrics.newTimer(JobConfigManager.class, "addJobTimer");
+    private static final Timer updateJobTimer = Metrics.newTimer(JobConfigManager.class, "updateJobTimer");
 
     private static final int loadThreads  = Parameter.intValue("job.config.load.threads", 8);
     private static final int jobChunkSize = Parameter.intValue("job.config.chunk.size", 30);
@@ -78,8 +75,12 @@ public class JobConfigManager {
     private static final String brokerInfoChildName  = "/brokerinfo";
     private static final String taskChildName        = "/task";
 
+    private final SpawnDataStore spawnDataStore;
+    private final Map<String, IJob> jobs;
+
     public JobConfigManager(SpawnDataStore spawnDataStore) {
         this.spawnDataStore = spawnDataStore;
+        this.jobs = loadJobs();
     }
 
     public void writeUpdateIfDataNotNull(String path, String data) throws Exception {
@@ -142,7 +143,7 @@ public class JobConfigManager {
      * @return The reconstituted job object
      * @throws Exception
      */
-    private IJob createJobFromQueryData(String jobId, Map<String, String> queryData) throws Exception {
+    @Nullable private IJob createJobFromQueryData(String jobId, Map<String, String> queryData) throws Exception {
         String jobPath = getJobPath(jobId);
         String rstring = spawnDataStore.getChild(SPAWN_JOB_CONFIG_PATH, jobId);
         if (rstring == null) {
@@ -228,29 +229,7 @@ public class JobConfigManager {
         return rv;
     }
 
-    /**
-     * Find all job ids in the SpawnDataStore, split them into chunks, and then load the jobs from each chunk in parallel
-     *
-     * @return A map of all jobs found in the SpawnDataStore
-     */
     public Map<String, IJob> getJobs() {
-        final Map<String, IJob> jobs = new HashMap<>();
-        List<String> jobNodes = spawnDataStore.getChildrenNames(SPAWN_JOB_CONFIG_PATH);
-        if (jobNodes != null) {
-            // Use multiple threads to query the database, and gather the results together
-            ExecutorService executorService = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(loadThreads, loadThreads, 1000L, TimeUnit.MILLISECONDS,
-
-                                                                                                             new LinkedBlockingQueue<>()));
-            for (List<String> jobIdChunk : Lists.partition(jobNodes, jobChunkSize)) {
-                executorService.submit(new MapChunkLoader(jobs, jobIdChunk));
-            }
-            try {
-                executorService.shutdown();
-                executorService.awaitTermination(600000, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                logger.error("Interrupted while waiting for job import: ", e);
-            }
-        }
         return jobs;
     }
 
@@ -265,22 +244,45 @@ public class JobConfigManager {
     }
 
     /**
+     * Find all job ids in the SpawnDataStore, split them into chunks, and then load the jobs from each chunk in parallel
+     *
+     * @return A map of all jobs found in the SpawnDataStore
+     */
+    private Map<String, IJob> loadJobs() {
+        final Map<String, IJob> jobs = new HashMap<>();
+        List<String> jobNodes = spawnDataStore.getChildrenNames(SPAWN_JOB_CONFIG_PATH);
+        if (jobNodes != null) {
+            // Use multiple threads to query the database, and gather the results together
+            ExecutorService executorService = new ThreadPoolExecutor(
+                    loadThreads, loadThreads, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+                    new ThreadFactoryBuilder().setDaemon(true).build());
+            for (List<String> jobIdChunk : Lists.partition(jobNodes, jobChunkSize)) {
+                executorService.submit(new MapChunkLoader(this, jobs, jobIdChunk));
+            }
+            MoreExecutors.shutdownAndAwaitTermination(executorService, 600000, TimeUnit.MILLISECONDS);
+        }
+        return jobs;
+    }
+
+    /**
      * Internal class to fetch a chunk of jobIds, then push the results into a master map
      */
-    private class MapChunkLoader implements Runnable {
+    private static class MapChunkLoader implements Runnable {
 
         private final Map<String, IJob> jobs;
         private final List<String> chunk;
+        private final JobConfigManager jobConfigManager;
 
-        public MapChunkLoader(Map<String, IJob> jobs, List<String> chunk) {
+        public MapChunkLoader(JobConfigManager jobConfigManager, Map<String, IJob> jobs, List<String> chunk) {
             this.jobs = jobs;
             this.chunk = chunk;
+            this.jobConfigManager = jobConfigManager;
         }
 
         @Override
         public void run() {
             try {
-                Map<String, IJob> chunkMap = loadJobChunk(chunk);
+                Map<String, IJob> chunkMap = jobConfigManager.loadJobChunk(chunk);
                 synchronized (jobs) {
                     jobs.putAll(chunkMap);
                 }
@@ -305,7 +307,7 @@ public class JobConfigManager {
         }
     }
 
-    private String getJobPath(String jobId) {
+    private static String getJobPath(String jobId) {
         return SPAWN_JOB_CONFIG_PATH + "/" + jobId;
     }
 

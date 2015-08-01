@@ -11,19 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.spawn;
+package com.addthis.hydra.job.spawn.balancer;
 
-import com.addthis.hydra.job.Job;
-
-/** Handles callback on job finish. */
-public interface JobOnFinishStateHandler extends AutoCloseable {
-
-    public static enum JobOnFinishState {
-        OnComplete, OnError
-    }
-
-    void handle(Job job, JobOnFinishState state);
-
-    /** No exception in signature. **/
-    @Override void close();
-}
+public enum RebalanceType {HOST, JOB}

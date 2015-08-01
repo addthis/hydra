@@ -27,6 +27,8 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.prop.DataTime;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Runnables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -62,10 +64,25 @@ public class PathPrune extends PathElement {
     @FieldConfig private boolean ignoreMissingTimeProp = false;
 
     /**
+     * If true then delete all nodes at the leaf level of matching.
+     * Otherwise perform the default date matching behavior.
+     * Default is false.
+     */
+    @FieldConfig private boolean allLeaves = false;
+
+    /**
      * When traversing the tree in search of the nodes to prune, if this parameter is a positive integer then begin
      * the traversal this many levels lower than the current location. Default is zero.
      */
     @FieldConfig private int relativeDown = 0;
+
+    /**
+     * Optionally specify a path for traversal before pruning is initiated.
+     * This parameter is incompatible the relativeDown parameter. The recognized
+     * path types are "*" for matching all values, "{{date}}" for date matching,
+     * and "foo" for matching a specific value.
+     */
+    @Nullable private ImmutableList<String> treePath;
 
     /**
      * If true then terminate the pruning process when the job is shutting down.
@@ -85,14 +102,23 @@ public class PathPrune extends PathElement {
      */
     @Nullable private final DateTimeFormatter nameFormat;
 
+    private Splitter SLASH_SPLITTER = Splitter.on('/').omitEmptyStrings();
+
     public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat,
-                     @Nullable @JsonProperty("timezone") String timezone) {
+                     @Nullable @JsonProperty("timezone") String timezone,
+                     @Nullable @JsonProperty("treePath") String treePath) {
         if (nameFormat != null && timezone != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat).withZone(DateTimeZone.forID(timezone));
         } else if (nameFormat != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat);
         } else {
             this.nameFormat = null;
+        }
+        if ((treePath != null) && (relativeDown != 0)) {
+            throw new IllegalStateException("cannot use both treePath and relativeDown parameters");
+        }
+        if (treePath != null) {
+            this.treePath = ImmutableList.copyOf(SLASH_SPLITTER.splitToList(treePath));
         }
     }
 
@@ -107,18 +133,49 @@ public class PathPrune extends PathElement {
             log.info("Path pruning is not executing due to JVM shutdown.");
             return result;
         }
-        findAndPruneChildren(state, root, now, relativeDown);
+        findAndPruneChildren(state, root, now, relativeDown, treePath);
         return result;
     }
 
-    public void findAndPruneChildren(final TreeMapState state, final DataTreeNode root, long now, int depth) {
-        if (depth == 0) {
+    public void findAndPruneChildren(final TreeMapState state, final DataTreeNode root, long now, int depth, List<String> treePaths) {
+        if ((depth == 0) && ((treePaths == null) || (treePaths.size() == 0))) {
             pruneChildren(state, root, now);
+        } else if (treePaths != null) {
+            String current = treePaths.get(0);
+            List<String> next = treePaths.subList(1, treePaths.size());
+            if ("*".equals(current)) {
+                ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
+                try {
+                    while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
+                        findAndPruneChildren(state, keyNodeItr.next(), now, 0, next);
+                    }
+                } finally {
+                    keyNodeItr.close();
+                }
+            } else if ("{{date}}".equals(current)) {
+                ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
+                try {
+                    while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
+                        DataTreeNode treeNode = keyNodeItr.next();
+                        long nodeTime = getNodeTime(treeNode);
+                        if ((nodeTime > 0) && ((now - nodeTime) > ttl)) {
+                            findAndPruneChildren(state, treeNode, now, 0, next);
+                        }
+                    }
+                } finally {
+                    keyNodeItr.close();
+                }
+            } else {
+                DataTreeNode nextNode = root.getNode(current);
+                if (nextNode != null) {
+                    findAndPruneChildren(state, nextNode, now, 0, next);
+                }
+            }
         } else {
             ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
             try {
                 while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
-                    findAndPruneChildren(state, keyNodeItr.next(), now, depth - 1);
+                    findAndPruneChildren(state, keyNodeItr.next(), now, depth - 1, null);
                 }
             } finally {
                 keyNodeItr.close();
@@ -134,8 +191,14 @@ public class PathPrune extends PathElement {
         try {
             while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
                 DataTreeNode treeNode = keyNodeItr.next();
-                long nodeTime = getNodeTime(treeNode);
-                if ((nodeTime > 0) && ((now - nodeTime) > ttl)) {
+                boolean delete;
+                if (allLeaves) {
+                    delete = true;
+                } else {
+                    long nodeTime = getNodeTime(treeNode);
+                    delete = ((nodeTime > 0) && ((now - nodeTime) > ttl));
+                }
+                if (delete) {
                     root.deleteNode(treeNode.getName());
                     deleted++;
                 } else {

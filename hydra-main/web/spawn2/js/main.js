@@ -765,18 +765,12 @@ function(
                 'description',
                 'dontCloneMe',
                 'dontAutoBalanceMe',
-                'group',
-                'groupExecutable',
-                'groupWritable',
                 'hourlyBackups',
                 'maxRunTime',
                 'maxSimulRunning',
                 'minionType',
                 'monthlyBackups',
                 'nodes',
-                'owner',
-                'ownerExecutable',
-                'ownerWritable',
                 'parameters',
                 'priority',
                 'qc_canQuery',
@@ -788,8 +782,6 @@ function(
                 'replicas',
                 'replicationFactor',
                 'weeklyBackups',
-                'worldExecutable',
-                'worldWritable',
                 'autoRetry'
             ]);
             data.description = "CLONE "+data.description;

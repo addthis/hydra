@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.mq;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -93,7 +95,7 @@ public class HostState implements HostMessage {
         lastUpdateTime = System.currentTimeMillis();
     }
 
-    public boolean hasLive(JobKey jobKey) {
+    public boolean hasLive(@Nullable JobKey jobKey) {
         if (stopped != null && Arrays.asList(stopped).contains(jobKey)) {
             return true;
         }

@@ -110,6 +110,9 @@ import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
 import com.addthis.hydra.job.spawn.JobOnFinishStateHandler.JobOnFinishState;
+import com.addthis.hydra.job.spawn.balancer.RebalanceType;
+import com.addthis.hydra.job.spawn.balancer.RebalanceWeight;
+import com.addthis.hydra.job.spawn.balancer.SpawnBalancer;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
@@ -413,8 +416,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.spawnMQ = spawnMQ;
     }
 
-    @VisibleForTesting
-    protected void loadSpawnQueue() throws Exception {
+    @VisibleForTesting public void loadSpawnQueue() throws Exception {
         String queueFromZk = spawnDataStore.get(SPAWN_QUEUE_PATH);
         if (queueFromZk == null) {
             return;
@@ -426,7 +428,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    protected void writeSpawnQueue() {
+    @VisibleForTesting public void writeSpawnQueue() {
         ObjectMapper om = new ObjectMapper();
         try {
             taskQueuesByPriority.lock();
@@ -986,7 +988,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @param limitToAvailableSlots Whether movements should honor their host's availableTaskSlots count
      * @return The number of tasks that were actually moved
      */
-    public List<JobTaskMoveAssignment> executeReallocationAssignments(List<JobTaskMoveAssignment> assignments, boolean limitToAvailableSlots) {
+    public List<JobTaskMoveAssignment> executeReallocationAssignments(@Nullable List<JobTaskMoveAssignment> assignments, boolean limitToAvailableSlots) {
         List<JobTaskMoveAssignment> executedAssignments = new ArrayList<>();
         if (assignments == null) {
             return executedAssignments;
@@ -1323,7 +1325,7 @@ public class Spawn implements Codable, AutoCloseable {
     public boolean prepareTaskStatesForRebalance(Job job, JobTask task, boolean isMigration) {
         jobLock.lock();
         try {
-            if (!balancer.isInMovableState(task)) {
+            if (!SpawnBalancer.isInMovableState(task)) {
                 log.warn("[task.mover] decided not to move non-idle task " + task);
                 return false;
             }
@@ -1444,7 +1446,7 @@ public class Spawn implements Codable, AutoCloseable {
         return newReplicas;
     }
 
-    protected List<JobTaskReplica> replicateTask(JobTask task, List<String> targetHosts) {
+    public List<JobTaskReplica> replicateTask(JobTask task, List<String> targetHosts) {
         List<JobTaskReplica> newReplicas = new ArrayList<>();
         for (String targetHostUUID : targetHosts) {
             JobTaskReplica replica = new JobTaskReplica();
@@ -2481,6 +2483,9 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("Exception draining job task update queue", ex);
         }
 
+        balancer.close();
+        jobOnFinishStateHandler.close();
+
         try {
             spawnFormattedLogger.close();
         } catch (Exception ex) {
@@ -2501,7 +2506,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    protected void autobalance(SpawnBalancer.RebalanceType type, SpawnBalancer.RebalanceWeight weight) {
+    protected void autobalance(RebalanceType type, RebalanceWeight weight) {
         executeReallocationAssignments(balancer.getAssignmentsForAutoBalance(type, weight), false);
     }
 
@@ -2903,7 +2908,7 @@ public class Spawn implements Codable, AutoCloseable {
         return false;
     }
 
-    protected boolean isNewTask(JobTask task) {
+    public boolean isNewTask(JobTask task) {
         HostState liveHost = hostManager.getHostState(task.getHostUUID());
         return (liveHost != null)
                && !liveHost.hasLive(task.getJobKey())

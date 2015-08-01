@@ -13,7 +13,8 @@
  */
 package com.addthis.hydra.job.store;
 
-import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -27,6 +28,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A cache implementation that never blocks unless there is no data for a given ID. Stale values are refreshed asynchronously
@@ -34,7 +36,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  *
  * @param <T> The class that will be stored in the cache
  */
-public abstract class AvailableCache<T> {
+public abstract class AvailableCache<T> implements AutoCloseable {
 
     /* A LoadingCache used to save fetched objects */
     private final LoadingCache<String, Optional<T>> loadingCache;
@@ -51,7 +53,7 @@ public abstract class AvailableCache<T> {
      * @param fetchThreads  How many threads to use to fetch values in the background (if <=0, use two threads)
      */
     public AvailableCache(long refreshMillis, long expireMillis, int maxSize, int fetchThreads) {
-        CacheBuilder cacheBuilder = CacheBuilder.newBuilder();
+        CacheBuilder<Object, Object> cacheBuilder = CacheBuilder.newBuilder();
         // Configure the cache for any parameters that are > 0
         if (expireMillis > 0) {
             cacheBuilder.expireAfterWrite(expireMillis, TimeUnit.MILLISECONDS);
@@ -62,9 +64,12 @@ public abstract class AvailableCache<T> {
         if (maxSize > 0) {
             cacheBuilder.maximumSize(maxSize);
         }
-        fetchThreads = fetchThreads > 0 ? fetchThreads : 2;
-        executor = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(fetchThreads, fetchThreads, 1000L,
-                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()));
+        if (fetchThreads <= 0) {
+            fetchThreads = 2;
+        }
+        executor = new ThreadPoolExecutor(
+                fetchThreads, fetchThreads, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("avail-cache-%d").setDaemon(true).build());
         //noinspection unchecked
         this.loadingCache = cacheBuilder.build(new CacheLoader<String, Optional<T>>() {
             @Override
@@ -72,15 +77,15 @@ public abstract class AvailableCache<T> {
              * If refreshAfterWrite is enabled, this method is called after returning the old value.
              * The new value will be inserted into the cache when the load() operation completes.
              */
-            public ListenableFuture<Optional<T>> reload(final String key, Optional<T> oldval) {
+            public ListenableFuture<Optional<T>> reload(final String key, Optional<T> oldValue) {
                 ListenableFutureTask<Optional<T>> task = ListenableFutureTask.create(() -> load(key));
                 executor.execute(task);
                 return task;
             }
 
             @Override
-            public Optional<T> load(String id) throws Exception {
-                return Optional.fromNullable(fetchValue(id));
+            public Optional<T> load(String key) throws Exception {
+                return Optional.fromNullable(fetchValue(key));
             }
         });
     }
@@ -91,10 +96,10 @@ public abstract class AvailableCache<T> {
      * @param id The id to fetch
      * @return A possibly-null object to put into the cache
      */
-    public abstract T fetchValue(String id);
+    @Nullable public abstract T fetchValue(String id);
 
 
-    public T get(String id) throws ExecutionException {
+    @Nullable public T get(String id) throws ExecutionException {
         return loadingCache.get(id).orNull();
     }
 
@@ -103,14 +108,17 @@ public abstract class AvailableCache<T> {
     }
 
     public void put(String id, T value) {
-        if (id == null || value == null) {
+        if ((id == null) || (value == null)) {
             return;
         }
-        loadingCache.put(id, Optional.fromNullable(value));
+        loadingCache.put(id, Optional.of(value));
     }
 
     public void clear() {
         loadingCache.invalidateAll();
     }
 
+    @Override public void close() throws Exception {
+        MoreExecutors.shutdownAndAwaitTermination(executor, 120, TimeUnit.SECONDS);
+    }
 }

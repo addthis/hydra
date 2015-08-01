@@ -14,7 +14,6 @@
 package com.addthis.hydra.job;
 
 import java.util.List;
-import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
 
@@ -34,10 +33,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 @Category(SlowTest.class)
 public class JobConfigManagerTest extends ZkCodecStartUtil {
@@ -180,7 +176,7 @@ public class JobConfigManagerTest extends ZkCodecStartUtil {
         JobConfigManager jcm = getJobConfigManager();
         jcm.addJob(new ZnodeJob("foo"));
         jcm.addJob(new ZnodeJob("bar"));
-        Map<String, IJob> jobs = jcm.getJobs();
+        new JobConfigManager(spawnDataStore);
     }
 
 }

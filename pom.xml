@@ -23,7 +23,7 @@
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.4.6-SNAPSHOT</version>
+  <version>5.5.1-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -42,7 +42,6 @@
     <module>hydra-mq</module>
     <module>hydra-store</module>
     <module>hydra-task</module>
-    <module>hydra-hdfs</module>
     <module>hydra-uber</module>
   </modules>
 
