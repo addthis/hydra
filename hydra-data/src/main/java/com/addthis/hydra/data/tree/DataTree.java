@@ -49,14 +49,6 @@ public interface DataTree extends DataTreeNode {
         throw new UnsupportedOperationException();
     }
 
-    public default int getCacheSize() {
-        throw new UnsupportedOperationException();
-    }
-
-    public default double getCacheHitRate() {
-        throw new UnsupportedOperationException();
-    }
-
     public DataTreeNode getRootNode();
 
     @Override public default DataTreeNode getNode(String name) {

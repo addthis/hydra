@@ -440,7 +440,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                     long mark = JitterClock.globalTime();
                     long streamRate = (streamCounts * 1000L) / (mark - lastHeaderTime.getAndSet(mark));
                     log.info(
-                            "tread tmap  input proc  rules  nodes bundles cache..hit% dbs   mem   bundleTime [{}," +
+                            "tread tmap  input proc  rules  nodes bundles dbs   mem   bundleTime [{}," +
                             "{}/s,{}MM]",
                             streamCounts, streamRate, streamTotals);
                 }
@@ -461,8 +461,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 snap.ruleProcessRate = bench.getEventRate(BENCH.RULES);
                 snap.nodesUpdated = processNodes.getAndSet(0);
                 snap.totalPackets = proc;
-                snap.treeCacheSize = tree.getCacheSize();
-                snap.treeCacheHitRate = tree.getCacheHitRate();
+//                snap.treeCacheSize = tree.getCacheSize();
+//                snap.treeCacheHitRate = tree.getCacheHitRate();
                 snap.treeDbCount = tree.getDBCount();
                 snap.freeMemory = Runtime.getRuntime().freeMemory() / 1024L / 1024L;
                 snap.averageTimestamp = date.format(avg_t);

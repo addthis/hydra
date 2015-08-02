@@ -13,31 +13,11 @@
  */
 package com.addthis.hydra.data.tree.concurrent;
 
-import javax.annotation.concurrent.GuardedBy;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BooleanSupplier;
-
-import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
-import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.hydra.common.Configuration;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
@@ -58,15 +38,26 @@ import com.addthis.hydra.store.util.MeterFileLogger;
 import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
 import com.addthis.hydra.store.util.NamedThreadFactory;
 import com.addthis.hydra.store.util.Raw;
-
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.AtomicDouble;
-
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.concurrent.GuardedBy;
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BooleanSupplier;
 
 /**
  * @user-reference
@@ -86,22 +77,13 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Configuration.Parameter
     static final int deletionLogInterval = Parameter.intValue("hydra.tree.clean.logging", 100000);
 
-
-    @Configuration.Parameter
-    // when false the node cache is bypassed and all tree puts and gets go directly to the
-    // backing IPageDB source
-    static final boolean nodeCacheEnable = Parameter.boolValue("hydra.tree.node.cache.enable", false);
-
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
 
     private final String scope = "ConcurrentTree" + Integer.toString(scopeGenerator.getAndIncrement());
 
     public static enum METERTREE {
-        CACHE_HIT, CACHE_MISS, NODE_PUT, NODE_CREATE, NODE_DELETE, SOURCE_MISS
+        NODE_PUT, NODE_CREATE, NODE_DELETE, SOURCE_MISS
     }
-
-    static final String keyCacheGet = METERTREE.CACHE_HIT.toString();
-    static final String keyCacheMiss = METERTREE.CACHE_MISS.toString();
 
     private final File root;
     private final File idFile;
@@ -112,8 +94,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     final AtomicBoolean closed = new AtomicBoolean(false);
     private final Meter<METERTREE> meter;
     private final MeterFileLogger logger;
-    private final AtomicDouble cacheHitRate = new AtomicDouble(0.0);
-    private final MediatedEvictionConcurrentHashMap<CacheKey, ConcurrentTreeNode> cache;
     private final ScheduledExecutorService deletionThreadPool;
 
     @GuardedBy("treeTrashNode")
@@ -163,15 +143,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         source.setCacheMem(TreeCommonParameters.maxCacheMem);
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);
-        // create cache
-        if (nodeCacheEnable) {
-            cache = new MediatedEvictionConcurrentHashMap.
-                    Builder<CacheKey, ConcurrentTreeNode>().
-                    mediator(new CacheMediator(source)).
-                    maximumWeightedCapacity(cleanQSize).build();
-        } else {
-            cache = null;
-        }
 
         // get stored next db id
         idFile = new File(root, "nextID");
@@ -237,6 +208,26 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return (!lease || node.tryLease());
     }
 
+
+    /**
+     * Only used in testing.  Allows an external actor to put a node into the tree directly
+     * without calling getOrCreateNode
+     *
+     * @param parent - the parent of the node to place into the tree
+     * @param node   - the node to place into the tree
+     * @return the previous value or null if it did not already exist
+     */
+    @VisibleForTesting
+    ConcurrentTreeNode putNode(final ConcurrentTreeNode parent, final ConcurrentTreeNode node) {
+        long nodedb = parent.nodeDB();
+        if (nodedb <= 0) {
+            log.trace("[node.get] {} --> {} NOMAP --> null", parent, node);
+            return null;
+        }
+        CacheKey key = new CacheKey(nodedb, node.name);
+        return source.put(key.dbkey(), node);
+    }
+
     public ConcurrentTreeNode getNode(final ConcurrentTreeNode parent, final String child, final boolean lease) {
         long nodedb = parent.nodeDB();
         if (nodedb <= 0) {
@@ -256,47 +247,23 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
          */
 
         while (true) {
-            ConcurrentTreeNode node = null;
-            if (nodeCacheEnable) {
-                node = cache.get(key);
+
+            DBKey dbkey = key.dbkey();
+            ConcurrentTreeNode node = source.get(dbkey);
+
+            if (node == null) {
+                meter.inc(METERTREE.SOURCE_MISS);
+                return null; // (3)
             }
-            if (node != null) {
-                if (node.isDeleted()) {
-                    cache.remove(key, node);
-                } else if (setLease(node, lease)) {
-                    reportCacheHit();
-                    return node; // (1)
-                }
 
-            } else {// (2)
-                DBKey dbkey = key.dbkey();
-                reportCacheMiss();
-                node = source.get(dbkey);
+            if (node.isDeleted()) {
+                source.remove(dbkey);
+            } else {
+                node.initIfDecoded(this, dbkey, key.name);
 
-                if (node == null) {
-                    meter.inc(METERTREE.SOURCE_MISS);
-                    return null; // (3)
-                }
-
-                if (node.isDeleted()) {
-                    source.remove(dbkey);
-                } else {
-                    node.initIfDecoded(this, dbkey, key.name);
-
-                    if (nodeCacheEnable) {
-                        ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
-                        if (prev == null) {
-                            node.reactivate();
-                            if (setLease(node, lease)) {
-                                return node; // (4)
-                            }
-                        }
-                    } else {
-                        node.reactivate();
-                        if (setLease(node, lease)) {
-                            return node;
-                        }
-                    }
+                node.reactivate();
+                if (setLease(node, lease)) {
+                    return node;
                 }
             }
         }
@@ -309,72 +276,33 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         ConcurrentTreeNode newNode = null;
 
         while (true) {
-            ConcurrentTreeNode node = null;
-            if (nodeCacheEnable) {
-                node = cache.get(key);
-            }
+            DBKey dbkey = key.dbkey();
+            ConcurrentTreeNode node = source.get(dbkey);
+
             if (node != null) {
                 if (node.isDeleted()) {
-                    if (nodeCacheEnable) {
-                        cache.remove(key, node);
-                    }
-                } else if (setLease(node, true)) {
-                    reportCacheHit();
-                    return node;
-                }
-            } else {
-                DBKey dbkey = key.dbkey();
-                reportCacheMiss();
-                node = source.get(dbkey);
-
-                if (node != null) {
-                    if (node.isDeleted()) {
-                        source.remove(dbkey);
-                    } else {
-                        node.initIfDecoded(this, dbkey, key.name);
-                        if (nodeCacheEnable) {
-                            ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
-                            if (prev == null) {
-                                node.reactivate();
-                                if (setLease(node, true)) {
-                                    return node;
-                                }
-                            }
-                        } else {
-                            node.reactivate();
-                            if (setLease(node, true)) {
-                                return node;
-                            }
-                        }
-                    }
-                } else { // create a new node
-                    if (newNode == null) {
-                        newNode = new ConcurrentTreeNode();
-                        newNode.init(this, dbkey, key.name);
-                        newNode.tryLease();
-                        newNode.markChanged();
-                        if (creator != null) {
-                            creator.onNewNode(newNode);
-                        }
-                    }
-                    node = newNode;
-                    if (nodeCacheEnable) {
-                        if (cache.putIfAbsent(key, node) == null) {
-                            /**
-                             * We must insert the new node into the external storage
-                             * because our iterators traverse this data
-                             * structure to search for nodes.
-                             */
-                            source.put(dbkey, node);
-                            parent.updateNodeCount(1);
-                            return node;
-                        }
-                    } else {
-                        source.put(dbkey, node);
-                        parent.updateNodeCount(1);
+                    source.remove(dbkey);
+                } else {
+                    node.initIfDecoded(this, dbkey, key.name);
+                    node.reactivate();
+                    if (setLease(node, true)) {
                         return node;
                     }
                 }
+            } else { // create a new node
+                if (newNode == null) {
+                    newNode = new ConcurrentTreeNode();
+                    newNode.init(this, dbkey, key.name);
+                    newNode.tryLease();
+                    newNode.markChanged();
+                    if (creator != null) {
+                        creator.onNewNode(newNode);
+                    }
+                }
+                node = newNode;
+                source.put(dbkey, node);
+                parent.updateNodeCount(1);
+                return node;
             }
         }
     }
@@ -399,9 +327,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             if (node.markDeleted()) {
                 // node could have already been dropped from the cache, and then re-created (sharing the same cache
                 // key equality). That is a fresh node that needs its own deletion, so only try to remove our instance.
-                if (nodeCacheEnable) {
-                    cache.remove(key, node);
-                }
                 parent.updateNodeCount(-1);
                 if (node.hasNodes() && !node.isAlias()) {
                     markForChildDeletion(node);
@@ -458,13 +383,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
     }
 
-    /**
-     * Package-level visibility is for testing purposes only.
-     */
-    @VisibleForTesting
-    ConcurrentMap<CacheKey, ConcurrentTreeNode> getCache() {
-        return cache;
-    }
 
     private void shutdownDeletionThreadPool() {
         if (deletionThreadPool == null)
@@ -501,13 +419,13 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Override
     public void sync() throws IOException {
         log.debug("[sync] start");
-        if (nodeCacheEnable) {
-            for (ConcurrentTreeNode node : cache.values()) {
-                if (!node.isDeleted() && node.isChanged()) {
-                    source.put(node.dbkey, node);
-                }
-            }
-        }
+        // note that we must push these two nodes for correctness on shutdown
+        // in the previous implementations we just got lucky that they were always
+        // in the LRU (even if you set cache size to 0)
+        // because if they weren't in the LRU the persisted data would have been
+        // incorrect
+        source.put(treeRootNode.dbkey, treeRootNode);
+        source.put(treeTrashNode.dbkey, treeTrashNode);
         log.debug("[sync] end nextdb={}", nextDBID);
         LessFiles.write(idFile, LessBytes.toBytes(nextDBID.toString()), false);
     }
@@ -515,19 +433,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Override
     public long getDBCount() {
         return nextDBID.get();
-    }
-
-    @Override
-    public int getCacheSize() {
-        return nodeCacheEnable ? cache.size() : 0;
-    }
-
-    @Override
-    public double getCacheHitRate() {
-        if (logger == null) {
-            getIntervalData();
-        }
-        return cacheHitRate.get();
     }
 
     /**
@@ -575,24 +480,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     @Override
     public Map<String, Long> getIntervalData() {
-        Map<String, Long> mark = meter.mark();
-        Long gets = mark.get(keyCacheGet);
-        Long miss = mark.get(keyCacheMiss);
-        if (gets == null || miss == null || miss == 0) {
-            cacheHitRate.set(0);
-        } else {
-            cacheHitRate.set(1.0d - ((miss * 1.0d) / ((gets + miss) * 1.0d)));
-        }
-        return mark;
+        return meter.mark();
     }
 
-    private void reportCacheHit() {
-        meter.inc(METERTREE.CACHE_HIT);
-    }
-
-    private void reportCacheMiss() {
-        meter.inc(METERTREE.CACHE_MISS);
-    }
 
     @Override
     public String toString() {
@@ -745,17 +635,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
                 if (next.hasNodes() && !next.isAlias()) {
                     counter = deleteSubTree(next, counter, terminationCondition, deletionLogger);
-                }
-                String name = entry.getKey().rawKey().toString();
-                CacheKey key = new CacheKey(nodeDB, name);
-                if (nodeCacheEnable) {
-                    ConcurrentTreeNode cacheNode = cache.remove(key);
-                /* Mark the node as deleted so that it will not be
-                 * pushed to disk when removed from the eviction queue.
-                 */
-                    if (cacheNode != null) {
-                        cacheNode.markDeleted();
-                    }
                 }
             }
             if (range.hasNext()) {

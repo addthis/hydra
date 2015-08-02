@@ -209,11 +209,9 @@ public class TestConcurrentTree {
             parent.release();
 
             assertEquals(1, root.getNodeCount());
-            assertEquals(TreeCommonParameters.cleanQMax, tree.getCache().size());
 
             tree.deleteNode(root, "hello");
             tree = waitForDeletion(tree, dir);
-            assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
             assertTrue(tree.getTreeTrashNode().getCounter() >= 1);
             assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
@@ -245,8 +243,6 @@ public class TestConcurrentTree {
                 parent.release();
             }
 
-            assertEquals(TreeCommonParameters.cleanQMax, tree.getCache().size());
-
             assertEquals(fastNumThreads, root.getNodeCount());
 
             for (int i = 0; i < fastNumThreads; i++) {
@@ -254,7 +250,6 @@ public class TestConcurrentTree {
             }
 
             tree = waitForDeletion(tree, dir);
-            assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
 
             tree.close(false, close);
