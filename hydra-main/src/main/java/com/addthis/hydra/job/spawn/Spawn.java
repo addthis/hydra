@@ -681,7 +681,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     private List<HostState> getOrCreateHostStateList(String minionType, @Nullable Collection<String> hostList) {
         List<HostState> hostStateList;
-        if ((hostList == null) || (hostList.isEmpty())) {
+        if ((hostList == null) || hostList.isEmpty()) {
             hostStateList = balancer.sortHostsByActiveTasks(hostManager.listHostStatus(minionType));
         } else {
             hostStateList = new ArrayList<>();
@@ -1251,7 +1251,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     private static List<JobTaskReplica> removeReplicasForHost(String hostUuid, List<JobTaskReplica> currentReplicas) {
-        if ((currentReplicas == null) || (currentReplicas.isEmpty())) {
+        if ((currentReplicas == null) || currentReplicas.isEmpty()) {
             return new ArrayList<>();
         }
         List<JobTaskReplica> replicasCopy = new ArrayList<>(currentReplicas);
@@ -3065,7 +3065,7 @@ public class Spawn implements Codable, AutoCloseable {
         if (shouldBlockTaskKick(liveHost)) {
             unavailable.add(liveHost);
         }
-        List<JobTaskReplica> replicas = ((task.getReplicas() != null) ? task.getReplicas() : new ArrayList<>());
+        List<JobTaskReplica> replicas = task.getReplicas() != null ? task.getReplicas() : new ArrayList<>();
         for (JobTaskReplica replica : replicas) {
             HostState replicaHost = hostManager.getHostState(replica.getHostUUID());
             if (shouldBlockTaskKick(replicaHost)) {
