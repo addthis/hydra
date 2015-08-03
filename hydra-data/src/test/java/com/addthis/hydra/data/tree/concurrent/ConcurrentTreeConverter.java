@@ -77,7 +77,6 @@ public class ConcurrentTreeConverter {
                 writeMap.put(entry.getKey(), entry.getValue());
             }
         }
-        writeNode.markChanged();
         writeNode.writeUnlock();
         writeNode.release();
     }
