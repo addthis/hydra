@@ -273,7 +273,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                                               final DataTreeNodeInitializer creator) {
         parent.requireNodeDB();
         CacheKey key = new CacheKey(parent.nodeDB(), child);
-        ConcurrentTreeNode newNode = null;
 
         while (true) {
             DBKey dbkey = key.dbkey();
@@ -290,14 +289,11 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     }
                 }
             } else { // create a new node
-                if (newNode == null) {
-                    newNode = new ConcurrentTreeNode();
-                    newNode.init(this, dbkey, key.name);
-                    newNode.tryLease();
-                    newNode.markChanged();
-                    if (creator != null) {
-                        creator.onNewNode(newNode);
-                    }
+                ConcurrentTreeNode newNode = new ConcurrentTreeNode();
+                newNode.init(this, dbkey, key.name);
+                newNode.tryLease();
+                if (creator != null) {
+                    creator.onNewNode(newNode);
                 }
                 node = newNode;
                 source.put(dbkey, node);
@@ -450,14 +446,12 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         log.debug("closing {}", this);
         waitOnDeletions();
         if (treeRootNode != null) {
-            treeRootNode.markChanged();
             treeRootNode.release();
             if (treeRootNode.getLeaseCount() != 0) {
                 throw new IllegalStateException("invalid root state on shutdown : " + treeRootNode);
             }
         }
         if (treeTrashNode != null) {
-            treeTrashNode.markChanged();
             treeTrashNode.release();
         }
         sync();

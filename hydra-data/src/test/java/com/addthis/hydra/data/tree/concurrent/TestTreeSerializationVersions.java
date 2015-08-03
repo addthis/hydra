@@ -71,7 +71,6 @@ public class TestTreeSerializationVersions {
                 attachment.setFirst(i);
                 attachment.setLast(i + count);
                 node.createMap().put("time", attachment);
-                node.markChanged();
                 node.release();
             }
             tree.close(false, close);

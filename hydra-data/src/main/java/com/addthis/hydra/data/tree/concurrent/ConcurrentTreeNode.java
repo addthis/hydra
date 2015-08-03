@@ -104,8 +104,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     @Mem(estimate = false, size = 64)
     private AtomicInteger leases = new AtomicInteger(0);
     @Mem(estimate = false, size = 64)
-    private AtomicBoolean changed = new AtomicBoolean(false);
-    @Mem(estimate = false, size = 64)
     private ReadWriteLock lock = new ReentrantReadWriteLock();
 
     private AtomicBoolean decoded = new AtomicBoolean(false);
@@ -117,7 +115,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     public String toString() {
         return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + hits +
-               ",nm=" + name + ",le=" + leases + ",ch=" + changed + ",bi=" + bits + "]";
+                ",nm=" + name + ",le=" + leases + ",bi=" + bits + "]";
     }
 
     @Override public String getName() {
@@ -148,7 +146,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     protected synchronized int updateNodeCount(int delta) {
         nodes += delta;
-        changed.set(true);
         return nodes;
     }
 
@@ -172,11 +169,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return count == -2;
     }
 
-    public void markChanged() {
-        requireEditable();
-        changed.set(true);
-    }
-
     protected boolean markDeleted() {
         return leases.getAndSet(-2) != -2;
     }
@@ -187,10 +179,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     protected synchronized void markAlias() {
         bitSet(ALIAS);
-    }
-
-    protected boolean isChanged() {
-        return changed.get();
     }
 
     private final void bitSet(int set) {
@@ -417,9 +405,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         } finally {
             lock.writeLock().unlock();
         }
-        if (updated) {
-            changed.set(true);
-        }
     }
 
     /**
@@ -433,12 +418,10 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
             if (child != null && data != null) {
                 deferredOps = new ArrayList<>(1);
                 for (TreeNodeData<?> tnd : data.values()) {
-                    if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
-                        changed.set(true);
+                    if (isnew) {
+                        tnd.updateParentNewChild(state, this, child, deferredOps);
                     }
-                    if (tnd.updateParentData(state, this, child, deferredOps)) {
-                        changed.set(true);
-                    }
+                    tnd.updateParentData(state, this, child, deferredOps);
                 }
             }
         } finally {
