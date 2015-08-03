@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -298,7 +300,7 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
         return rebalanceTarget;
     }
 
-    public void setRebalanceTarget(String rebalanceTarget) {
+    public void setRebalanceTarget(@Nullable String rebalanceTarget) {
         this.rebalanceTarget = rebalanceTarget;
     }
 
@@ -306,7 +308,7 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
         return rebalanceSource;
     }
 
-    public void setRebalanceSource(String rebalanceSource) {
+    public void setRebalanceSource(@Nullable String rebalanceSource) {
         this.rebalanceSource = rebalanceSource;
     }
 

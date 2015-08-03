@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -369,7 +371,7 @@ public final class Job implements IJob {
     }
 
     @Override
-    public void setStartTime(Long startTime) {
+    public void setStartTime(@Nullable Long startTime) {
         this.startTime = startTime;
     }
 
@@ -379,7 +381,7 @@ public final class Job implements IJob {
     }
 
     @Override
-    public void setEndTime(Long endTime) {
+    public void setEndTime(@Nullable Long endTime) {
         this.endTime = endTime;
     }
 
@@ -460,7 +462,7 @@ public final class Job implements IJob {
     }
 
     @Override
-    public void setConfig(String config) {
+    public void setConfig(@Nullable String config) {
         this.config = config;
     }
 
@@ -548,7 +550,7 @@ public final class Job implements IJob {
         return nodes.size();
     }
 
-    @Override
+    @Nullable @Override
     public synchronized JobTask getTask(int id) {
         if (nodes == null) {
             return null;
@@ -893,7 +895,7 @@ public final class Job implements IJob {
     /**
      * Log a job event to a rolling log file
      */
-    public static void logJobEvent(Job job, JobEvent event, RollingLog eventLog) {
+    public static void logJobEvent(@Nullable Job job, JobEvent event, RollingLog eventLog) {
         LogUtil.log(eventLog, log, new StringMapHelper()
                         .put("event", event)
                         .put("time", System.currentTimeMillis())

@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.mq;
 
+import javax.annotation.Nullable;
+
 import java.util.Arrays;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -48,9 +50,9 @@ public class CommandTaskReplicate extends AbstractJobMessage {
     public CommandTaskReplicate(String hostUuid,
                                 String job,
                                 int node,
-                                ReplicaTarget[] replicas,
-                                String jobCommand,
-                                String choreWatcherKey,
+                                @Nullable ReplicaTarget[] replicas,
+                                @Nullable String jobCommand,
+                                @Nullable String choreWatcherKey,
                                 boolean force,
                                 boolean wasQueued) {
         super(hostUuid, job, node);

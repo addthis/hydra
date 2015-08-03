@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job;
 
+import javax.annotation.Nullable;
+
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
@@ -39,7 +41,7 @@ public class RebalanceOutcome implements Codable {
     private String id;
     private static final Logger log = LoggerFactory.getLogger(RebalanceOutcome.class);
 
-    public RebalanceOutcome(String id, String errMsg, String dirCorrectionMsg, String dirOptimizationMsg) {
+    public RebalanceOutcome(@Nullable String id, @Nullable String errMsg, @Nullable String dirCorrectionMsg, @Nullable String dirOptimizationMsg) {
         this.errMsg = errMsg;
         this.dirCorrectionMsg = dirCorrectionMsg;
         this.dirOptimizationMsg = dirOptimizationMsg;

@@ -40,7 +40,6 @@ public class JobTaskReplica implements Codable {
     public JobTaskReplica() {
     }
 
-    @VisibleForTesting
     public JobTaskReplica(String hostUuid, String jobUuid, int version, long updated) {
         this.hostUuid = hostUuid;
         this.jobUuid = jobUuid;

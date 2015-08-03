@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import javax.annotation.Nullable;
+
 import java.util.Collection;
 
 import com.addthis.hydra.job.Job;
@@ -40,8 +42,8 @@ public class ScheduledTaskKick implements Runnable {
     public ScheduledTaskKick(Spawn spawn,
                              String jobId,
                              Collection<JobParameter> jobParameters,
-                             String jobConfig,
-                             String rawJobConfig,
+                             @Nullable String jobConfig,
+                             @Nullable String rawJobConfig,
                              SpawnMQ spawnMQ,
                              CommandTaskKick kick,
                              Job job,
