@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.mq;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -27,7 +29,7 @@ public class CommandTaskDelete extends AbstractJobMessage {
         super();
     }
 
-    public CommandTaskDelete(String hostUuid, String job, Integer node, int runCount) {
+    public CommandTaskDelete(String hostUuid, String job, @Nullable Integer node, int runCount) {
         super(hostUuid, job, node);
         this.runCount = runCount;
     }

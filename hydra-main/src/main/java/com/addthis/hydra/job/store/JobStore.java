@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.store;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -174,7 +176,7 @@ public class JobStore {
      * @param config        The latest config
      * @param commitMessage If specified, the commit message to use
      */
-    public void submitConfigUpdate(String jobId, String author, String config, String commitMessage) {
+    public void submitConfigUpdate(String jobId, String author, @Nullable String config, @Nullable String commitMessage) {
         assert (jobId != null);
         config = formatConfig(config);
         synchronized (jobStoreDir) {

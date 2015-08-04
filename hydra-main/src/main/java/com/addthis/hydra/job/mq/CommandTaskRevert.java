@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.mq;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -31,7 +33,8 @@ public class CommandTaskRevert extends AbstractJobMessage {
         super();
     }
 
-    public CommandTaskRevert(String host, String job, Integer node, String backupType, int rev, long time, ReplicaTarget[] replicas, boolean skipMove) {
+    public CommandTaskRevert(String host, String job, Integer node, String backupType, int rev, long time, @Nullable
+    ReplicaTarget[] replicas, boolean skipMove) {
         super(host, job, node);
         this.revision = rev;
         this.time = time;

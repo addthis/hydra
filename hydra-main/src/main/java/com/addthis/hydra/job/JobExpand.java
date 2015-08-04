@@ -275,10 +275,10 @@ public class JobExpand {
         builder.append(replacer.process(contents.get(0)));
         builder.append(delimiters.get(0));
         for (int i = 1; i < length; i++) {
-            if (builder.length() > Spawn.inputMaxNumberOfCharacters) {
+            if (builder.length() > Spawn.INPUT_MAX_NUMBER_OF_CHARACTERS) {
                 throw new IllegalStateException("Expanded job config length of at least " + builder.length()
                                                    + " characters is greater than max length of "
-                                                   + Spawn.inputMaxNumberOfCharacters);
+                                                   + Spawn.INPUT_MAX_NUMBER_OF_CHARACTERS);
             }
             String delimiter = delimiters.get(i - 1);
             if (delimiter.equals("//") || delimiter.equals("/*")) {
@@ -288,10 +288,10 @@ public class JobExpand {
             }
             builder.append(delimiters.get(i));
         }
-        if (builder.length() > Spawn.inputMaxNumberOfCharacters) {
+        if (builder.length() > Spawn.INPUT_MAX_NUMBER_OF_CHARACTERS) {
             throw new IllegalStateException("Expanded job config length of " + builder.length()
                                             + " characters is greater than max length of "
-                                            + Spawn.inputMaxNumberOfCharacters);
+                                            + Spawn.INPUT_MAX_NUMBER_OF_CHARACTERS);
         }
         return builder.toString();
     }

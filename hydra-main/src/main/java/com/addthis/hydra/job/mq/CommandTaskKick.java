@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.mq;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -46,8 +48,8 @@ public class CommandTaskKick implements JobMessage {
     private CommandTaskKick() {}
 
     public CommandTaskKick(String host, JobKey jobKey, String owner, String userGroup, int priority, int jobNodes, long runTime,
-                           int runCount, String config, String command, int hourlyBackups,
-                           int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas,
+                           int runCount, @Nullable String config, String command, int hourlyBackups,
+                           int dailyBackups, int weeklyBackups, int monthlyBackups, @Nullable ReplicaTarget[] replicas,
                            boolean autoRetry, int starts) {
         this.hostUuid = host;
         this.jobKey = jobKey;
