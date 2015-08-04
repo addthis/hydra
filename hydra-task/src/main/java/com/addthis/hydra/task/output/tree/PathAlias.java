@@ -20,6 +20,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeUtil;
+import com.addthis.hydra.data.tree.TreeDataParent;
 
 /**
  * This {@link PathElement PathElement} <span class="hydra-summary">creates a reference to another existing node in the tree</span>.
@@ -122,7 +123,7 @@ public class PathAlias extends PathKeyValue {
     }
 
     @Override
-    public DataTreeNode getOrCreateNode(final TreeMapState state, final String name) {
+    public DataTreeNode getOrCreateNode(final TreeMapState state, final String name, TreeDataParent parentPath) {
         if (hard) {
             DataTreeNode node = state.getLeasedNode(name);
             if (node != null) {
@@ -143,17 +144,14 @@ public class PathAlias extends PathKeyValue {
         }
         if (alias != null) {
             final DataTreeNode finalAlias = alias;
-            DataTreeNodeInitializer init = new DataTreeNodeInitializer() {
-                @Override
-                public void onNewNode(DataTreeNode child) {
-                    child.aliasTo(finalAlias);
-                    state.onNewNode(child);
-                }
+            DataTreeNodeInitializer init = child -> {
+                child.aliasTo(finalAlias);
+                state.onNewNode(child);
             };
             if (debug > 0) {
                 debug(true);
             }
-            return state.getOrCreateNode(name, init);
+            return state.getOrCreateNode(name, init, this);
         } else {
             if (debug > 0) {
                 debug(false);

@@ -282,7 +282,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     public ConcurrentTreeNode getOrCreateNode(final ConcurrentTreeNode parent, final String child,
-                                              final DataTreeNodeInitializer creator) {
+                                              final DataTreeNodeInitializer creator, final TreeDataParent path) {
         parent.requireNodeDB();
         CacheKey key = new CacheKey(parent.nodeDB(), child);
         ConcurrentTreeNode newNode = null;
@@ -317,7 +317,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 } else { // create a new node
                     if (newNode == null) {
                         newNode = new ConcurrentTreeNode();
-                        newNode.init(this, dbkey, key.name);
+                        newNode.init(this, dbkey, key.name, path);
                         newNode.tryLease();
                         newNode.markChanged();
                         if (creator != null) {
@@ -562,8 +562,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     @Override
-    public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
-        return getRootNode().getOrCreateNode(name, init);
+    public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init, TreeDataParent path) {
+        return getRootNode().getOrCreateNode(name, init, path);
     }
 
     @Override

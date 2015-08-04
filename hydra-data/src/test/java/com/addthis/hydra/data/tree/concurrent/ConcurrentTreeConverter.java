@@ -64,7 +64,7 @@ public class ConcurrentTreeConverter {
     private void generateNode(ConcurrentTree writeTree,
             ConcurrentTreeNode writeParent,
             ReadTreeNode readChild) {
-        ConcurrentTreeNode writeNode = writeTree.getOrCreateNode(writeParent, readChild.getName(), null);
+        ConcurrentTreeNode writeNode = writeTree.getOrCreateNode(writeParent, readChild.getName(), null, null);
         writeNode.writeLock();
         if (readChild.hasNodes()) {
             writeNode.requireNodeDB();
@@ -72,7 +72,7 @@ public class ConcurrentTreeConverter {
         writeNode.setCounter(readChild.getCounter());
         Map<String, TreeNodeData> readMap = readChild.getDataMap();
         if (readMap != null) {
-            Map<String, TreeNodeData> writeMap = writeNode.createMap();
+            Map<String, TreeNodeData> writeMap = writeNode.createMap(readMap.size());
             for (Map.Entry<String, TreeNodeData> entry : readMap.entrySet()) {
                 writeMap.put(entry.getKey(), entry.getValue());
             }

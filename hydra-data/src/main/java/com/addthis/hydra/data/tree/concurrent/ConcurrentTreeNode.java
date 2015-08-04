@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -93,10 +94,15 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         }
     }
 
-    protected void init(ConcurrentTree tree, DBKey key, String name) {
+    protected void init(ConcurrentTree tree, DBKey key, String name, TreeDataParent path) {
         this.tree = tree;
         this.dbkey = key;
         this.name = name;
+        // only create data attachment map
+        // if there is data to put into it
+        if (path != null && path.dataConfig() != null && !path.dataConfig().isEmpty()) {
+            createMap(path.dataConfig().size());
+        }
     }
 
     @Mem(estimate = false, size = 64)
@@ -107,6 +113,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     private AtomicBoolean changed = new AtomicBoolean(false);
     @Mem(estimate = false, size = 64)
     private ReadWriteLock lock = new ReentrantReadWriteLock();
+    @Mem(estimate = false, size = 64)
+    private AtomicLong atomicHits = new AtomicLong();
 
     private AtomicBoolean decoded = new AtomicBoolean(false);
     private AtomicBoolean initOnce = new AtomicBoolean(false);
@@ -118,6 +126,12 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     public String toString() {
         return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + hits +
                ",nm=" + name + ",le=" + leases + ",ch=" + changed + ",bi=" + bits + "]";
+    }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        this.hits = atomicHits.get();
+        return super.bytesEncode(version);
     }
 
     @Override public String getName() {
@@ -339,11 +353,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     }
 
     public DataTreeNode getOrCreateEditableNode(String name) {
-        return getOrCreateEditableNode(name, null);
+        return getOrCreateEditableNode(name, null, null);
     }
 
-    public DataTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator) {
-        return tree.getOrCreateNode(this, name, creator);
+    public DataTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator, TreeDataParent path) {
+        return tree.getOrCreateNode(this, name, creator, path);
     }
 
     @Override public boolean deleteNode(String name) {
@@ -370,9 +384,9 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return true;
     }
 
-    protected HashMap<String, TreeNodeData> createMap() {
+    protected HashMap<String, TreeNodeData> createMap(int size) {
         if (data == null) {
-            data = new HashMap<>();
+            data = new HashMap<>(size);
         }
         return data;
     }
@@ -389,60 +403,73 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         requireEditable();
         boolean updated = false;
         HashMap<String, TreeDataParameters> dataconf = path.dataConfig();
-        lock.writeLock().lock();
-        try {
-            if (path.assignHits()) {
-                hits = state.getAssignmentValue();
-                updated = true;
-            } else if (path.countHits()) {
-                hits += state.getCountValue();
-                updated = true;
-            }
-            if (dataconf != null) {
-                if (data == null) {
-                    data = new HashMap<>(dataconf.size());
-                }
-                for (Entry<String, TreeDataParameters> el : dataconf.entrySet()) {
-                    TreeNodeData tnd = data.get(el.getKey());
-                    if (tnd == null) {
-                        tnd = el.getValue().newInstance(this);
-                        data.put(el.getKey(), tnd);
-                        updated = true;
+        if (data == null || data.isEmpty()) {
+            // no lock required to update atomic values
+            updateHits(state, path);
+        } else {
+            lock.writeLock().lock();
+            try {
+                updated = updateHits(state, path);
+                if (dataconf != null) {
+                    if (data == null) {
+                        data = new HashMap<>(dataconf.size());
                     }
-                    if (tnd.updateChildData(state, this, el.getValue())) {
-                        updated = true;
+                    for (Entry<String, TreeDataParameters> el : dataconf.entrySet()) {
+                        TreeNodeData tnd = data.get(el.getKey());
+                        if (tnd == null) {
+                            tnd = el.getValue().newInstance(this);
+                            data.put(el.getKey(), tnd);
+                            updated = true;
+                        }
+                        if (tnd.updateChildData(state, this, el.getValue())) {
+                            updated = true;
+                        }
                     }
                 }
+            } finally {
+                lock.writeLock().unlock();
             }
-        } finally {
-            lock.writeLock().unlock();
         }
         if (updated) {
             changed.set(true);
         }
     }
 
-    /**
-     * @return true if data was changed
-     */
+    public boolean updateHits(DataTreeNodeUpdater state, TreeDataParent path) {
+        boolean updated = false;
+        if (path.assignHits()) {
+            atomicHits.set(state.getAssignmentValue());
+            updated = true;
+        } else if (path.countHits()) {
+            atomicHits.addAndGet(state.getCountValue());
+            updated = true;
+        }
+        return updated;
+    }
+
     @Override public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
-        requireEditable();
         List<TreeNodeDataDeferredOperation> deferredOps = null;
-        lock.writeLock().lock();
-        try {
-            if (child != null && data != null) {
-                deferredOps = new ArrayList<>(1);
-                for (TreeNodeData<?> tnd : data.values()) {
-                    if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
-                        changed.set(true);
+        // since data is initialized at start time we don't need the write lock
+        // unless data is non null and non empty because if it is empty
+        // there is nothing to update.
+        if (child != null && data != null) {
+            requireEditable();
+            if (!data.isEmpty()) {
+                lock.writeLock().lock();
+                try {
+                    deferredOps = new ArrayList<>(1);
+                    for (TreeNodeData<?> tnd : data.values()) {
+                        if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
+                            changed.set(true);
+                        }
+                        if (tnd.updateParentData(state, this, child, deferredOps)) {
+                            changed.set(true);
+                        }
                     }
-                    if (tnd.updateParentData(state, this, child, deferredOps)) {
-                        changed.set(true);
-                    }
+                } finally {
+                    lock.writeLock().unlock();
                 }
             }
-        } finally {
-            lock.writeLock().unlock();
         }
         if (deferredOps != null) {
             for (TreeNodeDataDeferredOperation currentOp : deferredOps) {
@@ -484,6 +511,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     @Override
     public void postDecode() {
         super.postDecode();
+        atomicHits.set(hits);
         decoded.set(true);
     }
 
@@ -600,8 +628,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     }
 
     @Override
-    public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
-        return getOrCreateEditableNode(name, init);
+    public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init, TreeDataParent path) {
+        return getOrCreateEditableNode(name, init, path);
     }
 
     /**
@@ -614,23 +642,22 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
      */
 
     @Override
-    public synchronized long getCounter() {
-        return hits;
+    public long getCounter() {
+        return atomicHits.get();
     }
 
     @Override
-    public synchronized void incrementCounter() {
-        hits++;
+    public void incrementCounter() {
+        atomicHits.incrementAndGet();
     }
 
     @Override
-    public synchronized long incrementCounter(long val) {
-        hits += val;
-        return hits;
+    public long incrementCounter(long val) {
+        return atomicHits.addAndGet(val);
     }
 
     @Override
-    public synchronized void setCounter(long val) {
-        hits = val;
+    public void setCounter(long val) {
+        atomicHits.set(val);
     }
 }

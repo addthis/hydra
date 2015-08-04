@@ -123,7 +123,7 @@ public class DataLimitRecent extends TreeNodeData<DataLimitRecent.Config> {
 
         @Override
         public void run() {
-            DataTreeNode check = parentNode.getOrCreateNode(e.key, null);
+            DataTreeNode check = parentNode.getOrCreateNode(e.key, null, null);
             if (check != null) {
                 // TODO need 'count' field from current PathElement to be
                 // strict instead of using 1

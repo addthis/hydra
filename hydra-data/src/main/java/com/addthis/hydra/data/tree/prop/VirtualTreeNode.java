@@ -34,6 +34,7 @@ public final class VirtualTreeNode extends ConcurrentTreeNode {
     public VirtualTreeNode(final String name, final long hits, final VirtualTreeNode[] children) {
         this.name = name;
         this.hits = hits;
+        this.setCounter(hits);
         this.nodes = children != null ? children.length : 0;
         this.children = children;
     }
@@ -89,8 +90,8 @@ public final class VirtualTreeNode extends ConcurrentTreeNode {
      * Upgrade access modifier of this operation for VirtualTreeNodes.
      */
     @Override
-    public HashMap<String, TreeNodeData> createMap() {
-        return super.createMap();
+    public HashMap<String, TreeNodeData> createMap(int size) {
+        return super.createMap(size);
     }
 
     private class VirtualTreeNodeIterator implements ClosableIterator<DataTreeNode> {

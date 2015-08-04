@@ -339,7 +339,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
                     ((value - error) < entries[i + 1].getValue())) {
                     break;
                 }
-                Map<String, TreeNodeData> data = node.createMap();
+                Map<String, TreeNodeData> data = node.createMap(this.size);
                 DataMap dataMap = new DataMap(1);
                 dataMap.put("error", ValueFactory.create(error));
                 data.put("stats", dataMap);

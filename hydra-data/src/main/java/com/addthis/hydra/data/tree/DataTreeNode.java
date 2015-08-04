@@ -103,7 +103,7 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
      * return node if it exists, create and return new otherwise.
      * returned node is read/write.  MUST call release() when complete to commit changes OR discard.
      */
-    public default DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
+    public default DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init, TreeDataParent path) {
         throw new UnsupportedOperationException("getOrCreateNode");
     }
 

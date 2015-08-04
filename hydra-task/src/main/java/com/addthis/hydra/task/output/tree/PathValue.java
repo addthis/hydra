@@ -26,6 +26,7 @@ import com.addthis.bundle.value.ValueString;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.TreeDataParent;
 
 /**
  * This {@link PathElement PathElement} <span class="hydra-summary">creates a single node with a specified value</span>.
@@ -189,9 +190,9 @@ public class PathValue extends PathElement {
      * @param name    name of target node
      * @return existing node or newly created node
      */
-    public DataTreeNode getOrCreateNode(TreeMapState state, String name) {
+    public DataTreeNode getOrCreateNode(TreeMapState state, String name, TreeDataParent path) {
         if (create && ((maxNodes == 0) || (state.getNodeCount() < maxNodes))) {
-            return state.getOrCreateNode(name, state);
+            return state.getOrCreateNode(name, state, path);
         } else {
             return state.getLeasedNode(name);
         }
@@ -268,7 +269,7 @@ public class PathValue extends PathElement {
             parent.deleteNode(sv);
         }
         /** get db for parent node once we're past it (since it has children) */
-        DataTreeNode child = getOrCreateNode(state, sv);
+        DataTreeNode child = getOrCreateNode(state, sv, this);
         boolean isnew = state.getAndClearLastWasNew();
         /** can be null if parent is deleted by another thread or if create == false */
         if (child == null) {

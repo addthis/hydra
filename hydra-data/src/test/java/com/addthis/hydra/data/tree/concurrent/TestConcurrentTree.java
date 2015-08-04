@@ -100,7 +100,7 @@ public class TestConcurrentTree {
                     if (threadId.get(i) == myId) {
                         Integer val = values.get(i);
                         ConcurrentTreeNode node = cache.getOrCreateNode(parent,
-                                Integer.toString(val), null);
+                                Integer.toString(val), null, null);
                         node.release();
                         counter++;
                     }
@@ -171,7 +171,7 @@ public class TestConcurrentTree {
             ConcurrentTree tree = new Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 assertNotNull(node);
                 assertEquals(Integer.toString(i), node.getName());
                 node.release();
@@ -198,9 +198,9 @@ public class TestConcurrentTree {
         try {
             ConcurrentTree tree = new Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
-            ConcurrentTreeNode parent = tree.getOrCreateNode(root, "hello", null);
+            ConcurrentTreeNode parent = tree.getOrCreateNode(root, "hello", null, null);
             for (int i = 0; i < (TreeCommonParameters.cleanQMax << 1); i++) {
-                ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(i), null);
+                ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(i), null, null);
                 assertNotNull(child);
                 assertEquals(Integer.toString(i), child.getName());
                 parent.release();
@@ -234,9 +234,9 @@ public class TestConcurrentTree {
                     numDeletionThreads(8).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < fastNumThreads; i++) {
-                ConcurrentTreeNode parent = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode parent = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 for (int j = 0; j < TreeCommonParameters.cleanQMax; j++) {
-                    ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(j), null);
+                    ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(j), null, null);
                     assertNotNull(child);
                     assertEquals(Integer.toString(j), child.getName());
                     parent.release();
@@ -344,11 +344,11 @@ public class TestConcurrentTree {
                     .numDeletionThreads(numDeletionThreads).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 assertNotNull(node);
                 assertEquals(1, node.getLeaseCount());
                 assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null, null);
                 child.release();
                 node.release();
             }
@@ -431,10 +431,10 @@ public class TestConcurrentTree {
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 assertNotNull(node);
                 assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null, null);
                 child.release();
                 node.release();
             }
@@ -482,10 +482,10 @@ public class TestConcurrentTree {
             for (int i = 0; i < numElements; i++) {
                 values.add(i);
                 threadId.add(i % numThreads);
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 assertNotNull(node);
                 assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null, null);
                 child.release();
                 node.release();
             }
@@ -530,21 +530,21 @@ public class TestConcurrentTree {
             ConcurrentTree tree = new Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 assertNotNull(node);
                 assertEquals(1, node.getLeaseCount());
                 assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null, null);
                 child.release();
                 node.release();
             }
             assertTrue(tree.setNextNodeDB(Integer.MAX_VALUE));
             for (int i = 1000; i < 2000; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 assertNotNull(node);
                 assertEquals(1, node.getLeaseCount());
                 assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null, null);
                 child.release();
                 node.release();
             }

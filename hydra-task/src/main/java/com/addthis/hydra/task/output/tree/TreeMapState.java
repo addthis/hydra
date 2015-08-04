@@ -30,6 +30,7 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 
+import com.addthis.hydra.data.tree.TreeDataParent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 @SuppressWarnings("serial")
@@ -123,8 +124,8 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         return tn;
     }
 
-    public DataTreeNode getOrCreateNode(String key, DataTreeNodeInitializer init) {
-        DataTreeNode tn = current().getOrCreateNode(key, init);
+    public DataTreeNode getOrCreateNode(String key, DataTreeNodeInitializer init, TreeDataParent path) {
+        DataTreeNode tn = current().getOrCreateNode(key, init, path);
         return tn;
     }
 

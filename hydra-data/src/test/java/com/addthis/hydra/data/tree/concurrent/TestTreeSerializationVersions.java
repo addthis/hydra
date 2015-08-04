@@ -64,13 +64,13 @@ public class TestTreeSerializationVersions {
              * write count nodes that have a time data attachment. Use the legacy page encoding.
              */
             for (int i = 0; i < count; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null, null);
                 assertNotNull(node);
                 assertEquals(Integer.toString(i), node.getName());
                 DataTime attachment = new DataTime();
                 attachment.setFirst(i);
                 attachment.setLast(i + count);
-                node.createMap().put("time", attachment);
+                node.createMap(1).put("time", attachment);
                 node.markChanged();
                 node.release();
             }
@@ -108,7 +108,7 @@ public class TestTreeSerializationVersions {
                 DataTime attachment = new DataTime();
                 attachment.setFirst(2 * i);
                 attachment.setLast(2 * i + count);
-                node.createMap().put("time", attachment);
+                node.createMap(1).put("time", attachment);
                 node.markChanged();
                 node.release();
             }
