@@ -403,7 +403,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         requireEditable();
         boolean updated = false;
         HashMap<String, TreeDataParameters> dataconf = path.dataConfig();
-        if (data == null || data.isEmpty()) {
+        if (data == null) {
             // no lock required to update atomic values
             updateHits(state, path);
         } else {
