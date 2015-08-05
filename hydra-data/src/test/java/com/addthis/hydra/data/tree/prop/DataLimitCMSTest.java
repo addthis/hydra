@@ -25,12 +25,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class DataCMSUpperBoundTest {
+public class DataLimitCMSTest {
 
     @Test
-    public void countMinSketch() throws Exception {
+    public void lowerBound() throws Exception {
         ListBundleFormat format = new ListBundleFormat();
-        DataCMSUpperBound dataCountMinSketch = new DataCMSUpperBound(10, 100_000);
+        DataLimitCMS dataCountMinSketch = new DataLimitCMS(10, 100_000);
         dataCountMinSketch.add("a", 5);
         dataCountMinSketch.add("b", 2);
         dataCountMinSketch.add("a", 7);
@@ -38,8 +38,40 @@ public class DataCMSUpperBoundTest {
         assertEquals(2l, dataCountMinSketch.getValue("val(b)").asLong().asNative().longValue());
         assertEquals(0l, dataCountMinSketch.getValue("val(c)").asLong().asNative().longValue());
         AutoField field = AutoField.newAutoField("field");
-        DataCMSUpperBound.Config config = Configs.decodeObject(DataCMSUpperBound.Config.class,
-                                                               "key: field, limit: 5");
+        DataLimitCMS.Config config = Configs.decodeObject(DataLimitCMS.Config.class,
+                                                          "key: field, limit: 5, upper:false");
+        Bundle bundle = format.createBundle();
+        field.setValue(bundle, ValueFactory.create("b"));
+        dataCountMinSketch.updateChildData(bundle, config);
+        assertNull(field.getValue(bundle));
+        field.setValue(bundle, ValueFactory.create("b"));
+        dataCountMinSketch.updateChildData(bundle, config);
+        assertNull(field.getValue(bundle));
+        field.setValue(bundle, ValueFactory.create("b"));
+        dataCountMinSketch.updateChildData(bundle, config);
+        assertNull(field.getValue(bundle));
+        field.setValue(bundle, ValueFactory.create("b"));
+        dataCountMinSketch.updateChildData(bundle, config);
+        assertNotNull(field.getValue(bundle));
+        dataCountMinSketch.updateChildData(bundle, config);
+        assertNotNull(field.getValue(bundle));
+        assertEquals(5l, dataCountMinSketch.getValue("val(b)").asLong().asNative().longValue());
+    }
+
+
+    @Test
+    public void upperBound() throws Exception {
+        ListBundleFormat format = new ListBundleFormat();
+        DataLimitCMS dataCountMinSketch = new DataLimitCMS(10, 100_000);
+        dataCountMinSketch.add("a", 5);
+        dataCountMinSketch.add("b", 2);
+        dataCountMinSketch.add("a", 7);
+        assertEquals(12l, dataCountMinSketch.getValue("val(a)").asLong().asNative().longValue());
+        assertEquals(2l, dataCountMinSketch.getValue("val(b)").asLong().asNative().longValue());
+        assertEquals(0l, dataCountMinSketch.getValue("val(c)").asLong().asNative().longValue());
+        AutoField field = AutoField.newAutoField("field");
+        DataLimitCMS.Config config = Configs.decodeObject(DataLimitCMS.Config.class,
+                                                               "key: field, limit: 5, upper:true");
         Bundle bundle = format.createBundle();
         field.setValue(bundle, ValueFactory.create("a"));
         dataCountMinSketch.updateChildData(bundle, config);

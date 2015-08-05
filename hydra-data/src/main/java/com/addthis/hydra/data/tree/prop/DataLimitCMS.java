@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,7 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
@@ -35,11 +37,10 @@ import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> implements
-                                                                                SuperCodable {
+public class DataLimitCMS extends TreeNodeData<DataLimitCMS.Config> implements SuperCodable {
 
     /**
-     * <p>This data attachment is a <span class="hydra-summary">upper bound limit on keys</span>.
+     * <p>This data attachment is a <span class="hydra-summary">upper or lower bound limit on keys</span>.
      * <p/>
      * <p>The {@link #limit limit} specifies the maximum number of occurrences that any value for
      * a key can be observed. Once the limit is reached then this value will be removed
@@ -87,7 +88,7 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
      *
      * @user-reference
      */
-    public static final class Config extends TreeDataParameters<DataCMSUpperBound> {
+    public static final class Config extends TreeDataParameters<DataLimitCMS> {
 
         /**
          * Bundle field name from which to insert keys into the sketch.
@@ -140,9 +141,16 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
         @FieldConfig(codable = true)
         private AutoField count;
 
+        /**
+         * If true then use the limit as an upper bound. Otherwise
+         * use as a lower bound.
+         */
+        @FieldConfig(codable = true)
+        private boolean upper = true;
+
         @Override
-        public DataCMSUpperBound newInstance() {
-            DataCMSUpperBound db = new DataCMSUpperBound();
+        public DataLimitCMS newInstance() {
+            DataLimitCMS db = new DataLimitCMS();
             if ((width == 0) && (percentage == 0.0)) {
                 throw new IllegalArgumentException("Either 'width' or " +
                                                    "'percentage' must be specified.");
@@ -170,9 +178,9 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
 
     private CountMinSketch sketch;
 
-    public DataCMSUpperBound(){}
+    public DataLimitCMS(){}
 
-    public DataCMSUpperBound(int depth, int width) {
+    public DataLimitCMS(int depth, int width) {
         this.sketch = new CountMinSketch(depth, width, 0);
     }
 
@@ -218,30 +226,67 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
 
     @VisibleForTesting
     boolean updateChildData(Bundle bundle, Config conf) {
-        Optional<String> o = conf.key.getString(bundle);
-        if (o.isPresent()) {
-            long current = sketch.estimateCount(o.get());
-            if (current >= conf.limit) {
-                conf.key.setValue(bundle, null);
-                return true;
+        ValueObject valueObject = conf.key.getValue(bundle);
+        if (valueObject == null) {
+            return false;
+        }
+        if (valueObject.getObjectType() == ValueObject.TYPE.ARRAY) {
+            ValueArray array = valueObject.asArray();
+            Iterator<ValueObject> iterator = array.iterator();
+            boolean updated = false;
+            while (iterator.hasNext()) {
+                ValueObject next = iterator.next();
+                updated = updated | updateString(next.asString().asNative(), iterator, bundle, conf);
             }
-            long myCount = 1;
-            if (conf.count != null) {
-                ValueObject v = conf.count.getValue(bundle);
-                if (v != null) {
-                    try {
-                        myCount = v.asLong().getLong();
-                    } catch (ValueTranslationException ignored) {
-                        return false;
-                    }
-                } else {
+            return updated;
+        } else {
+            return updateString(valueObject.asString().asNative(), null, bundle, conf);
+        }
+    }
+
+    private boolean updateString(String input, Iterator<ValueObject> iterator, Bundle bundle, Config conf) {
+        long current = sketch.estimateCount(input);
+        if (conf.upper) {
+            if (current >= conf.limit) {
+                removeElement(iterator, bundle, conf);
+                return false;
+            } else {
+                return updateCount(input, bundle, conf);
+            }
+        } else {
+            if (current < conf.limit) {
+                removeElement(iterator, bundle, conf);
+                return updateCount(input, bundle, conf);
+            } else {
+                return false;
+            }
+        }
+    }
+
+    private void removeElement(Iterator<ValueObject> iterator, Bundle bundle, Config conf) {
+        if (iterator != null) {
+            iterator.remove();
+        } else {
+            conf.key.setValue(bundle, null);
+        }
+    }
+
+    private boolean updateCount(String input, Bundle bundle, Config conf) {
+        long myCount = 1;
+        if (conf.count != null) {
+            ValueObject v = conf.count.getValue(bundle);
+            if (v != null) {
+                try {
+                    myCount = v.asLong().getLong();
+                } catch (ValueTranslationException ignored) {
                     return false;
                 }
+            } else {
+                return false;
             }
-            sketch.add(o.get(), myCount);
-            return true;
         }
-        return false;
+        sketch.add(input, myCount);
+        return true;
     }
 
     @Override
