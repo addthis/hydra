@@ -165,9 +165,14 @@ public class PipelineTask implements TaskRunnable {
 
     @Nonnull @Override
     public ImmutableList<Path> writableRootPaths() {
-        return ImmutableList.copyOf(
-                Arrays.stream(phases).flatMap(
-                        phase -> phase.writableRootPaths().stream()).iterator());
+        ImmutableList.Builder<Path> builder = new ImmutableList.Builder<>();
+        for (int i = 0; i < phases.length; i++) {
+            if ((disable != null) && disable[i]) {
+                continue;
+            }
+            builder.addAll(phases[i].writableRootPaths());
+        }
+        return builder.build();
     }
 
     public void validateWritableRootPaths() {
@@ -180,6 +185,9 @@ public class PipelineTask implements TaskRunnable {
         Set<Path>[] outputDirs = new Set[phases.length];
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < phases.length; i++) {
+            if ((disable != null) && disable[i]) {
+                continue;
+            }
             outputDirs[i] = new HashSet<>();
             outputDirs[i].addAll(phases[i].writableRootPaths());
             for (int j = 0; j < i; j++) {
