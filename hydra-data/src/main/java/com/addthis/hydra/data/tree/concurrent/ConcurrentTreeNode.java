@@ -457,13 +457,18 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
             requireEditable();
             if (!data.isEmpty()) {
                 deferredOps = new ArrayList<>(1);
-                for (TreeNodeData<?> tnd : data.values()) {
-                    if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
-                        changed.set(true);
+                lock.writeLock().lock();
+                try {
+                    for (TreeNodeData<?> tnd : data.values()) {
+                        if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
+                            changed.set(true);
+                        }
+                        if (tnd.updateParentData(state, this, child, deferredOps)) {
+                            changed.set(true);
+                        }
                     }
-                    if (tnd.updateParentData(state, this, child, deferredOps)) {
-                        changed.set(true);
-                    }
+                } finally {
+                    lock.writeLock().unlock();
                 }
             }
         }
