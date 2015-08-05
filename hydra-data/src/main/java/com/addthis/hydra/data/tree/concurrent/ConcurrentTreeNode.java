@@ -422,11 +422,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
                             data.put(el.getKey(), tnd);
                             updated = true;
                         }
+                        if (tnd.updateChildData(state, this, el.getValue())) {
+                            updated = true;
+                        }
                     } finally {
                         lock.writeLock().unlock();
-                    }
-                    if (tnd.updateChildData(state, this, el.getValue())) {
-                        updated = true;
                     }
                 }
             }
