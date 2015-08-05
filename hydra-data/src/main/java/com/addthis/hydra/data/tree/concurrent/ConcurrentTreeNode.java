@@ -124,7 +124,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     protected DBKey dbkey;
 
     public String toString() {
-        return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + hits +
+        return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + atomicHits.get() +
                ",nm=" + name + ",le=" + leases + ",ch=" + changed + ",bi=" + bits + "]";
     }
 
@@ -407,27 +407,28 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
             // no lock required to update atomic values
             updateHits(state, path);
         } else {
-            lock.writeLock().lock();
-            try {
-                updated = updateHits(state, path);
-                if (dataconf != null) {
-                    if (data == null) {
-                        data = new HashMap<>(dataconf.size());
-                    }
-                    for (Entry<String, TreeDataParameters> el : dataconf.entrySet()) {
-                        TreeNodeData tnd = data.get(el.getKey());
+            updated = updateHits(state, path);
+            if (dataconf != null) {
+                if (data == null) {
+                    data = new HashMap<>(dataconf.size());
+                }
+                for (Entry<String, TreeDataParameters> el : dataconf.entrySet()) {
+                    TreeNodeData tnd;
+                    lock.writeLock().lock();
+                    try {
+                        tnd = data.get(el.getKey());
                         if (tnd == null) {
                             tnd = el.getValue().newInstance(this);
                             data.put(el.getKey(), tnd);
                             updated = true;
                         }
-                        if (tnd.updateChildData(state, this, el.getValue())) {
-                            updated = true;
-                        }
+                    } finally {
+                        lock.writeLock().unlock();
+                    }
+                    if (tnd.updateChildData(state, this, el.getValue())) {
+                        updated = true;
                     }
                 }
-            } finally {
-                lock.writeLock().unlock();
             }
         }
         if (updated) {
@@ -455,19 +456,14 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         if (child != null && data != null) {
             requireEditable();
             if (!data.isEmpty()) {
-                lock.writeLock().lock();
-                try {
-                    deferredOps = new ArrayList<>(1);
-                    for (TreeNodeData<?> tnd : data.values()) {
-                        if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
-                            changed.set(true);
-                        }
-                        if (tnd.updateParentData(state, this, child, deferredOps)) {
-                            changed.set(true);
-                        }
+                deferredOps = new ArrayList<>(1);
+                for (TreeNodeData<?> tnd : data.values()) {
+                    if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
+                        changed.set(true);
                     }
-                } finally {
-                    lock.writeLock().unlock();
+                    if (tnd.updateParentData(state, this, child, deferredOps)) {
+                        changed.set(true);
+                    }
                 }
             }
         }
@@ -631,15 +627,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init, TreeDataParent path) {
         return getOrCreateEditableNode(name, init, path);
     }
-
-    /**
-     * The synchronized methods protecting the {@code counter} field
-     * is a code smell. This should probably be protected by the
-     * encoding reader/writer {@code lock} field. There is an invariant
-     * for the page storage system that the encoding (write) locks of two nodes
-     * cannot be held simultaneously and switching to the encoding lock
-     * for these methods may violate the invariant.
-     */
 
     @Override
     public long getCounter() {
