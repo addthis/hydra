@@ -211,15 +211,20 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             if ((map.filterIn == null) || map.filterIn.filter(bundle)) {
                 bundle = mapBundle(bundle);
                 if ((map.filterOut == null) || map.filterOut.filter(bundle)) {
-                    filterAfter = System.nanoTime();
-                    if (builder != null) {
-                        builder.process(bundle, this);
+                    if ((map.cFilterOut == null)  || map.cFilterOut.filter(bundle)) {
+                        filterAfter = System.nanoTime();
+                        if (builder != null) {
+                            builder.process(bundle, this);
+                        } else {
+                            emit(bundle);
+                        }
+                        long bundleOutputTime = System.nanoTime() - filterAfter;
+                        outputTime.add(bundleOutputTime);
+                        outputMeter.mark();
                     } else {
-                        emit(bundle);
+                        filterAfter = System.nanoTime();
+                        log.debug("closeable filterOut dropped bundle : {}", bundle);
                     }
-                    long bundleOutputTime = System.nanoTime() - filterAfter;
-                    outputTime.add(bundleOutputTime);
-                    outputMeter.mark();
                 } else {
                     filterAfter = System.nanoTime();
                     log.debug("filterOut dropped bundle : {}", bundle);
@@ -354,6 +359,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     public void close() throws InterruptedException {
         feeder.interrupt();
         feeder.join();
+        map.close();
     }
 
     /** called on process exit */

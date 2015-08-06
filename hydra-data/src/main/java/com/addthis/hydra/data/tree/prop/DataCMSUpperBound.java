@@ -36,11 +36,13 @@ import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
 import com.google.common.annotations.VisibleForTesting;
 
+@Deprecated
 public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> implements SuperCodable {
 
     /**
-     * <p>This data attachment is a <span class="hydra-summary">upper or lower bound limit on keys</span>.
+     * <p>This data attachment is a <span class="hydra-summary">deprecated</span>.
      * <p/>
+     * <p>This data attachment is deprecated. Use {@link com.addthis.hydra.data.filter.closeablebundle.CloseableBundleCMSLimit}.</p>
      * <p>The {@link #limit limit} specifies the maximum number of occurrences that any value for
      * a key can be observed. Once the limit is reached then this value will be removed
      * from the bundle when it is encountered.</p>

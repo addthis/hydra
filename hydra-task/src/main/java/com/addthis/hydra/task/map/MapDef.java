@@ -13,7 +13,11 @@
  */
 package com.addthis.hydra.task.map;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
+import com.addthis.hydra.data.filter.closeablebundle.CloseableBundleFilter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -49,7 +53,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * @user-reference
  */
-public final class MapDef {
+public final class MapDef implements AutoCloseable {
 
     /** The filter to apply before field transformation. */
     @JsonProperty BundleFilter filterIn;
@@ -57,9 +61,18 @@ public final class MapDef {
     /** The filter to apply after field transformation. */
     @JsonProperty BundleFilter filterOut;
 
+    @JsonProperty CloseableBundleFilter cFilterOut;
+
     /** The mapping of fields from the input source into the bundle. */
     @JsonProperty FieldFilter[] fields;
 
     public void init() {
+    }
+
+    @Override
+    public void close() {
+        if (cFilterOut != null) {
+            cFilterOut.close();
+        }
     }
 }
