@@ -16,7 +16,6 @@ package com.addthis.hydra.data.tree.prop;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 
 import com.addthis.basis.util.LessStrings;
 
@@ -37,7 +36,7 @@ import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class DataLimitCMS extends TreeNodeData<DataLimitCMS.Config> implements SuperCodable {
+public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> implements SuperCodable {
 
     /**
      * <p>This data attachment is a <span class="hydra-summary">upper or lower bound limit on keys</span>.
@@ -88,7 +87,7 @@ public class DataLimitCMS extends TreeNodeData<DataLimitCMS.Config> implements S
      *
      * @user-reference
      */
-    public static final class Config extends TreeDataParameters<DataLimitCMS> {
+    public static final class Config extends TreeDataParameters<DataCMSUpperBound> {
 
         /**
          * Bundle field name from which to insert keys into the sketch.
@@ -149,8 +148,8 @@ public class DataLimitCMS extends TreeNodeData<DataLimitCMS.Config> implements S
         private boolean upper = true;
 
         @Override
-        public DataLimitCMS newInstance() {
-            DataLimitCMS db = new DataLimitCMS();
+        public DataCMSUpperBound newInstance() {
+            DataCMSUpperBound db = new DataCMSUpperBound();
             if ((width == 0) && (percentage == 0.0)) {
                 throw new IllegalArgumentException("Either 'width' or " +
                                                    "'percentage' must be specified.");
@@ -178,9 +177,9 @@ public class DataLimitCMS extends TreeNodeData<DataLimitCMS.Config> implements S
 
     private CountMinSketch sketch;
 
-    public DataLimitCMS(){}
+    public DataCMSUpperBound(){}
 
-    public DataLimitCMS(int depth, int width) {
+    public DataCMSUpperBound(int depth, int width) {
         this.sketch = new CountMinSketch(depth, width, 0);
     }
 
