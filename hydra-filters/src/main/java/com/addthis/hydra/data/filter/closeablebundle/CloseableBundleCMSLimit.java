@@ -16,6 +16,8 @@ package com.addthis.hydra.data.filter.closeablebundle;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
@@ -23,6 +25,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +38,8 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueObject;
 
 import com.clearspring.analytics.stream.frequency.CountMinSketch;
+
+import com.google.common.io.ByteStreams;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -237,10 +243,19 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
 
     private void writeSketch(String key, CountMinSketch sketch) throws IOException {
         byte[] data = CountMinSketch.serialize(sketch);
+        ByteArrayOutputStream byteStream =
+                new ByteArrayOutputStream(data.length);
+        GZIPOutputStream zipStream = new GZIPOutputStream(byteStream);
+        try {
+            zipStream.write(data);
+        } finally {
+            zipStream.close();
+            byteStream.close();
+        }
         Path parent = Paths.get(dataDir);
-        Path path = Paths.get(dataDir, key);
+        Path path = Paths.get(dataDir, key + ".gz");
         Files.createDirectories(parent);
-        Files.write(path, data);
+        Files.write(path, byteStream.toByteArray());
     }
 
     private class CMSLimitHashMap extends LinkedHashMap<String, CountMinSketch> {
@@ -251,12 +266,35 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
 
         @Override
         public CountMinSketch get(Object key) {
-            CountMinSketch sketch = super.get(key);
-            if (sketch == null) {
-                sketch = new CountMinSketch(calcDepth, calcWidth, 0);
-                put(key.toString(), sketch);
+            try {
+                CountMinSketch sketch = super.get(key);
+                if (sketch == null) {
+                    ByteArrayInputStream byteStream = null;
+                    GZIPInputStream zipStream = null;
+                    try {
+                        Path path = Paths.get(dataDir, key + ".gz");
+                        if (Files.exists(path)) {
+                            byte[] data = Files.readAllBytes(path);
+                            byteStream = new ByteArrayInputStream(data);
+                            zipStream = new GZIPInputStream(byteStream);
+                            sketch = CountMinSketch.deserialize(ByteStreams.toByteArray(zipStream));
+                        } else {
+                            sketch = new CountMinSketch(calcDepth, calcWidth, 0);
+                        }
+                    } finally {
+                        if (zipStream != null) {
+                            zipStream.close();
+                        }
+                        if (byteStream != null) {
+                            byteStream.close();
+                        }
+                    }
+                    put(key.toString(), sketch);
+                }
+                return sketch;
+            } catch (IOException ex) {
+                throw new UncheckedIOException(ex);
             }
-            return sketch;
         }
 
         protected boolean removeEldestEntry(Map.Entry<String, CountMinSketch> eldest) {
