@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
-import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.LessFiles;
@@ -100,6 +100,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     private final File root;
     private final File idFile;
     final IPageDB<DBKey, ConcurrentTreeNode> source;
+    final ConcurrentHashMap<CacheKey, ConcurrentTreeNode> cache;
     private final ConcurrentTreeNode treeRootNode;
     final ConcurrentTreeNode treeTrashNode;
     private final AtomicLong nextDBID;
@@ -107,7 +108,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     private final Meter<METERTREE> meter;
     private final MeterFileLogger logger;
     private final AtomicDouble cacheHitRate = new AtomicDouble(0.0);
-    private final MediatedEvictionConcurrentHashMap<CacheKey, ConcurrentTreeNode> cache;
     private final ScheduledExecutorService deletionThreadPool;
 
     @GuardedBy("treeTrashNode")
@@ -158,10 +158,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);
         // create cache
-        cache = new MediatedEvictionConcurrentHashMap.
-                Builder<CacheKey, ConcurrentTreeNode>().
-                mediator(new CacheMediator(source)).
-                maximumWeightedCapacity(cleanQSize).build();
+        cache = new ConcurrentHashMap<>();
 
         // get stored next db id
         idFile = new File(root, "nextID");
@@ -267,14 +264,17 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 if (node.isDeleted()) {
                     source.remove(dbkey);
                 } else {
-                    node.initIfDecoded(this, dbkey, key.name);
-
-                    ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
-                    if (prev == null) {
-                        node.reactivate();
-                        if (setLease(node, lease)) {
-                            return node; // (4)
+                    node.initIfDecoded(this, key);
+                    if (lease) {
+                        ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
+                        if (prev == null) {
+                            node.reactivate();
+                            if (setLease(node, true)) {
+                                return node; // (4)
+                            }
                         }
+                    } else {
+                        return node;
                     }
                 }
             }
@@ -305,7 +305,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     if (node.isDeleted()) {
                         source.remove(dbkey);
                     } else {
-                        node.initIfDecoded(this, dbkey, key.name);
+                        node.initIfDecoded(this, key);
                         ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
                         if (prev == null) {
                             node.reactivate();
@@ -317,7 +317,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 } else { // create a new node
                     if (newNode == null) {
                         newNode = new ConcurrentTreeNode();
-                        newNode.init(this, dbkey, key.name);
+                        newNode.init(this, key);
                         newNode.tryLease();
                         newNode.markChanged();
                         if (creator != null) {
@@ -504,7 +504,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (treeRootNode != null) {
             treeRootNode.markChanged();
             treeRootNode.release();
-            if (treeRootNode.getLeaseCount() != 0) {
+            if (treeRootNode.getLeaseCount() != -1) {
                 throw new IllegalStateException("invalid root state on shutdown : " + treeRootNode);
             }
         }
