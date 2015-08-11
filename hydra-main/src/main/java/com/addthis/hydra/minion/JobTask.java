@@ -199,16 +199,6 @@ public class JobTask implements Codable {
         }
     }
 
-    private void monitor() {
-        monitored = true;
-        save();
-    }
-
-    public void unmonitor() {
-        monitored = false;
-        save();
-    }
-
     public void updateFileStats() {
         final TimerContext updateTimer = minion.fileStatsTimer.time();
         FileStats stats = new FileStats();
@@ -924,8 +914,8 @@ public class JobTask implements Codable {
                 LessFiles.write(replicateRun, LessBytes.toBytes(replicateRunScript), false);
                 String replicateSHScript = generateReplicateSHScript(replicateAllBackups);
                 LessFiles.write(replicateSH, LessBytes.toBytes(replicateSHScript), false);
-                replicateStartTime = System.currentTimeMillis();
                 minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
+                replicateStartTime = System.currentTimeMillis();
                 save();
             }
             // start watcher

@@ -65,7 +65,6 @@ public class RunTaskWorkItem extends MinionWorkItem {
 
     @Override
     public void sendFinishStatusMessages(int exit) throws Exception {
-        task.unmonitor();
         if (exit == 0) {
             synchronized (task) {
                 task.execReplicate(null, null, false, true, false);
