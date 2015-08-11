@@ -2149,10 +2149,10 @@ public class Spawn implements Codable, AutoCloseable {
 
         try {
             log.info("Closing spawn thread pools...");
-            expandKickExecutor.shutdown();
             scheduledExecutor.shutdown();
-            expandKickExecutor.awaitTermination(120, TimeUnit.SECONDS);
             scheduledExecutor.awaitTermination(120, TimeUnit.SECONDS);
+            expandKickExecutor.shutdown();
+            expandKickExecutor.awaitTermination(120, TimeUnit.SECONDS);
         } catch (Exception ex) {
             log.warn("Exception shutting down background processes", ex);
         }
