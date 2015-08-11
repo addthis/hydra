@@ -2135,7 +2135,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     /** Called by Thread registered to Runtime triggered by sig-term. */
     @Override public void close() {
-        log.info("Shutting/closing spawn...");
+        log.info("Shutting down/closing spawn...");
         shuttingDown.set(true);
 
         try {
@@ -2197,6 +2197,8 @@ public class Spawn implements Codable, AutoCloseable {
         } catch (Exception ex) {
             log.warn("", ex);
         }
+
+        log.info("Spawn shutdown/close complete.");
     }
 
     private void drainJobTaskUpdateQueue() {

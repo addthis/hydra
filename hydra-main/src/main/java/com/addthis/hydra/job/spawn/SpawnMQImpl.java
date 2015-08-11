@@ -158,6 +158,13 @@ public class SpawnMQImpl implements SpawnMQ {
             }
         } catch (Exception ex)  {
             log.warn("", ex);
+            try {
+                if (channel != null) {
+                    channel.close();
+                }
+            } catch (Exception ex2)  {
+                log.warn("", ex2);
+            }
         }
         try {
             if (batchControlProducer != null) {
@@ -169,13 +176,6 @@ public class SpawnMQImpl implements SpawnMQ {
         try {
             if (batchJobProducer != null) {
                 batchJobProducer.close();
-            }
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
-        try {
-            if (channel != null) {
-                channel.close();
             }
         } catch (Exception ex)  {
             log.warn("", ex);
