@@ -365,10 +365,15 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             if (batchControlConsumer != null) {
                 batchControlConsumer.close();
             }
-        } catch (AlreadyClosedException ace) {
-            log.warn("Attempt was made to close batchControlConsumer more than once: ", ace);
         } catch (Exception ex) {
             log.warn("Error trying to close batchControlConsumer: ", ex);
+            try {
+                if (channel != null) {
+                    channel.close();
+                }
+            } catch (Exception ex2) {
+                log.warn("Error trying to close channel: ", ex2);
+            }
         }
         try {
             if (queryControlProducer != null) {
@@ -392,15 +397,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             }
         } catch (Exception ex) {
             log.warn("Error trying to close zkBatchControlProducer: ", ex);
-        }
-        try {
-            if (channel != null) {
-                channel.close();
-            }
-        } catch (AlreadyClosedException ace) {
-            log.warn("Attempt was made to close channel more than once: ", ace);
-        } catch (Exception ex) {
-            log.warn("Error trying to close channel: ", ex);
         }
     }
 
