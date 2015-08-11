@@ -2135,8 +2135,20 @@ public class Spawn implements Codable, AutoCloseable {
 
     /** Called by Thread registered to Runtime triggered by sig-term. */
     @Override public void close() {
+        log.info("Shutting/closing spawn...");
         shuttingDown.set(true);
+
         try {
+            if (spawnMQ != null) {
+                log.info("Closing spawn mq...");
+                spawnMQ.close();
+            }
+        } catch (Exception ex) {
+            log.error("Exception closing spawn mq", ex);
+        }
+
+        try {
+            log.info("Closing spawn thread pools...");
             expandKickExecutor.shutdown();
             scheduledExecutor.shutdown();
             expandKickExecutor.awaitTermination(120, TimeUnit.SECONDS);
@@ -2145,28 +2157,27 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("Exception shutting down background processes", ex);
         }
 
+        log.info("Closing spawn balancer...");
+        balancer.close();
+        log.info("Closing spawn finish state handler...");
+        jobOnFinishStateHandler.close();
+
         try {
+            log.info("Closing spawn permissions manager...");
             permissionsManager.close();
         } catch (Exception ex) {
             log.warn("Exception closing permissions manager", ex);
         }
 
         try {
+            log.info("Closing spawn update queue...");
             drainJobTaskUpdateQueue();
         } catch (Exception ex) {
             log.warn("Exception draining job task update queue", ex);
         }
 
-        balancer.close();
-        jobOnFinishStateHandler.close();
-
         try {
-            spawnFormattedLogger.close();
-        } catch (Exception ex) {
-            log.warn("", ex);
-        }
-
-        try {
+            log.info("Closing spawn host managers...");
             hostManager.minionMembers.shutdown();
             hostManager.deadMinionMembers.shutdown();
         } catch (IOException ex) {
@@ -2174,9 +2185,17 @@ public class Spawn implements Codable, AutoCloseable {
         }
 
         try {
+            log.info("Closing spawn zk clients...");
             closeZkClients();
         } catch (Exception ex) {
             log.warn("Exception closing zk clients", ex);
+        }
+
+        try {
+            log.info("Closing spawn formatted logger...");
+            spawnFormattedLogger.close();
+        } catch (Exception ex) {
+            log.warn("", ex);
         }
     }
 
