@@ -87,7 +87,7 @@ public abstract class MinionWorkItem implements Runnable {
             interrupted = true;
         } catch (Exception e) {
             log.warn("{} exception during script execution: {}", task.getName(), e, e);
-            } finally {
+        } finally {
             task.deallocate();
             try {
                 if (!interrupted) {
