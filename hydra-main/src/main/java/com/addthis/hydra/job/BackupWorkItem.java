@@ -60,6 +60,7 @@ public class BackupWorkItem extends MinionWorkItem {
         if (!doneFile.exists()) {
             doneFile.createNewFile();
         }
+        task.save();
         task.sendEndStatus(code, rebalanceSource, rebalanceTarget);
     }
 
@@ -72,6 +73,5 @@ public class BackupWorkItem extends MinionWorkItem {
         log.warn("clearing {}", task.getName());
         setStartTime(0);
         task.setProcess(null);
-        task.save();
     }
 }

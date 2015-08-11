@@ -152,6 +152,5 @@ public class RunTaskWorkItem extends MinionWorkItem {
         }
         setStartTime(0);
         task.setProcess(null);
-        task.save();
     }
 }
