@@ -2179,10 +2179,17 @@ public class Spawn implements Codable, AutoCloseable {
         }
 
         try {
-            log.info("Closing spawn update queue...");
+            log.info("Closing spawn job (client and datastore) update queue...");
             drainJobTaskUpdateQueue();
         } catch (Exception ex) {
             log.warn("Exception draining job task update queue", ex);
+        }
+
+        try {
+            log.info("Closing spawn priority queues...");
+            writeSpawnQueue();
+        } catch (Exception ex) {
+            log.warn("Exception writing final spawn queue state", ex);
         }
 
         try {
@@ -2194,7 +2201,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
 
         try {
-            log.info("Closing spawn zk clients...");
+            log.info("Closing spawn zk clients and datastore...");
             closeZkClients();
         } catch (Exception ex) {
             log.warn("Exception closing zk clients", ex);
