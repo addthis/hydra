@@ -17,11 +17,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.util.concurrent.TimeUnit;
+
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.job.mq.CommandTaskKick;
+
+import com.google.common.util.concurrent.Uninterruptibles;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,14 +104,14 @@ public abstract class MinionWorkItem implements Runnable {
         log.warn("{} exited with {}", task.getName(), exit);
     }
 
-    protected void startAndWaitForPid() throws IOException, InterruptedException {
+    protected void startAndWaitForPid() throws IOException {
         long start = System.currentTimeMillis();
         if (execute) {
             task.setProcess(Runtime.getRuntime().exec("sh " + runFile));
         }
         for (int j = 0; j < numPidFileTries && !pidFile.exists(); j++) {
             // Watch for the pid file. If it still doesn't exist after some time, fail noisily.
-            Thread.sleep(1000);
+            Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
         }
         if (!pidFile.exists()) {
             // We must interrupt the task process so that the replicate won't suddenly kick in at a future time

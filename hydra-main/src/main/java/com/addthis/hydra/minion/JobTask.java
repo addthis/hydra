@@ -860,13 +860,6 @@ public class JobTask implements Codable {
         }
         save();
         minion.sendHostStatus();
-        // mark it active TODO: should this occur before sending updated host state?
-        Minion.capacityLock.lock();
-        try {
-            minion.activeTaskKeys.add(getName());
-        } finally {
-            Minion.capacityLock.unlock();
-        }
         // start watcher, which will fire it up
         workItemThread = new Thread(new RunTaskWorkItem(jobPid, jobRun, jobDone, this, execute, autoRetry));
         workItemThread.setName("RunTask-WorkItem-" + getName());
