@@ -146,27 +146,37 @@ public class SpawnMQImpl implements SpawnMQ {
     @Override
     public void close() {
         try {
-            if (hostStatusConsumer != null) hostStatusConsumer.close();
+            if (hostStatusConsumer != null) {
+                hostStatusConsumer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            if (batchControlConsumer != null) batchControlConsumer.close();
+            if (batchControlConsumer != null) {
+                batchControlConsumer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            if (batchControlProducer != null) batchControlProducer.close();
+            if (batchControlProducer != null) {
+                batchControlProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            if (batchJobProducer != null) batchJobProducer.close();
+            if (batchJobProducer != null) {
+                batchJobProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            if (channel != null) channel.close();
+            if (channel != null) {
+                channel.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
