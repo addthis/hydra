@@ -1093,6 +1093,10 @@ public class Spawn implements Codable, AutoCloseable {
         jobLock.lock();
         try {
             job = getJob(task.getJobUUID());
+            if (job == null) {
+                log.warn("[task.swap] job vanished mid-swap {}", task.getJobKey());
+                return false;
+            }
             task.replaceReplica(replicaHostID, task.getHostUUID());
             task.setHostUUID(replicaHostID);
             queueJobTaskUpdateEvent(job);
