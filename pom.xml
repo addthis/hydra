@@ -45,6 +45,18 @@
     <module>hydra-uber</module>
   </modules>
 
+  <profiles>
+    <profile>
+      <id>fast</id>
+      <properties>
+        <maven.test.skip>true</maven.test.skip>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <source.skip>true</source.skip>
+        <at.check.skip.all>true</at.check.skip.all>
+      </properties>
+    </profile>
+  </profiles>
+
   <properties>
     <project.build.targetJdk>1.8</project.build.targetJdk>
 
