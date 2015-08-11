@@ -356,7 +356,7 @@ public class Spawn implements Codable, AutoCloseable {
         writeState();
     }
 
-    private synchronized void jobTaskUpdateHeartbeatCheck() {
+    private void jobTaskUpdateHeartbeatCheck() {
         try {
             String now = Long.toString(System.currentTimeMillis());
             spawnDataStore.put(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_HEARTBEAT_PATH, now);
