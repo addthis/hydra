@@ -2140,8 +2140,8 @@ public class Spawn implements Codable, AutoCloseable {
 
         try {
             if (spawnMQ != null) {
-                log.info("Closing spawn mq...");
-                spawnMQ.close();
+                log.info("Closing spawn mq consumers...");
+                spawnMQ.closeConsumers();
             }
         } catch (Exception ex) {
             log.error("Exception closing spawn mq", ex);
@@ -2161,6 +2161,15 @@ public class Spawn implements Codable, AutoCloseable {
         balancer.close();
         log.info("Closing spawn finish state handler...");
         jobOnFinishStateHandler.close();
+
+        try {
+            if (spawnMQ != null) {
+                log.info("Closing spawn mq producers...");
+                spawnMQ.closeProducers();
+            }
+        } catch (Exception ex) {
+            log.error("Exception closing spawn mq", ex);
+        }
 
         try {
             log.info("Closing spawn permissions manager...");

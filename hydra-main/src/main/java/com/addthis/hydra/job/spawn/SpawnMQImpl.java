@@ -142,9 +142,7 @@ public class SpawnMQImpl implements SpawnMQ {
         }
     }
 
-
-    @Override
-    public void close() {
+    @Override public void closeConsumers() {
         try {
             if (hostStatusConsumer != null) {
                 hostStatusConsumer.close();
@@ -166,6 +164,9 @@ public class SpawnMQImpl implements SpawnMQ {
                 log.warn("", ex2);
             }
         }
+    }
+
+    @Override public void closeProducers() {
         try {
             if (batchControlProducer != null) {
                 batchControlProducer.close();
