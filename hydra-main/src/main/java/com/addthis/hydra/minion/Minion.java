@@ -105,6 +105,7 @@ import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.zookeeper.KeeperException;
 
+import org.eclipse.jetty.io.UncheckedIOException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.util.BlockingArrayQueue;
@@ -712,9 +713,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                     batchControlProducer.sendMessage(msg, "SPAWN");
                 }
             }
-        } catch (Exception ex) {
-            log.error("[mq.ctrl.send] fail <INITIATING JVM SHUTDOWN>", ex);
-            shutdown();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
         }
     }
 
