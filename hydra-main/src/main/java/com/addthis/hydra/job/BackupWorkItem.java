@@ -60,8 +60,8 @@ public class BackupWorkItem extends MinionWorkItem {
         if (!doneFile.exists()) {
             doneFile.createNewFile();
         }
-        task.save();
         task.sendEndStatus(code, rebalanceSource, rebalanceTarget);
+        task.save();
     }
 
     @Override
