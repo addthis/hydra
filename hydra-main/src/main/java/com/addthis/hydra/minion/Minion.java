@@ -87,6 +87,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -108,7 +109,6 @@ import org.apache.zookeeper.KeeperException;
 import org.eclipse.jetty.io.UncheckedIOException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -164,12 +164,14 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
 
     final Set<String> activeTaskKeys;
     final AtomicBoolean shutdown = new AtomicBoolean(false);
-    final ExecutorService messageTaskExecutorService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()));
+    final ExecutorService messageTaskExecutorService = new ThreadPoolExecutor(
+            4, 4, 100L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setDaemon(true).build());
     // This next executor service only serves promote/demote requests, so that these will be performed quickly and not
     // wait on a lengthy revert / delete / etc.
-    final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>()));
+    final ExecutorService promoteDemoteTaskExecutorService = new ThreadPoolExecutor(
+            4, 4, 100L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setDaemon(true).build());
     final Lock minionStateLock = new ReentrantLock();
     // Historical metrics
     Timer fileStatsTimer;
@@ -198,7 +200,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     int minionPid = -1;
 
     RabbitQueueingConsumer batchJobConsumer;
-    BlockingArrayQueue<CoreMessage> queuedHostMessages;
     private MessageConsumer<CoreMessage> batchControlConsumer;
     private MessageProducer<CoreMessage> queryControlProducer;
     private MessageProducer<CoreMessage> zkBatchControlProducer;
@@ -811,8 +812,24 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
 
     @Override public void close() throws Exception {
         jetty.stop();
+        if (!shutdown.getAndSet(true)) {
+            writeState();
+            log.info("[minion] stopping and sending updated stats to spawn");
+            sendHostStatus();
+            if (runner != null) {
+                runner.stopTaskRunner();
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (Exception ex) {
+                log.warn("", ex);
+            }
+            disconnectFromMQ();
+        }
+        MoreExecutors.shutdownAndAwaitTermination(messageTaskExecutorService, 120, TimeUnit.SECONDS);
+        MoreExecutors.shutdownAndAwaitTermination(promoteDemoteTaskExecutorService, 120, TimeUnit.SECONDS);
         minionTaskDeleter.stopDeletionThread();
-        if (zkClient != null && zkClient.getState() == CuratorFrameworkState.STARTED) {
+        if ((zkClient != null) && (zkClient.getState() == CuratorFrameworkState.STARTED)) {
             minionGroupMembership.removeFromGroup("/minion/up", getUUID());
             zkClient.close();
         }
