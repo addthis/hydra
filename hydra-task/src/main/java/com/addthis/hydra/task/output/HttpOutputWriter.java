@@ -24,6 +24,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import com.addthis.basis.util.Backoff;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueMap;
@@ -72,6 +74,10 @@ public class HttpOutputWriter extends AbstractOutputWriter {
     @JsonProperty private int maxConnPerRoute = 20;
 
     @JsonProperty private int timeout = 120 * 1000; // timeout in milliseconds
+
+    @JsonProperty private Integer backoffMaxMillis;
+
+    private Backoff backoff = new Backoff(0, backoffMaxMillis != null ? backoffMaxMillis : 1);
 
     private int rotation = 0;
 
@@ -202,6 +208,7 @@ public class HttpOutputWriter extends AbstractOutputWriter {
                     }
                 } catch (NoHttpResponseException ignored) {
                     log.warn("Failed to connect to server, going to continue with retries");
+                    backoff();
                 } catch (UnsupportedEncodingException e) {
                     log.error("Encoding error", e);
                     throw e;
@@ -221,6 +228,18 @@ public class HttpOutputWriter extends AbstractOutputWriter {
 
             if (retry == retries) {
                 throw new IOException("Max retries exceeded");
+            }
+        }
+    }
+
+    private void backoff() {
+        if (backoffMaxMillis != null) {
+            long sleepTime = backoff.get();
+            log.info("Backing off for {} millis", sleepTime);
+            try {
+                Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+                log.error("Interrupted while backing off", e);
             }
         }
     }
