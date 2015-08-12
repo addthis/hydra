@@ -36,7 +36,7 @@ import com.addthis.hydra.data.tree.prop.DataSum;
  *
  * @user-reference
  * @hydra-category Data Attachments
- * @hydra-doc-position 7
+ * @hydra-doc-position 8
  */
 @Pluggable("data-attachment")
 public abstract class TreeDataParameters<T extends TreeNodeData<?>> implements Codable {

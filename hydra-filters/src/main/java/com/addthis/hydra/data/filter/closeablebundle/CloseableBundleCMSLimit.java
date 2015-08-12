@@ -50,6 +50,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * it rejects the input then that field is removed from the bundle and the filter returns false.
  * If the input is an array then this filter removes values that do not need the limit criteria
  * and always return true.
+ *
+ * @user-reference
  */
 public class CloseableBundleCMSLimit implements CloseableBundleFilter {
 
