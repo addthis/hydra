@@ -45,7 +45,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This closeable bundle filter applies a limit using the count-min sketch data structure.
+ * This closeable bundle filter <span class="hydra-summary">applies a limit using the count-min sketch data structure</span>.
  * If the input is a scalar value then this filter returns true if it accepts the input. If
  * it rejects the input then that field is removed from the bundle and the filter returns false.
  * If the input is an array then this filter removes values that do not need the limit criteria
