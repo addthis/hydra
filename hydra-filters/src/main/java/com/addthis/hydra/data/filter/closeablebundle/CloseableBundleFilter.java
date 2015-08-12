@@ -17,6 +17,16 @@ import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
+/**
+ * A closeable bundle filter applies a transformation on a bundle and returns
+ * true or false to indicate whether the transformation was successful.
+ * Closeable bundle filters are stateful and must implement a close() method
+ * to close any state on process termination.
+ *
+ * @user-reference
+ * @hydra-category Closeable Bundle Filters
+ * @hydra-doc-position 4
+ */
 @Pluggable("closeable bundle filter")
 public interface CloseableBundleFilter extends BundleFilter, AutoCloseable {
 

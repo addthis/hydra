@@ -199,16 +199,6 @@ public class JobTask implements Codable {
         }
     }
 
-    private void monitor() {
-        monitored = true;
-        save();
-    }
-
-    public void unmonitor() {
-        monitored = false;
-        save();
-    }
-
     public void updateFileStats() {
         final TimerContext updateTimer = minion.fileStatsTimer.time();
         FileStats stats = new FileStats();
@@ -870,13 +860,6 @@ public class JobTask implements Codable {
         }
         save();
         minion.sendHostStatus();
-        // mark it active TODO: should this occur before sending updated host state?
-        Minion.capacityLock.lock();
-        try {
-            minion.activeTaskKeys.add(getName());
-        } finally {
-            Minion.capacityLock.unlock();
-        }
         // start watcher, which will fire it up
         workItemThread = new Thread(new RunTaskWorkItem(jobPid, jobRun, jobDone, this, execute, autoRetry));
         workItemThread.setName("RunTask-WorkItem-" + getName());
@@ -924,8 +907,8 @@ public class JobTask implements Codable {
                 LessFiles.write(replicateRun, LessBytes.toBytes(replicateRunScript), false);
                 String replicateSHScript = generateReplicateSHScript(replicateAllBackups);
                 LessFiles.write(replicateSH, LessBytes.toBytes(replicateSHScript), false);
-                replicateStartTime = System.currentTimeMillis();
                 minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
+                replicateStartTime = System.currentTimeMillis();
                 save();
             }
             // start watcher

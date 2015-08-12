@@ -35,10 +35,9 @@ final class ProcessUtils {
             File tmp = File.createTempFile(".minion", "shell", directory);
             try {
                 LessFiles.write(tmp, LessBytes.toBytes("#!/bin/sh\n" + cmd + "\n"), false);
-                int exit = Runtime.getRuntime().exec("sh " + tmp).waitFor();
-                if (log.isDebugEnabled()) {
-                    log.debug("[shell] (" + cmd + ") exited with " + exit);
-                }
+                Process process = Runtime.getRuntime().exec("sh " + tmp);
+                int exit = waitForUninterruptibly(process);
+                log.debug("[shell] ({}) exited with {}", cmd, exit);
                 return exit;
             } finally {
                 tmp.delete();
@@ -47,6 +46,23 @@ final class ProcessUtils {
             log.warn("", ex);
         }
         return -1;
+    }
+
+    public static int waitForUninterruptibly(Process toWaitFor) {
+        boolean interrupted = false;
+        try {
+            while (true) {
+                try {
+                    return toWaitFor.waitFor();
+                } catch (InterruptedException ignored) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     static String getTaskBaseDir(String baseDir, String id, int node) {

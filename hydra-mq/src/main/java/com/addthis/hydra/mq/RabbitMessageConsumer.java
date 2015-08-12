@@ -73,7 +73,7 @@ public class RabbitMessageConsumer<T> extends DefaultConsumer implements Message
         for (String routingKey : routingKeys) {
             getChannel().queueBind(queueName, exchange, routingKey);
         }
-        getChannel().basicConsume(queueName, true, this);
+        getChannel().basicConsume(queueName, false, this);
 
     }
 
@@ -82,11 +82,10 @@ public class RabbitMessageConsumer<T> extends DefaultConsumer implements Message
                                AMQP.BasicProperties properties, byte[] body) throws IOException {
         try {
             T message = Jackson.defaultMapper().readValue(body, messageType);
-            if (messageListeners.size() > 0) {
-                for (MessageListener<T> messageListener : messageListeners) {
-                    messageListener.onMessage(message);
-                }
+            for (MessageListener<T> messageListener : messageListeners) {
+                messageListener.onMessage(message);
             }
+            getChannel().basicAck(envelope.getDeliveryTag(), false);
         } catch (IOException e) {
             log.warn("[rabbitConsumer] error reading message", e);
         }

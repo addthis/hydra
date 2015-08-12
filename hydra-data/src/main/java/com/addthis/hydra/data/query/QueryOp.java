@@ -42,7 +42,7 @@ import io.netty.channel.ChannelProgressivePromise;
  *
  * @user-reference
  * @hydra-category Query Operations
- * @hydra-doc-position 8
+ * @hydra-doc-position 9
  */
 public interface QueryOp extends BundleOutput, Closeable {
 
