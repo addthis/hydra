@@ -356,7 +356,7 @@ public class Spawn implements Codable, AutoCloseable {
         writeState();
     }
 
-    private synchronized void jobTaskUpdateHeartbeatCheck() {
+    private void jobTaskUpdateHeartbeatCheck() {
         try {
             String now = Long.toString(System.currentTimeMillis());
             spawnDataStore.put(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_HEARTBEAT_PATH, now);
@@ -1093,6 +1093,10 @@ public class Spawn implements Codable, AutoCloseable {
         jobLock.lock();
         try {
             job = getJob(task.getJobUUID());
+            if (job == null) {
+                log.warn("[task.swap] job vanished mid-swap {}", task.getJobKey());
+                return false;
+            }
             task.replaceReplica(replicaHostID, task.getHostUUID());
             task.setHostUUID(replicaHostID);
             queueJobTaskUpdateEvent(job);
@@ -2131,38 +2135,65 @@ public class Spawn implements Codable, AutoCloseable {
 
     /** Called by Thread registered to Runtime triggered by sig-term. */
     @Override public void close() {
+        log.info("Shutting down/closing spawn...");
         shuttingDown.set(true);
+
         try {
-            expandKickExecutor.shutdown();
+            if (spawnMQ != null) {
+                log.info("Closing spawn mq consumers...");
+                spawnMQ.closeConsumers();
+            }
+        } catch (Exception ex) {
+            log.error("Exception closing spawn mq", ex);
+        }
+
+        try {
+            log.info("Closing spawn thread pools...");
             scheduledExecutor.shutdown();
-            expandKickExecutor.awaitTermination(120, TimeUnit.SECONDS);
             scheduledExecutor.awaitTermination(120, TimeUnit.SECONDS);
+            expandKickExecutor.shutdown();
+            expandKickExecutor.awaitTermination(120, TimeUnit.SECONDS);
         } catch (Exception ex) {
             log.warn("Exception shutting down background processes", ex);
         }
 
+        log.info("Closing spawn balancer...");
+        balancer.close();
+        log.info("Closing spawn finish state handler...");
+        jobOnFinishStateHandler.close();
+
         try {
+            if (spawnMQ != null) {
+                log.info("Closing spawn mq producers...");
+                spawnMQ.closeProducers();
+            }
+        } catch (Exception ex) {
+            log.error("Exception closing spawn mq", ex);
+        }
+
+        try {
+            log.info("Closing spawn permissions manager...");
             permissionsManager.close();
         } catch (Exception ex) {
             log.warn("Exception closing permissions manager", ex);
         }
 
         try {
+            log.info("Closing spawn job (client and datastore) update queue...");
             drainJobTaskUpdateQueue();
         } catch (Exception ex) {
             log.warn("Exception draining job task update queue", ex);
         }
 
-        balancer.close();
-        jobOnFinishStateHandler.close();
-
         try {
-            spawnFormattedLogger.close();
+            log.info("Closing spawn priority queues...");
+            writeSpawnQueue();
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Exception writing final spawn queue state", ex);
         }
 
         try {
+            log.info("Closing spawn host managers...");
             hostManager.minionMembers.shutdown();
             hostManager.deadMinionMembers.shutdown();
         } catch (IOException ex) {
@@ -2170,10 +2201,20 @@ public class Spawn implements Codable, AutoCloseable {
         }
 
         try {
+            log.info("Closing spawn zk clients and datastore...");
             closeZkClients();
         } catch (Exception ex) {
             log.warn("Exception closing zk clients", ex);
         }
+
+        try {
+            log.info("Closing spawn formatted logger...");
+            spawnFormattedLogger.close();
+        } catch (Exception ex) {
+            log.warn("", ex);
+        }
+
+        log.info("Spawn shutdown/close complete.");
     }
 
     private void drainJobTaskUpdateQueue() {

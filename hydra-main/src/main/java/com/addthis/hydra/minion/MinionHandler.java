@@ -44,20 +44,6 @@ class MinionHandler extends AbstractHandler {
 
     @Override
     public void doStop() {
-        if (!minion.shutdown.getAndSet(true)) {
-            minion.writeState();
-            log.info("[minion] stopping and sending updated stats to spawn");
-            minion.sendHostStatus();
-            if (minion.runner != null) {
-                minion.runner.stopTaskRunner();
-            }
-            try {
-                Thread.sleep(1000);
-            } catch (Exception ex) {
-                log.warn("", ex);
-            }
-            minion.disconnectFromMQ();
-        }
     }
 
     @Override

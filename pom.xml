@@ -23,7 +23,7 @@
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.5.2-SNAPSHOT</version>
+  <version>5.5.3-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -44,6 +44,18 @@
     <module>hydra-task</module>
     <module>hydra-uber</module>
   </modules>
+
+  <profiles>
+    <profile>
+      <id>fast</id>
+      <properties>
+        <maven.test.skip>true</maven.test.skip>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <source.skip>true</source.skip>
+        <at.check.skip.all>true</at.check.skip.all>
+      </properties>
+    </profile>
+  </profiles>
 
   <properties>
     <project.build.targetJdk>1.8</project.build.targetJdk>

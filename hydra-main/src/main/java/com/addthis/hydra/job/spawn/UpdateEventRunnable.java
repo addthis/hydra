@@ -37,7 +37,6 @@ class UpdateEventRunnable implements Runnable {
         int jobrunning = 0;
         int jobscheduled = 0;
         int joberrored = 0;
-        int taskallocated = 0;
         int taskbusy = 0;
         int taskerrored = 0;
         int taskqueued = 0;
@@ -50,9 +49,14 @@ class UpdateEventRunnable implements Runnable {
                 for (JobTask jn : job.getCopyOfTasks()) {
                     switch (jn.getState()) {
                         case ALLOCATED:
-                            taskallocated++;
-                            break;
                         case BUSY:
+                        case BACKUP:
+                        case REPLICATE:
+                        case REBALANCE:
+                        case REVERT:
+                        case SWAPPING:
+                        case MIGRATING:
+                        case FULL_REPLICATE:
                             taskbusy++;
                             break;
                         case ERROR:
@@ -106,7 +110,6 @@ class UpdateEventRunnable implements Runnable {
         events.put("jobs_errored", (long) joberrored);
         events.put("jobs_hung", (long) jobshung);
         events.put("tasks_busy", (long) taskbusy);
-        events.put("tasks_allocated", (long) taskallocated);
         events.put("tasks_queued", (long) taskqueued);
         events.put("tasks_queued_no_slot", (long) taskQueuedNoSlot);
         events.put("tasks_errored", (long) taskerrored);

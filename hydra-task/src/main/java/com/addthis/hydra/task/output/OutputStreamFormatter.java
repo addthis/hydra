@@ -22,7 +22,7 @@ import com.addthis.codec.annotations.Pluggable;
  *
  * @user-reference
  * @hydra-category Output Stream Formatters
- * @hydra-doc-position 9
+ * @hydra-doc-position 10
  */
 @Pluggable("output stream formatter")
 public abstract class OutputStreamFormatter {

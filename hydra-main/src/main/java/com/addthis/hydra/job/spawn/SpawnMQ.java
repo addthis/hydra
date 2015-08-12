@@ -14,7 +14,6 @@
 package com.addthis.hydra.job.spawn;
 
 import com.addthis.hydra.job.mq.CoreMessage;
-import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.mq.MessageListener;
 
 
@@ -53,8 +52,7 @@ public interface SpawnMQ extends MessageListener<CoreMessage> {
      */
     void sendJobMessage(CoreMessage msg);
 
-    /**
-     * closes all of the connections
-     */
-    void close();
+    void closeProducers();
+
+    void closeConsumers();
 }

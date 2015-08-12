@@ -84,7 +84,6 @@ public class ReplicateWorkItem extends MinionWorkItem {
         log.warn("clearing {}", task.getName());
         setStartTime(0);
         task.setProcess(null);
-        task.save();
     }
 
     @Override

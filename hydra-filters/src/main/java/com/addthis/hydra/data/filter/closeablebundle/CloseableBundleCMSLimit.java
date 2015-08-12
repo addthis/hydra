@@ -45,11 +45,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This closeable bundle filter applies a limit using the count-min sketch data structure.
+ * This closeable bundle filter <span class="hydra-summary">applies a limit using the count-min sketch data structure</span>.
  * If the input is a scalar value then this filter returns true if it accepts the input. If
  * it rejects the input then that field is removed from the bundle and the filter returns false.
  * If the input is an array then this filter removes values that do not need the limit criteria
  * and always return true.
+ *
+ * @user-reference
  */
 public class CloseableBundleCMSLimit implements CloseableBundleFilter {
 
@@ -75,6 +77,13 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
     private final boolean rejectNull;
 
     private final int limit;
+
+    /**
+     * The value to return if the filter removes the item from the bundle.
+     * Only used if the input is a scalar. If the input is an array then
+     * always return true. Default value of parameter is false.
+     */
+    private final boolean failReturn;
 
     /**
      * Optionally specify the depth of the sketch.
@@ -117,6 +126,7 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
                                    @JsonProperty(value = "dataDir", required = true) String dataDir,
                                    @JsonProperty(value = "cacheSize", required = true) int cacheSize,
                                    @JsonProperty("rejectNull") boolean rejectNull,
+                                   @JsonProperty("failReturn") boolean failReturn,
                                    @JsonProperty("width") int width,
                                    @JsonProperty("depth") int depth,
                                    @JsonProperty(value = "limit", required = true) int limit,
@@ -138,6 +148,7 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
         this.dataDir = dataDir;
         this.cacheSize = cacheSize;
         this.rejectNull = rejectNull;
+        this.failReturn = failReturn;
         this.width = width;
         this.depth = depth;
         this.limit = limit;
@@ -177,7 +188,7 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
                 }
                 sb.append(optional.get());
             } else if (rejectNull) {
-                return false;
+                return failReturn;
             }
         }
         return updateSketch(row, sb.toString(), valueField.getValue(row));
@@ -186,7 +197,7 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
     private synchronized boolean updateSketch(Bundle row, String key, ValueObject valueObject) {
         CountMinSketch sketch = sketches.get(key);
         if (valueObject == null) {
-            return false;
+            return failReturn;
         }
         if (valueObject.getObjectType() == ValueObject.TYPE.ARRAY) {
             ValueArray array = valueObject.asArray();
@@ -205,9 +216,9 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
         long current = sketch.estimateCount(input);
         switch (bound) {
             case UPPER:
-                if (current >= limit) {
+                if (current > limit) {
                     removeElement(iterator, bundle);
-                    return false;
+                    return failReturn;
                 } else {
                     updateCount(input, sketch, bundle);
                 }
@@ -216,7 +227,7 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
                 if (current < limit) {
                     removeElement(iterator, bundle);
                     updateCount(input, sketch, bundle);
-                    return false;
+                    return failReturn;
                 }
                 break;
         }

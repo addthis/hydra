@@ -29,7 +29,7 @@ import com.addthis.codec.annotations.Pluggable;
  *
  * @user-reference
  * @hydra-category Output Sinks
- * @hydra-doc-position 5
+ * @hydra-doc-position 6
  */
 @Pluggable("output-sink")
 public abstract class TaskDataOutput implements DataChannelOutput, WritableRootPaths {

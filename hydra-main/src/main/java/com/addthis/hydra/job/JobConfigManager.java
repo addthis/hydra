@@ -252,6 +252,7 @@ public class JobConfigManager {
         final Map<String, IJob> jobs = new HashMap<>();
         List<String> jobNodes = spawnDataStore.getChildrenNames(SPAWN_JOB_CONFIG_PATH);
         if (jobNodes != null) {
+            logger.info("Using {} threads to pull data on {} jobs", loadThreads, jobNodes.size());
             // Use multiple threads to query the database, and gather the results together
             ExecutorService executorService = new ThreadPoolExecutor(
                     loadThreads, loadThreads, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
@@ -259,7 +260,9 @@ public class JobConfigManager {
             for (List<String> jobIdChunk : Lists.partition(jobNodes, jobChunkSize)) {
                 executorService.submit(new MapChunkLoader(this, jobs, jobIdChunk));
             }
-            MoreExecutors.shutdownAndAwaitTermination(executorService, 600000, TimeUnit.MILLISECONDS);
+            logger.info("Waiting for job loading threads to finish...");
+            MoreExecutors.shutdownAndAwaitTermination(executorService, 600, TimeUnit.SECONDS);
+            logger.info("Job loading complete");
         }
         return jobs;
     }

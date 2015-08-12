@@ -61,6 +61,7 @@ public class BackupWorkItem extends MinionWorkItem {
             doneFile.createNewFile();
         }
         task.sendEndStatus(code, rebalanceSource, rebalanceTarget);
+        task.save();
     }
 
     @Override
@@ -72,6 +73,5 @@ public class BackupWorkItem extends MinionWorkItem {
         log.warn("clearing {}", task.getName());
         setStartTime(0);
         task.setProcess(null);
-        task.save();
     }
 }

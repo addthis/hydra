@@ -15,6 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import java.io.IOException;
 
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.Parameter;
@@ -40,6 +41,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public class SpawnMQImpl implements SpawnMQ {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
@@ -53,14 +55,15 @@ public class SpawnMQImpl implements SpawnMQ {
     private MessageConsumer<HostState> hostStatusConsumer;
     private MessageConsumer<CoreMessage> batchControlConsumer;
     private Channel channel;
-    private Spawn spawn;
-    private final CuratorFramework zkClient;
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final Spawn spawn;
+    private final CuratorFramework zkClient;
+    private final Lock lock;
 
     public SpawnMQImpl(CuratorFramework zkClient, Spawn spawn) {
         this.spawn = spawn;
         this.zkClient = zkClient;
+        this.lock = new ReentrantLock();
     }
 
     private static class QuiesceOnRabbitMQBlockedListener implements BlockedListener {
@@ -88,7 +91,7 @@ public class SpawnMQImpl implements SpawnMQ {
     public void connectToMQ(String hostUUID) throws IOException {
         final MessageListener<HostState> hostStateListener = SpawnMQImpl.this::onMessage;
         QuiesceOnRabbitMQBlockedListener blockedListener = new QuiesceOnRabbitMQBlockedListener(spawn);
-        hostStatusConsumer = new ZkMessageConsumer<HostState>(zkClient, "/minion", hostStateListener, HostState.class);
+        hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", hostStateListener, HostState.class);
         batchJobProducer = RabbitMessageProducer.constructAndOpen("CSBatchJob", batchBrokeAddresses,
                                                                   batchBrokerUsername, batchBrokerPassword,
                                                                   blockedListener);
@@ -98,10 +101,10 @@ public class SpawnMQImpl implements SpawnMQ {
         Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
                                                                   batchBrokerPassword);
         channel = connection.createChannel();
-        batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl",
-                                                         hostUUID + Minion.batchControlQueueSuffix,
-                                                         this, ImmutableList.of("SPAWN"),
-                                                         ImmutableList.of(), CoreMessage.class);
+        batchControlConsumer = new RabbitMessageConsumer<>(channel, "CSBatchControl",
+                                                           hostUUID + Minion.batchControlQueueSuffix,
+                                                           this, ImmutableList.of("SPAWN"),
+                                                           ImmutableList.of(), CoreMessage.class);
     }
 
     /**
@@ -139,31 +142,42 @@ public class SpawnMQImpl implements SpawnMQ {
         }
     }
 
+    @Override public void closeConsumers() {
+        try {
+            if (hostStatusConsumer != null) {
+                hostStatusConsumer.close();
+            }
+        } catch (Exception ex)  {
+            log.warn("", ex);
+        }
+        try {
+            if (batchControlConsumer != null) {
+                batchControlConsumer.close();
+            }
+        } catch (Exception ex)  {
+            log.warn("", ex);
+            try {
+                if (channel != null) {
+                    channel.close();
+                }
+            } catch (Exception ex2)  {
+                log.warn("", ex2);
+            }
+        }
+    }
 
-    @Override
-    public void close() {
+    @Override public void closeProducers() {
         try {
-            if (hostStatusConsumer != null) hostStatusConsumer.close();
+            if (batchControlProducer != null) {
+                batchControlProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            if (batchControlConsumer != null) batchControlConsumer.close();
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
-        try {
-            if (batchControlProducer != null) batchControlProducer.close();
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
-        try {
-            if (batchJobProducer != null) batchJobProducer.close();
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
-        try {
-            if (channel != null) channel.close();
+            if (batchJobProducer != null) {
+                batchJobProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
