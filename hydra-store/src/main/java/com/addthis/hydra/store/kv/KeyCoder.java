@@ -26,6 +26,8 @@ public interface KeyCoder<K, V> {
      */
     K negInfinity();
 
+    byte[] encodedNegInfinity();
+
     /**
      * Unoptimized key encoding. Uses only the state of the key
      * to generate byte array. The sorted order of two keys should

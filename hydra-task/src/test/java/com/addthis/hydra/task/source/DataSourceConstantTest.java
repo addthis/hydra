@@ -72,7 +72,7 @@ public class DataSourceConstantTest {
 
     private DataSourceConstant initSource(@Syntax("HOCON") @Nonnull String config) throws IOException {
         DataSourceConstant src = Configs.decodeObject(DataSourceConstant.class, config);
-        src.init();
+        src.init(true);
         return src;
     }
 

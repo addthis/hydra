@@ -79,10 +79,10 @@ public class TaskDataOutputChain extends DataOutputTypeList {
     private boolean immutableCopy = false;
 
     @Override
-    protected void open() {
+    protected void open(boolean concurrent) {
         log.warn("[init] beginning init chain");
         for (int i = 0; i < outputs.length; i++) {
-            outputs[i].open();
+            outputs[i].open(concurrent);
         }
         log.warn("[init] all outputs initialized");
     }

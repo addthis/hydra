@@ -52,7 +52,8 @@ import com.addthis.hydra.data.query.source.LiveQueryReference;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.TreeConfig;
 import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
-import com.addthis.hydra.data.tree.concurrent.TreeCommonParameters;
+import com.addthis.hydra.data.tree.nonconcurrent.NonConcurrentTree;
+import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.task.output.DataOutputTypeList;
@@ -277,7 +278,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     }
 
     @Override
-    public void open() {
+    public void open(boolean concurrent) {
         try {
             boolean success = Shutdown.tryAddShutdownHook(
                     new Thread(() -> closing.set(true), "TreeMapper shutdown hook"));
@@ -297,7 +298,11 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             log.info("[init] live={}, target={} job={}", live, root, this.config.jobId);
 
             Path treePath = Paths.get(config.dir, directory);
-            tree = new ConcurrentTree(LessFiles.initDirectory(treePath.toFile()));
+            if (concurrent) {
+                tree = new ConcurrentTree(LessFiles.initDirectory(treePath.toFile()));
+            } else {
+                tree = new NonConcurrentTree(LessFiles.initDirectory(treePath.toFile()));
+            }
             bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
             TreeConfig.writeConfigToDataDirectory(treePath, advanced);
 

@@ -39,11 +39,13 @@ import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.common.Configuration;
+import com.addthis.hydra.data.tree.CacheKey;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.store.db.CloseOperation;
@@ -51,8 +53,8 @@ import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.skiplist.Page;
-import com.addthis.hydra.store.skiplist.PageFactory;
+import com.addthis.hydra.store.skiplist.ConcurrentPage;
+import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.skiplist.SkipListCache;
 import com.addthis.hydra.store.util.MeterFileLogger;
 import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
@@ -193,8 +195,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     public ConcurrentTree(File root) throws Exception {
         this(root, defaultNumDeletionThreads, TreeCommonParameters.cleanQMax,
-             TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
-             Page.DefaultPageFactory.singleton);
+                TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
+                ConcurrentPage.ConcurrentPageFactory.singleton);
     }
 
     public void meter(METERTREE meterval) {
@@ -462,7 +464,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         log.debug("[sync] start");
         for (ConcurrentTreeNode node : cache.values()) {
             if (!node.isDeleted() && node.isChanged()) {
-                source.put(node.dbkey, node);
+                source.put(node.getDbkey(), node);
             }
         }
         log.debug("[sync] end nextdb={}", nextDBID);

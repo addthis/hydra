@@ -77,8 +77,9 @@ public final class GangliaOutput extends AbstractFilteredOutput {
         this.units = units;
     }
 
-    @Override protected void open() {
-        super.open();
+    @Override
+    protected void open(boolean concurrent) {
+        super.open(concurrent);
         checkState(gmetrics == null, "open was already called");
         log.info("opening ganglia output with hosts: {}", hostsToString());
         gmetrics = hosts.stream().map(hostPort -> {

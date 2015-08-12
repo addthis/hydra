@@ -34,7 +34,8 @@ public class EmptyDataOutput extends TaskDataOutput {
     private AtomicLong totalBundles = new AtomicLong(0);
 
     @Override
-    protected void open() {}
+    protected void open(boolean concurrent) {
+    }
 
     @Override
     public void send(Bundle bundle) throws DataChannelError {

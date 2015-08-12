@@ -44,7 +44,7 @@ public abstract class TaskDataOutput implements DataChannelOutput, WritableRootP
         this.format = format;
     }
 
-    protected abstract void open();
+    protected abstract void open(boolean concurrent);
 
     @Override public void send(List<Bundle> bundles) {
         for (Bundle bundle : bundles) {
@@ -56,7 +56,7 @@ public abstract class TaskDataOutput implements DataChannelOutput, WritableRootP
         return format.createBundle();
     }
 
-    public final void init() {
-        open();
+    public final void init(boolean concurrent) {
+        open(concurrent);
     }
 }

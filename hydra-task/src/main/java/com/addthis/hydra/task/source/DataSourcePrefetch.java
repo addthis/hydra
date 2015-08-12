@@ -53,8 +53,8 @@ public final class DataSourcePrefetch extends TaskDataSource {
     }
 
     @Override
-    public void init() {
-        source.init();
+    public void init(boolean concurrent) {
+        source.init(concurrent);
     }
 
     @Override

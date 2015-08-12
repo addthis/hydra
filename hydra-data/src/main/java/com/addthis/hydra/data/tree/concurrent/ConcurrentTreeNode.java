@@ -13,22 +13,8 @@
  */
 package com.addthis.hydra.data.tree.concurrent;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.MemoryCounter.Mem;
-
 import com.addthis.hydra.data.tree.AbstractTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
@@ -40,6 +26,18 @@ import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB.Range;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 /**
@@ -112,21 +110,10 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     private AtomicBoolean initOnce = new AtomicBoolean(false);
     private final Object initLock = new Object();
 
-    protected String name;
-    protected DBKey dbkey;
 
     public String toString() {
         return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + hits +
                ",nm=" + name + ",le=" + leases + ",ch=" + changed + ",bi=" + bits + "]";
-    }
-
-    @Override public String getName() {
-        return name;
-    }
-
-    @Override @SuppressWarnings("unchecked")
-    public Map<String, TreeNodeData> getDataMap() {
-        return data;
     }
 
     public int getLeaseCount() {
@@ -159,13 +146,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         }
     }
 
-    public final boolean isBitSet(int bitcheck) {
-        return (bits & bitcheck) == bitcheck;
-    }
-
-    public boolean isAlias() {
-        return isBitSet(ALIAS);
-    }
 
     public boolean isDeleted() {
         int count = leases.get();
@@ -185,21 +165,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         leases.compareAndSet(-1, -3);
     }
 
-    protected synchronized void markAlias() {
-        bitSet(ALIAS);
-    }
-
     protected boolean isChanged() {
         return changed.get();
     }
 
-    private final void bitSet(int set) {
-        bits |= set;
-    }
 
-    private final void bitUnset(int set) {
-        bits &= (~set);
-    }
 
     /**
      * A node is reactivated when it is retrieved from the backing storage
@@ -290,10 +260,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         }
     }
 
-    protected long nodeDB() {
-        return nodedb;
-    }
-
     /**
      * returns an iterator of read-only nodes
      */
@@ -350,6 +316,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return tree.deleteNode(this, name);
     }
 
+    @Override
+    public ConcurrentTree getTreeRoot() {
+        return tree;
+    }
+
     /**
      * link this node (aliasing) to another node in the tree. they will share
      * children, but not meta-data. should only be called from within a
@@ -368,13 +339,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         nodedb = ((ConcurrentTreeNode) node).nodedb;
         markAlias();
         return true;
-    }
-
-    protected HashMap<String, TreeNodeData> createMap() {
-        if (data == null) {
-            data = new HashMap<>();
-        }
-        return data;
     }
 
     /**
@@ -474,11 +438,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         } finally {
             lock.readLock().unlock();
         }
-    }
-
-    @Override
-    public int getNodeCount() {
-        return nodes;
     }
 
     @Override
@@ -582,11 +541,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     @Override
     public ClosableIterator<DataTreeNode> getIterator() {
         return getNodeIterator();
-    }
-
-    @Override
-    public ConcurrentTree getTreeRoot() {
-        return tree;
     }
 
     @Override

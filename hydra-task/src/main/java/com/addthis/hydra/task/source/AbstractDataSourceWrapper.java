@@ -46,8 +46,8 @@ public abstract class AbstractDataSourceWrapper extends TaskDataSource {
     }
 
     @Override
-    public void init() throws DataChannelError {
-        source.init();
+    public void init(boolean concurrent) throws DataChannelError {
+        source.init(concurrent);
     }
 
     @Override

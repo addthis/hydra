@@ -49,7 +49,8 @@ public class DataSourceEmpty extends TaskDataSource {
         return new KVBundle();
     }
 
-    @Override public void init() {
+    @Override
+    public void init(boolean concurrent) {
         generateNext();
     }
 

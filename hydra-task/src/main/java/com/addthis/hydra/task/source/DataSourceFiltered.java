@@ -58,8 +58,8 @@ public class DataSourceFiltered extends TaskDataSource {
     private Bundle peek;
 
     @Override
-    public void init() {
-        stream.init();
+    public void init(boolean concurrent) {
+        stream.init(concurrent);
     }
 
     @Override

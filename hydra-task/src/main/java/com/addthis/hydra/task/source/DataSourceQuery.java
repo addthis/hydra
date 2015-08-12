@@ -184,7 +184,8 @@ public class DataSourceQuery extends TaskDataSource {
     private Bundle nextBundle;
     private InputStream underlyingInputStream;
 
-    @Override public void init() {
+    @Override
+    public void init(boolean concurrent) {
         if (testMarkFile()) {
             return;
         }

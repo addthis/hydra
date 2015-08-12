@@ -13,27 +13,27 @@
  */
 package com.addthis.hydra.data.tree;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import java.nio.charset.Charset;
-
 import com.addthis.basis.util.Varint;
-
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.codec.codables.ConcurrentCodable;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.reflection.Fields;
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
+import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.kv.PageEncodeType;
-
 import com.google.common.primitives.Ints;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+
 public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, ConcurrentCodable, BytesCodable {
+
+    public static final int ALIAS = 1 << 1;
 
     @FieldConfig(codable = true)
     protected long hits;
@@ -48,6 +48,18 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
     protected HashMap<String, TreeNodeData> data;
 
     protected volatile long nodedb;
+    protected String name;
+    protected DBKey dbkey;
+
+    public DBKey getDbkey() {
+        return dbkey;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Map<String, TreeNodeData> getDataMap() {
+        return data;
+    }
 
     @Override
     public byte[] bytesEncode(long version) {
@@ -146,11 +158,86 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
         }
     }
 
+    final boolean isBitSet(int bitcheck) {
+        return (bits & bitcheck) == bitcheck;
+    }
+
+    public boolean isAlias() {
+        return isBitSet(ALIAS);
+    }
+
+    protected final void bitSet(int set) {
+        bits |= set;
+    }
+
+    protected final void bitUnset(int set) {
+        bits &= (~set);
+    }
+
+
+    protected synchronized void markAlias() {
+        bitSet(ALIAS);
+    }
+
+
     @Override public void encodeLock() {}
 
     @Override public void encodeUnlock() {}
 
     public boolean hasNodes() {
         return nodedb > 0;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public long getCounter() {
+        return hits;
+    }
+
+    @Override
+    public void incrementCounter() {
+        hits++;
+    }
+
+    @Override
+    public long incrementCounter(long val) {
+        hits += val;
+        return hits;
+    }
+
+    @Override
+    public void setCounter(long val) {
+        hits = val;
+    }
+
+    @Override
+    public void release() {
+        // do nothing
+    }
+
+    protected int incrementNodeCount() {
+        return nodes++;
+    }
+
+
+    public long nodeDB() {
+        return nodedb;
+    }
+
+
+    protected HashMap<String, TreeNodeData> createMap() {
+        if (data == null) {
+            data = new HashMap<>();
+        }
+        return data;
+    }
+
+    @Override
+    public int getNodeCount() {
+        return nodes;
     }
 }

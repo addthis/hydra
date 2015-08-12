@@ -170,7 +170,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
     protected DataSourceStreamList() {}
 
     @Override
-    public void init() {
+    public void init(boolean concurrent) {
         try {
             doOpen();
         } catch (Exception ex) {

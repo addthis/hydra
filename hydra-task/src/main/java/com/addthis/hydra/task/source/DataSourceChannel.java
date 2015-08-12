@@ -41,7 +41,7 @@ public class DataSourceChannel extends TaskDataSource implements BundleFactory {
     private DataChannelReader reader;
     private Bundle peek;
 
-    @Override public void init() {
+    @Override public void init(boolean concurrent) {
         try {
             reader = new DataChannelReader(this, input.createInputStream());
         } catch (IOException e) {
