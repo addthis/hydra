@@ -301,11 +301,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
             markDirFile = LessFiles.initDirectory(markDir);
             if (useSimpleMarks) {
-                PageFactory<DBKey, SimpleMark> factory = concurrent ? ConcurrentPage.ConcurrentPageFactory.singleton : NonConcurrentPage.NonConcurrentPageFactory.singleton;
+                PageFactory<DBKey, SimpleMark> factory = ConcurrentPage.ConcurrentPageFactory.singleton;
                 markDB = new PageDB<>(markDirFile, SimpleMark.class,
                         MARK_PAGE_SIZE, MARK_PAGES, factory);
             } else {
-                PageFactory<DBKey, SimpleMark> factory = concurrent ? ConcurrentPage.ConcurrentPageFactory.singleton : NonConcurrentPage.NonConcurrentPageFactory.singleton;
+                PageFactory<DBKey, SimpleMark> factory = ConcurrentPage.ConcurrentPageFactory.singleton;
                 markDB = new PageDB<>(markDirFile,
                         Mark.class, MARK_PAGE_SIZE, MARK_PAGES, factory);
             }

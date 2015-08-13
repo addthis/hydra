@@ -181,7 +181,7 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
 
         log.info("[init] ro=" + isReadOnly() + " maxPageSize=" + maxPageSize +
                 " maxPages=" + maxPages + " gztype=" + AbstractPage.gztype + " gzlevel=" +
-                AbstractPage.gzlevel + " gzbuf=" + AbstractPage.gzbuf + " mem[page=" + mem_page + "]");
+                AbstractPage.gzlevel + " gzbuf=" + AbstractPage.gzbuf + " mem[page=" + mem_page + " type=SkipListCache]");
 
     }
 

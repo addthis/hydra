@@ -109,7 +109,7 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
 
         log.info("[init] ro=" + isReadOnly() + " maxPageSize=" + maxPageSize +
                 " maxPages=" + maxPages + " gztype=" + NonConcurrentPage.gztype + " gzlevel=" +
-                NonConcurrentPage.gzlevel + " gzbuf=" + NonConcurrentPage.gzbuf + " mem[page=" + mem_page + "]");
+                NonConcurrentPage.gzlevel + " gzbuf=" + NonConcurrentPage.gzbuf + " mem[page=" + mem_page + " type=NonConcurrentPageCache]");
 
     }
 

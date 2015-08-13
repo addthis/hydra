@@ -23,7 +23,7 @@ import com.addthis.hydra.store.kv.PageEncodeType;
 
 import java.util.ArrayList;
 
-public class NonConcurrentPage<K extends DBKey, V extends BytesCodable> extends AbstractPage<K, V> {
+public class NonConcurrentPage<K, V extends BytesCodable> extends AbstractPage<K, V> {
 
     public NonConcurrentPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         super(cache, firstKey, nextFirstKey, encodeType, Type.NON_CONCURRENT);
@@ -33,7 +33,7 @@ public class NonConcurrentPage<K extends DBKey, V extends BytesCodable> extends 
         super(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType, Type.NON_CONCURRENT);
     }
 
-    public static class NonConcurrentPageFactory<K extends DBKey, V extends BytesCodable> extends PageFactory<K, V> {
+    public static class NonConcurrentPageFactory<K, V extends BytesCodable> extends PageFactory<K, V> {
 
         public static final NonConcurrentPageFactory singleton = new NonConcurrentPageFactory();
 

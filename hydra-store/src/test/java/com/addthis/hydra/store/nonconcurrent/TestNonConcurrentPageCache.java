@@ -489,7 +489,7 @@ public class TestNonConcurrentPageCache {
             }
 
 
-            assertEquals(40, cache.getNumPagesInMemory(), 20);
+            assertTrue(cache.getNumPagesInMemory() < 50);
 
             cache.pushAllPagesToDisk();
 
