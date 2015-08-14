@@ -29,8 +29,10 @@ import com.addthis.hydra.data.tree.prop.DataTime;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Runnables;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.joda.time.DateTimeZone;
@@ -57,24 +59,25 @@ public class PathPrune extends PathElement {
     private static final Logger logger = LoggerFactory.getLogger(PathPrune.class);
 
     /** Maximum age in milliseconds. */
-    @Time(TimeUnit.MILLISECONDS) @FieldConfig private long ttl;
+    private final long ttl;
 
     /** Property key name for extracting the time stamp of a node. Default is "time". */
-    @FieldConfig private String timePropKey = "time";
-    @FieldConfig private boolean ignoreMissingTimeProp = false;
+    private final String timePropKey;
+
+    private final boolean ignoreMissingTimeProp;
 
     /**
      * If true then delete all nodes at the leaf level of matching.
      * Otherwise perform the default date matching behavior.
      * Default is false.
      */
-    @FieldConfig private boolean allLeaves = false;
+    private final boolean allLeaves;
 
     /**
      * When traversing the tree in search of the nodes to prune, if this parameter is a positive integer then begin
      * the traversal this many levels lower than the current location. Default is zero.
      */
-    @FieldConfig private int relativeDown = 0;
+    private final int relativeDown;
 
     /**
      * Optionally specify a path for traversal before pruning is initiated.
@@ -82,7 +85,8 @@ public class PathPrune extends PathElement {
      * path types are "*" for matching all values, "{{date}}" for date matching,
      * and "foo" for matching a specific value.
      */
-    @Nullable private ImmutableList<String> treePath;
+    @Nullable
+    private final ImmutableList<String> treePath;
 
     /**
      * If true then terminate the pruning process when the job is shutting down.
@@ -91,7 +95,7 @@ public class PathPrune extends PathElement {
      * job always terminates when its maximum runtime is reached.
      * Consider specifying a prune in the "pre" section and setting preempt to true.
      */
-    @FieldConfig private boolean preempt = false;
+    private final boolean preempt;
 
     /**
      * If non-null then parse the name of each node using the provided
@@ -100,13 +104,32 @@ public class PathPrune extends PathElement {
      * parser will use the default time zone. To change the time zone
      * use the "timezone" field.
      */
-    @Nullable private final DateTimeFormatter nameFormat;
+    @Nullable
+    private final DateTimeFormatter nameFormat;
+
+    @Nullable
+    private final ImmutableSet<String> excludes;
 
     private Splitter SLASH_SPLITTER = Splitter.on('/').omitEmptyStrings();
 
-    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat,
+    @JsonCreator
+    public PathPrune(@Time(TimeUnit.MILLISECONDS) @JsonProperty("ttl") long ttl,
+                     @Nullable @JsonProperty("nameFormat") String nameFormat,
                      @Nullable @JsonProperty("timezone") String timezone,
-                     @Nullable @JsonProperty("treePath") String treePath) {
+                     @Nullable @JsonProperty("treePath") String treePath,
+                     @JsonProperty("timePropKey") String timePropKey,
+                     @JsonProperty("ignoreMissingTimeProp") boolean ignoreMissingTimeProp,
+                     @JsonProperty("allLeaves") boolean allLeaves,
+                     @JsonProperty("relativeDown") int relativeDown,
+                     @JsonProperty("preempt") boolean preempt,
+                     @JsonProperty("excludes") ImmutableSet<String> excludes) {
+        this.ttl = ttl;
+        this.timePropKey = timePropKey;
+        this.ignoreMissingTimeProp = ignoreMissingTimeProp;
+        this.allLeaves = allLeaves;
+        this.relativeDown = relativeDown;
+        this.preempt = preempt;
+        this.excludes = excludes;
         if (nameFormat != null && timezone != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat).withZone(DateTimeZone.forID(timezone));
         } else if (nameFormat != null) {
@@ -119,6 +142,8 @@ public class PathPrune extends PathElement {
         }
         if (treePath != null) {
             this.treePath = ImmutableList.copyOf(SLASH_SPLITTER.splitToList(treePath));
+        } else {
+            this.treePath = null;
         }
     }
 
@@ -236,6 +261,9 @@ public class PathPrune extends PathElement {
     }
 
     @VisibleForTesting long getNodeTime(DataTreeNode treeNode) {
+        if ((excludes != null) && (excludes.contains(treeNode.getName()))) {
+            return -1;
+        }
         if (nameFormat != null) {
             return nameFormat.parseMillis(treeNode.getName());
         } else {
