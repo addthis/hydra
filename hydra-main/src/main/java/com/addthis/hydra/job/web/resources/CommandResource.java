@@ -107,10 +107,11 @@ public class CommandResource {
             if (name == null) {
                 return Response.serverError().entity("missing command name").build();
             }
-            if (jobCommandManager.deleteEntity(name)) {
+            String error = jobCommandManager.deleteEntity(name);
+            if (error == null) {
                 return Response.ok().build();
             } else {
-                return Response.serverError().entity("command may be used by a job").build();
+                return Response.serverError().entity(error).build();
             }
         } catch (Exception ex) {
             log.info("Error while deleting command: ", ex);

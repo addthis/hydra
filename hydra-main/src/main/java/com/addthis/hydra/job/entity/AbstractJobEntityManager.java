@@ -113,22 +113,20 @@ public abstract class AbstractJobEntityManager<T> implements JobEntityManager<T>
     }
 
     @Override
-    public boolean deleteEntity(String key) {
+    public String deleteEntity(String key) {
         // prevent deletion of entity used in jobs
         Job job = findDependentJob(spawn, key);
         if (job != null) {
-            log.warn("Unable to delete {} {} because it is used by job {}", entityClassName, key, job.getId());
-            return false;
+            return "Unable to delete " + entityClassName + " " + key + " because it is used by job " + job.getId();
         }
 
         T entity = entities.remove(key);
         if (entity != null) {
             spawnDataStore.deleteChild(dataStorePath, key);
             log.info("Successfully deleted {} {}", entityClassName, key);
-            return true;
+            return null;
         } else {
-            log.warn("Unable to delete {} {} because it doesn't exist", entityClassName, key);
-            return false;
+            return "Unable to delete " + entityClassName + " " + key + " because it doesn't exist";
         }
     }
 
