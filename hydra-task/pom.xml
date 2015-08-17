@@ -119,6 +119,11 @@
       <artifactId>metrics-core</artifactId>
       <version>3.1.0</version>
     </dependency>
+    <dependency>
+      <groupId>com.github.rholder</groupId>
+      <artifactId>guava-retrying</artifactId>
+      <version>${hydra.dep.guava.retrying.version}</version>
+    </dependency>
   </dependencies>
 
   <repositories>
