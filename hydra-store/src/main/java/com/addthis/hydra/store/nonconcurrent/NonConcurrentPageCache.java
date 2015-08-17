@@ -27,31 +27,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ::TWO INVARIANTS TO AVOID DEADLOCK AND MAINTAIN CONSISTENCY::
- * <p>
- * Invariant #1:
- * When locking two pages always lock the lower page before locking the higher page.
- * <p>
- * Invariant #2:
- * To read a consistent snapshot of a page in the external storage you must
- * be holding a lock on the lower page in memory.
- * <p>
- * The left sentinel page is the lowest page in storage. It is constructed with
- * a special first key with value negative infinity. No key may be smaller than
- * negative infinity. The left sentinel page may be neither <i>purged</i>
- * nor <i>deleted</i> (see below).
- * <p>
- * A page is <i>evicted</i> when the contents of the page are transferred from
- * the JVM heap into the external storage. When a page is evicted a page stub
- * remains in memory that contains the minimal information needed to restore the
- * page into memory.
- * <p>
- * A page is <i>purged</i> when a page stub is deleted from memory. The most
- * recent copy of this page still resides in the external storage. The left
- * sentinel page may not be purged.
- * <p>
- * A page is <i>deleted</i> when it is removed from both memory and the external storage.
- * Only pages with 0 keys may be deleted. The left sentinel page may not be deleted.
+ * The {@link NonConcurrentPageCache} provides a paging data cache but does not offer
+ * any concurrency protection.  Clients that use this cache should either be single threaded
+ * or implement their own locking mechanisms.
+ *
+ * Evictions required to page new data into the cache happen synchronously with the operation
+ * that requested new data from the backing store.
  *
  * @param <K>
  * @param <V>
@@ -121,15 +102,7 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
     protected V doPut(K key, V value) {
         V prev;
 
-        /**
-         * If the background eviction threads are behind schedule,
-         * then synchronously perform a page eviction. The
-         * {@link #getEvictionTask()} and {@link #putEvictionTask(BackgroundEvictionTask)}
-         * method are for re-using BackgroundEvictionTask object.
-         */
-        while (shouldEvictPage() || mustEvictPage()) {
-            fixedNumberEviction(fixedNumberEvictions);
-        }
+        evictAsneeded();
 
         Page<K, V> page = locatePage(key);
 
@@ -148,12 +121,20 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
         return prev;
     }
 
+    /**
+     * evict pages until we have room for additional
+     * pages to enter the cache
+     */
+    private void evictAsneeded() {
+        while (mustEvictPage()) {
+            fixedNumberEviction(fixedNumberEvictions);
+        }
+    }
+
     @Override
     protected void doRemove(K start, K end) {
         while (true) {
-            while (shouldEvictPage() || mustEvictPage()) {
-                fixedNumberEviction(fixedNumberEvictions);
-            }
+            evictAsneeded();
 
             Page<K, V> page = locatePage(start);
             int startOffset = binarySearch(page.keys(), start, comparator);
@@ -203,9 +184,9 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
     }
 
     protected V doRemove(K key) {
-        while (shouldEvictPage() || mustEvictPage()) {
-            fixedNumberEviction(fixedNumberEvictions);
-        }
+        // even though we are removing data from the cache we may
+        // need to page new data into the cache to perform that removal
+        evictAsneeded();
 
         Page<K, V> page = locatePage(key);
         if (page.size() == 0) {
