@@ -14,25 +14,35 @@
 package com.addthis.hydra.store.skiplist;
 
 import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.common.AbstractPage;
 import com.addthis.hydra.store.common.AbstractPageCache;
-import com.addthis.hydra.store.common.Page;
 import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.kv.PageEncodeType;
 
+/**
+ * Concurrent implementation of {@link AbstractPage}.  Main purpose is to provide a
+ * factory for generating instances of this class.
+ *
+ * @param <K> the key used to get/put values onto pages maintained by the cache
+ * @param <V> the value which must extend {@link BytesCodable}
+ */
 public class ConcurrentPage<K, V extends BytesCodable> extends AbstractPage<K, V> {
 
 
     public ConcurrentPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
-        super(cache, firstKey, nextFirstKey, encodeType, Type.CONCURRENT);
+        super(cache, firstKey, nextFirstKey, encodeType);
     }
 
     public ConcurrentPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
-        super(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType, Type.CONCURRENT);
+        super(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
+    public ReentrantReadWriteLock initLock() {
+        return new ReentrantReadWriteLock();
+    }
 
     public static class ConcurrentPageFactory<K, V extends BytesCodable> extends PageFactory<K, V> {
 

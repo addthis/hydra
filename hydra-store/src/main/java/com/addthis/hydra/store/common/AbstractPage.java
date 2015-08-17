@@ -45,8 +45,6 @@ public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K,
     public static final int estimateRollMin = Parameter.intValue("eps.mem.estimate.roll.min", 1000);
     public static final int estimateRollFactor = Parameter.intValue("eps.mem.estimate.roll.factor", 100);
 
-    public enum Type {CONCURRENT, NON_CONCURRENT}
-
     protected final AbstractPageCache<K, V> parent;
 
     public final K firstKey;
@@ -102,7 +100,7 @@ public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K,
         writeStamp++;
     }
 
-    public AbstractPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType, Type pageType) {
+    public AbstractPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         this.parent = cache;
         this.keyCoder = parent != null ? parent.keyCoder : null;
         this.firstKey = firstKey;
@@ -110,24 +108,18 @@ public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K,
         this.timeStamp = AbstractPageCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
         this.encodeType = encodeType;
-        this.lock = initLock(pageType);
+        this.lock = initLock();
     }
 
-    public ReentrantReadWriteLock initLock(Type pageType) {
-        switch (pageType) {
-            case CONCURRENT:
-                return new ReentrantReadWriteLock();
-            case NON_CONCURRENT:
-                return null;
-            default:
-                throw new RuntimeException("Unexpected page type " + pageType);
-        }
+    public ReentrantReadWriteLock initLock() {
+        // default implementation does nothing, subclasses may override
+        return null;
     }
 
 
     public AbstractPage(AbstractPageCache<K, V> cache, K firstKey,
                         K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values,
-                        ArrayList<byte[]> rawValues, PageEncodeType encodeType, Type pageType) {
+                        ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         assert (keys != null);
         assert (values != null);
         assert (rawValues != null);
@@ -147,7 +139,7 @@ public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K,
         this.timeStamp = AbstractPageCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
         this.encodeType = encodeType;
-        this.lock = initLock(pageType);
+        this.lock = initLock();
     }
 
     @SuppressWarnings("unused")

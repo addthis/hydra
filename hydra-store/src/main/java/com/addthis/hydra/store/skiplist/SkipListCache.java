@@ -26,6 +26,8 @@ import com.addthis.hydra.store.kv.KeyCoder;
 import com.addthis.hydra.store.util.MetricsUtil;
 import com.addthis.hydra.store.util.NamedThreadFactory;
 import com.google.common.annotations.VisibleForTesting;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.PooledByteBufAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -783,6 +785,14 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
         }
     }
 
+    public void backgroundEviction() {
+        ByteBufOutputStream byteStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
+        try {
+            while (shutdownEvictionThreads.get() && shouldEvictPage() && doEvictPage(byteStream)) ;
+        } finally {
+            byteStream.buffer().release();
+        }
+    }
 
     public class BackgroundEvictionTask implements Runnable {
 

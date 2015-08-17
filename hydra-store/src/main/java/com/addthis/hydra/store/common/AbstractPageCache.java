@@ -31,6 +31,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * The abstract implementation of {@link PagedKeyValueStore} extended by
+ * {@link com.addthis.hydra.store.nonconcurrent.NonConcurrentPageCache} and
+ * {@link com.addthis.hydra.store.skiplist.SkipListCache}
+ *
+ * This class is optionally thread safe.  if the implantation intends
+ * to concurrently access pages stored in this class then this class
+ * must be initialized with {@code useLocks} set to true
+ *
+ * @param <K> the key used to get/put values onto pages maintained by the cache
+ * @param <V> the value which must extend {@link BytesCodable}
+ */
 public abstract class AbstractPageCache<K, V extends BytesCodable> implements PagedKeyValueStore<K, V> {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractPageCache.class);
@@ -188,7 +200,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         this.shutdownGuard = new AtomicBoolean(false);
         this.evictionQueue = new LinkedBlockingQueue<>();
         this.comparator = null;
-        // if we are using locks then we need to use evition threads
+        // if we are using locks then we will have eviction threads that need to be shutdown
         this.shutdownEvictionThreads = new AtomicBoolean(useLocks);
         this.useLocks = useLocks;
         loadFromExternalStore();
@@ -393,7 +405,6 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
     protected void updateMemoryCounters(Page<K, V> page, K key, V value, V prev) {
         /** for memory estimation, the replacement gets 2x weighting */
-
         if (prev == null) {
             page.updateAverage(key, value, 1);
         } else {
@@ -416,15 +427,6 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
             for (int i = 0; i < numEvictions; i++) {
                 doEvictPage(byteStream);
             }
-        } finally {
-            byteStream.buffer().release();
-        }
-    }
-
-    public void backgroundEviction() {
-        ByteBufOutputStream byteStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
-        try {
-            while (shutdownEvictionThreads.get() && shouldEvictPage() && doEvictPage(byteStream)) ;
         } finally {
             byteStream.buffer().release();
         }
@@ -471,33 +473,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
     protected abstract void addToPurgeSet(Page<K, V> page);
 
-    /**
-     * Return true if-and-only if no further processing is necessary.
-     */
-    protected EvictionStatus removePageFromCache(K targetKey) {
-        assert (!targetKey.equals(negInf));
 
-        Page<K, V> prevPage = null, currentPage = null;
-        Map.Entry<K, Page<K, V>> prevEntry, currentEntry;
-        prevEntry = getCache().lowerEntry(targetKey);
-        prevPage = prevEntry.getValue();
-
-        currentEntry = getCache().higherEntry(prevEntry.getKey());
-        if (currentEntry != null) {
-            currentPage = currentEntry.getValue();
-            int compareKeys = compareKeys(targetKey, currentPage.getFirstKey());
-            if (compareKeys < 0) {
-                return EvictionStatus.NO_STATUS;
-            } else if (compareKeys == 0 && currentPage.keys() == null &&
-                    currentPage.getState() == ExternalMode.DISK_MEMORY_IDENTICAL) {
-                currentPage.setState(ExternalMode.MEMORY_EVICTED);
-                getCache().remove(targetKey);
-                cacheSize.getAndDecrement();
-                return EvictionStatus.SUCCESS;
-            }
-        }
-        return EvictionStatus.EVICTED_PAGE;
-    }
 
     /**
      * Returns <code>true</code> is a page is evicted and
@@ -505,7 +481,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
      *
      * @param byteStream
      */
-    private boolean doEvictPage(ByteBufOutputStream byteStream) {
+    protected boolean doEvictPage(ByteBufOutputStream byteStream) {
         long referenceTime = generateTimestamp();
         int timeout = 10;
 
@@ -750,6 +726,8 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         }
     }
 
+    /* ---------------- End Comparison utilities -------------- */
+
 
     // For testing purposes only
     @VisibleForTesting
@@ -857,8 +835,9 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
     /**
      * This method locates a page either in cache or in the external storage.
      * If the page is on disk then it is loaded into memory. The target page
-     * is returned and it is either read-locked or write-locked depending on
-     * the {@param mode} parameter. It is guaranteed that the page returned
+     * is returned and if locks are in use it is either read-locked or
+     * write-locked depending on the {@param mode} parameter.
+     * It is guaranteed that the page returned
      * is not in a transient state and that it has been loaded into memory,
      * ie. (page.keys != null).
      * <p>
@@ -933,12 +912,6 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 }
                 if (returnPage) {
                     current.setTimeStamp(generateTimestamp());
-
-                    /**
-                     *  Fancy way of asserting that we do not
-                     *  hold the READLOCK when we want to return the WRITELOCK.
-                     */
-                    assert (!useLocks || (currentMode != LockMode.READMODE || returnMode != LockMode.WRITEMODE));
 
                     if (useLocks && (currentMode == LockMode.WRITEMODE && returnMode == LockMode.READMODE)) {
                         current.downgradeLock();
@@ -1391,7 +1364,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
     }
 
-    private class SkipListCacheIterator implements Iterator<Map.Entry<K, V>> {
+    private class PageCacheIterator implements Iterator<Map.Entry<K, V>> {
 
         Page<K, V> page;
         int position;
@@ -1400,7 +1373,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         K nextKey;
         V nextValue;
 
-        SkipListCacheIterator(K from) {
+        PageCacheIterator(K from) {
             this.page = locatePage(from, LockMode.READMODE);
             this.prevKey = null;
             this.stamp = -1;
@@ -1422,7 +1395,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
             prevKey = nextKey;
 
-            Map.Entry<K, V> pair = new SkipListCacheKeyValue(nextKey, nextValue);
+            Map.Entry<K, V> pair = new PageCacheKeyValue(nextKey, nextValue);
 
             nextHelper(prevKey, false, true);
 
@@ -1692,12 +1665,12 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         return repair ? 0 : failedPages;
     }
 
-    private class SkipListCacheKeyValue implements Map.Entry<K, V> {
+    private class PageCacheKeyValue implements Map.Entry<K, V> {
 
         final K key;
         V value;
 
-        public SkipListCacheKeyValue(K key, V value) {
+        public PageCacheKeyValue(K key, V value) {
             this.key = key;
             this.value = value;
         }
@@ -1799,7 +1772,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
     @Override
     public Iterator<Map.Entry<K, V>> range(K start) {
-        return new SkipListCacheIterator(start);
+        return new PageCacheIterator(start);
     }
 
     @Override

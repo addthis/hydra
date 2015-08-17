@@ -26,6 +26,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 /**
  * The {@link NonConcurrentPageCache} provides a paging data cache but does not offer
  * any concurrency protection.  Clients that use this cache should either be single threaded
@@ -34,8 +36,8 @@ import org.slf4j.LoggerFactory;
  * Evictions required to page new data into the cache happen synchronously with the operation
  * that requested new data from the backing store.
  *
- * @param <K>
- * @param <V>
+ * @param <K> the key used to get/put values onto pages maintained by the cache
+ * @param <V> the value which must extend {@link BytesCodable}
  */
 public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractPageCache<K, V> {
 
@@ -280,6 +282,35 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
             }
         }
         return status;
+    }
+
+    /**
+     * Return true if the page was evicted from the cache
+     *
+     * @return true if the page was evicted from the cache
+     */
+    protected boolean removePageFromCache(K targetKey) {
+        assert (!targetKey.equals(negInf));
+
+        Page<K, V> currentPage;
+        Map.Entry<K, Page<K, V>> prevEntry, currentEntry;
+        prevEntry = getCache().lowerEntry(targetKey);
+
+        currentEntry = getCache().higherEntry(prevEntry.getKey());
+        if (currentEntry != null) {
+            currentPage = currentEntry.getValue();
+            int compareKeys = compareKeys(targetKey, currentPage.getFirstKey());
+            if (compareKeys < 0) {
+                return false;
+            } else if (compareKeys == 0 && currentPage.keys() == null &&
+                    currentPage.getState() == ExternalMode.DISK_MEMORY_IDENTICAL) {
+                currentPage.setState(ExternalMode.MEMORY_EVICTED);
+                getCache().remove(targetKey);
+                cacheSize.getAndDecrement();
+                return true;
+            }
+        }
+        return false;
     }
 
     protected void addToPurgeSet(Page<K, V> page) {

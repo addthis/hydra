@@ -26,16 +26,16 @@ import java.util.ArrayList;
 public class NonConcurrentPage<K, V extends BytesCodable> extends AbstractPage<K, V> {
 
     public NonConcurrentPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
-        super(cache, firstKey, nextFirstKey, encodeType, Type.NON_CONCURRENT);
+        super(cache, firstKey, nextFirstKey, encodeType);
     }
 
     public NonConcurrentPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
-        super(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType, Type.NON_CONCURRENT);
+        super(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
     public static class NonConcurrentPageFactory<K, V extends BytesCodable> extends PageFactory<K, V> {
 
-        public static final NonConcurrentPageFactory singleton = new NonConcurrentPageFactory();
+        public static final NonConcurrentPageFactory singleton = new NonConcurrentPageFactory<>();
 
         @Override
         public TYPE getType() {
@@ -46,12 +46,12 @@ public class NonConcurrentPage<K, V extends BytesCodable> extends AbstractPage<K
         }
 
         @Override
-        public Page<K, V> newPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
+        public NonConcurrentPage<K, V> newPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
             return new NonConcurrentPage(cache, firstKey, nextFirstKey, encodeType);
         }
 
         @Override
-        public Page<K, V> newPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
+        public NonConcurrentPage<K, V> newPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
                                   ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
             return new NonConcurrentPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
         }
