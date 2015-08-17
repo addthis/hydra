@@ -251,17 +251,23 @@ public class JobAlertRunner {
         if (errors.isEmpty()) {
             return;
         }
-        String subject = String.format("%s %s - %s - %s", reason, jobAlert.getTypeString(),
-                                       JobAlertRunner.getClusterHead(), errors.keySet());
-        log.info("Alerting {} :: jobs : {} : {}", jobAlert.email, errors.keySet(), reason);
-        StringBuilder sb = new StringBuilder(subject + "\n");
-        sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.alertId + "\n");
         String description = jobAlert.description;
-        if (LessStrings.isNotEmpty(description)) {
-            sb.append("Alert Description : " + description + "\n");
+        boolean hasDescription = LessStrings.isNotEmpty(description);
+        String subject;
+        if (hasDescription) {
+            subject = reason + ' ' + description;
+        } else {
+            subject = String.format("%s %s - %s - %s", reason, jobAlert.getTypeString(),
+                                    JobAlertRunner.getClusterHead(), errors.keySet());
+        }
+        log.info("Alerting {} :: jobs : {} : {}", jobAlert.email, errors.keySet(), reason);
+        StringBuilder sb = new StringBuilder(reason + ' ' + jobAlert.getTypeString() + '\n');
+        sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.alertId + '\n');
+        if (hasDescription) {
+            sb.append("Alert Description : " + description + '\n');
         }
         for (Map.Entry<String, String> entry : errors.entrySet()) {
-            sb.append(summary(spawn.getJob(entry.getKey())) + "\n");
+            sb.append(summary(spawn.getJob(entry.getKey())) + '\n');
             sb.append("Error Message\n");
             sb.append(entry.getValue());
             sb.append("\n------------------------------\n");

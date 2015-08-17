@@ -15,30 +15,42 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.UncheckedIOException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.annotations.Time;
 
+import com.google.common.base.Throwables;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.github.rholder.retry.RetryException;
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.WaitStrategies;
 
-import org.apache.commons.lang3.text.translate.LookupTranslator;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.http.HttpEntity;
 import org.apache.http.NoHttpResponseException;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -61,38 +73,88 @@ public class HttpOutputWriter extends AbstractOutputWriter {
     private static final Logger log = LoggerFactory.getLogger(HttpOutputWriter.class);
 
     // Field names to send; same for both bundle and json output
-    @JsonProperty(required = true) private String[] fields;
+    private final String[] fields;
 
-    @JsonProperty private String requestType = "POST";
+    /**
+     * Default is "POST"
+     */
+    private final String requestType;
 
-    @JsonProperty private int retries = 5;
+    /**
+     * Default is 5.
+     */
+    private final int retries;
 
-    @JsonProperty private int maxConnTotal = 200;
+    /**
+     * Default is 200.
+     */
+    @SuppressWarnings("unused")
+    private final int maxConnTotal;
 
-    @JsonProperty private int maxConnPerRoute = 20;
+    /**
+     * Default is 20.
+     */
+    @SuppressWarnings("unused")
+    private final int maxConnPerRoute;
 
-    @JsonProperty private int timeout = 120 * 1000; // timeout in milliseconds
+    /**
+     * Timeout in milliseconds. Default is 120,000.
+     */
+    @SuppressWarnings("unused")
+    private final int timeout;
+
+    /**
+     * Maximum exponential backoff wait in milliseconds. Default is 0.
+     */
+    @SuppressWarnings("unused")
+    private final int backoffMax;
 
     private int rotation = 0;
 
-    private ObjectWriter objectWriter = new ObjectMapper().writer();
+    private final ObjectWriter objectWriter = new ObjectMapper().writer();
 
-    private RequestConfig.Builder requestBuilder = RequestConfig.custom()
-                                                                .setConnectTimeout(timeout)
-                                                                .setConnectionRequestTimeout(
-                                                                        timeout);
+    private final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
 
-    private PoolingHttpClientConnectionManager connectionManager =
-            new PoolingHttpClientConnectionManager();
+    private final CloseableHttpClient httpClient;
 
-    private CloseableHttpClient httpClient = HttpClientBuilder.create()
-                                                              .setDefaultRequestConfig(
-                                                                      requestBuilder.build())
-                                                              .setConnectionManager(
-                                                                      connectionManager)
-                                                              .setMaxConnTotal(maxConnTotal)
-                                                              .setMaxConnPerRoute(maxConnPerRoute)
-                                                              .build();
+    private final Retryer<Integer> retryer;
+
+    @JsonCreator
+    public HttpOutputWriter(@JsonProperty(value = "fields", required = true) String[] fields,
+                            @JsonProperty(value = "requestType") String requestType,
+                            @JsonProperty(value = "retries") int retries,
+                            @JsonProperty(value = "maxConnTotal") int maxConnTotal,
+                            @JsonProperty(value = "maxConnPerRoute") int maxConnPerRoute,
+                            @JsonProperty(value = "timeout") @Time(TimeUnit.MILLISECONDS) int timeout,
+                            @JsonProperty(value = "backoffMax") @Time(TimeUnit.MILLISECONDS) int backoffMax) {
+        this.fields = fields;
+        this.requestType = requestType;
+        this.retries = retries;
+        this.maxConnTotal = maxConnTotal;
+        this.maxConnPerRoute = maxConnPerRoute;
+        this.timeout = timeout;
+        this.backoffMax = backoffMax;
+        RequestConfig.Builder requestBuilder =
+                RequestConfig.custom().setConnectTimeout(timeout).setConnectionRequestTimeout(timeout);
+        httpClient =
+                HttpClientBuilder.create()
+                                 .setDefaultRequestConfig(requestBuilder.build())
+                                 .setConnectionManager(connectionManager)
+                                 .setMaxConnTotal(maxConnTotal)
+                                 .setMaxConnPerRoute(maxConnPerRoute)
+                                 .build();
+        RetryerBuilder<Integer> retryerBuilder = RetryerBuilder
+                .<Integer>newBuilder()
+                .retryIfExceptionOfType(NoHttpResponseException.class)
+                .retryIfResult((val) -> (val == null) || !(val >= 200 && val < 300))
+                .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
+        if (backoffMax > 0) {
+            retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMax, TimeUnit.MILLISECONDS));
+        } else {
+            retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
+        }
+        retryer = retryerBuilder.build();
+    }
 
     private Object unbox(ValueObject val) {
         switch (val.getObjectType()) {
@@ -147,6 +209,35 @@ public class HttpOutputWriter extends AbstractOutputWriter {
         }
     }
 
+    @Nonnull
+    private Integer request(String[] endpoints, String body, MutableInt retry) {
+        rotation = (rotation + 1) % endpoints.length;
+        String endpoint = endpoints[rotation];
+        if (retry.getValue() > 0) {
+            log.info("Attempting to send to {}. Retry {}", endpoint, retry.getValue());
+        }
+        retry.increment();
+        CloseableHttpResponse response = null;
+        try {
+            HttpEntity entity = new StringEntity(body, ContentType.APPLICATION_JSON);
+            HttpUriRequest request = buildRequest(requestType, endpoint, entity);
+
+            response = httpClient.execute(request);
+            EntityUtils.consume(response.getEntity());
+            return response.getStatusLine().getStatusCode();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+            } catch (IOException ex) {
+                throw new UncheckedIOException(ex);
+            }
+        }
+    }
+
     @Override
     protected void dequeueWrite(List<WriteTuple> outputTuples) throws IOException {
         if (outputTuples == null || outputTuples.size() == 0) {
@@ -179,48 +270,18 @@ public class HttpOutputWriter extends AbstractOutputWriter {
                 throw e;
             }
 
-            int retry = 0;
-            while (retry < retries) {
-                rotation = (rotation + 1) % endpoints.length;
-                String endpoint = endpoints[rotation];
-                if (retry > 0) {
-                    log.info("Attempting to send to {}. Retry {} of {}", endpoint, retry, retries - 1);
+            try {
+                MutableInt retry = new MutableInt(0);
+                retryer.call(() -> request(endpoints, body, retry));
+            } catch (RetryException ex) {
+                throw new IOException("Max retries exceeded.");
+            } catch (ExecutionException ex) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof IOException) {
+                    throw ((IOException) cause);
+                } else {
+                    Throwables.propagate(cause);
                 }
-                CloseableHttpResponse response = null;
-                try {
-                    HttpEntity entity = new StringEntity(body, ContentType.APPLICATION_JSON);
-                    HttpUriRequest request = buildRequest(requestType, endpoint, entity);
-
-                    response = httpClient.execute(request);
-                    EntityUtils.consume(response.getEntity());
-                    int statusCode = response.getStatusLine().getStatusCode();
-                    if (statusCode >= 200 && statusCode < 300) {
-                        break;
-                    } else {
-                        log.error("Server error: " + response.getStatusLine());
-                        log.error(response.toString());
-                    }
-                } catch (NoHttpResponseException ignored) {
-                    log.warn("Failed to connect to server, going to continue with retries");
-                } catch (UnsupportedEncodingException e) {
-                    log.error("Encoding error", e);
-                    throw e;
-                } catch (ClientProtocolException e) {
-                    log.error("Client communication error: ", e);
-                    throw e;
-                } catch (IOException e) {
-                    log.error("IO exception: ", e);
-                    throw e;
-                } finally {
-                    retry++;
-                    if (response != null) {
-                        response.close();
-                    }
-                }
-            }
-
-            if (retry == retries) {
-                throw new IOException("Max retries exceeded");
             }
         }
     }

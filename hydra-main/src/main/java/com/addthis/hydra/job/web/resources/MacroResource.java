@@ -144,10 +144,11 @@ public class MacroResource {
             if (name == null) {
                 return Response.serverError().entity("missing macro name").build();
             }
-            if (jobMacroManager.deleteEntity(name)) {
+            String error = jobMacroManager.deleteEntity(name);
+            if (error == null) {
                 return Response.ok().build();
             } else {
-                return Response.serverError().entity("macro may be used by a job").build();
+                return Response.serverError().entity(error).build();
             }
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();

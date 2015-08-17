@@ -45,9 +45,8 @@ public interface JobEntityManager<T> {
     /** 
      * Deletes an entity by key if it is not used by any job.
      * 
-     * @return  {@code true} if entity is deleted successfully; {@code false} if entity is being 
-     *          used by a job therefore can't be deleted.
+     * @return  {@code null} if entity is deleted successfully; otherwise return the error message
      */
-    boolean deleteEntity(String key);
+    String deleteEntity(String key);
 
 }
