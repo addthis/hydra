@@ -292,7 +292,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
                 if (md.exists()) {
                     FileUtils.deleteDirectory(md);
-                    log.warn("Deleted file : {}", md);
+                    log.info("Deleted marks directory : {}", md);
                 }
             }
 
