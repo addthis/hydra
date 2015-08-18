@@ -22,11 +22,10 @@ import com.addthis.hydra.store.nonconcurrent.NonConcurrentPage;
 import com.addthis.hydra.store.skiplist.ConcurrentPage;
 import com.addthis.hydra.store.common.PageFactory;
 
-public class Builder<T extends DataTree> {
+public class TreeBuilder<T extends DataTree> {
 
     // Required parameters
     protected final File root;
-    private final boolean concurrent;
 
     // Optional parameters - initialized to default values;
     protected int numDeletionThreads = ConcurrentTree.defaultNumDeletionThreads;
@@ -37,49 +36,44 @@ public class Builder<T extends DataTree> {
     protected PageFactory nonConcurrentPageFactory = NonConcurrentPage.NonConcurrentPageFactory.singleton;
     protected PageFactory pageFactory;
 
-    public Builder(File root) {
-        this(root, true);
-    }
-
-    public Builder(File root, boolean concurrent) {
+    public TreeBuilder(File root) {
         this.root = root;
-        this.concurrent = concurrent;
-
     }
 
-    public Builder numDeletionThreads(int val) {
+    public TreeBuilder numDeletionThreads(int val) {
         numDeletionThreads = val;
         return this;
     }
 
-    public Builder nodeCacheSize(int val) {
+    public TreeBuilder nodeCacheSize(int val) {
         cleanQSize = val;
         return this;
     }
 
-    public Builder maxCacheSize(int val) {
+    public TreeBuilder maxCacheSize(int val) {
         maxCache = val;
         return this;
     }
 
-    public Builder maxPageSize(int val) {
+    public TreeBuilder maxPageSize(int val) {
         maxPageSize = val;
         return this;
     }
 
-    public Builder pageFactory(PageFactory factory) {
+    public TreeBuilder pageFactory(PageFactory factory) {
         pageFactory = factory;
         return this;
     }
 
-    public DataTree build() throws Exception {
-        if (concurrent) {
-            pageFactory = concurrentPageFactory;
-            return new ConcurrentTree(root, numDeletionThreads, cleanQSize,
-                    maxCache, maxPageSize, pageFactory);
-        } else {
-            pageFactory = nonConcurrentPageFactory;
-            return new NonConcurrentTree(root, maxCache, maxPageSize, pageFactory);
-        }
+    public ConcurrentTree multiThreadedTree() throws Exception {
+        pageFactory = concurrentPageFactory;
+        return new ConcurrentTree(root, numDeletionThreads, cleanQSize,
+                                  maxCache, maxPageSize, pageFactory);
     }
+
+    public NonConcurrentTree singleThreadedTree() throws Exception {
+        pageFactory = concurrentPageFactory;
+        return new NonConcurrentTree(root, maxCache, maxPageSize, pageFactory);
+    }
+
 }

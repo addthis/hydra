@@ -169,7 +169,7 @@ public class TestConcurrentTree {
         log.info("getOrCreateOneThread");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).build();
+            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -197,7 +197,7 @@ public class TestConcurrentTree {
         log.info("recursiveDeleteOneThread");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).build();
+            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
             ConcurrentTreeNode parent = tree.getOrCreateNode(root, "hello", null);
             for (int i = 0; i < (TreeCommonParameters.cleanQMax << 1); i++) {
@@ -231,7 +231,7 @@ public class TestConcurrentTree {
         log.info("recursiveDeleteMultiThreads");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).numDeletionThreads(8).build();
+            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(8).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < fastNumThreads; i++) {
                 ConcurrentTreeNode parent = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -284,7 +284,7 @@ public class TestConcurrentTree {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             ArrayList<Integer> threadId = new ArrayList<>(numElements);
             InsertionThread[] threads = new InsertionThread[numThreads];
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).build();
+            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -342,7 +342,7 @@ public class TestConcurrentTree {
         int tests = 10_000;
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).numDeletionThreads(numDeletionThreads).build();
+            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numDeletionThreads).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < tests; i++) {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -383,7 +383,7 @@ public class TestConcurrentTree {
      */
     private ConcurrentTree waitForDeletion(ConcurrentTree tree, File dir) throws Exception {
         tree.close();
-        tree = (ConcurrentTree) new Builder(dir).numDeletionThreads(0).build();
+        tree = new TreeBuilder(dir).numDeletionThreads(0).multiThreadedTree();
         tree.foregroundNodeDeletion(() -> false);
         return tree;
     }
@@ -427,8 +427,8 @@ public class TestConcurrentTree {
         log.info("iterateAndDelete {} {}", numThreads, numElements);
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).
-                    numDeletionThreads(numThreads).maxPageSize(5).maxCacheSize(500).build();
+            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numThreads)
+                                                      .maxPageSize(5).maxCacheSize(500).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -476,7 +476,7 @@ public class TestConcurrentTree {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             ArrayList<Integer> threadId = new ArrayList<>(numElements);
             DeletionThread[] threads = new DeletionThread[numThreads];
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).numDeletionThreads(numDeletionThreads).build();
+            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numDeletionThreads).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -527,7 +527,7 @@ public class TestConcurrentTree {
     public void maximumNodeIdentifier() throws Exception {
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = (ConcurrentTree) new Builder(dir).build();
+            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);

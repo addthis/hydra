@@ -424,11 +424,12 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
      */
     long deleteSubTree(NonConcurrentTreeNode rootNode,
                        long counter) {
-        Stack<DeletePopper> stack = new Stack<>();
-        stack.push(new DeletePopper(rootNode, counter));
+        Stack<DeletionStackNode> stack = new Stack<>();
+        stack.push(new DeletionStackNode(rootNode, counter));
 
         while (!stack.isEmpty()) {
-            DeletePopper popper = stack.pop();
+            DeletionStackNode popper = stack.pop();
+            counter = popper.counter;
 
             long nodeDB = popper.node.nodeDB();
             IPageDB.Range<DBKey, NonConcurrentTreeNode> range = fetchNodeRange(nodeDB);
@@ -442,7 +443,7 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
                     NonConcurrentTreeNode next = entry.getValue();
 
                     if (next.hasNodes() && !next.isAlias()) {
-                        stack.push(new DeletePopper(next, counter));
+                        stack.push(new DeletionStackNode(next, counter));
                     }
                 }
                 endRange = new DBKey(nodeDB + 1);
@@ -454,11 +455,11 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
         return counter;
     }
 
-    private class DeletePopper {
+    private class DeletionStackNode {
         private final NonConcurrentTreeNode node;
         private final long counter;
 
-        public DeletePopper(NonConcurrentTreeNode node, long counter) {
+        public DeletionStackNode(NonConcurrentTreeNode node, long counter) {
             this.node = node;
             this.counter = counter;
         }

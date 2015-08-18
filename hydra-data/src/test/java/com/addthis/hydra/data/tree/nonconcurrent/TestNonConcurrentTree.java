@@ -17,7 +17,7 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
-import com.addthis.hydra.data.tree.concurrent.Builder;
+import com.addthis.hydra.data.tree.concurrent.TreeBuilder;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.nonconcurrent.NonConcurrentPage;
 import org.junit.Test;
@@ -120,8 +120,7 @@ public class TestNonConcurrentTree {
         log.info("iterateAndDelete {}", numElements);
         File dir = makeTemporaryDirectory();
         try {
-            NonConcurrentTree tree = (NonConcurrentTree) new Builder(dir, false).
-                    maxPageSize(5).build();
+            NonConcurrentTree tree = new TreeBuilder(dir).maxPageSize(5).singleThreadedTree();
             NonConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -163,7 +162,7 @@ public class TestNonConcurrentTree {
     public void maximumNodeIdentifier() throws Exception {
         File dir = makeTemporaryDirectory();
         try {
-            NonConcurrentTree tree = (NonConcurrentTree) new Builder(dir, false).build();
+            NonConcurrentTree tree = new TreeBuilder(dir).singleThreadedTree();
             NonConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
                 NonConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -195,7 +194,7 @@ public class TestNonConcurrentTree {
         log.info("recursiveDelete");
         File dir = makeTemporaryDirectory();
         try {
-            NonConcurrentTree tree = (NonConcurrentTree) new Builder(dir, false).build();
+            NonConcurrentTree tree = new TreeBuilder(dir).singleThreadedTree();
             NonConcurrentTreeNode root = tree.getRootNode();
             NonConcurrentTreeNode parent = tree.getOrCreateNode(root, "0", null);
             for (int j = 0; j < TreeCommonParameters.cleanQMax; j++) {
