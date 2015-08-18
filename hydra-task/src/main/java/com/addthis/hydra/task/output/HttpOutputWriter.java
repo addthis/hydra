@@ -210,7 +210,7 @@ public class HttpOutputWriter extends AbstractOutputWriter {
     }
 
     @Nonnull
-    private Integer request(String[] endpoints, String body, MutableInt retry) {
+    private Integer request(String[] endpoints, String body, MutableInt retry) throws IOException {
         rotation = (rotation + 1) % endpoints.length;
         String endpoint = endpoints[rotation];
         if (retry.getValue() > 0) {
@@ -225,15 +225,9 @@ public class HttpOutputWriter extends AbstractOutputWriter {
             response = httpClient.execute(request);
             EntityUtils.consume(response.getEntity());
             return response.getStatusLine().getStatusCode();
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
         } finally {
-            try {
-                if (response != null) {
-                    response.close();
-                }
-            } catch (IOException ex) {
-                throw new UncheckedIOException(ex);
+            if (response != null) {
+                response.close();
             }
         }
     }
