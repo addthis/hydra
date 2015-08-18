@@ -50,7 +50,6 @@ import com.github.rholder.retry.WaitStrategies;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.http.HttpEntity;
-import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -145,7 +144,7 @@ public class HttpOutputWriter extends AbstractOutputWriter {
                                  .build();
         RetryerBuilder<Integer> retryerBuilder = RetryerBuilder
                 .<Integer>newBuilder()
-                .retryIfExceptionOfType(NoHttpResponseException.class)
+                .retryIfExceptionOfType(UncheckedIOException.class)
                 .retryIfResult((val) -> (val == null) || !(val >= 200 && val < 300))
                 .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
         if (backoffMax > 0) {
