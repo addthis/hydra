@@ -51,7 +51,7 @@ public class DataSourceConstant extends TaskDataSource {
     private boolean closed = false;
 
     @Override
-    public void init(boolean concurrent) {
+    public void init() {
         Iterator<Bundle> iter;
         if (repeat == 0) {
             iter = bundles.iterator();

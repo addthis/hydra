@@ -73,8 +73,8 @@ public class DataSourceRange extends TaskDataSource {
     }
 
     @Override
-    public void init(boolean concurrent) {
-        source.init(concurrent);
+    public void init() {
+        source.init();
     }
 
     @Nonnull @Override

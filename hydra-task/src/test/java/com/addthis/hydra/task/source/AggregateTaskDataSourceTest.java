@@ -26,8 +26,8 @@ public class AggregateTaskDataSourceTest {
         TaskDataSource mockDS2 = Mockito.mock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
-        mockDS1.init(true);
-        mockDS2.init(true);
+        mockDS1.init();
+        mockDS2.init();
 
         Mockito.when(mockDS1.isEnabled()).thenReturn(true);
         Mockito.when(mockDS2.isEnabled()).thenReturn(true);
@@ -35,7 +35,7 @@ public class AggregateTaskDataSourceTest {
         Mockito.when(mockDS1.peek()).thenReturn(null);
         Mockito.when(mockDS2.peek()).thenReturn(null);
 
-        aggregateTaskDataSource.init(true);
+        aggregateTaskDataSource.init();
         Mockito.verify(mockDS1).peek();
         Mockito.verify(mockDS2).peek();
     }
@@ -47,8 +47,8 @@ public class AggregateTaskDataSourceTest {
         TaskDataSource mockDS2 = Mockito.mock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
-        mockDS1.init(true);
-        mockDS2.init(true);
+        mockDS1.init();
+        mockDS2.init();
 
         Mockito.when(mockDS1.isEnabled()).thenReturn(true);
         Mockito.when(mockDS2.isEnabled()).thenReturn(true);
@@ -56,7 +56,7 @@ public class AggregateTaskDataSourceTest {
         Mockito.when(mockDS1.peek()).thenReturn(null);
         Mockito.when(mockDS2.peek()).thenReturn(null);
 
-        aggregateTaskDataSource.init(true);
+        aggregateTaskDataSource.init();
         aggregateTaskDataSource.peek();
         Mockito.verify(mockDS1).peek();
         Mockito.verify(mockDS2).peek();

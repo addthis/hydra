@@ -59,9 +59,9 @@ public class DataSourceHashed extends TaskDataSource {
     private Integer[] shards;
 
     @Override
-    public void init(boolean concurrent) {
+    public void init() {
         shards = config.calcShardList(shardTotal);
-        stream.init(concurrent);
+        stream.init();
     }
 
     @Override

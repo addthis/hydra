@@ -56,7 +56,6 @@ import com.addthis.hydra.data.filter.value.StringFilter;
 import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
-import com.addthis.hydra.store.nonconcurrent.NonConcurrentPage;
 import com.addthis.hydra.store.skiplist.ConcurrentPage;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
@@ -278,7 +277,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         return new ListBundle(bundleFormat);
     }
 
-    @Override public void init(boolean concurrent) {
+    @Override public void init() {
         if (legacyMode != null) {
             magicMarksNumber = 0;
             useSimpleMarks = true;

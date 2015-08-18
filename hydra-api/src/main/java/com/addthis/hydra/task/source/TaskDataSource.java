@@ -44,7 +44,7 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
     @FieldConfig(codable = true)
     private boolean enabled = true;
 
-    public abstract void init(boolean concurrent);
+    public abstract void init();
 
     public final AutoField getShardField() {
         return shardField;

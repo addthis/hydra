@@ -50,7 +50,7 @@ public class DataSourceEmpty extends TaskDataSource {
     }
 
     @Override
-    public void init(boolean concurrent) {
+    public void init() {
         generateNext();
     }
 

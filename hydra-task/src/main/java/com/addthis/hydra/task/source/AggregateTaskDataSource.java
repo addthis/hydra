@@ -85,11 +85,11 @@ public class AggregateTaskDataSource extends TaskDataSource {
     }
 
     @Override
-    public void init(boolean concurrent) {
+    public void init() {
         for (TaskDataSource source : sources) {
             if (source.isEnabled()) {
                 log.debug("init {}", source);
-                source.init(concurrent);
+                source.init();
                 sourceList.add(source);
             } else {
                 log.debug("disabled {}", source);

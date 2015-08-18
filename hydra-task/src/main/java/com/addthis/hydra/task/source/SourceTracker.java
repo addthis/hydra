@@ -68,7 +68,7 @@ public class SourceTracker {
     }
 
     public void open(final TaskDataSource source) {
-        source.init(true);
+        source.init();
     }
 
     /**

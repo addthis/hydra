@@ -185,7 +185,7 @@ public class DataSourceQuery extends TaskDataSource {
     private InputStream underlyingInputStream;
 
     @Override
-    public void init(boolean concurrent) {
+    public void init() {
         if (testMarkFile()) {
             return;
         }

@@ -66,7 +66,7 @@ public class DataSourceHttp extends TaskDataSource {
     private InputStream underlyingInputStream;
 
     @Override
-    public void init(boolean concurrent) {
+    public void init() {
         HttpURLConnection conn = null;
         try {
             StringBuilder urlMaker = new StringBuilder(url);

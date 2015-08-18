@@ -63,8 +63,8 @@ public class SortedTaskDataSource extends TaskDataSource {
         sorted = new TreeMap<>(comparator);
     }
 
-    @Override public void init(boolean concurrent) {
-        source.init(concurrent);
+    @Override public void init() {
+        source.init();
     }
 
     private void fill() {
