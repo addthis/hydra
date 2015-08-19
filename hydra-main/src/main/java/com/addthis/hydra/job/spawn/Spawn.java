@@ -328,7 +328,6 @@ public class Spawn implements Codable, AutoCloseable {
         // start JobAlertManager
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
         // start job scheduler
-        scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(this), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(this::drainJobTaskUpdateQueue,
                                                  taskQueueDrainInterval,
@@ -2433,6 +2432,7 @@ public class Spawn implements Codable, AutoCloseable {
                     for (LinkedList<SpawnQueueItem> queue : queues) {
                         iterateThroughTaskQueue(queue);
                     }
+                    new UpdateEventRunnable(this).run();
                     sendTaskQueueUpdateEvent();
                 }
             } finally {
@@ -2442,7 +2442,7 @@ public class Spawn implements Codable, AutoCloseable {
                 }
             }
             if (!success) {
-                Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+                Uninterruptibles.sleepUninterruptibly(100, MILLISECONDS);
             }
         }
     }
