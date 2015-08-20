@@ -357,16 +357,14 @@ function(
             });
         },
         save : function(param){
-            var self=this;
             var data = _.extend(_.omit(this.toJSON(),'parameters','alerts','config','DT_RowId','DT_RowClass'),param);
             data= _.omit(data,'state');
-            data.command=$("#command").val();
             if (!_.isEmpty(this.commit)) {
                 data.commit=this.commit;
             }
             var parameters = {};
             if (!this.isNew()) {
-                parameters['id'] = self.id;
+                parameters['id'] = this.id;
             }
             app.authQueryParameters(parameters);
             parameters['defaults'] = false;

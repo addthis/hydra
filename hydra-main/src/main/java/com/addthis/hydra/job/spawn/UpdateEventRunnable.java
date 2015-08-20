@@ -21,6 +21,7 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.mq.HostState;
 
 class UpdateEventRunnable implements Runnable {
 
@@ -33,10 +34,12 @@ class UpdateEventRunnable implements Runnable {
 
     @Override
     public void run() {
+        int jobtotal = 0;
         int jobshung = 0;
         int jobrunning = 0;
         int jobscheduled = 0;
         int joberrored = 0;
+        int tasktotal = 0;
         int taskbusy = 0;
         int taskerrored = 0;
         int taskqueued = 0;
@@ -46,7 +49,9 @@ class UpdateEventRunnable implements Runnable {
         spawn.jobLock.lock();
         try {
             for (Job job : spawn.spawnState.jobs.values()) {
+                jobtotal++;
                 for (JobTask jn : job.getCopyOfTasks()) {
+                    tasktotal++;
                     switch (jn.getState()) {
                         case ALLOCATED:
                         case BUSY:
@@ -99,6 +104,13 @@ class UpdateEventRunnable implements Runnable {
         } finally {
             spawn.jobLock.unlock();
         }
+        long diskUsed = 0;
+        long diskCapacity = 0;
+        for (HostState host : spawn.hostManager.getLiveHosts(null)) {
+            diskUsed += host.getUsed().getDisk();
+            diskCapacity += host.getMax().getDisk();
+        }
+        float diskAvailable = ((float) diskUsed) / ((float) diskCapacity);
         events.clear();
         events.put("time", System.currentTimeMillis());
         events.put("hosts", (long) spawn.hostManager.monitored.size());
@@ -109,20 +121,27 @@ class UpdateEventRunnable implements Runnable {
         events.put("jobs_scheduled", (long) jobscheduled);
         events.put("jobs_errored", (long) joberrored);
         events.put("jobs_hung", (long) jobshung);
+        events.put("jobs_total", (long) jobtotal);
         events.put("tasks_busy", (long) taskbusy);
         events.put("tasks_queued", (long) taskqueued);
         events.put("tasks_queued_no_slot", (long) taskQueuedNoSlot);
         events.put("tasks_errored", (long) taskerrored);
+        events.put("tasks_total", (long) tasktotal);
         events.put("files", files);
         events.put("bytes", bytes);
+        events.put("disk_used", diskUsed);
+        events.put("disk_capacity", diskCapacity);
         spawn.spawnFormattedLogger.periodicState(events);
+        SpawnMetrics.totalTaskCount.set(tasktotal);
         SpawnMetrics.runningTaskCount.set(taskbusy);
         SpawnMetrics.queuedTaskCount.set(taskqueued);
         SpawnMetrics.queuedTaskNoSlotCount.set(taskQueuedNoSlot);
         SpawnMetrics.failTaskCount.set(taskerrored);
+        SpawnMetrics.totalJobCount.set(jobtotal);
         SpawnMetrics.runningJobCount.set(jobrunning);
         SpawnMetrics.queuedJobCount.set(jobscheduled);
         SpawnMetrics.failJobCount.set(joberrored);
         SpawnMetrics.hungJobCount.set(jobshung);
+        SpawnMetrics.diskAvailablePercent.set(diskAvailable);
     }
 }

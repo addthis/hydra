@@ -28,10 +28,13 @@ public final class SpawnMetrics {
     static final SettableGauge<Integer> queuedTaskCount = newSettableGauge(Spawn.class, "queuedTasks", 0);
     static final SettableGauge<Integer> queuedTaskNoSlotCount = newSettableGauge(Spawn.class, "queuedTasksNoSlot", 0);
     static final SettableGauge<Integer> failTaskCount = newSettableGauge(Spawn.class, "failedTasks", 0);
+    static final SettableGauge<Integer> totalTaskCount = newSettableGauge(Spawn.class, "totalTasks", 0);
     static final SettableGauge<Integer> runningJobCount = newSettableGauge(Spawn.class, "runningJobs", 0);
     static final SettableGauge<Integer> queuedJobCount = newSettableGauge(Spawn.class, "queuedJobs", 0);
     static final SettableGauge<Integer> failJobCount = newSettableGauge(Spawn.class, "failedJobs", 0);
     static final SettableGauge<Integer> hungJobCount = newSettableGauge(Spawn.class, "hungJobs", 0);
+    static final SettableGauge<Integer> totalJobCount = newSettableGauge(Spawn.class, "totalJobs", 0);
+    static final SettableGauge<Float> diskAvailablePercent = newSettableGauge(Spawn.class, "diskAvailable", 0.0f);
 
     static final Meter tasksStartedPerHour =
             Metrics.newMeter(Spawn.class, "tasksStartedPerHour", "tasksStartedPerHour", TimeUnit.HOURS);
