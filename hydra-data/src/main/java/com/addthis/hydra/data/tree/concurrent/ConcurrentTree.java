@@ -67,6 +67,8 @@ import com.google.common.util.concurrent.AtomicDouble;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -684,10 +686,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * value to disable logging of the number of deleted nodes.
      *
      * @param rootNode root of the subtree to delete
-     * @param counter if non-negative then tally the nodes that have been deleted
      */
-    long deleteSubTree(ConcurrentTreeNode rootNode,
-                       long counter,
+    void deleteSubTree(ConcurrentTreeNode rootNode,
+                       MutableLong totalCount,
+                       MutableLong nodeCount,
                        BooleanSupplier terminationCondition,
                        Logger deletionLogger) {
         long nodeDB = rootNode.nodeDB();
@@ -696,14 +698,16 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         boolean reschedule;
         try {
             while (range.hasNext() && !terminationCondition.getAsBoolean()) {
-                if ((++counter % deletionLogInterval) == 0) {
-                    deletionLogger.info("Deleted {} nodes from the tree.", counter);
+                totalCount.increment();
+                if ((totalCount.longValue() % deletionLogInterval) == 0) {
+                    deletionLogger.info("Deleted {} total nodes in {} trash nodes from the trash.",
+                                        totalCount.longValue(), nodeCount.longValue());
                 }
                 Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
                 ConcurrentTreeNode next = entry.getValue();
 
                 if (next.hasNodes() && !next.isAlias()) {
-                    counter = deleteSubTree(next, counter, terminationCondition, deletionLogger);
+                    deleteSubTree(next, totalCount, nodeCount, terminationCondition, deletionLogger);
                 }
                 String name = entry.getKey().rawKey().toString();
                 CacheKey key = new CacheKey(nodeDB, name);
@@ -729,7 +733,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (reschedule) {
             markForChildDeletion(rootNode);
         }
-        return counter;
     }
 
     Map.Entry<DBKey, ConcurrentTreeNode> nextTrashNode() {

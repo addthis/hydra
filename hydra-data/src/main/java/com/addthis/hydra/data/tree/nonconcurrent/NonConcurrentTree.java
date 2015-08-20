@@ -228,7 +228,7 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
         if (node != null) {
             parent.updateNodeCount(-1);
             if (node.hasNodes() && !node.isAlias()) {
-                deleteSubTree(node, 0);
+                deleteSubTree(node);
             }
             return true;
         } else {
@@ -420,30 +420,27 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
      * value to disable logging of the number of deleted nodes.
      *
      * @param rootNode root of the subtree to delete
-     * @param counter  if non-negative then tally the nodes that have been deleted
      */
-    long deleteSubTree(NonConcurrentTreeNode rootNode,
-                       long counter) {
-        Stack<DeletionStackNode> stack = new Stack<>();
-        stack.push(new DeletionStackNode(rootNode, counter));
+    void deleteSubTree(NonConcurrentTreeNode rootNode) {
+        long totalCount = 0;
+        Stack<NonConcurrentTreeNode> stack = new Stack<>();
+        stack.push(rootNode);
 
         while (!stack.isEmpty()) {
-            DeletionStackNode popper = stack.pop();
-            counter = popper.counter;
-
-            long nodeDB = popper.node.nodeDB();
+            NonConcurrentTreeNode node = stack.pop();
+            long nodeDB = node.nodeDB();
             IPageDB.Range<DBKey, NonConcurrentTreeNode> range = fetchNodeRange(nodeDB);
             DBKey endRange;
             try {
                 while (range.hasNext()) {
-                    if ((++counter % 1000) == 0) {
-                        log.info("Deleted {} nodes from the tree.", counter);
+                    if ((++totalCount % 1000) == 0) {
+                        log.info("Deleted {} children in this subtree.", totalCount);
                     }
                     Map.Entry<DBKey, NonConcurrentTreeNode> entry = range.next();
                     NonConcurrentTreeNode next = entry.getValue();
 
                     if (next.hasNodes() && !next.isAlias()) {
-                        stack.push(new DeletionStackNode(next, counter));
+                        stack.push(next);
                     }
                 }
                 endRange = new DBKey(nodeDB + 1);
@@ -451,17 +448,6 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
                 range.close();
             }
             source.remove(new DBKey(nodeDB), endRange);
-        }
-        return counter;
-    }
-
-    private class DeletionStackNode {
-        private final NonConcurrentTreeNode node;
-        private final long counter;
-
-        public DeletionStackNode(NonConcurrentTreeNode node, long counter) {
-            this.node = node;
-            this.counter = counter;
         }
     }
 }
