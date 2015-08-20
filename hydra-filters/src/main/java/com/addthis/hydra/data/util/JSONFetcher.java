@@ -14,7 +14,6 @@
 package com.addthis.hydra.data.util;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 
 import java.net.URISyntaxException;
 
@@ -106,7 +105,7 @@ public class JSONFetcher {
         this.backoffMillis = backoffMillis;
         RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
                 .<byte[]>newBuilder()
-                .retryIfExceptionOfType(UncheckedIOException.class)
+                .retryIfExceptionOfType(IOException.class)
                 .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
         if (backoffMillis > 0) {
             retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMillis, TimeUnit.MILLISECONDS));
@@ -193,7 +192,7 @@ public class JSONFetcher {
         }
     }
 
-    private byte[] request(String url, MutableInt retry) throws URISyntaxException {
+    private byte[] request(String url, MutableInt retry) throws URISyntaxException, IOException {
         if (retry.getValue() > 0) {
             log.info("Attempting to fetch {}. Retry {}", url, retry.getValue());
         }
@@ -203,17 +202,15 @@ public class JSONFetcher {
         } catch (URISyntaxException u) {
             log.error("URISyntaxException on url {}", url, u);
             throw u;
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
         }
     }
 
-    private byte[] retrieveBytes(String url) throws Exception {
+    private byte[] retrieveBytes(String url) throws IOException {
         MutableInt retry = new MutableInt(0);
         try {
             return retryer.call(() -> request(url, retry));
         } catch (ExecutionException e) {
-            throw Throwables.propagate(e);
+            throw Throwables.propagate(e.getCause());
         } catch (RetryException e) {
             throw new IOException("Max retries exceeded");
         }
