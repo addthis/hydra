@@ -49,6 +49,14 @@ public enum JobState {
         this.value = value;
     }
 
+    public static JobState toJobState(int value) {
+        for (JobState state : JobState.values()) {
+            if (state.value == value) {
+                return state;
+            }
+        }
+        return UNKNOWN;
+    }
 
     public boolean canTransition(JobState state) {
         return this == state || transitions.get(this).contains(state);
