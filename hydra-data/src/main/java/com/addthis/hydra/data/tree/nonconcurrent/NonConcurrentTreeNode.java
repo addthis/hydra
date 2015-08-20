@@ -27,12 +27,8 @@ import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB.Range;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 
 
 /**
@@ -41,6 +37,9 @@ import java.util.NoSuchElementException;
  * to work efficiently in a single threaded environment
  */
 public class NonConcurrentTreeNode extends AbstractTreeNode {
+
+    private String name;
+    private DBKey dbkey;
 
     public static NonConcurrentTreeNode getTreeRoot(NonConcurrentTree tree) {
         NonConcurrentTreeNode node = new NonConcurrentTreeNode();
@@ -141,6 +140,7 @@ public class NonConcurrentTreeNode extends AbstractTreeNode {
     public NonConcurrentTreeNode getNode(String name) {
         return tree.getNode(this, name, false);
     }
+
 
     @Override
     public ClosableIterator<DataTreeNode> getIterator() {
@@ -325,4 +325,66 @@ public class NonConcurrentTreeNode extends AbstractTreeNode {
     }
 
 
+    @Override
+    public long getCounter() {
+        return hits;
+    }
+
+    @Override
+    public void incrementCounter() {
+        hits++;
+    }
+
+    @Override
+    public long incrementCounter(long val) {
+        hits += val;
+        return hits;
+    }
+
+    @Override
+    public void setCounter(long val) {
+        hits = val;
+    }
+
+    @Override
+    public void release() {
+        // do nothing
+    }
+
+    public long nodeDB() {
+        return nodedb;
+    }
+
+
+    protected HashMap<String, TreeNodeData> createMap() {
+        if (data == null) {
+            data = new HashMap<>();
+        }
+        return data;
+    }
+
+    @Override
+    public int getNodeCount() {
+        return nodes;
+    }
+
+    final boolean isBitSet(int bitcheck) {
+        return (bits & bitcheck) == bitcheck;
+    }
+
+    public boolean isAlias() {
+        return isBitSet(ALIAS);
+    }
+
+    protected final void bitSet(int set) {
+        bits |= set;
+    }
+
+    protected synchronized void markAlias() {
+        bitSet(ALIAS);
+    }
+
+    public DBKey getDbkey() {
+        return dbkey;
+    }
 }

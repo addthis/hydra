@@ -27,13 +27,8 @@ import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB.Range;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -57,7 +52,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class ConcurrentTreeNode extends AbstractTreeNode {
 
-    public static final int ALIAS = 1 << 1;
+    protected String name;
+    protected DBKey dbkey;
 
     public static ConcurrentTreeNode getTreeRoot(ConcurrentTree tree) {
         ConcurrentTreeNode node = new ConcurrentTreeNode() {
@@ -76,6 +72,10 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
      * required for Codable. must be followed by an init() call.
      */
     public ConcurrentTreeNode() {
+    }
+
+    public DBKey getDbkey() {
+        return dbkey;
     }
 
     protected void initIfDecoded(ConcurrentTree tree, DBKey key, String name) {
@@ -587,4 +587,50 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     public synchronized void setCounter(long val) {
         hits = val;
     }
+
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+
+    public long nodeDB() {
+        return nodedb;
+    }
+
+
+    protected HashMap<String, TreeNodeData> createMap() {
+        if (data == null) {
+            data = new HashMap<>();
+        }
+        return data;
+    }
+
+    @Override
+    public int getNodeCount() {
+        return nodes;
+    }
+
+    final boolean isBitSet(int bitcheck) {
+        return (bits & bitcheck) == bitcheck;
+    }
+
+    public boolean isAlias() {
+        return isBitSet(ALIAS);
+    }
+
+    protected final void bitSet(int set) {
+        bits |= set;
+    }
+
+    protected final void bitUnset(int set) {
+        bits &= (~set);
+    }
+
+
+    protected synchronized void markAlias() {
+        bitSet(ALIAS);
+    }
+
 }
