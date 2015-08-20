@@ -53,7 +53,8 @@ public class ValueFilterExclude extends AbstractMatchStringFilter {
                        @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                        @JsonProperty("toLower") boolean toLower,
                        @JsonProperty("urlTimeout") int urlTimeout,
-                       @JsonProperty("urlRetries") int urlRetries) {
+                       @JsonProperty("urlRetries") int urlRetries,
+                       @JsonProperty("urlBackoff") int urlBackoff) {
         super(value,
               valueURL,
               match,
@@ -66,6 +67,7 @@ public class ValueFilterExclude extends AbstractMatchStringFilter {
               toLower,
               urlTimeout,
               urlRetries,
+              urlBackoff,
               true);
     }
 
