@@ -96,8 +96,12 @@ class AuthenticationManagerLocalUser extends AuthenticationManager {
         return null;
     }
 
-    @Override void logout(User user) {
-        tokenCache.remove(user.name());
+    @Override public void evict(String username) {
+        tokenCache.evict(username);
+    }
+
+    @Override void logout(String username, String secret) {
+        tokenCache.remove(username, secret);
     }
 
     @Override ImmutableList<String> adminGroups() {

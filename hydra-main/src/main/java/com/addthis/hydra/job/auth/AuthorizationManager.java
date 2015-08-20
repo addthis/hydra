@@ -87,7 +87,7 @@ abstract class AuthorizationManager implements Closeable {
      * Performs any logout activities such as clearing
      * the sudo cache.
      */
-    abstract void logout(User user);
+    abstract void logout(String username);
 
     @Override
     public void close() throws IOException {}

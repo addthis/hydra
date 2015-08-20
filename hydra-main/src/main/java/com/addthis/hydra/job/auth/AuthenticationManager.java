@@ -77,12 +77,20 @@ abstract class AuthenticationManager implements Closeable {
     abstract String sudoToken(String username);
 
     /**
+     * Remove all tokens associated with this user.
+     *
+     * @param username
+     */
+    public abstract void evict(String username);
+
+    /**
      * Logout the user from the authentication manager. The secret
      * token for the user should be invalidated.
      *
-     * @param user
+     * @param username
+     * @param secret
      */
-    abstract void logout(User user);
+    abstract void logout(String username, String secret);
 
     abstract ImmutableList<String> adminGroups();
 

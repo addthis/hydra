@@ -122,8 +122,8 @@ class AuthorizationManagerBasic extends AuthorizationManager {
         }
     }
 
-    @Override void logout(User user) {
-        sudoCache.remove(user.name());
+    @Override void logout(String username) {
+        sudoCache.evict(username);
     }
 
 }

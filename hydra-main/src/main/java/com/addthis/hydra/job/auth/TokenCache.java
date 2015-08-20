@@ -16,12 +16,14 @@ package com.addthis.hydra.job.auth;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.codec.annotations.Time;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.primitives.Ints;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,13 +45,20 @@ public class TokenCache {
      */
     public final int timeout;
 
-    private final Cache<String, String> cache;
+    /**
+     * Map each username to a set of cached tokens that expire.
+     */
+    private final ConcurrentHashMap<String, Cache<String, Boolean>> cache;
 
     @JsonCreator
     public TokenCache(@JsonProperty(value = "policy", required = true) ExpirationPolicy policy,
                       @JsonProperty(value = "timeout", required = true) @Time(TimeUnit.SECONDS) int timeout) {
         this.policy = policy;
         this.timeout = timeout;
+        this.cache = new ConcurrentHashMap<>();
+    }
+
+    private Cache<String, Boolean> buildCache() {
         CacheBuilder cacheBuilder = CacheBuilder.newBuilder();
         switch (policy) {
             case ACCESS:
@@ -61,23 +70,30 @@ public class TokenCache {
             default:
                 throw new IllegalStateException("Unknown expiration policy " + policy);
         }
-        cache = cacheBuilder.build();
+        return cacheBuilder.build();
     }
 
     public boolean get(@Nullable String name, @Nullable String secret) {
         if ((name == null) || (secret == null)) {
             return false;
         }
-        String candidate = cache.getIfPresent(name);
-        return ((candidate != null) && (candidate.equals(secret)));
+        Cache<String, Boolean> tokens = cache.computeIfAbsent(name, (k) -> buildCache());
+        return (tokens.getIfPresent(secret) != null);
     }
 
     public void put(@Nonnull String name, @Nonnull String secret) {
-        cache.put(name, secret);
+        Cache<String, Boolean> tokens = cache.computeIfAbsent(name, (k) -> buildCache());
+        tokens.put(secret, Boolean.TRUE);
     }
 
-    public void remove(@Nonnull String name) {
-        cache.invalidate(name);
+    public int remove(@Nonnull String name, @Nonnull String secret) {
+        Cache<String, Boolean> tokens = cache.computeIfAbsent(name, (k) -> buildCache());
+        tokens.invalidate(secret);
+        return Ints.saturatedCast(tokens.size());
+    }
+
+    public void evict(@Nonnull String name) {
+        cache.remove(name);
     }
 
 }

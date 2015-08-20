@@ -36,11 +36,7 @@ function(
         user: new Backbone.Model({username:"",token:"",sudo:""}),
         server:server,
         loginSSLDefault:true,
-        loginExpirationSeconds:86400,
-        sudoExpirationSeconds:900,
         loginDialog:null,
-        loginTimeoutId:null,
-        sudoTimeoutId:null,
         jobDefaults: {},
         activeModels:[],
         showView:function(view,link,activeModels){
@@ -64,15 +60,6 @@ function(
                 self[modelName]=undefined;
             });
         },
-        redirectToLogin:function() {
-            var redirect;
-            if (window.location.hash) {
-                redirect = window.location.hash.substring(1);
-            } else {
-                redirect = "jobs";
-            }
-            window.location=app.authprefix() + "/spawn2/login.html?redirect=" + redirect;
-        },
         authprefix:function() {
             var useSSL = app.loginSSLDefault || (window.location.href.lastIndexOf("https", 0) == 0);
             return (useSSL ? "https://" : "http://") + window.location.hostname + ":" +
@@ -94,43 +81,28 @@ function(
                 dataType: 'json',
                 success: function(response) {
                     app.loginSSLDefault = response.sslDefault;
-                    app.loginExpirationSeconds = response.authTimeout;
-                    app.sudoExpirationSeconds = response.sudoTimeout;
                     var username = Cookies.get("username");
                     var token = Cookies.get("token");
-                    var tokenExpires = Cookies.get("tokenExpires");
-                    if (username && token && tokenExpires) {
-                        var delta = new Date(tokenExpires).getTime() - new Date().getTime();
-                        if (delta > 0) {
-                            app.loginTimeoutId = setTimeout(app.loginTimeout, delta);
+                    $.ajax({
+                        type: 'POST',
+                        url: '/authentication/validate',
+                        data: {
+                            user: username,
+                            token: token
+                        },
+                        dataType: 'text',
+                        success: function(response) {
+                            if (response === "true") {
+                                app.user.set("username", username);
+                                app.user.set("token", token);
+                            } else {
+                                alertify.error("Invalid credentials. Please login.", 0);
+                            }
+                        },
+                        error: function(error) {
+                            alertify.error("Failure on /authentication/validate", 0);
                         }
-                    }
-                    if (window.location.href.search("login.html") == -1) {
-                        if (!username || !token) {
-                            app.redirectToLogin();
-                        } else {
-                            $.ajax({
-                                type: 'POST',
-                                url: '/authentication/validate',
-                                data: {
-                                    user: username,
-                                    token: token
-                                },
-                                dataType: 'text',
-                                success: function(response) {
-                                    if (response === "true") {
-                                        app.user.set("username", username);
-                                        app.user.set("token", token);
-                                    } else {
-                                        app.redirectToLogin();
-                                    }
-                                },
-                                error: function(error) {
-                                    alertify.error("Failure on /authentication/validate", 0);
-                                }
-                            });
-                        }
-                    }
+                    });
                 },
                 error: function(error) {
                     alertify.error("Failure on /update/settings", 0);
@@ -176,59 +148,30 @@ function(
                         }
                     } else {
                         if (tokenName == "token") {
-                            var loginTimeout = new Date(new Date().getTime() + app.loginExpirationSeconds * 1000);
-                            Cookies.set("username", username, {expires: loginTimeout});
-                            Cookies.set("token", token, {expires: loginTimeout});
-                            Cookies.set("tokenExpires", loginTimeout, {expires: loginTimeout});
+                            Cookies.set("username", username);
+                            Cookies.set("token", token);
                             Cookies.set("sudo", "", {expires:0});
-                            if (app.loginTimeoutId) {
-                                clearTimeout(app.loginTimeoutId);
-                            }
-                            app.loginTimeoutId = setTimeout(app.loginTimeout, app.loginExpirationSeconds * 1000);
                             app.user.set("username", username);
                             app.user.set("token", token);
                             app.user.set("sudo", "");
                             $("#sudoCheckbox").prop("checked", false);
                         } else {
-                            var sudoTimeout = new Date(new Date().getTime() + app.sudoExpirationSeconds * 1000);
-                            Cookies.set("sudo", token, {expires: sudoTimeout});
+                            Cookies.set("sudo", token);
                             app.user.set("sudo", token);
-                            if (app.sudoTimeoutId) {
-                                clearTimeout(app.sudoTimeoutId);
-                            }
-                            app.sudoTimeoutId = setTimeout(app.sudoTimeout, app.sudoExpirationSeconds * 1000);
-                        }
-                        var currentUrl = window.location.href;
-                        if (currentUrl.indexOf("login.html") > -1) {
-                            var redirectLoc = currentUrl.indexOf("redirect=");
-                            var redirectHash;
-                            if (redirectLoc > -1) {
-                                redirectHash = currentUrl.substring(redirectLoc + 9);
-                            } else {
-                                redirectHash = "jobs";
-                            }
-                            window.location="http://" + window.location.hostname + ":5052/spawn2/index.html#" + redirectHash;
                         }
                     }
                 },
-                error: function(error) {
+                error: function(jqXHR, textStatus) {
                     if (app.loginDialog) {
                         app.loginDialog.close();
                     }
-                    alertify.error("Accept our <a target=\"_blank\" href=\"" + app.authprefix() + "\">https certificate</a>", 0);
+                    if (jqXHR.status === 401) {
+                        alertify.error("Invalid username/password provided");
+                    } else {
+                        alertify.error("Accept our <a target=\"_blank\" href=\"" + app.authprefix() + "/spawn2/landing.html"+ "\">https certificate</a>", 0);
+                    }
                 }
             });
-        },
-        loginTimeout:function() {
-            app.user.set("username", "");
-            app.user.set("token", "");
-            app.user.set("sudo", "");
-            $("#sudoCheckbox").prop("checked", false);
-            alertify.alert("Your session has expired. Press the login button in the top-right corner.");
-        },
-        sudoTimeout:function() {
-            app.user.set("sudo", "");
-            $("#sudoCheckbox").prop("checked", false);
         },
         login:function() {
             document.activeElement.blur();
@@ -251,6 +194,7 @@ function(
                     app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
                 }
             } else {
+                Cookies.set("sudo", "", {expires:0});
                 app.user.set("sudo", "");
             }
         },
@@ -279,10 +223,6 @@ function(
             app.user.set("token", "");
             app.user.set("sudo", "");
             $("#sudoCheckbox").prop("checked", false);
-            clearTimeout(app.loginTimeoutId);
-            clearTimeout(app.sudoTimeoutId);
-            app.loginTimeoutId = null;
-            app.sudoTimeoutId = null;
         },
         authQueryParameters:function(parameters) {
             var user = app.user.get("username");

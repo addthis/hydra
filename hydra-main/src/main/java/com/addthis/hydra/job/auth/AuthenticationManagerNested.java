@@ -107,11 +107,14 @@ class AuthenticationManagerNested extends AuthenticationManager {
         }
     }
 
-    @Override void logout(User user) {
-        if (user != null) {
-            inner.logout(user);
-            outer.logout(user);
-        }
+    @Override public void evict(String username) {
+        inner.evict(username);
+        outer.evict(username);
+    }
+
+    @Override void logout(String username, String secret) {
+        inner.logout(username, secret);
+        outer.logout(username, secret);
     }
 
     @Override ImmutableList<String> adminGroups() {

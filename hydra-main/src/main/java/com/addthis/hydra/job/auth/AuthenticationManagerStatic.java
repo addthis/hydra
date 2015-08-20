@@ -116,6 +116,14 @@ class AuthenticationManagerStatic extends AuthenticationManager {
         }
     }
 
+    @Override public void evict(String username) {
+        // do nothing
+    }
+
+    @Override void logout(String username, String secret) {
+        // do nothing
+    }
+
     @Override boolean isAdmin(User user) {
         if (user == null) {
             return false;
@@ -133,11 +141,6 @@ class AuthenticationManagerStatic extends AuthenticationManager {
             }
         }
         return false;
-    }
-
-
-    @Override void logout(User user) {
-        // do nothing
     }
 
     @Override ImmutableList<String> adminGroups() {
