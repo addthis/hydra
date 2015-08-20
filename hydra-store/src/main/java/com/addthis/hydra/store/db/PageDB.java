@@ -36,6 +36,7 @@ import com.addthis.hydra.store.kv.MapDbByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 
 import com.addthis.hydra.store.nonconcurrent.NonConcurrentPageCache;
+import com.addthis.hydra.store.skiplist.ConcurrentPage;
 import com.addthis.hydra.store.skiplist.SkipListCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,6 +92,10 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
         public PageDB<V> build() throws IOException {
             return new PageDB<>(dir, clazz, dbname, maxPageSize, maxPages, pageFactory);
         }
+    }
+
+    public PageDB(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages) throws IOException {
+        this(dir, clazz, defaultDbName, maxPageSize, maxPages, ConcurrentPage.ConcurrentPageFactory.singleton);
     }
 
     public PageDB(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages, PageFactory<DBKey, V> factory) throws IOException {
