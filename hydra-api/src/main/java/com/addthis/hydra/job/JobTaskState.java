@@ -60,6 +60,15 @@ public enum JobTaskState {
         transitions.put(FULL_REPLICATE, EnumSet.of(IDLE, BACKUP, ERROR, REBALANCE));
     }
 
+    public static JobTaskState toJobTaskState(int value) {
+        for (JobTaskState state : JobTaskState.values()) {
+            if (state.value == value) {
+                return state;
+            }
+        }
+        return UNKNOWN;
+    }
+
     private JobTaskState(int value) {
         this.value = value;
     }
