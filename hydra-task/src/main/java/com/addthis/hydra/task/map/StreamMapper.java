@@ -185,10 +185,9 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
 
     @Override
     public void start() {
-        boolean concurrent = threads > 1;
         source.init();
         map.init();
-        output.init(concurrent);
+        output.init();
         if (builder != null) {
             builder.init();
         }

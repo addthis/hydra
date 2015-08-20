@@ -34,7 +34,7 @@ public class EmptyDataOutput extends TaskDataOutput {
     private AtomicLong totalBundles = new AtomicLong(0);
 
     @Override
-    protected void open(boolean concurrent) {
+    protected void open() {
     }
 
     @Override

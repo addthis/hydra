@@ -47,8 +47,8 @@ public class FilteredDataOutput extends TaskDataOutput {
     private BundleFilter filter;
 
     @Override
-    protected void open(boolean concurrent) {
-        output.open(concurrent);
+    protected void open() {
+        output.open();
     }
 
     @Override

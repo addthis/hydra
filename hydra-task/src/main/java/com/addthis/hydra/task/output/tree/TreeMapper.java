@@ -150,6 +150,17 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     @FieldConfig private boolean repairTree = false;
 
     /**
+     * Boolean to determine if a concurrent or non-concurrent tree
+     * should be used by this mapper.  Note that you cannot use
+     * non-concurrent tree if more than one task processing
+     * threads are in use
+     *
+     * Default is true.
+     */
+    @FieldConfig private boolean concurrentTree = true;
+
+
+    /**
      * Optional sample rate for applying
      * the {@link #pre pre} paths. If greater
      * than one than apply once every N runs.
@@ -278,7 +289,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     }
 
     @Override
-    public void open(boolean concurrent) {
+    public void open() {
         try {
             boolean success = Shutdown.tryAddShutdownHook(
                     new Thread(() -> closing.set(true), "TreeMapper shutdown hook"));
@@ -298,7 +309,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             log.info("[init] live={}, target={} job={}", live, root, this.config.jobId);
 
             Path treePath = Paths.get(config.dir, directory);
-            if (concurrent) {
+            if (concurrentTree) {
                 tree = new ConcurrentTree(LessFiles.initDirectory(treePath.toFile()));
             } else {
                 tree = new NonConcurrentTree(LessFiles.initDirectory(treePath.toFile()));

@@ -89,7 +89,7 @@ public class BundleReporter extends AbstractPollingReporter implements MetricPro
 
     public void start() {
         log.info("starting bundle metric reporter");
-        this.output.init(false);
+        this.output.init();
         super.start(period, TimeUnit.NANOSECONDS);
     }
 

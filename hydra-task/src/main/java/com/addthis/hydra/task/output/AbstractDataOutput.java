@@ -71,8 +71,8 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     protected abstract AbstractOutputWriter getWriter();
 
     @Override
-    public void open(boolean concurrent) {
-        log.info("[init] {} {}", config, concurrent);
+    public void open() {
+        log.info("[init] {}", config);
         AbstractOutputWriter writer = getWriter();
         if (writer != null) {
             writer.open();

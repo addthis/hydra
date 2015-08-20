@@ -24,7 +24,7 @@ public abstract class AbstractFilteredOutput extends TaskDataOutput {
     @JsonProperty protected BundleFilter filter;
 
     @Override
-    protected void open(boolean concurrent) {
+    protected void open() {
     }
 
     public boolean filter(Bundle bundle) {
