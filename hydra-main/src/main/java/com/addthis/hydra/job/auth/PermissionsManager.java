@@ -122,6 +122,17 @@ public final class PermissionsManager implements Closeable {
         }
     }
 
+    public boolean evict(String username) {
+        User user = authentication.getUser(username);
+        if (user != null) {
+            authentication.logout(user);
+            authorization.logout(user);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public void logout(String username, String secret) {
         User user = authentication.authenticate(username, secret);
         if (user != null) {
