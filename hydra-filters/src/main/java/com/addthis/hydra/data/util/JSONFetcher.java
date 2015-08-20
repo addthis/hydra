@@ -13,18 +13,33 @@
  */
 package com.addthis.hydra.data.util;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+import java.net.URISyntaxException;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
+import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessStrings;
 
-import com.addthis.hydra.data.filter.value.ValueFilterHttpGet;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Throwables;
+
+import com.github.rholder.retry.RetryException;
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.WaitStrategies;
+
+import org.apache.commons.lang3.mutable.MutableInt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,6 +84,8 @@ public class JSONFetcher {
     private final int timeout;
     private final int retries;
     private final boolean trace;
+    private final int backoffMillis;
+    private final Retryer<byte[]> retryer;
 
     public JSONFetcher() {
         this(60000, false);
@@ -79,9 +96,24 @@ public class JSONFetcher {
     }
 
     public JSONFetcher(int timeout, int retries, boolean trace) {
+        this(timeout, retries, trace, 0);
+    }
+
+    public JSONFetcher(int timeout, int retries, boolean trace, int backoffMillis) {
         this.timeout = timeout;
         this.retries = retries;
         this.trace = trace;
+        this.backoffMillis = backoffMillis;
+        RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
+                .<byte[]>newBuilder()
+                .retryIfExceptionOfType(UncheckedIOException.class)
+                .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
+        if (backoffMillis > 0) {
+            retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMillis, TimeUnit.MILLISECONDS));
+        } else {
+            retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
+        }
+        retryer = retryerBuilder.build();
     }
 
     public HashMap<String, String> loadMap(String mapURL) {
@@ -161,23 +193,29 @@ public class JSONFetcher {
         }
     }
 
-    private byte[] retrieveBytes(String mapURL) {
-        int retry = retries;
-        while (true) {
-            try {
-                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
-                if (raw == null) {
-                    throw new IllegalArgumentException("No data found at url " + mapURL);
-                }
-                return raw;
-            } catch (Exception e) {
-                log.warn("fetch err on {} for retry {} max retries is {} err is: ",
-                         mapURL, (retries - retry), retries, e);
-                if (retry-- > 0) {
-                    continue;
-                }
-                throw Throwables.propagate(e);
-            }
+    private byte[] request(String url, MutableInt retry) throws URISyntaxException {
+        if (retry.getValue() > 0) {
+            log.info("Attempting to fetch {}. Retry {}", url, retry.getValue());
+        }
+        retry.increment();
+        try {
+            return HttpUtil.httpGet(url, timeout).getBody();
+        } catch (URISyntaxException u) {
+            log.error("URISyntaxException on url {}", url, u);
+            throw u;
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
+    private byte[] retrieveBytes(String url) throws Exception {
+        MutableInt retry = new MutableInt(0);
+        try {
+            return retryer.call(() -> request(url, retry));
+        } catch (ExecutionException e) {
+            throw Throwables.propagate(e);
+        } catch (RetryException e) {
+            throw new IOException("Max retries exceeded");
         }
     }
 
