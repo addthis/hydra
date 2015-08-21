@@ -13,12 +13,12 @@
  */
 package com.addthis.hydra.job.auth;
 
+import javax.annotation.Nonnull;
+
 import java.io.Closeable;
 import java.io.IOException;
 
-import com.addthis.hydra.job.alert.types.RuntimeExceededJobAlert;
-
-import com.google.common.base.Throwables;
+import com.google.common.io.Closer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,9 +34,14 @@ public final class PermissionsManager implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(PermissionsManager.class);
 
+    @Nonnull
     private final AuthenticationManager authentication;
 
+    @Nonnull
     private final AuthorizationManager authorization;
+
+    @Nonnull
+    private final Closer closer;
 
     private static PermissionsManager ALLOW_ALL = new PermissionsManager(
             new AuthenticationManagerAllowAll(), new AuthorizationManagerAllowAll());
@@ -50,6 +55,9 @@ public final class PermissionsManager implements Closeable {
                               @JsonProperty(value = "authorization", required = true) AuthorizationManager authorization) {
         this.authentication = authentication;
         this.authorization = authorization;
+        this.closer = Closer.create();
+        closer.register(authentication);
+        closer.register(authorization);
     }
 
     /**
@@ -141,26 +149,9 @@ public final class PermissionsManager implements Closeable {
         }
     }
 
-    private static Exception closeAndPropagate(Closeable target, Exception exception) {
-        try {
-            target.close();
-        } catch (RuntimeException|IOException ex) {
-            if (exception == null) {
-                exception = ex;
-            } else {
-                exception.addSuppressed(ex);
-            }
-        }
-        return exception;
-    }
-
     @Override
     public void close() throws IOException {
-        Exception exception = closeAndPropagate(authentication, null);
-        exception = closeAndPropagate(authorization, exception);
-        if (exception != null) {
-            Throwables.propagate(exception);
-        }
+        closer.close();
     }
 
 }

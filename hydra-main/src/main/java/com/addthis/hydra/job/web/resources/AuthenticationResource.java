@@ -131,7 +131,11 @@ public class AuthenticationResource {
                       @FormParam("sudo") String sudo,
                       @FormParam("target") String target) {
         Response.ResponseBuilder builder;
-        if (!spawn.getPermissionsManager().adminAction(user, token, sudo)) {
+        if (target == null) {
+            builder = Response.status(Response.Status.BAD_REQUEST);
+            builder.entity("target argument missing");
+        } else if ((target.equals(user) && (spawn.getPermissionsManager().authenticate(user, token) == null)) ||
+                   (!target.equals(user) && !spawn.getPermissionsManager().adminAction(user, token, sudo))) {
             builder = Response.status(Response.Status.UNAUTHORIZED);
             builder.entity("Invalid credentials provided");
         } else if (!spawn.getPermissionsManager().evict(target)) {

@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.auth;
 
+import java.io.IOException;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -110,5 +112,10 @@ class AuthenticationManagerLocalUser extends AuthenticationManager {
 
     @Override ImmutableList<String> adminUsers() {
         return ImmutableList.of("admin");
+    }
+
+    @Override
+    public void close() throws IOException {
+        tokenCache.close();
     }
 }
