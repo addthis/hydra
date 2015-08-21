@@ -148,8 +148,8 @@ function(
                         }
                     } else {
                         if (tokenName == "token") {
-                            Cookies.set("username", username);
-                            Cookies.set("token", token);
+                            Cookies.set("username", username, {expires: 730});
+                            Cookies.set("token", token, {expires: 730});
                             Cookies.set("sudo", "", {expires:0});
                             app.user.set("username", username);
                             app.user.set("token", token);
