@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.util;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 import java.net.URISyntaxException;
@@ -84,6 +86,7 @@ public class JSONFetcher {
     private final int retries;
     private final boolean trace;
     private final int backoffMillis;
+    @Nullable
     private final Retryer<byte[]> retryer;
 
     public JSONFetcher() {
@@ -103,16 +106,20 @@ public class JSONFetcher {
         this.retries = retries;
         this.trace = trace;
         this.backoffMillis = backoffMillis;
-        RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
-                .<byte[]>newBuilder()
-                .retryIfExceptionOfType(IOException.class)
-                .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
-        if (backoffMillis > 0) {
-            retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMillis, TimeUnit.MILLISECONDS));
+        if (retries > 0) {
+            RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
+                    .<byte[]>newBuilder()
+                    .retryIfExceptionOfType(IOException.class)
+                    .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
+            if (backoffMillis > 0) {
+                retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMillis, TimeUnit.MILLISECONDS));
+            } else {
+                retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
+            }
+            retryer = retryerBuilder.build();
         } else {
-            retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
+            retryer = null;
         }
-        retryer = retryerBuilder.build();
     }
 
     public HashMap<String, String> loadMap(String mapURL) {
@@ -208,7 +215,13 @@ public class JSONFetcher {
     private byte[] retrieveBytes(String url) throws IOException {
         MutableInt retry = new MutableInt(0);
         try {
-            return retryer.call(() -> request(url, retry));
+            if (retryer != null) {
+                return retryer.call(() -> request(url, retry));
+            } else {
+                return request(url, retry);
+            }
+        } catch (URISyntaxException e) {
+            throw Throwables.propagate(e);
         } catch (ExecutionException e) {
             throw Throwables.propagate(e.getCause());
         } catch (RetryException e) {
