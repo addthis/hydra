@@ -123,7 +123,7 @@ public class TokenCache implements Closeable {
 
     public void put(@Nonnull String name, @Nonnull String secret) {
         ConcurrentHashMap<String, Long> userTokens = cache.computeIfAbsent(name, (k) -> buildCache());
-        userTokens.put(secret, System.currentTimeMillis());
+        userTokens.put(secret, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(timeout));
     }
 
     public int remove(@Nonnull String name, @Nonnull String secret) {
