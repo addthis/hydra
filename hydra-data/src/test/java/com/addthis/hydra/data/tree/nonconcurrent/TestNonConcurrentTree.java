@@ -38,10 +38,6 @@ public class TestNonConcurrentTree {
 
     private static final CloseOperation close = CloseOperation.TEST;
 
-    static final int fastNumElements = 10000;
-
-    static final int slowNumElements = 100000;
-
     private File makeTemporaryDirectory() throws IOException {
         final File temp;
 

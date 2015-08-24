@@ -17,6 +17,9 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Meter;
+import com.addthis.basis.util.Parameter;
+
+import com.addthis.hydra.common.Configuration;
 import com.addthis.hydra.data.tree.CacheKey;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
@@ -51,6 +54,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+
 /**
  * This is a non-concurrent version of the {@link DataTree}.  The idea here is
  * that in many cases a single thread that does not require concurrency constructs
@@ -79,14 +84,15 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
     private final File root;
     final IPageDB<DBKey, NonConcurrentTreeNode> source;
     private final NonConcurrentTreeNode treeRootNode;
+    private final NonConcurrentTreeNode treeTrashNode;
     private final AtomicLong nextDBID;
     final AtomicBoolean closed = new AtomicBoolean(false);
     private final Meter<METERTREE> meter;
     private final MeterFileLogger logger;
 
-    @GuardedBy("treeTrashNode")
-    private IPageDB.Range<DBKey, ConcurrentTreeNode> trashIterator;
-
+    // number of nodes in between trash removal logging messages
+    @Configuration.Parameter
+    static final int deletionLogInterval = Parameter.intValue("hydra.tree.clean.logging", 100000);
 
     public NonConcurrentTree(File root, int maxCacheSize,
                              int maxPageSize, PageFactory factory) throws Exception {
@@ -124,6 +130,7 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
         // get tree root
         NonConcurrentTreeNode dummyRoot = NonConcurrentTreeNode.getTreeRoot(this);
         treeRootNode = dummyRoot.getOrCreateEditableNode("root");
+        treeTrashNode = dummyRoot.getOrCreateEditableNode("trash");
 
         long openTime = System.currentTimeMillis() - start;
         log.info("dir={} root={} nextdb={} openms={}",
@@ -203,7 +210,26 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
 
     @Override
     public void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
-        // do nothing
+        IPageDB.Range<DBKey, NonConcurrentTreeNode> range = fetchNodeRange(treeTrashNode.nodeDB());
+        Map.Entry<DBKey, NonConcurrentTreeNode> entry;
+        MutableLong totalCount = new MutableLong();
+        MutableLong nodeCount = new MutableLong();
+        try {
+            while (range.hasNext() && !terminationCondition.getAsBoolean()) {
+                entry = range.next();
+                if (entry != null) {
+                    NonConcurrentTreeNode node = entry.getValue();
+                    NonConcurrentTreeNode prev = source.remove(entry.getKey());
+                    if (prev != null) {
+                        deleteSubTree(node, totalCount, nodeCount, terminationCondition);
+                        nodeCount.increment();
+                        treeTrashNode.incrementCounter();
+                    }
+                }
+            }
+        } finally {
+            range.close();
+        }
     }
 
     @Override
@@ -228,12 +254,22 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
         if (node != null) {
             parent.updateNodeCount(-1);
             if (node.hasNodes() && !node.isAlias()) {
-                deleteSubTree(node);
+                markForChildDeletion(node);
             }
             return true;
         } else {
             return false;
         }
+    }
+
+    private void markForChildDeletion(final NonConcurrentTreeNode node) {
+        assert node.hasNodes();
+        assert !node.isAlias();
+        long nodeDB = treeTrashNode.nodeDB();
+        int next = treeTrashNode.updateNodeCount(1);
+        DBKey key = new DBKey(nodeDB, Raw.get(LessBytes.toBytes(next)));
+        source.put(key, node);
+        log.trace("[trash.mark] {} --> {}", next, treeTrashNode);
     }
 
     @SuppressWarnings("unchecked")
@@ -290,6 +326,7 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
     @Override
     public void sync() throws IOException {
         source.put(treeRootNode.getDbkey(), treeRootNode);
+        source.put(treeTrashNode.getDbkey(), treeTrashNode);
     }
 
 
@@ -421,33 +458,40 @@ public final class NonConcurrentTree implements DataTree, MeterDataSource {
      *
      * @param rootNode root of the subtree to delete
      */
-    void deleteSubTree(NonConcurrentTreeNode rootNode) {
-        long totalCount = 0;
-        Stack<NonConcurrentTreeNode> stack = new Stack<>();
-        stack.push(rootNode);
-
-        while (!stack.isEmpty()) {
-            NonConcurrentTreeNode node = stack.pop();
-            long nodeDB = node.nodeDB();
-            IPageDB.Range<DBKey, NonConcurrentTreeNode> range = fetchNodeRange(nodeDB);
-            DBKey endRange;
-            try {
-                while (range.hasNext()) {
-                    if ((++totalCount % 1000) == 0) {
-                        log.info("Deleted {} children in this subtree.", totalCount);
-                    }
-                    Map.Entry<DBKey, NonConcurrentTreeNode> entry = range.next();
-                    NonConcurrentTreeNode next = entry.getValue();
-
-                    if (next.hasNodes() && !next.isAlias()) {
-                        stack.push(next);
-                    }
+    void deleteSubTree(NonConcurrentTreeNode rootNode,
+                       MutableLong totalCount,
+                       MutableLong nodeCount,
+                       BooleanSupplier terminationCondition) {
+        long nodeDB = rootNode.nodeDB();
+        IPageDB.Range<DBKey, NonConcurrentTreeNode> range = fetchNodeRange(nodeDB);
+        DBKey endRange;
+        boolean reschedule;
+        try {
+            while (range.hasNext() && !terminationCondition.getAsBoolean()) {
+                totalCount.increment();
+                if ((totalCount.longValue() % deletionLogInterval) == 0) {
+                    log.info("Deleted {} total nodes in {} trash nodes from the trash.",
+                             totalCount.longValue(), nodeCount.longValue());
                 }
-                endRange = new DBKey(nodeDB + 1);
-            } finally {
-                range.close();
+                Map.Entry<DBKey, NonConcurrentTreeNode> entry = range.next();
+                NonConcurrentTreeNode next = entry.getValue();
+                if (next.hasNodes() && !next.isAlias()) {
+                    deleteSubTree(next, totalCount, nodeCount, terminationCondition);
+                }
             }
-            source.remove(new DBKey(nodeDB), endRange);
+            if (range.hasNext()) {
+                endRange = range.next().getKey();
+                reschedule = true;
+            } else {
+                endRange = new DBKey(nodeDB + 1);
+                reschedule = false;
+            }
+        } finally {
+            range.close();
+        }
+        source.remove(new DBKey(nodeDB), endRange);
+        if (reschedule) {
+            markForChildDeletion(rootNode);
         }
     }
 }

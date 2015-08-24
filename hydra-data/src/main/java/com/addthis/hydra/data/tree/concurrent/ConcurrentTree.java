@@ -177,8 +177,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
         // get tree root
         ConcurrentTreeNode dummyRoot = ConcurrentTreeNode.getTreeRoot(this);
-        treeRootNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("root");
-        treeTrashNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("trash");
+        treeRootNode = dummyRoot.getOrCreateEditableNode("root");
+        treeTrashNode = dummyRoot.getOrCreateEditableNode("trash");
         treeTrashNode.requireNodeDB();
         deletionThreadPool = Executors.newScheduledThreadPool(numDeletionThreads,
                 new NamedThreadFactory(scope + "-deletion-", true));

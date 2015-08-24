@@ -340,11 +340,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return tree.getNode(this, name, true);
     }
 
-    public DataTreeNode getOrCreateEditableNode(String name) {
+    public ConcurrentTreeNode getOrCreateEditableNode(String name) {
         return getOrCreateEditableNode(name, null);
     }
 
-    public DataTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator) {
+    public ConcurrentTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator) {
         return tree.getOrCreateNode(this, name, creator);
     }
 
