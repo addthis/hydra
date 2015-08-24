@@ -22,7 +22,7 @@ import com.addthis.hydra.store.nonconcurrent.NonConcurrentPage;
 import com.addthis.hydra.store.skiplist.ConcurrentPage;
 import com.addthis.hydra.store.common.PageFactory;
 
-public class TreeBuilder<T extends DataTree> {
+public class TreeBuilder {
 
     // Required parameters
     protected final File root;

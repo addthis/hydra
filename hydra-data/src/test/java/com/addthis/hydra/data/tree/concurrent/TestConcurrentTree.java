@@ -333,12 +333,11 @@ public class TestConcurrentTree {
 
     @Test
     public void deleteOneThreadBackground() throws Exception {
-        log.info("deleteOneThread Background");
+        log.info("deleteOneThreadBackground");
         deleteOneThread(fastNumThreads);
     }
 
     private void deleteOneThread(int numDeletionThreads) throws Exception {
-        numDeletionThreads = 1;
         int tests = 10_000;
         File dir = makeTemporaryDirectory();
         try {
@@ -420,15 +419,15 @@ public class TestConcurrentTree {
 
     @Test
     public void iterateAndDeleteFast() throws Exception {
-        iterateAndDelete(fastNumThreads, 10);
+        iterateAndDelete(fastNumThreads, 1000);
     }
 
     private void iterateAndDelete(int numThreads, int numElements) throws Exception {
         log.info("iterateAndDelete {} {}", numThreads, numElements);
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numThreads)
-                                                      .maxPageSize(5).maxCacheSize(500).multiThreadedTree();
+            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numThreads).
+                    maxPageSize(5).maxCacheSize(500).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -476,7 +475,8 @@ public class TestConcurrentTree {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             ArrayList<Integer> threadId = new ArrayList<>(numElements);
             DeletionThread[] threads = new DeletionThread[numThreads];
-            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numDeletionThreads).multiThreadedTree();
+            ConcurrentTree tree = new TreeBuilder(dir)
+                    .numDeletionThreads(numDeletionThreads).multiThreadedTree();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {

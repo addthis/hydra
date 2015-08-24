@@ -89,9 +89,6 @@ public class NonConcurrentTreeNode extends AbstractTreeNode {
         return nodes;
     }
 
-    /**
-     * double-checked locking idiom to avoid unnecessary synchronization.
-     */
     protected void requireNodeDB() {
         if (!hasNodes()) {
             nodedb = tree.getNextNodeDB();
