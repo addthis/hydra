@@ -17,7 +17,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.5.4-SNAPSHOT</version>
+    <version>5.5.5-SNAPSHOT</version>
   </parent>
   <name>Hydra Filters Module</name>
   <description>filters for hydra that can also be used stand-alone</description>
@@ -79,6 +79,16 @@
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-analyzers</artifactId>
       <version>3.6.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.rholder</groupId>
+      <artifactId>guava-retrying</artifactId>
+      <version>${hydra.dep.guava.retrying.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.3.2</version>
     </dependency>
   </dependencies>
 </project>

@@ -132,9 +132,14 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
         return manager.sudoToken(username);
     }
 
-    @Override void logout(User user) {
+    @Override public void evict(String username) {
         updateAuthenticationManager();
-        manager.logout(user);
+        manager.evict(username);
+    }
+
+    @Override void logout(String username, String secret) {
+        updateAuthenticationManager();
+        manager.logout(username, secret);
     }
 
     @Override ImmutableList<String> adminGroups() {

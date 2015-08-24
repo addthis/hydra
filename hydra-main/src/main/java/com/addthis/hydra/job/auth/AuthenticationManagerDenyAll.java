@@ -45,7 +45,12 @@ class AuthenticationManagerDenyAll extends AuthenticationManager {
         return null;
     }
 
-    @Override void logout(User user) {
+    @Override public void evict(String username) {
+        // do nothing
+    }
+
+    @Override void logout(String username, String secret) {
+        // do nothing
     }
 
     @Override String sudoToken(String username) {
