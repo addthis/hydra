@@ -72,8 +72,7 @@ public class DataSourceRange extends TaskDataSource {
         source.close();
     }
 
-    @Override
-    public void init() {
+    @Override public void init() {
         source.init();
     }
 

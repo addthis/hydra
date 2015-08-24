@@ -50,8 +50,7 @@ public class DataSourceConstant extends TaskDataSource {
     private PeekingIterator<Bundle> iterator;
     private boolean closed = false;
 
-    @Override
-    public void init() {
+    @Override public void init() {
         Iterator<Bundle> iter;
         if (repeat == 0) {
             iter = bundles.iterator();
