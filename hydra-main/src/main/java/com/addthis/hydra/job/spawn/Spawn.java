@@ -1627,6 +1627,31 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
+    public DeleteStatus forceDeleteJob(String jobUUID) throws Exception {
+        jobLock.lock();
+        Job job;
+        try {
+            job = getJob(jobUUID);
+            if (job == null) {
+                return DeleteStatus.JOB_MISSING;
+            }
+            if (job.getDontDeleteMe()) {
+                return DeleteStatus.JOB_DO_NOT_DELETE;
+            }
+            job.setEnabled(false);
+        } finally {
+            jobLock.unlock();
+        }
+        while ((job != null) && (job.getCountActiveTasks() > 0)) {
+            stopJob(jobUUID);
+            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+            killJob(jobUUID);
+            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+            job = getJob(jobUUID);
+        }
+        return deleteJob(jobUUID);
+    }
+
     public DeleteStatus deleteJob(String jobUUID) throws Exception {
         jobLock.lock();
         try {
