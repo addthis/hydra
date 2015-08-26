@@ -428,6 +428,8 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
 
     public static final class LCValue extends AbstractCustom<ICardinality> implements Numeric {
 
+        private Long cardinality;
+
         public LCValue() {
             super(null);
         }
@@ -437,7 +439,10 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         private long toLong() {
-            return heldObject.cardinality();
+            if (cardinality == null) {
+                cardinality = heldObject.cardinality();
+            }
+            return cardinality;
         }
 
         @Override
@@ -492,7 +497,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
 
         @Override
         public String toString() {
-            return Long.toString(heldObject.cardinality());
+            return Long.toString(toLong());
         }
 
         @Override
@@ -517,12 +522,12 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
 
         @Override
         public ValueLong asLong() throws ValueTranslationException {
-            return ValueFactory.create(heldObject.cardinality());
+            return ValueFactory.create(toLong());
         }
 
         @Override
         public ValueDouble asDouble() throws ValueTranslationException {
-            return ValueFactory.create(heldObject.cardinality()).asDouble();
+            return ValueFactory.create(toLong()).asDouble();
         }
 
         @Override
