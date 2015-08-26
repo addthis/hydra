@@ -1639,6 +1639,7 @@ public class Spawn implements Codable, AutoCloseable {
                 return DeleteStatus.JOB_DO_NOT_DELETE;
             }
             job.setEnabled(false);
+            jobAlertManager.removeAlertsForJob(jobUUID);
         } finally {
             jobLock.unlock();
         }
