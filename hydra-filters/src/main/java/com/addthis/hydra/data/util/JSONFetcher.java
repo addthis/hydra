@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.util;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 import java.io.IOException;
 
@@ -31,6 +31,8 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
+
+import com.clearspring.analytics.util.Preconditions;
 
 import com.google.common.base.Throwables;
 
@@ -86,7 +88,7 @@ public class JSONFetcher {
     private final int retries;
     private final boolean trace;
     private final int backoffMillis;
-    @Nullable
+    @Nonnull
     private final Retryer<byte[]> retryer;
 
     public JSONFetcher() {
@@ -102,24 +104,21 @@ public class JSONFetcher {
     }
 
     public JSONFetcher(int timeout, int retries, boolean trace, int backoffMillis) {
+        Preconditions.checkArgument(retries >= 0, "retries argument must be a non-negative integer");
         this.timeout = timeout;
         this.retries = retries;
         this.trace = trace;
         this.backoffMillis = backoffMillis;
-        if (retries > 0) {
-            RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
-                    .<byte[]>newBuilder()
-                    .retryIfExceptionOfType(IOException.class)
-                    .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
-            if (backoffMillis > 0) {
-                retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMillis, TimeUnit.MILLISECONDS));
-            } else {
-                retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
-            }
-            retryer = retryerBuilder.build();
+        RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
+                .<byte[]>newBuilder()
+                .retryIfExceptionOfType(IOException.class)
+                .withStopStrategy(StopStrategies.stopAfterAttempt(retries + 1));
+        if (backoffMillis > 0) {
+            retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMillis, TimeUnit.MILLISECONDS));
         } else {
-            retryer = null;
+            retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
         }
+        retryer = retryerBuilder.build();
     }
 
     public HashMap<String, String> loadMap(String mapURL) {
@@ -215,13 +214,7 @@ public class JSONFetcher {
     private byte[] retrieveBytes(String url) throws IOException {
         MutableInt retry = new MutableInt(0);
         try {
-            if (retryer != null) {
-                return retryer.call(() -> request(url, retry));
-            } else {
-                return request(url, retry);
-            }
-        } catch (URISyntaxException e) {
-            throw Throwables.propagate(e);
+            return retryer.call(() -> request(url, retry));
         } catch (ExecutionException e) {
             throw Throwables.propagate(e.getCause());
         } catch (RetryException e) {
