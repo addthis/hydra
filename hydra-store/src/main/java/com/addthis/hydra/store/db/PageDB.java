@@ -29,14 +29,15 @@ import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.codables.BytesCodable;
+import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
 import com.addthis.hydra.store.kv.MapDbByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.skiplist.Page;
-import com.addthis.hydra.store.skiplist.PageFactory;
-import com.addthis.hydra.store.skiplist.SkipListCache;
 
+import com.addthis.hydra.store.nonconcurrent.NonConcurrentPageCache;
+import com.addthis.hydra.store.skiplist.ConcurrentPage;
+import com.addthis.hydra.store.skiplist.SkipListCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +70,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
         // Optional parameters - initialized to default values;
         protected String dbname = defaultDbName;
-        protected PageFactory pageFactory = Page.DefaultPageFactory.singleton;
+        protected PageFactory<DBKey, V> pageFactory;
 
         public Builder(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages) {
             this.dir = dir;
@@ -83,7 +84,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
             return this;
         }
 
-        public Builder<V> pageFactory(PageFactory factory) {
+        public Builder<V> pageFactory(PageFactory<DBKey, V> factory) {
             this.pageFactory = factory;
             return this;
         }
@@ -94,11 +95,15 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
     }
 
     public PageDB(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages) throws IOException {
-        this(dir, clazz, defaultDbName, maxPageSize, maxPages, Page.DefaultPageFactory.singleton);
+        this(dir, clazz, defaultDbName, maxPageSize, maxPages, ConcurrentPage.ConcurrentPageFactory.singleton);
+    }
+
+    public PageDB(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages, PageFactory<DBKey, V> factory) throws IOException {
+        this(dir, clazz, defaultDbName, maxPageSize, maxPages, factory);
     }
 
     public PageDB(File dir, Class<? extends V> clazz, String dbname, int maxPageSize,
-                  int maxPages, PageFactory factory) throws IOException {
+                  int maxPages, PageFactory<DBKey, V> factory) throws IOException {
         String dbType = getByteStoreNameForFile(dir);
         this.keyCoder = new DBKeyCoder<>(clazz);
         LessFiles.initDirectory(dir);
@@ -113,8 +118,19 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
                 store = new ConcurrentByteStoreBDB(dir, dbname);
                 break;
         }
-        this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize).
-        maxPages(maxPages).pageFactory(factory).build();
+
+        switch (factory.getType()) {
+            case NON_CONCURRENT:
+                this.eps =  new NonConcurrentPageCache.Builder<>(keyCoder, store, maxPageSize)
+                        .maxPages(maxPages).pageFactory(factory).build();
+                break;
+            case CONUCRRENT:
+            default:
+                this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize)
+                        .maxPages(maxPages).pageFactory(factory).build();
+                break;
+        }
+
         LessFiles.write(new File(dir, DB_TYPE_FILENAME), LessBytes.toBytes(dbType), false);
     }
 

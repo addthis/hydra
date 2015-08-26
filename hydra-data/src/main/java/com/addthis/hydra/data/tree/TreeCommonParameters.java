@@ -11,27 +11,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree.concurrent;
+package com.addthis.hydra.data.tree;
 
 import com.addthis.basis.util.Parameter;
 
 public class TreeCommonParameters {
 
-    static int cleanQMax = Math.max(1, Parameter.intValue("hydra.tree.cleanqmax", 100));
+    public static int cleanQMax = Math.max(1, Parameter.intValue("hydra.tree.cleanqmax", 100));
     // max number of pages allowed to reside in memory
-    static int maxCacheSize = Parameter.intValue("hydra.tree.cache.maxSize", 0);
+    public static int maxCacheSize = Parameter.intValue("hydra.tree.cache.maxSize", 0);
     // max mem for all pages in memory
-    static long maxCacheMem = Parameter.longValue("hydra.tree.cache.maxMem", 0);
+    public static long maxCacheMem = Parameter.longValue("hydra.tree.cache.maxMem", 0);
     // max number of keys in a single page
-    static int maxPageSize = Parameter.intValue("hydra.tree.page.maxSize", 0);
+    public static int maxPageSize = Parameter.intValue("hydra.tree.page.maxSize", 0);
     // max memory for a given page
-    static int maxPageMem = Parameter.intValue("hydra.tree.page.maxMem", 0);
-    static int memSample = Parameter.intValue("hydra.tree.mem.sample", 0);
-    static int meterLogging = Parameter.intValue("hydra.tree.meterlog", 0);
-    static final int meterLogLines = Parameter.intValue("hydra.tree.loglines", 100000);
-    static int cacheShards = Parameter.intValue("hydra.tree.shards", Runtime.getRuntime().availableProcessors() * 8);
-    static long trashInterval = Parameter.longValue("hydra.tree.trash.interval", 0);
-    static long trashMaxTime = Parameter.intValue("hydra.tree.trash.maxtime", 0);
+    public static int maxPageMem = Parameter.intValue("hydra.tree.page.maxMem", 0);
+    public static int memSample = Parameter.intValue("hydra.tree.mem.sample", 0);
+    public static int meterLogging = Parameter.intValue("hydra.tree.meterlog", 0);
+    public static final int meterLogLines = Parameter.intValue("hydra.tree.loglines", 100000);
+    public static int cacheShards = Parameter.intValue("hydra.tree.shards", Runtime.getRuntime().availableProcessors() * 8);
+    public static long trashInterval = Parameter.longValue("hydra.tree.trash.interval", 0);
+    public static long trashMaxTime = Parameter.intValue("hydra.tree.trash.maxtime", 0);
 
     public static void setDefaultMaxCacheSize(int size) {
         maxCacheSize = size;

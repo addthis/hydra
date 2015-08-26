@@ -35,6 +35,7 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
     protected final Class<? extends V> clazz;
 
     private static final byte[] zero = new byte[0];
+    private static final byte[] negInfBytes = new DBKey(0, (Raw)null).toBytes();
 
     public DBKeyCoder(Class<? extends V> clazz) {
         this(codecBin2, clazz);
@@ -51,6 +52,11 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
     @Override
     public DBKey negInfinity() {
         return new DBKey(0, (Raw) null);
+    }
+
+    @Override
+    public byte[] encodedNegInfinity() {
+        return negInfBytes;
     }
 
     /**

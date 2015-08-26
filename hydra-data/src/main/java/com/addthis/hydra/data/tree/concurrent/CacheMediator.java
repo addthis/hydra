@@ -15,6 +15,7 @@ package com.addthis.hydra.data.tree.concurrent;
 
 import com.addthis.basis.concurrentlinkedhashmap.EvictionMediator;
 
+import com.addthis.hydra.data.tree.CacheKey;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 

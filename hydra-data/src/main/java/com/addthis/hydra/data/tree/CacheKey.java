@@ -11,19 +11,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree.concurrent;
+package com.addthis.hydra.data.tree;
 
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.util.Raw;
 
-class CacheKey {
+public class CacheKey {
 
-    final int hc;
-    final long db;
-    final String name;
-    volatile DBKey dbkey;
+    public final int hc;
+    public final long db;
+    public final String name;
+    private volatile DBKey dbkey;
 
-    CacheKey(long db, String name) {
+    public CacheKey(long db, String name) {
         int hash = Math.abs(Long.hashCode(db) + name.hashCode());
         this.db = db;
         this.name = name;
@@ -33,7 +33,7 @@ class CacheKey {
         hc = hash;
     }
 
-    protected DBKey dbkey() {
+    public DBKey dbkey() {
         if (dbkey == null) {
             dbkey = new DBKey(db, Raw.get(name));
         }

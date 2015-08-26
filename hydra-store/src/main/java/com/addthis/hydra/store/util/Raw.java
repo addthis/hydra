@@ -17,6 +17,9 @@ import com.addthis.basis.util.LessBytes;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.BytesCodable;
+import com.google.common.primitives.UnsignedBytes;
+
+import javax.annotation.Nonnull;
 
 
 public final class Raw implements Comparable<Raw>, BytesCodable {
@@ -158,7 +161,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         if (longcompare) {
             return compare(getLongs(), o.getLongs());
         }
-        return LessBytes.compare(raw, o.raw);
+        return UnsignedBytes.lexicographicalComparator().compare(raw, o.raw);
     }
 
     private long[] getLongs() {

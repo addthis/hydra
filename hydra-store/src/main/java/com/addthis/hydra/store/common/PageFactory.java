@@ -11,27 +11,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.store.skiplist;
+package com.addthis.hydra.store.common;
 
 import java.util.ArrayList;
 
 import com.addthis.codec.codables.BytesCodable;
+import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.kv.PageEncodeType;
+import com.addthis.hydra.store.kv.PagedKeyValueStore;
 
-public abstract class PageFactory<K,V extends BytesCodable> {
+public abstract class PageFactory<K, V extends BytesCodable> {
 
-    abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType);
+    public enum TYPE {CONUCRRENT, NON_CONCURRENT}
 
-    abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size,
-                          ArrayList<K> keys, ArrayList<V> values, ArrayList<byte[]> rawValues,
-                          PageEncodeType encodeType);
+    protected abstract Page<K, V> newPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType);
 
-    public final Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
+    protected abstract Page<K, V> newPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, int size,
+                                          ArrayList<K> keys, ArrayList<V> values, ArrayList<byte[]> rawValues,
+                                          PageEncodeType encodeType);
+
+    public abstract TYPE getType();
+
+    public final Page<K, V> generateEmptyPage(AbstractPageCache<K, V> cache,
                                               K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         return newPage(cache, firstKey, nextFirstKey, encodeType);
     }
 
-    public final Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
+    public final Page<K, V> generateEmptyPage(AbstractPageCache<K, V> cache,
                                               K firstKey, PageEncodeType encodeType) {
         return newPage(cache, firstKey, null, encodeType);
     }
@@ -40,12 +46,13 @@ public abstract class PageFactory<K,V extends BytesCodable> {
         return newPage(null, null, null, encodeType);
     }
 
-    public final Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
+    public final Page<K, V> generateSiblingPage(AbstractPageCache<K, V> cache,
                                                 K firstKey, K nextFirstKey,
                                                 int size, ArrayList<K> keys,
                                                 ArrayList<V> values,
                                                 ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         return newPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
+
 
 }

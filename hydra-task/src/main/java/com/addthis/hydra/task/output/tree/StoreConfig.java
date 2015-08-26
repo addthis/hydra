@@ -15,7 +15,7 @@ package com.addthis.hydra.task.output.tree;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.data.tree.concurrent.TreeCommonParameters;
+import com.addthis.hydra.data.tree.TreeCommonParameters;
 
 public final class StoreConfig implements Codable {
 

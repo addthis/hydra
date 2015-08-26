@@ -11,45 +11,47 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.store.skiplist;
+package com.addthis.hydra.store.common;
 
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.hydra.store.nonconcurrent.NonConcurrentPageCache;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Histogram;
 
-public class SkipListCacheMetrics {
+public class PageCacheMetrics<K, V extends BytesCodable> {
 
-    private final SkipListCache parent;
-
-    @SuppressWarnings("unused")
-    final Gauge<Long> memEstimateGauge;
+    public final AbstractPageCache<K, V> parent;
 
     @SuppressWarnings("unused")
-    final Gauge<Integer> cacheSizeGauge;
+    public final Gauge<Long> memEstimateGauge;
 
     @SuppressWarnings("unused")
-    final Gauge<Integer> pagesInMemoryGauge;
+    public final Gauge<Integer> cacheSizeGauge;
 
     @SuppressWarnings("unused")
-    final Gauge<Long> pagesDeletedGauge;
+    public final Gauge<Integer> pagesInMemoryGauge;
 
-    final Histogram encodeFirstKeySize;
+    @SuppressWarnings("unused")
+    public final Gauge<Long> pagesDeletedGauge;
 
-    final Histogram encodeNextFirstKeySize;
+    public final Histogram encodeFirstKeySize;
 
-    final Histogram encodeKeySize;
+    public final Histogram encodeNextFirstKeySize;
 
-    final Histogram encodeValueSize;
+    public final Histogram encodeKeySize;
+
+    public final Histogram encodeValueSize;
 
     // This metrics counts compressed bytes
-    final Histogram encodePageSize;
+    public final Histogram encodePageSize;
 
     // This metrics counts compressed bytes
-    final Histogram numberKeysPerPage;
+    public final Histogram numberKeysPerPage;
 
-    public SkipListCacheMetrics(SkipListCache cache) {
+    public PageCacheMetrics(AbstractPageCache<K, V> cache) {
         parent = cache;
-        memEstimateGauge = Metrics.newGauge(SkipListCache.class,
+        memEstimateGauge = Metrics.newGauge(cache.getClass(),
                 "memoryEstimate", parent.scope,
                 new Gauge<Long>() {
                     @Override
@@ -58,7 +60,7 @@ public class SkipListCacheMetrics {
                     }
                 });
 
-        cacheSizeGauge = Metrics.newGauge(SkipListCache.class,
+        cacheSizeGauge = Metrics.newGauge(cache.getClass(),
                 "cacheSize", parent.scope,
                 new Gauge<Integer>() {
                     @Override
@@ -67,7 +69,7 @@ public class SkipListCacheMetrics {
                     }
                 });
 
-        pagesInMemoryGauge = Metrics.newGauge(SkipListCache.class,
+        pagesInMemoryGauge = Metrics.newGauge(cache.getClass(),
                 "pagesInMemory", parent.scope,
                 new Gauge<Integer>() {
                     @Override
@@ -76,7 +78,7 @@ public class SkipListCacheMetrics {
                     }
                 });
 
-        pagesDeletedGauge = Metrics.newGauge(SkipListCache.class,
+        pagesDeletedGauge = Metrics.newGauge(cache.getClass(),
                 "pagesDeleted", parent.scope,
                 new Gauge<Long>() {
                     @Override
@@ -85,28 +87,28 @@ public class SkipListCacheMetrics {
                     }
                 });
 
-        encodeFirstKeySize = SkipListCache.trackEncodingByteUsage ?
-                             Metrics.newHistogram(SkipListCache.class, "encodeFirstKeySize", parent.scope) :
+        encodeFirstKeySize = NonConcurrentPageCache.trackEncodingByteUsage ?
+                Metrics.newHistogram(cache.getClass(), "encodeFirstKeySize", parent.scope) :
                              null;
 
-        encodeNextFirstKeySize = SkipListCache.trackEncodingByteUsage ?
-                                 Metrics.newHistogram(SkipListCache.class, "encodeNextFirstKeySize", parent.scope) :
+        encodeNextFirstKeySize = NonConcurrentPageCache.trackEncodingByteUsage ?
+                Metrics.newHistogram(cache.getClass(), "encodeNextFirstKeySize", parent.scope) :
                                  null;
 
-        encodeKeySize = SkipListCache.trackEncodingByteUsage ?
-                        Metrics.newHistogram(SkipListCache.class, "encodeKeySize", parent.scope) :
+        encodeKeySize = NonConcurrentPageCache.trackEncodingByteUsage ?
+                Metrics.newHistogram(cache.getClass(), "encodeKeySize", parent.scope) :
                         null;
 
-        encodeValueSize = SkipListCache.trackEncodingByteUsage ?
-                          Metrics.newHistogram(SkipListCache.class, "encodeValueSize", parent.scope) :
+        encodeValueSize = NonConcurrentPageCache.trackEncodingByteUsage ?
+                Metrics.newHistogram(cache.getClass(), "encodeValueSize", parent.scope) :
                           null;
 
-        encodePageSize = SkipListCache.trackEncodingByteUsage ?
-                         Metrics.newHistogram(SkipListCache.class, "encodePageSize", parent.scope) :
+        encodePageSize = NonConcurrentPageCache.trackEncodingByteUsage ?
+                Metrics.newHistogram(cache.getClass(), "encodePageSize", parent.scope) :
                          null;
 
-        numberKeysPerPage = SkipListCache.trackEncodingByteUsage ?
-                            Metrics.newHistogram(SkipListCache.class, "numberKeysPerPage", parent.scope) :
+        numberKeysPerPage = NonConcurrentPageCache.trackEncodingByteUsage ?
+                Metrics.newHistogram(cache.getClass(), "numberKeysPerPage", parent.scope) :
                             null;
 
     }
