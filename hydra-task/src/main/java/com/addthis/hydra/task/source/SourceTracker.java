@@ -27,6 +27,9 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
+import com.addthis.hydra.store.nonconcurrent.NonConcurrentPage;
+import com.addthis.hydra.store.nonconcurrent.NonConcurrentPageCache;
+import com.addthis.hydra.store.skiplist.ConcurrentPage;
 import com.addthis.meshy.service.stream.StreamService;
 
 import org.slf4j.Logger;
@@ -46,7 +49,7 @@ public class SourceTracker {
         File dirFile = LessFiles.initDirectory(dir);
         try {
             lockDir = new RandomAccessFile(new File(dirFile, "tracker.lock"), "rw").getChannel().lock();
-            db = new PageDB<>(dirFile, SimpleMark.class, 100, 100);
+            db = new PageDB<SimpleMark>(dirFile, SimpleMark.class, 100, 100, ConcurrentPage.ConcurrentPageFactory.singleton);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

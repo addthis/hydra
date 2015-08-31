@@ -86,6 +86,8 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
      */
     final private int urlRetries;
 
+    final private int urlBackoff;
+
     final private boolean not;
 
     private ArrayList<Pattern> pattern;
@@ -105,6 +107,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               boolean toLower,
                               int urlTimeout,
                               int urlRetries,
+                              int urlBackoff,
                               boolean not) {
         this.value = value;
         this.valueURL = valueURL;
@@ -118,6 +121,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         this.toLower = toLower;
         this.urlTimeout = urlTimeout;
         this.urlRetries = urlRetries;
+        this.urlBackoff = urlBackoff;
         this.not = not;
         if (match != null) {
             ArrayList<Pattern> np = new ArrayList<>();
@@ -248,7 +252,8 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                               @JsonProperty("toLower") boolean toLower,
                               @JsonProperty("urlTimeout") int urlTimeout,
-                              @JsonProperty("urlRetries") int urlRetries) {
+                              @JsonProperty("urlRetries") int urlRetries,
+                              @JsonProperty("urlBackoff") int urlBackoff) {
             super(value,
                   valueURL,
                   match,
@@ -261,6 +266,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                   toLower,
                   urlTimeout,
                   urlRetries,
+                  urlBackoff,
                   false);
         }
 

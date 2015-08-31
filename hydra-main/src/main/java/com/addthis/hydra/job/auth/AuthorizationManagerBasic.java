@@ -15,6 +15,8 @@ package com.addthis.hydra.job.auth;
 
 import javax.annotation.Nonnull;
 
+import java.io.IOException;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -122,8 +124,12 @@ class AuthorizationManagerBasic extends AuthorizationManager {
         }
     }
 
-    @Override void logout(User user) {
-        sudoCache.remove(user.name());
+    @Override void logout(String username) {
+        sudoCache.evict(username);
     }
 
+    @Override
+    public void close() throws IOException {
+        sudoCache.close();
+    }
 }

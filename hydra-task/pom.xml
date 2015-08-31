@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.5.3-SNAPSHOT</version>
+    <version>5.5.7-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-task</artifactId>
@@ -118,6 +118,11 @@
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
       <version>3.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.rholder</groupId>
+      <artifactId>guava-retrying</artifactId>
+      <version>${hydra.dep.guava.retrying.version}</version>
     </dependency>
   </dependencies>
 

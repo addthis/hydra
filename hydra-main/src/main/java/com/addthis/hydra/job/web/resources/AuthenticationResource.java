@@ -125,6 +125,28 @@ public class AuthenticationResource {
     }
 
     @POST
+    @Path("/evict")
+    public Response evict(@FormParam("user") String user,
+                      @FormParam("token") String token,
+                      @FormParam("sudo") String sudo,
+                      @FormParam("target") String target) {
+        Response.ResponseBuilder builder;
+        if (target == null) {
+            builder = Response.status(Response.Status.BAD_REQUEST);
+            builder.entity("target argument missing");
+        } else if ((target.equals(user) && (spawn.getPermissionsManager().authenticate(user, token) == null)) ||
+                   (!target.equals(user) && !spawn.getPermissionsManager().adminAction(user, token, sudo))) {
+            builder = Response.status(Response.Status.UNAUTHORIZED);
+            builder.entity("Invalid credentials provided");
+        } else if (!spawn.getPermissionsManager().evict(target)) {
+            builder = Response.ok("User " + target + " was not logged in");
+        } else {
+            builder = Response.ok("User " + target + " evicted");
+        }
+        return builder.build();
+    }
+
+    @POST
     @Path("/logout")
     public void logout(@FormParam("user") String username,
                        @FormParam("token") String token,

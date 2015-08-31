@@ -1,76 +1,87 @@
-/*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.addthis.hydra.store.skiplist;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import java.util.ArrayList;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.zip.GZIPInputStream;
+package com.addthis.hydra.store.common;
 
 import com.addthis.basis.io.GZOut;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Varint;
-
 import com.addthis.codec.codables.BytesCodable;
-import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
-
+import com.addthis.hydra.store.kv.PageEncodeType;
+import com.addthis.hydra.store.skiplist.LockMode;
+import com.addthis.hydra.store.skiplist.SkipListCache;
 import com.google.common.base.Throwables;
-
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
 import com.jcraft.jzlib.InflaterInputStream;
 import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
 import com.yammer.metrics.core.Histogram;
-
-import org.xerial.snappy.SnappyInputStream;
-import org.xerial.snappy.SnappyOutputStream;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
+import org.xerial.snappy.SnappyInputStream;
+import org.xerial.snappy.SnappyOutputStream;
 
-public class Page<K, V extends BytesCodable> {
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.zip.GZIPInputStream;
 
-    static final int gzlevel = Parameter.intValue("eps.gz.level", 1);
-    static final int gztype = Parameter.intValue("eps.gz.type", 1);
-    static final int gzbuf = Parameter.intValue("eps.gz.buffer", 1024);
-    static final int estimateMissingFactor = Parameter.intValue("eps.mem.estimate.missing.factor", 8);
-    static final int memEstimationStrategy = Parameter.intValue("eps.mem.estimate.method", 1);
-    static final int estimateRollMin = Parameter.intValue("eps.mem.estimate.roll.min", 1000);
-    static final int estimateRollFactor = Parameter.intValue("eps.mem.estimate.roll.factor", 100);
+public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K, V> {
 
-    final SkipListCache<K, V> parent;
+    public static final int gzlevel = Parameter.intValue("eps.gz.level", 1);
+    public static final int gztype = Parameter.intValue("eps.gz.type", 1);
+    public static final int gzbuf = Parameter.intValue("eps.gz.buffer", 1024);
+    public static final int estimateMissingFactor = Parameter.intValue("eps.mem.estimate.missing.factor", 8);
+    public static final int memEstimationStrategy = Parameter.intValue("eps.mem.estimate.method", 1);
+    public static final int estimateRollMin = Parameter.intValue("eps.mem.estimate.roll.min", 1000);
+    public static final int estimateRollFactor = Parameter.intValue("eps.mem.estimate.roll.factor", 100);
 
-    final K firstKey;
+    protected final AbstractPageCache<K, V> parent;
 
-    @GuardedBy("lock")
-    K nextFirstKey;
+    public final K firstKey;
+
+    public K nextFirstKey;
+
+    /**
+     * This value is updated each time the node is accessed.
+     */
+    volatile long timeStamp;
+
+    int size;
+
+    @Nullable
+    private ArrayList<K> keys;
+
+    @Nullable
+    private ArrayList<V> values;
+
+    @Nullable
+    private ArrayList<byte[]> rawValues;
 
     @Nonnull
+    private ExternalMode state;
+
+    private int estimateTotal, estimates, avgEntrySize;
+
+    private int memoryEstimate;
+
+    private PageEncodeType encodeType;
+
+    public static final int ESTIMATES_BIT_OFFSET = 4;
+    public static final int TYPE_BIT_OFFSET = 5;
+    public static final int FLAGS_HAS_ESTIMATES = 1 << ESTIMATES_BIT_OFFSET;
+
+    public final KeyCoder<K, V> keyCoder;
+
     private final ReentrantReadWriteLock lock;
 
     /**
@@ -80,59 +91,35 @@ public class Page<K, V extends BytesCodable> {
     @GuardedBy("lock")
     long writeStamp;
 
-    /**
-     * This value is updated each time the node is accessed.
-     */
-    volatile long timeStamp;
+    @Override
+    public long getWriteStamp() {
+        return writeStamp;
+    }
 
-    @GuardedBy("lock")
-    int size;
+    public void incrementWriteStamp() {
+        writeStamp++;
+    }
 
-    @GuardedBy("lock")
-    @Nullable
-    ArrayList<K> keys;
-
-    @GuardedBy("lock")
-    @Nullable
-    ArrayList<V> values;
-
-    @GuardedBy("lock")
-    @Nullable
-    ArrayList<byte[]> rawValues;
-
-    @GuardedBy("lock")
-    @Nonnull
-    ExternalMode state;
-
-    @GuardedBy("lock")
-    int estimateTotal, estimates, avgEntrySize;
-
-    @GuardedBy("lock")
-    private int memoryEstimate;
-
-    @GuardedBy("lock")
-    protected PageEncodeType encodeType;
-
-    protected static final int ESTIMATES_BIT_OFFSET = 4;
-    protected static final int TYPE_BIT_OFFSET = 5;
-    protected static final int FLAGS_HAS_ESTIMATES = 1 << ESTIMATES_BIT_OFFSET;
-
-    protected final KeyCoder<K, V> keyCoder;
-
-    protected Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
+    public AbstractPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         this.parent = cache;
         this.keyCoder = parent != null ? parent.keyCoder : null;
         this.firstKey = firstKey;
         this.nextFirstKey = nextFirstKey;
-        this.lock = new ReentrantReadWriteLock();
-        this.timeStamp = SkipListCache.generateTimestamp();
+        this.timeStamp = AbstractPageCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
         this.encodeType = encodeType;
+        this.lock = initLock();
     }
 
-    protected Page(SkipListCache<K, V> cache, K firstKey,
-            K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values,
-            ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
+    public ReentrantReadWriteLock initLock() {
+        // default implementation does nothing, subclasses may override
+        return null;
+    }
+
+
+    public AbstractPage(AbstractPageCache<K, V> cache, K firstKey,
+                        K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values,
+                        ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         assert (keys != null);
         assert (values != null);
         assert (rawValues != null);
@@ -149,39 +136,102 @@ public class Page<K, V extends BytesCodable> {
         this.keys = keys;
         this.values = values;
         this.rawValues = rawValues;
-        this.lock = new ReentrantReadWriteLock();
-        this.timeStamp = SkipListCache.generateTimestamp();
+        this.timeStamp = AbstractPageCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
         this.encodeType = encodeType;
+        this.lock = initLock();
+    }
+
+    @SuppressWarnings("unused")
+    public boolean upgradeLockAndTestStamp(long oldStamp) {
+        readUnlock();
+        writeLock();
+        return (writeStamp == oldStamp);
+    }
+
+    public void readLock() {
+        lock.readLock().lock();
+    }
+
+    public void readUnlock() {
+        modeUnlock(LockMode.READMODE);
+    }
+
+    public void writeLock() {
+        lock.writeLock().lock();
+    }
+
+    public boolean writeTryLock() {
+        return lock.writeLock().tryLock();
+    }
+
+    public void writeUnlock() {
+        writeStamp++;
+        lock.writeLock().unlock();
+    }
+
+    public void modeLock(LockMode mode) {
+        switch (mode) {
+            case READMODE:
+                lock.readLock().lock();
+                break;
+            case WRITEMODE:
+                lock.writeLock().lock();
+                break;
+        }
+    }
+
+    public void modeUnlock(LockMode mode) {
+        switch (mode) {
+            case READMODE:
+                lock.readLock().unlock();
+                break;
+            case WRITEMODE:
+                writeUnlock();
+                break;
+        }
+    }
+
+    public void downgradeLock() {
+        assert (lock.isWriteLockedByCurrentThread());
+        readLock();
+        writeUnlock();
+    }
+
+    public boolean isWriteLockedByCurrentThread() {
+        return lock.isWriteLockedByCurrentThread();
     }
 
     /**
      * Generate a blank page.
      */
+    @Override
     public void initialize() {
         keys = new ArrayList<>();
         values = new ArrayList<>();
         rawValues = new ArrayList<>();
         size = 0;
-        timeStamp = SkipListCache.generateTimestamp();
+        timeStamp = AbstractPageCache.generateTimestamp();
     }
+
 
     protected final void updateHistogram(Histogram histogram, int value, boolean record) {
         /**
          *  The JIT compiler should be smart enough to eliminate this code
          *  when {@link SkipListCache.trackEncodingByteUsage} is false.
          */
-        if (SkipListCache.trackEncodingByteUsage && record) {
+        if (AbstractPageCache.trackEncodingByteUsage && record) {
             histogram.update(value);
         }
     }
 
+    @Override
     public byte[] encode(ByteBufOutputStream out) {
         return encode(out, true);
     }
 
     public byte[] encode(ByteBufOutputStream out, boolean record) {
-        SkipListCacheMetrics metrics = parent.metrics;
+        PageCacheMetrics<K, V> metrics = parent.metrics;
         parent.numPagesEncoded.getAndIncrement();
         PageEncodeType upgradeType = PageEncodeType.defaultType();
         try {
@@ -265,7 +315,7 @@ public class Page<K, V extends BytesCodable> {
     }
 
 
-    public void  decode(byte[] page) {
+    public void decode(byte[] page) {
         parent.numPagesDecoded.getAndIncrement();
         ByteBuf buffer = Unpooled.wrappedBuffer(page);
         try {
@@ -312,7 +362,6 @@ public class Page<K, V extends BytesCodable> {
     }
 
     /**
-     *
      * @param encodeType
      * @param in
      * @param dis
@@ -330,7 +379,7 @@ public class Page<K, V extends BytesCodable> {
         firstKey = keyCoder.keyDecode(encodeType.readBytes(in, dis));
         nextFirstKeyBytes = encodeType.nextFirstKey(in, dis);
         nextFirstKey = keyCoder.keyDecode(nextFirstKeyBytes);
-        assert(this.firstKey.equals(firstKey));
+        assert (this.firstKey.equals(firstKey));
 
         int bytes = 0;
 
@@ -341,7 +390,7 @@ public class Page<K, V extends BytesCodable> {
 
         for (int i = 0; i < entries; i++) {
             byte[] kb = encodeType.readBytes(in, dis);
-            byte[] vb = encodeType.readBytes(in ,dis);
+            byte[] vb = encodeType.readBytes(in, dis);
             bytes += kb.length + vb.length;
             keys.add(keyCoder.keyDecode(kb, firstKey, encodeType));
             values.add(null);
@@ -375,16 +424,16 @@ public class Page<K, V extends BytesCodable> {
         return (weightedAvg * size);
     }
 
-    void updateAverage(K key, V val, int count) {
+    public void updateAverage(K key, V val, int count) {
         long next = parent.estimateCounter.incrementAndGet();
         if (avgEntrySize == 0 ||
-            (parent.estimateInterval <= 0 && estimates > 0 && next % estimates == 0) ||
-            (parent.estimateInterval > 0 && next % parent.estimateInterval == 0)) {
+                (parent.getEstimateInterval() <= 0 && estimates > 0 && next % estimates == 0) ||
+                (parent.getEstimateInterval() > 0 && next % parent.getEstimateInterval() == 0)) {
             switch (memEstimationStrategy) {
                 case 0:
                     /** use encoded byte size as crude proxy for mem size */
                     updateAverage((keyCoder.keyEncode(key).length +
-                                   keyCoder.valueEncode(val, encodeType).length), count);
+                            keyCoder.valueEncode(val, encodeType).length), count);
                     break;
                 case 1:
                     /** walk objects and estimate.  possibly slower and not demonstrably more accurate */
@@ -410,7 +459,6 @@ public class Page<K, V extends BytesCodable> {
         }
     }
 
-
     private void setAverage(int total, int count) {
         if ((count == 0) || (total == 1 && count == 1)) {
             avgEntrySize = 0;
@@ -430,67 +478,6 @@ public class Page<K, V extends BytesCodable> {
     public void updateMemoryEstimate() {
         memoryEstimate = estimatedMem();
     }
-
-    @SuppressWarnings("unused")
-    public boolean upgradeLockAndTestStamp(long oldStamp) {
-        readUnlock();
-        writeLock();
-        return (writeStamp == oldStamp);
-    }
-
-    public void readLock() {
-        lock.readLock().lock();
-    }
-
-    public void readUnlock() {
-        lock.readLock().unlock();
-    }
-
-    public void writeLock() {
-        lock.writeLock().lock();
-    }
-
-    public boolean writeTryLock() {
-        return lock.writeLock().tryLock();
-    }
-
-    public void writeUnlock() {
-        writeStamp++;
-        lock.writeLock().unlock();
-    }
-
-    public void modeLock(LockMode mode) {
-        switch (mode) {
-            case READMODE:
-                lock.readLock().lock();
-                break;
-            case WRITEMODE:
-                lock.writeLock().lock();
-                break;
-        }
-    }
-
-    public void modeUnlock(LockMode mode) {
-        switch (mode) {
-            case READMODE:
-                lock.readLock().unlock();
-                break;
-            case WRITEMODE:
-                writeUnlock();
-                break;
-        }
-    }
-
-    public void downgradeLock() {
-        assert (lock.isWriteLockedByCurrentThread());
-        readLock();
-        writeUnlock();
-    }
-
-    public boolean isWriteLockedByCurrentThread() {
-        return lock.isWriteLockedByCurrentThread();
-    }
-
 
     public boolean interval(Comparable<? super K> ckey) {
         assert (ckey.compareTo(firstKey) >= 0);
@@ -513,7 +500,7 @@ public class Page<K, V extends BytesCodable> {
      * result of {@link #rawValues}.
      */
     public void fetchValue(int position) {
-       V value = values.get(position);
+        V value = values.get(position);
         byte[] rawValue = rawValues.get(position);
         if (value == null) {
             values.set(position, keyCoder.valueDecode(rawValue, encodeType));
@@ -523,43 +510,130 @@ public class Page<K, V extends BytesCodable> {
     public boolean splitCondition() {
         if (size == 1) {
             return false;
-        } else if (parent.maxPageMem > 0 && estimatedMem() > parent.maxPageMem) {
+        } else if (parent.getMaxPageMem() > 0 && estimatedMem() > parent.getMaxPageMem()) {
             return true;
-        } else if (parent.maxPageSize > 0) {
-            if (size > parent.maxPageSize) {
+        } else if (parent.getMaxPageSize() > 0) {
+            if (size > parent.getMaxPageSize()) {
                 return true;
             }
-        } else if (size > SkipListCache.defaultMaxPageEntries) {
+        } else if (size > AbstractPageCache.defaultMaxPageEntries) {
             return true;
         }
         return false;
     }
 
+    @Override
+    public int size() {
+        return size;
+    }
+
+    @Override
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    @Override
+    public K getNextFirstKey() {
+        return nextFirstKey;
+    }
+
+    @Override
+    public void setNextFirstKey(K nextFirstKey) {
+        this.nextFirstKey = nextFirstKey;
+    }
+
+    @Override
+    public int getAvgEntrySize() {
+        return avgEntrySize;
+    }
+
+    @Override
+    public void setAvgEntrySize(int avgEntrySize) {
+        this.avgEntrySize = avgEntrySize;
+    }
+
+    @Override
+    public int getEstimates() {
+        return estimates;
+    }
+
+    @Override
+    public void setEstimates(int estimates) {
+        this.estimates = estimates;
+    }
+
+    @Override
+    public int getEstimateTotal() {
+        return estimateTotal;
+    }
+
+    @Override
+    public void setEstimateTotal(int estimateTotal) {
+        this.estimateTotal = estimateTotal;
+    }
+
+    @Override
+    public void setTimeStamp(long timeStamp) {
+        this.timeStamp = timeStamp;
+    }
+
+    @Override
+    public void setKeys(ArrayList<K> keys) {
+        this.keys = keys;
+    }
+
+    @Override
+    public void setValues(ArrayList<V> values) {
+        this.values = values;
+    }
+
+    @Override
+    public void setRawValues(ArrayList<byte[]> rawValues) {
+        this.rawValues = rawValues;
+    }
+
+    @Override
+    public long getTimeStamp() {
+        return timeStamp;
+    }
+
+    @Override
     public boolean inTransientState() {
         return state.isTransient();
     }
 
+    @Override
     public PageEncodeType getEncodeType() {
         return encodeType;
     }
 
-    public static class DefaultPageFactory<K, V extends BytesCodable> extends PageFactory<K,V> {
+    @Override
+    public ExternalMode getState() {
+        return state;
+    }
 
-        public static final DefaultPageFactory singleton = new DefaultPageFactory();
+    @Override
+    public void setState(ExternalMode state) {
+        this.state = state;
+    }
 
-        private DefaultPageFactory() {}
+    @Override
+    public ArrayList<K> keys() {
+        return keys;
+    }
 
-        @Override
-        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
-            return new Page(cache, firstKey, nextFirstKey, encodeType);
-        }
+    @Override
+    public ArrayList<V> values() {
+        return values;
+    }
 
-        @Override
-        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
-                ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
-            return new Page(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
-        }
+    @Override
+    public ArrayList<byte[]> rawValues() {
+        return rawValues;
+    }
 
+    @Override
+    public K getFirstKey() {
+        return firstKey;
     }
 }
-

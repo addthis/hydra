@@ -23,7 +23,7 @@
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.5.3-SNAPSHOT</version>
+  <version>5.5.7-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -88,6 +88,7 @@
     <dep.jackson.api.version>2.5.4</dep.jackson.api.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
     <hydra.dep.hadoop.version>2.4.0.2.1.1.0-385</hydra.dep.hadoop.version>
+    <hydra.dep.guava.retrying.version>2.0.0</hydra.dep.guava.retrying.version>
 
     <!-- compression dependency versions -->
     <hydra.dep.compress.compress-lzf.version>1.0.3</hydra.dep.compress.compress-lzf.version>

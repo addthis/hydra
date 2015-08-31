@@ -30,6 +30,11 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
+    public byte[] encodedNegInfinity() {
+        return keyEncode(negInfinity());
+    }
+
+    @Override
     public byte[] keyEncode(Integer key) {
         return key != null ? LessBytes.toBytes(key.intValue() ^ Integer.MIN_VALUE) : new byte[0];
     }

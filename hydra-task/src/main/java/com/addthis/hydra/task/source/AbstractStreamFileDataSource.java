@@ -53,8 +53,10 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.filter.value.StringFilter;
+import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
+import com.addthis.hydra.store.skiplist.ConcurrentPage;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
@@ -292,15 +294,19 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
                 if (md.exists()) {
                     FileUtils.deleteDirectory(md);
-                    log.warn("Deleted file : {}", md);
+                    log.info("Deleted marks directory : {}", md);
                 }
             }
 
             markDirFile = LessFiles.initDirectory(markDir);
             if (useSimpleMarks) {
-                markDB = new PageDB<>(markDirFile, SimpleMark.class, MARK_PAGE_SIZE, MARK_PAGES);
+                PageFactory<DBKey, SimpleMark> factory = ConcurrentPage.ConcurrentPageFactory.singleton;
+                markDB = new PageDB<>(markDirFile, SimpleMark.class,
+                        MARK_PAGE_SIZE, MARK_PAGES, factory);
             } else {
-                markDB = new PageDB<>(markDirFile, Mark.class, MARK_PAGE_SIZE, MARK_PAGES);
+                PageFactory<DBKey, SimpleMark> factory = ConcurrentPage.ConcurrentPageFactory.singleton;
+                markDB = new PageDB<>(markDirFile,
+                        Mark.class, MARK_PAGE_SIZE, MARK_PAGES, factory);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

@@ -53,8 +53,6 @@ import com.addthis.hydra.store.db.IPageDB.Range;
  */
 public class ConcurrentTreeNode extends AbstractTreeNode {
 
-    public static final int ALIAS = 1 << 1;
-
     public static ConcurrentTreeNode getTreeRoot(ConcurrentTree tree) {
         ConcurrentTreeNode node = new ConcurrentTreeNode() {
             @Override
@@ -120,6 +118,10 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     @Override public String getName() {
         return name;
+    }
+
+    public DBKey getDbkey() {
+        return dbkey;
     }
 
     @Override @SuppressWarnings("unchecked")
@@ -313,11 +315,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return tree.getNode(this, name, true);
     }
 
-    public DataTreeNode getOrCreateEditableNode(String name) {
+    public ConcurrentTreeNode getOrCreateEditableNode(String name) {
         return getOrCreateEditableNode(name, null);
     }
 
-    public DataTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator) {
+    public ConcurrentTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator) {
         return tree.getOrCreateNode(this, name, creator);
     }
 

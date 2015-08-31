@@ -47,7 +47,8 @@ class AuthorizationManagerAllowAll extends AuthorizationManager {
         return "unused";
     }
 
-    @Override void logout(User user) {
+    @Override void logout(String username) {
         // do nothing
     }
+
 }

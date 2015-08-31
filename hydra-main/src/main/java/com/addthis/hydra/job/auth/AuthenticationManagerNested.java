@@ -15,7 +15,10 @@ package com.addthis.hydra.job.auth;
 
 import javax.annotation.Nonnull;
 
+import java.io.IOException;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Closer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -46,11 +49,17 @@ class AuthenticationManagerNested extends AuthenticationManager {
     @Nonnull
     final AuthenticationManager outer;
 
+    @Nonnull
+    final Closer closer;
+
     @JsonCreator
     public AuthenticationManagerNested(@JsonProperty("inner") AuthenticationManager inner,
                                        @JsonProperty("outer") AuthenticationManager outer) {
         this.inner = inner;
         this.outer = outer;
+        this.closer = Closer.create();
+        closer.register(inner);
+        closer.register(outer);
         log.info("Registering nested authentication");
     }
 
@@ -107,11 +116,19 @@ class AuthenticationManagerNested extends AuthenticationManager {
         }
     }
 
-    @Override void logout(User user) {
-        if (user != null) {
-            inner.logout(user);
-            outer.logout(user);
-        }
+    @Override public void evict(String username) {
+        inner.evict(username);
+        outer.evict(username);
+    }
+
+    @Override void logout(String username, String secret) {
+        inner.logout(username, secret);
+        outer.logout(username, secret);
+    }
+
+    @Override
+    public void close() throws IOException {
+        closer.close();
     }
 
     @Override ImmutableList<String> adminGroups() {

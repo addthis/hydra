@@ -39,11 +39,13 @@ import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.common.Configuration;
+import com.addthis.hydra.data.tree.CacheKey;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.store.db.CloseOperation;
@@ -51,8 +53,8 @@ import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.skiplist.Page;
-import com.addthis.hydra.store.skiplist.PageFactory;
+import com.addthis.hydra.store.skiplist.ConcurrentPage;
+import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.skiplist.SkipListCache;
 import com.addthis.hydra.store.util.MeterFileLogger;
 import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
@@ -64,6 +66,8 @@ import com.google.common.util.concurrent.AtomicDouble;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
+
+import org.apache.commons.lang3.mutable.MutableLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,8 +174,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
         // get tree root
         ConcurrentTreeNode dummyRoot = ConcurrentTreeNode.getTreeRoot(this);
-        treeRootNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("root");
-        treeTrashNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("trash");
+        treeRootNode = dummyRoot.getOrCreateEditableNode("root");
+        treeTrashNode = dummyRoot.getOrCreateEditableNode("trash");
         treeTrashNode.requireNodeDB();
         deletionThreadPool = Executors.newScheduledThreadPool(numDeletionThreads,
                 new NamedThreadFactory(scope + "-deletion-", true));
@@ -190,8 +194,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     public ConcurrentTree(File root) throws Exception {
         this(root, defaultNumDeletionThreads, TreeCommonParameters.cleanQMax,
-             TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
-             Page.DefaultPageFactory.singleton);
+                TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
+                ConcurrentPage.ConcurrentPageFactory.singleton);
     }
 
     public void meter(METERTREE meterval) {
@@ -462,7 +466,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         log.debug("[sync] start");
         for (ConcurrentTreeNode node : cache.values()) {
             if (!node.isDeleted() && node.isChanged()) {
-                source.put(node.dbkey, node);
+                source.put(node.getDbkey(), node);
             }
         }
         log.debug("[sync] end nextdb={}", nextDBID);
@@ -682,10 +686,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * value to disable logging of the number of deleted nodes.
      *
      * @param rootNode root of the subtree to delete
-     * @param counter if non-negative then tally the nodes that have been deleted
      */
-    long deleteSubTree(ConcurrentTreeNode rootNode,
-                       long counter,
+    void deleteSubTree(ConcurrentTreeNode rootNode,
+                       MutableLong totalCount,
+                       MutableLong nodeCount,
                        BooleanSupplier terminationCondition,
                        Logger deletionLogger) {
         long nodeDB = rootNode.nodeDB();
@@ -694,14 +698,16 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         boolean reschedule;
         try {
             while (range.hasNext() && !terminationCondition.getAsBoolean()) {
-                if ((++counter % deletionLogInterval) == 0) {
-                    deletionLogger.info("Deleted {} nodes from the tree.", counter);
+                totalCount.increment();
+                if ((totalCount.longValue() % deletionLogInterval) == 0) {
+                    deletionLogger.info("Deleted {} total nodes in {} trash nodes from the trash.",
+                                        totalCount.longValue(), nodeCount.longValue());
                 }
                 Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
                 ConcurrentTreeNode next = entry.getValue();
 
                 if (next.hasNodes() && !next.isAlias()) {
-                    counter = deleteSubTree(next, counter, terminationCondition, deletionLogger);
+                    deleteSubTree(next, totalCount, nodeCount, terminationCondition, deletionLogger);
                 }
                 String name = entry.getKey().rawKey().toString();
                 CacheKey key = new CacheKey(nodeDB, name);
@@ -727,7 +733,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (reschedule) {
             markForChildDeletion(rootNode);
         }
-        return counter;
     }
 
     Map.Entry<DBKey, ConcurrentTreeNode> nextTrashNode() {

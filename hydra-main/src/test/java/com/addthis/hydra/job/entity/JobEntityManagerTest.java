@@ -15,6 +15,7 @@ package com.addthis.hydra.job.entity;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
@@ -107,7 +108,7 @@ public class JobEntityManagerTest extends JobEntityManagerTestBase {
         manager = new MyJobEntityManager(spawn);
         manager.putEntity("e1", e1, false);
         manager.putEntity("e2", e2, false);
-        assertTrue("deleted", manager.deleteEntity("e1"));
+        assertNull("deleted", manager.deleteEntity("e1"));
         assertEquals("size", 1, manager.size());
         assertNull("no longer exists", manager.getEntity("e1"));
         verify(spawnDataStore).deleteChild(DATA_STORE_PATH, "e1");
@@ -124,7 +125,7 @@ public class JobEntityManagerTest extends JobEntityManagerTestBase {
         };
         manager.putEntity("e1", e1, false);
         manager.putEntity("e2", e2, false);
-        assertFalse("did not delete", manager.deleteEntity("e1"));
+        assertNotNull("did not delete", manager.deleteEntity("e1"));
         assertEquals("size", 2, manager.size());
         assertEquals("still exists", e1, manager.getEntity("e1"));
         verify(spawnDataStore, never()).deleteChild(DATA_STORE_PATH, "e1");
@@ -134,7 +135,7 @@ public class JobEntityManagerTest extends JobEntityManagerTestBase {
     public void deleteNonExistent() throws Exception {
         manager = new MyJobEntityManager(spawn);
         manager.putEntity("e2", e2, false);
-        assertFalse("did not delete", manager.deleteEntity("e1"));
+        assertNotNull("did not delete", manager.deleteEntity("e1"));
         assertEquals("size", 1, manager.size());
         verify(spawnDataStore, never()).deleteChild(DATA_STORE_PATH, "e1");
     }

@@ -18,6 +18,8 @@ import java.util.function.BooleanSupplier;
 
 import com.addthis.hydra.store.db.DBKey;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+
 import org.slf4j.Logger;
 
 /**
@@ -44,13 +46,16 @@ class ConcurrentTreeDeletionTask implements Runnable {
     public void run() {
         try {
             Map.Entry<DBKey, ConcurrentTreeNode> entry;
+            MutableLong totalCount = new MutableLong();
+            MutableLong nodeCount = new MutableLong();
             do {
                 entry = dataTreeNodes.nextTrashNode();
                 if (entry != null) {
                     ConcurrentTreeNode node = entry.getValue();
                     ConcurrentTreeNode prev = dataTreeNodes.source.remove(entry.getKey());
                     if (prev != null) {
-                        dataTreeNodes.deleteSubTree(node, 0, terminationCondition, deletionLogger);
+                        dataTreeNodes.deleteSubTree(node, totalCount, nodeCount, terminationCondition, deletionLogger);
+                        nodeCount.increment();
                         dataTreeNodes.treeTrashNode.incrementCounter();
                     }
                 }

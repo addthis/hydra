@@ -478,18 +478,27 @@ public class JobsResource {
     public Response deleteJob(@QueryParam("id") @DefaultValue("") String id,
                               @QueryParam("user") String user,
                               @QueryParam("token") String token,
-                              @QueryParam("sudo") String sudo) {
+                              @QueryParam("sudo") String sudo,
+                              @QueryParam("force") boolean force) {
         Job job = spawn.getJob(id);
         if (job == null) {
             return Response.serverError().entity("Job with id " + id + " cannot be found").build();
         } else if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
             return Response.serverError().entity("Insufficient privileges to delete job " + id).build();
-        } else if (job.getCountActiveTasks() != 0) {
-            return Response.serverError().entity("A job with active tasks cannot be deleted").build();
         } else {
             emitLogLineForAction(user, "job delete on " + id);
             try {
-                DeleteStatus status = spawn.deleteJob(id);
+                DeleteStatus status;
+                int activeTasks = job.getCountActiveTasks();
+                if (activeTasks > 0) {
+                    if (force) {
+                        status = spawn.forceDeleteJob(id);
+                    } else {
+                        return Response.serverError().entity("A job with active tasks cannot be deleted").build();
+                    }
+                } else {
+                    status = spawn.deleteJob(id);
+                }
                 switch (status) {
                     case SUCCESS:
                         return Response.ok().build();

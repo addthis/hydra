@@ -30,6 +30,7 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
 
+import com.addthis.hydra.store.skiplist.ConcurrentPage;
 import org.apache.commons.io.FileUtils;
 
 import org.slf4j.Logger;
@@ -79,7 +80,7 @@ public class DiskBackedMap<T extends DiskBackedMap.DiskObject> implements Map<St
 
         try {
             db = new PageDB.Builder<>(diskStoragePathFile, CodableDiskObject.class, 1000, 1000)
-                    .dbname("DiskBackedMap.db").build();
+                    .dbname("DiskBackedMap.db").pageFactory(ConcurrentPage.ConcurrentPageFactory.singleton).build();
             db.setCacheMem(cacheSize);
         } catch (IOException e) {
             throw new RuntimeException(e);

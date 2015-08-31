@@ -328,7 +328,6 @@ public class Spawn implements Codable, AutoCloseable {
         // start JobAlertManager
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
         // start job scheduler
-        scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(this), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(this::drainJobTaskUpdateQueue,
                                                  taskQueueDrainInterval,
@@ -1628,6 +1627,32 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
+    public DeleteStatus forceDeleteJob(String jobUUID) throws Exception {
+        jobLock.lock();
+        Job job;
+        try {
+            job = getJob(jobUUID);
+            if (job == null) {
+                return DeleteStatus.JOB_MISSING;
+            }
+            if (job.getDontDeleteMe()) {
+                return DeleteStatus.JOB_DO_NOT_DELETE;
+            }
+            job.setEnabled(false);
+            jobAlertManager.removeAlertsForJob(jobUUID);
+        } finally {
+            jobLock.unlock();
+        }
+        while ((job != null) && (job.getCountActiveTasks() > 0)) {
+            stopJob(jobUUID);
+            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+            killJob(jobUUID);
+            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+            job = getJob(jobUUID);
+        }
+        return deleteJob(jobUUID);
+    }
+
     public DeleteStatus deleteJob(String jobUUID) throws Exception {
         jobLock.lock();
         try {
@@ -2433,6 +2458,7 @@ public class Spawn implements Codable, AutoCloseable {
                     for (LinkedList<SpawnQueueItem> queue : queues) {
                         iterateThroughTaskQueue(queue);
                     }
+                    new UpdateEventRunnable(this).run();
                     sendTaskQueueUpdateEvent();
                 }
             } finally {
@@ -2442,7 +2468,7 @@ public class Spawn implements Codable, AutoCloseable {
                 }
             }
             if (!success) {
-                Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+                Uninterruptibles.sleepUninterruptibly(100, MILLISECONDS);
             }
         }
     }

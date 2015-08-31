@@ -13,28 +13,26 @@
  */
 package com.addthis.hydra.data.tree;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import java.nio.charset.Charset;
-
 import com.addthis.basis.util.Varint;
-
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.codec.codables.ConcurrentCodable;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.reflection.Fields;
 import com.addthis.hydra.store.kv.PageEncodeType;
-
 import com.google.common.primitives.Ints;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+
 public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, ConcurrentCodable, BytesCodable {
 
+    public static final int ALIAS = 1 << 1;
+    
     @FieldConfig(codable = true)
     protected long hits;
     @FieldConfig(codable = true)
@@ -152,5 +150,10 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
 
     public boolean hasNodes() {
         return nodedb > 0;
+    }
+
+    @Override
+    public Map<String, TreeNodeData> getDataMap() {
+        return data;
     }
 }

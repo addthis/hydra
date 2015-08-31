@@ -72,6 +72,16 @@ public class PathPruneTest {
     }
 
     @Test
+    public void excludes() throws IOException {
+        TreeMapState state = new TreeMapState(new ListBundle());
+        DataTreeNode parent = mockTwoChildren();
+        PathPrune pathPrune = Configs.decodeObject(PathPrune.class, "ttl = 2 days, excludes = [\"foobar\"], nameFormat = YYMMDD");
+        long now = DateTimeFormat.forPattern("YYMMDD").parseMillis("140105");
+        pathPrune.pruneChildren(state, parent, now);
+        verify(parent).deleteNode("140101");
+    }
+
+    @Test
     public void allLeaves() throws IOException {
         TreeMapState state = new TreeMapState(new ListBundle());
         DataTreeNode parent = mockParent();
@@ -103,6 +113,24 @@ public class PathPruneTest {
         when(childIterator.next()).thenReturn(child);
 
         DataTreeNode parent = Mockito.mock(DataTreeNode.class);
+        when(parent.getName()).thenReturn("parent");
+        when(parent.getIterator()).thenReturn(childIterator);
+
+        return parent;
+    }
+
+    private DataTreeNode mockTwoChildren() {
+        DataTreeNode child1 = Mockito.mock(DataTreeNode.class);
+        when(child1.getName()).thenReturn("140101");
+        DataTreeNode child2 = Mockito.mock(DataTreeNode.class);
+        when(child2.getName()).thenReturn("foobar");
+
+        ClosableIterator<DataTreeNode> childIterator = Mockito.mock(ClosableIterator.class);
+        when(childIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
+        when(childIterator.next()).thenReturn(child1).thenReturn(child2);
+
+        DataTreeNode parent = Mockito.mock(DataTreeNode.class);
+        when(parent.getName()).thenReturn("parent");
         when(parent.getIterator()).thenReturn(childIterator);
 
         return parent;
