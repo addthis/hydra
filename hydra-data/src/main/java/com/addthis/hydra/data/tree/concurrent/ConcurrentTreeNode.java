@@ -30,6 +30,7 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.MemoryCounter.Mem;
 
 import com.addthis.hydra.data.tree.AbstractTreeNode;
+import com.addthis.hydra.data.tree.CacheKey;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
@@ -49,7 +50,7 @@ import com.addthis.hydra.store.db.IPageDB.Range;
  * N (for N > 0) : There are N threads that may be modifying the node. The node is active.
  * 0             : The node is idle. It may be evicted.
  * -1            : The node has been evicted.
- *
+ * -2            : The node has been deleted.
  */
 public class ConcurrentTreeNode extends AbstractTreeNode {
 
@@ -72,13 +73,13 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     public ConcurrentTreeNode() {
     }
 
-    protected void initIfDecoded(ConcurrentTree tree, CacheKey cacheKey) {
+    protected void initIfDecoded(ConcurrentTree tree, CacheKey cacheKey, DBKey dbkey) {
         if (decoded.get()) {
             synchronized (initLock) {
                 if (initOnce.compareAndSet(false, true)) {
                     this.tree = tree;
                     this.cacheKey = cacheKey;
-                    this.dbkey = cacheKey.dbkey;
+                    this.dbkey = dbkey;
                     this.name = cacheKey.name;
                     decoded.set(false);
                 }
@@ -86,10 +87,10 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         }
     }
 
-    protected void init(ConcurrentTree tree, CacheKey cacheKey) {
+    protected void init(ConcurrentTree tree, CacheKey cacheKey, DBKey dbkey) {
         this.tree = tree;
         this.cacheKey = cacheKey;
-        this.dbkey = cacheKey.dbkey;
+        this.dbkey = dbkey;
         this.name = cacheKey.name;
     }
 

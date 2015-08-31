@@ -94,7 +94,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     private final String scope = "ConcurrentTree" + Integer.toString(scopeGenerator.getAndIncrement());
 
-    public static enum METERTREE {
+    public enum METERTREE {
         CACHE_HIT, CACHE_MISS, NODE_PUT, NODE_CREATE, NODE_DELETE, SOURCE_MISS
     }
 
@@ -268,7 +268,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 if (node.isDeleted()) {
                     source.remove(dbkey);
                 } else {
-                    node.initIfDecoded(this, key);
+                    node.initIfDecoded(this, key, dbkey);
                     if (lease) {
                         ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
                         if (prev == null) {
@@ -309,7 +309,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     if (node.isDeleted()) {
                         source.remove(dbkey);
                     } else {
-                        node.initIfDecoded(this, key);
+                        node.initIfDecoded(this, key, dbkey);
                         ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
                         if (prev == null) {
                             node.reactivate();
@@ -321,7 +321,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 } else { // create a new node
                     if (newNode == null) {
                         newNode = new ConcurrentTreeNode();
-                        newNode.init(this, key);
+                        newNode.init(this, key, dbkey);
                         newNode.tryLease();
                         newNode.markChanged();
                         if (creator != null) {
