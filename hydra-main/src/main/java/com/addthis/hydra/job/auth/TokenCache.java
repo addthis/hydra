@@ -35,18 +35,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TokenCache implements Closeable {
 
+    private static final ImmutableSet<PosixFilePermission> OWNER_READ_WRITE =
+            ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
+
     public enum ExpirationPolicy {
         WRITE, ACCESS
     }
 
-    private static final Logger log = LoggerFactory.getLogger(PermissionsManager.class);
+    private static final Logger log = LoggerFactory.getLogger(TokenCache.class);
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -78,10 +80,9 @@ public class TokenCache implements Closeable {
         this.outputPath = outputPath;
         if ((outputPath != null) && (Files.isReadable(outputPath))) {
             log.info("Loading authentication tokens from disk.");
-            TypeFactory factory = mapper.getTypeFactory();
             TypeReference<ConcurrentHashMap<String, ConcurrentHashMap<String, Long>>> typeReference =
                     new TypeReference<ConcurrentHashMap<String, ConcurrentHashMap<String, Long>>>() {};
-            this.cache = mapper.readValue(outputPath.toFile(), factory.constructType(typeReference));
+            this.cache = mapper.readValue(outputPath.toFile(), typeReference);
         } else {
             this.cache = new ConcurrentHashMap<>();
         }
@@ -131,8 +132,9 @@ public class TokenCache implements Closeable {
         if (outputPath != null) {
             log.info("Persisting authentication tokens to disk.");
             if (!Files.exists(outputPath)) {
-                Files.createFile(outputPath, PosixFilePermissions.asFileAttribute(
-                        ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)));
+                Files.createFile(outputPath, PosixFilePermissions.asFileAttribute(OWNER_READ_WRITE));
+            } else {
+                Files.setPosixFilePermissions(outputPath, OWNER_READ_WRITE);
             }
             mapper.writeValue(outputPath.toFile(), cache);
         }
