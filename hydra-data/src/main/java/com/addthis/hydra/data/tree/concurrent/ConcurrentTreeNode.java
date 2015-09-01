@@ -30,6 +30,7 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.MemoryCounter.Mem;
 
 import com.addthis.hydra.data.tree.AbstractTreeNode;
+import com.addthis.hydra.data.tree.CacheKey;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
@@ -48,14 +49,8 @@ import com.addthis.hydra.store.db.IPageDB.Range;
  *
  * N (for N > 0) : There are N threads that may be modifying the node. The node is active.
  * 0             : The node is idle. It may be evicted.
- * -1            : The node is currently being evicted. This is a transient state.
+ * -1            : The node has been evicted.
  * -2            : The node has been deleted.
- * -3            : The node has been evicted.
- *
- * Only an idle node may be evicted. Any node that has 0 or more leases
- * can be deleted (yes it is counterintuitive but for legacy purposes
- * deleting nodes is a higher priority operation that modifying nodes).
- *
  */
 public class ConcurrentTreeNode extends AbstractTreeNode {
 
@@ -78,23 +73,25 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     public ConcurrentTreeNode() {
     }
 
-    protected void initIfDecoded(ConcurrentTree tree, DBKey key, String name) {
+    protected void initIfDecoded(ConcurrentTree tree, CacheKey cacheKey, DBKey dbkey) {
         if (decoded.get()) {
             synchronized (initLock) {
                 if (initOnce.compareAndSet(false, true)) {
                     this.tree = tree;
-                    this.dbkey = key;
-                    this.name = name;
+                    this.cacheKey = cacheKey;
+                    this.dbkey = dbkey;
+                    this.name = cacheKey.name;
                     decoded.set(false);
                 }
             }
         }
     }
 
-    protected void init(ConcurrentTree tree, DBKey key, String name) {
+    protected void init(ConcurrentTree tree, CacheKey cacheKey, DBKey dbkey) {
         this.tree = tree;
-        this.dbkey = key;
-        this.name = name;
+        this.cacheKey = cacheKey;
+        this.dbkey = dbkey;
+        this.name = cacheKey.name;
     }
 
     @Mem(estimate = false, size = 64)
@@ -112,6 +109,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     protected String name;
     protected DBKey dbkey;
+    protected CacheKey cacheKey;
+
 
     public String toString() {
         return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + hits +
@@ -183,10 +182,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return leases.getAndSet(-2) != -2;
     }
 
-    protected void evictionComplete() {
-        leases.compareAndSet(-1, -3);
-    }
-
     protected synchronized void markAlias() {
         bitSet(ALIAS);
     }
@@ -212,11 +207,9 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     void reactivate() {
         while(true) {
             int count = leases.get();
-            if (count == -3 && leases.compareAndSet(-3, 0)) {
+            if (count == -1 && leases.compareAndSet(-1, 0)) {
                 return;
-            } else if (count == -1 && leases.compareAndSet(-1, 0)) {
-                return;
-            } else if (count != -3 && count != -1) {
+            } else if (count != -1) {
                 return;
             }
         }
@@ -242,38 +235,21 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     }
 
     /**
-     * The node can be evicted if it has been deleted
-     * or it transitions from the active leases with 0 leases
-     * to the inactive state. If the node is already in the
-     * inactive state then it cannot be evicted.
-     *
-     * @return true if the node can be evicted
-     */
-    boolean trySetEviction() {
-        while (true) {
-            int count = leases.get();
-            if (count == -2) {
-                return true;
-            } else if (count != 0) {
-                return false;
-            }
-            if (leases.compareAndSet(0, -1)) {
-                return true;
-            }
-        }
-    }
-
-    /**
      * Atomically decrement the number of active leases.
      */
     @Override
     public void release() {
         while (true) {
             int count = leases.get();
-            if (count <= 0) {
+            if (count == -2) {
                 return;
-            }
-            if (leases.compareAndSet(count, count - 1)) {
+            } else if (count < 1) {
+                throw new IllegalStateException("Attempted to release a node with no active leases");
+            } else if ((count == 1) && leases.compareAndSet(1, -1)) {
+                tree.source.put(dbkey, this);
+                tree.cache.remove(cacheKey, this);
+                return;
+            } else if ((count > 1) && leases.compareAndSet(count, count - 1)) {
                 return;
             }
         }
