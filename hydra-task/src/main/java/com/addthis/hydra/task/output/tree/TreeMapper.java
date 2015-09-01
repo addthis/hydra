@@ -456,7 +456,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                     long mark = JitterClock.globalTime();
                     long streamRate = (streamCounts * 1000L) / (mark - lastHeaderTime.getAndSet(mark));
                     log.info(
-                            "tread tmap  input proc  rules  nodes bundles cache..hit% dbs   mem   bundleTime [{}," +
+                            "tread tmap  input proc  rules  nodes bundles cache...hit% dbs   mem   bundleTime [{}," +
                             "{}/s,{}MM]",
                             streamCounts, streamRate, streamTotals);
                 }

@@ -30,8 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class TreeMapperStats extends WrappingDynamicMBean {
 
-    public static final long MB = 1024L * 1024L;
-    private static final DecimalFormat percent = new DecimalFormat("00.0%");
+    private static final DecimalFormat percent = new DecimalFormat("0.0% ");
     public static final ObjectMapper mapper = new ObjectMapper();
 
     public TreeMapperStats() {
@@ -79,7 +78,7 @@ public class TreeMapperStats extends WrappingDynamicMBean {
             msg.append(pad(nodesUpdated, 6));
             msg.append(pad(totalPackets, 8));
             msg.append(pad(treeCacheSize, 6));
-            msg.append(Strings.padEnd(percent.format(treeCacheHitRate), 6, ' '));
+            msg.append(Strings.padStart(percent.format(treeCacheHitRate), 7, ' '));
             msg.append(pad(treeDbCount, 6));
             msg.append(pad(freeMemory, 6));
             msg.append(Strings.padEnd(averageTimestamp, 14, ' '));

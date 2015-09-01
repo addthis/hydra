@@ -539,8 +539,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         Map<String, Long> mark = meter.mark();
         Long gets = mark.get(keyCacheGet);
         Long miss = mark.get(keyCacheMiss);
-        if (gets == null || miss == null || miss == 0) {
-            cacheHitRate.set(0);
+        if ((gets == null) || (gets == 0)) {
+            cacheHitRate.set(0.0);
+        } else if ((miss == null) || (miss == 0)) {
+            cacheHitRate.set(1.0);
         } else {
             cacheHitRate.set(1.0d - ((miss * 1.0d) / ((gets + miss) * 1.0d)));
         }
