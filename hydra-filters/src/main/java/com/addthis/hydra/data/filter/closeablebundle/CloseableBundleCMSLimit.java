@@ -324,4 +324,110 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
         }
     }
 
+    public static class CloseableBundleCMSLimitBuilder {
+        private AutoField[] keyFields;
+        private AutoField valueField;
+        private AutoField countField;
+        private String dataDir;
+        private int cacheSize;
+        private boolean rejectNull;
+        private int limit;
+        private boolean failReturn;
+        private int depth;
+        private double confidence;
+        private int width;
+        private double percentage;
+        private Bound bound;
+
+        public CloseableBundleCMSLimitBuilder() {}
+
+        public CloseableBundleCMSLimitBuilder(CloseableBundleCMSLimit source) {
+            this.keyFields = source.keyFields;
+            this.valueField = source.valueField;
+            this.countField = source.countField;
+            this.dataDir = source.dataDir;
+            this.cacheSize = source.cacheSize;
+            this.rejectNull = source.rejectNull;
+            this.limit = source.limit;
+            this.failReturn = source.failReturn;
+            this.depth = source.depth;
+            this.confidence = source.confidence;
+            this.width = source.width;
+            this.percentage = source.percentage;
+            this.bound = source.bound;
+        }
+
+        public CloseableBundleCMSLimitBuilder setKeyFields(AutoField[] keyFields) {
+            this.keyFields = keyFields;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setValueField(AutoField valueField) {
+            this.valueField = valueField;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setCountField(AutoField countField) {
+            this.countField = countField;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setDataDir(String dataDir) {
+            this.dataDir = dataDir;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setCacheSize(int cacheSize) {
+            this.cacheSize = cacheSize;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setRejectNull(boolean rejectNull) {
+            this.rejectNull = rejectNull;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setLimit(int limit) {
+            this.limit = limit;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setFailReturn(boolean failReturn) {
+            this.failReturn = failReturn;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setDepth(int depth) {
+            this.depth = depth;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setConfidence(double confidence) {
+            this.confidence = confidence;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setWidth(int width) {
+            this.width = width;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setPercentage(double percentage) {
+            this.percentage = percentage;
+            return this;
+        }
+
+        public CloseableBundleCMSLimitBuilder setBound(Bound bound) {
+            this.bound = bound;
+            return this;
+        }
+
+        public CloseableBundleCMSLimit build() {
+            CloseableBundleCMSLimit closeableBundleCMSLimit =
+                    new CloseableBundleCMSLimit(keyFields, valueField, countField, dataDir,
+                                                cacheSize, rejectNull, failReturn, width,
+                                                depth, limit, confidence, percentage, bound);
+            return closeableBundleCMSLimit;
+        }
+    }
 }
