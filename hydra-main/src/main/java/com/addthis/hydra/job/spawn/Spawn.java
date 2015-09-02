@@ -3082,38 +3082,6 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     /**
-     * Attempt to kick a task. Add it to the queue instead if appropriate.
-     *
-     * @param job      Job to kick
-     * @param task     Task to kick
-     * @param config   Config for the job
-     * @param inQueue  Whether the task is already in the queue (in which case we shouldn't add it again)
-     * @param priority Priority of the kick request. Not the job priority.
-     * @throws Exception If there is a problem scheduling the task
-     */
-    private void kickIncludingQueue(Job job, JobTask task, String config, boolean inQueue, int priority)
-            throws Exception {
-        boolean success = false;
-        while (!success && !shuttingDown.get()) {
-            jobLock.lock();
-            try {
-                if (taskQueuesByPriority.tryLock()) {
-                    success = true;
-                    boolean kicked = kickOnExistingHosts(job, task, config, 0L, true);
-                    if (!kicked && !inQueue) {
-                        addToTaskQueue(task.getJobKey(), priority, false);
-                    }
-                }
-            } finally {
-                jobLock.unlock();
-                if (success) {
-                    taskQueuesByPriority.unlock();
-                }
-            }
-        }
-    }
-
-    /**
      * Helper function for kickOnExistingHosts.
      *
      * @param task A task, typically one that is about to be kicked
