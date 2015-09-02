@@ -215,7 +215,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             int select = kv.getIntValue("select", -1);
             int priority = manual ? 1 : 0;
             if (select >= 0) {
-                spawn.startTask(job.getId(), select, true, priority, false);
+                spawn.startTask(job.getId(), select, priority, false);
             } else {
                 spawn.startJob(job.getId(), priority);
             }

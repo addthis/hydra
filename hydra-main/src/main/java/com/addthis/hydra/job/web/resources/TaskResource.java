@@ -45,7 +45,7 @@ public class TaskResource {
     public Response startTask(@QueryParam("job") Optional<String> jobId,
             @QueryParam("task") Optional<Integer> task) {
         try {
-            spawn.startTask(jobId.or(""), task.or(-1), true, 1, false);
+            spawn.startTask(jobId.or(""), task.or(-1), 1, false);
             return Response.ok().build();
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();

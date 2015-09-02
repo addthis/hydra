@@ -902,7 +902,7 @@ public class JobsResource {
         if (taskId < 0) {
             spawn.startJob(jobId, priority);
         } else {
-            spawn.startTask(jobId, taskId, true, priority, false);
+            spawn.startTask(jobId, taskId, priority, false);
         }
     }
 

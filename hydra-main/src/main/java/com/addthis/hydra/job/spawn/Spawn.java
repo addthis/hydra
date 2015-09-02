@@ -1927,13 +1927,11 @@ public class Spawn implements Codable, AutoCloseable {
      *
      * @param jobUUID     Job ID
      * @param taskID      Node #
-     * @param addToQueue  Whether the task should be added to the queue (false if the task is already on the queue)
      * @param priority    Immediacy of the start request
      * @param toQueueHead Whether to add the task to the head of the queue rather than the end
      * @throws Exception When the task is invalid or already active
      */
-    public void startTask(String jobUUID, int taskID, boolean addToQueue, int priority, boolean toQueueHead)
-            throws Exception {
+    public void startTask(String jobUUID, int taskID, int priority, boolean toQueueHead) throws Exception {
         Job job = getJob(jobUUID);
         checkArgument(job != null, "job not found");
         checkArgument(job.isEnabled(), "job is disabled");
@@ -1943,11 +1941,7 @@ public class Spawn implements Codable, AutoCloseable {
         checkArgument(task != null, "no such task");
         checkArgument((task.getState() != JobTaskState.BUSY) && (task.getState() != JobTaskState.ALLOCATED) &&
                       (task.getState() != JobTaskState.QUEUED), "invalid task state");
-        if (addToQueue) {
-            addToTaskQueue(task.getJobKey(), priority, toQueueHead);
-        } else {
-            kickIncludingQueue(job, task, expandJob(job), false, priority);
-        }
+        addToTaskQueue(task.getJobKey(), priority, toQueueHead);
         log.warn("[task.kick] started {} / {} = {}", job.getId(), task.getTaskID(), job.getDescription());
         queueJobTaskUpdateEvent(job);
     }
@@ -2682,7 +2676,7 @@ public class Spawn implements Codable, AutoCloseable {
                     try {
                         job.setTaskState(task, JobTaskState.IDLE);
                         log.info("[task.cantbegin] kicking {}", task.getJobKey());
-                        startTask(cantBegin.getJobUuid(), cantBegin.getNodeID(), true, 1, true);
+                        startTask(cantBegin.getJobUuid(), cantBegin.getNodeID(), 1, true);
                     } catch (Exception ex) {
                         log.warn("[task.schedule] failed to reschedule task for {}", task.getJobKey(), ex);
                     }
