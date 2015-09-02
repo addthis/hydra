@@ -13,51 +13,40 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.JobKey;
 
-/**
- * A class representing an item that can sit on Spawn's queue.
- */
-public class SpawnQueueItem extends JobKey implements Codable {
+import com.google.common.base.Objects;
 
-    private int priority;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-    private final long creationTime; // When this task was added to the queue
+/** A class representing an item that can sit on Spawn's queue. */
+@JsonIgnoreProperties("ignoreQuiesce")
+public class SpawnQueueItem extends JobKey {
 
-    // Need this empty constructor for deserialization
-    public SpawnQueueItem() {
-        super();
-        priority = 0;
-        creationTime = System.currentTimeMillis();
+    public final int priority;
+    public final long creationTime;
+
+    @JsonCreator
+    private SpawnQueueItem(@JsonProperty("jobUuid") String jobUuid,
+                           @JsonProperty("nodeNumber") Integer nodeNumber,
+                           @JsonProperty("priority") int priority,
+                           @JsonProperty("creationTime") long creationTime) {
+        super(jobUuid, nodeNumber);
+        this.priority = priority;
+        this.creationTime = creationTime;
     }
 
     public SpawnQueueItem(JobKey key, int priority) {
-        this.setJobUuid(key.getJobUuid());
-        this.setNodeNumber(key.getNodeNumber());
-        this.priority = priority;
-        this.creationTime = System.currentTimeMillis();
+        this(key.getJobUuid(), key.getNodeNumber(), priority, System.currentTimeMillis());
     }
 
-    public long getCreationTime() {
-        return creationTime;
-    }
-
-    public void setIgnoreQuiesce(boolean ignoreQuiesce) // Necessary for correct deserialization
-    {
-        this.priority = ignoreQuiesce ? 1 : 0;
-    }
-
-    public int getPriority() {
-        return priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
-    }
-
-    @Override
-    public String toString() {
-        return "SpawnQueueItem{jobKey=" + this.getJobKey() + ",priority=" + priority + '}';
+    @Override public String toString() {
+        return Objects.toStringHelper(this)
+                      .add("jobKey", getJobKey())
+                      .add("priority", priority)
+                      .add("creationTime", creationTime)
+                      .toString();
     }
 }

@@ -3231,7 +3231,7 @@ public class Spawn implements Codable, AutoCloseable {
                     iter.remove();
                     continue;
                 }
-                if (systemManager.isQuiesced() && (key.getPriority() < 1)) {
+                if (systemManager.isQuiesced() && (key.priority < 1)) {
                     skippedQuiesceCount++;
                     log.debug("[task.queue] skipping {} because spawn is quiesced and the kick wasn't manual", key);
                     if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {
@@ -3242,7 +3242,7 @@ public class Spawn implements Codable, AutoCloseable {
                     boolean kicked = kickOnExistingHosts(job,
                                                          task,
                                                          null,
-                                                         now - key.getCreationTime(),
+                                                         now - key.creationTime,
                                                          !job.getDontAutoBalanceMe());
                     if (kicked) {
                         log.info("[task.queue] removing kicked task {}", task.getJobKey());
