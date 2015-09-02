@@ -62,56 +62,56 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
     private static final String KEY_SEPARATOR = "&";
 
     @Nonnull
-    private final AutoField[] keyFields;
+    public final AutoField[] keyFields;
 
     @Nonnull
-    private final AutoField valueField;
+    public final AutoField valueField;
 
     @Nullable
-    private final AutoField countField;
+    public final AutoField countField;
 
-    private final String dataDir;
+    public final String dataDir;
 
-    private final int cacheSize;
+    public final int cacheSize;
 
-    private final boolean rejectNull;
+    public final boolean rejectNull;
 
-    private final int limit;
+    public final int limit;
 
     /**
      * The value to return if the filter removes the item from the bundle.
      * Only used if the input is a scalar. If the input is an array then
      * always return true. Default value of parameter is false.
      */
-    private final boolean failReturn;
+    public final boolean failReturn;
 
     /**
      * Optionally specify the depth of the sketch.
      * If 'confidence' is specified then ignore this value.
      */
-    private final int depth;
+    public final int depth;
 
     /**
      * Confidence that the error tolerance is satisfied.
      * If 'confidence' is specified then ignore 'depth' parameter.
      * Expressed as a fraction.
      */
-    private final double confidence;
+    public final double confidence;
 
     /**
      * Width of the sketch in bits.
      * Either 'width' or 'percentage' are required.
      */
-    private final int width;
+    public final int width;
 
     /**
      * Maximum error tolerated as percentage of cardinality.
      * Either 'width' or 'percentage' are required.
      */
-    private final double percentage;
+    public final double percentage;
 
     @Nonnull
-    private final Bound bound;
+    public final Bound bound;
 
     private final CMSLimitHashMap sketches;
 
@@ -430,4 +430,6 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
             return closeableBundleCMSLimit;
         }
     }
+
+
 }
