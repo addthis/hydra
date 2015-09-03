@@ -94,8 +94,9 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
             LinkedList<SpawnQueueItem> queue = this.computeIfAbsent(totalPriority, i -> new LinkedList<>());
             if (toHead) {
                 queue.addFirst(new SpawnQueueItem(task, kickPriority));
+            } else {
+                queue.addLast(new SpawnQueueItem(task, kickPriority));
             }
-            queue.addLast(new SpawnQueueItem(task, kickPriority));
         } finally {
             queueLock.unlock();
         }
