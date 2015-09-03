@@ -433,7 +433,10 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 try {
                     boolean lackCap = activeTaskKeys.size() >= maxActiveTasks;
                     if (lackCap) {
-                        sendStatusMessage(new StatusTaskCantBegin(getUUID(), nextKick.getJobUuid(), nextKick.getNodeID()));
+                        sendStatusMessage(new StatusTaskCantBegin(getUUID(),
+                                                                  nextKick.getJobUuid(),
+                                                                  nextKick.getNodeID(),
+                                                                  nextKick.getPriority()));
                         jobQueue.remove(nextKick);
                         break;
                     } else {

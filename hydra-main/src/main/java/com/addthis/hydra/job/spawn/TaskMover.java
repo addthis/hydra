@@ -106,7 +106,7 @@ class TaskMover {
                 spawn.getHealthyHostStatesHousingTask(task, !job.getDontAutoBalanceMe()),
                 false);
         if (lightestExistingHost != null && !lightestExistingHost.getHostUuid().equals(task.getHostUUID())) {
-            spawn.swapTask(task, lightestExistingHost.getHostUuid(), false);
+            spawn.swapTask(task, lightestExistingHost.getHostUuid(), false, 0);
         }
         try {
             task.setRebalanceSource(sourceHostUUID);

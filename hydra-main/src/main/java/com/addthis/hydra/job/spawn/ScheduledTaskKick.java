@@ -42,7 +42,6 @@ public class ScheduledTaskKick implements Runnable {
     public ScheduledTaskKick(Spawn spawn,
                              String jobId,
                              Collection<JobParameter> jobParameters,
-                             @Nullable String jobConfig,
                              @Nullable String rawJobConfig,
                              SpawnMQ spawnMQ,
                              CommandTaskKick kick,
@@ -51,7 +50,7 @@ public class ScheduledTaskKick implements Runnable {
         this.spawn = spawn;
         this.jobId = jobId;
         this.jobParameters = jobParameters;
-        this.jobConfig = jobConfig;
+        this.jobConfig = null;
         this.rawJobConfig = rawJobConfig;
         this.spawnMQ = spawnMQ;
         this.kick = kick;

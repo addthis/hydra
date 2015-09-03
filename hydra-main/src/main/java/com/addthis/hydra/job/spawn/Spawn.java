@@ -1079,7 +1079,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @param kickOnComplete Whether to kick the task after the move is complete
      * @return true on success
      */
-    public boolean swapTask(JobTask task, String replicaHostID, boolean kickOnComplete) {
+    public boolean swapTask(JobTask task, String replicaHostID, boolean kickOnComplete, int priority) {
         if (task == null) {
             log.warn("[task.swap] received null task");
             return false;
@@ -1104,7 +1104,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
         if (kickOnComplete) {
             try {
-                scheduleTask(job, task, expandJob(job));
+                scheduleTask(job, task, priority);
             } catch (Exception e) {
                 log.warn("Warning: failed to kick task {} with: {}", task.getJobKey(), e, e);
                 job.errorTask(task, JobTaskErrorCode.KICK_ERROR);
@@ -2270,12 +2270,9 @@ public class Spawn implements Codable, AutoCloseable {
     /**
      * Send a start message to a minion.
      *
-     * @param job    Job to kick
-     * @param task   Task to kick
-     * @param config Config for job
      * @return True if the start message is sent successfully
      */
-    public boolean scheduleTask(Job job, JobTask task, @Nullable String config) {
+    public boolean scheduleTask(Job job, JobTask task, int priority) {
         if (!schedulePrep(job)) {
             return false;
         }
@@ -2308,44 +2305,30 @@ public class Spawn implements Codable, AutoCloseable {
                 task.setRebalanceTarget(null);
             }
         }
-        final CommandTaskKick kick;
+        long modifiedMaxRuntime;
         if (job.getMaxRunTime() != null) {
-            kick = new CommandTaskKick(task.getHostUUID(),
-                                       task.getJobKey(),
-                                       job.getOwner(),
-                                       job.getGroup(),
-                                       job.getPriority(),
-                                       job.getCopyOfTasks().size(),
-                                       job.getMaxRunTime() * 60000,
-                                       job.getRunCount(),
-                                       null,
-                                       LessStrings.join(jobcmd.getCommand(), " "),
-                                       job.getHourlyBackups(),
-                                       job.getDailyBackups(),
-                                       job.getWeeklyBackups(),
-                                       job.getMonthlyBackups(),
-                                       getTaskReplicaTargets(task.getAllReplicas()),
-                                       job.getAutoRetry(),
-                                       task.getStarts());
+            modifiedMaxRuntime = job.getMaxRunTime() * 60000;
         } else {
-            kick = new CommandTaskKick(task.getHostUUID(),
-                                       task.getJobKey(),
-                                       job.getOwner(),
-                                       job.getGroup(),
-                                       job.getPriority(),
-                                       job.getCopyOfTasks().size(),
-                                       0,
-                                       job.getRunCount(),
-                                       null,
-                                       LessStrings.join(jobcmd.getCommand(), " "),
-                                       job.getHourlyBackups(),
-                                       job.getDailyBackups(),
-                                       job.getWeeklyBackups(),
-                                       job.getMonthlyBackups(),
-                                       getTaskReplicaTargets(task.getAllReplicas()),
-                                       job.getAutoRetry(),
-                                       task.getStarts());
+            modifiedMaxRuntime = 0;
         }
+        final CommandTaskKick kick;
+        kick = new CommandTaskKick(task.getHostUUID(),
+                                   task.getJobKey(),
+                                   job.getOwner(),
+                                   job.getGroup(),
+                                   priority,
+                                   job.getCopyOfTasks().size(),
+                                   modifiedMaxRuntime,
+                                   job.getRunCount(),
+                                   null,
+                                   LessStrings.join(jobcmd.getCommand(), " "),
+                                   job.getHourlyBackups(),
+                                   job.getDailyBackups(),
+                                   job.getWeeklyBackups(),
+                                   job.getMonthlyBackups(),
+                                   getTaskReplicaTargets(task.getAllReplicas()),
+                                   job.getAutoRetry(),
+                                   task.getStarts());
 
         // Creating a runnable to expand the job and send kick message outside of the main queue-iteration thread.
         // Reason: the jobLock is held for duration of the queue-iteration and expanding some (kafka) jobs can be very
@@ -2358,7 +2341,6 @@ public class Spawn implements Codable, AutoCloseable {
         Runnable scheduledKick = new ScheduledTaskKick(this,
                                                        job.getId(),
                                                        jobParameters,
-                                                       config,
                                                        getJobConfig(job.getId()),
                                                        spawnMQ,
                                                        kick,
@@ -2374,15 +2356,14 @@ public class Spawn implements Codable, AutoCloseable {
      *
      * @param job         Job to kick
      * @param task        Task to kick
-     * @param config      Config for job
      * @param timeOnQueue Time that the task has been on the queue
      * @param allowSwap   Whether to allow swapping to replica hosts
      * @return True if some host had the capacity to run the task and the task was sent there; false otherwise
      */
     public boolean kickOnExistingHosts(Job job,
                                        JobTask task,
-                                       @Nullable String config,
                                        long timeOnQueue,
+                                       int priority,
                                        boolean allowSwap) {
         if (!jobTaskCanKick(job, task)) {
             if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {
@@ -2411,10 +2392,10 @@ public class Spawn implements Codable, AutoCloseable {
             String bestHostUuid = bestHost.getHostUuid();
             if (task.getHostUUID().equals(bestHostUuid)) {
                 taskQueuesByPriority.markHostTaskActive(bestHostUuid);
-                scheduleTask(job, task, config);
+                scheduleTask(job, task, priority);
                 log.info("[taskQueuesByPriority] sending {} to {}", task.getJobKey(), bestHostUuid);
                 return true;
-            } else if (swapTask(task, bestHostUuid, true)) {
+            } else if (swapTask(task, bestHostUuid, true, priority)) {
                 taskQueuesByPriority.markHostTaskActive(bestHostUuid);
                 log.info("[taskQueuesByPriority] swapping {} onto {}", task.getJobKey(), bestHostUuid);
                 return true;
@@ -2514,35 +2495,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     @Nonnull public SpawnDataStore getSpawnDataStore() {
         return spawnDataStore;
-    }
-
-    /* helper for SpawnMesh */
-    @Nullable CommandTaskKick getCommandTaskKick(Job job, JobTask task) {
-        JobCommand jobCmd = getJobCommandManager().getEntity(job.getCommand());
-        final String expandedJob;
-        try {
-            expandedJob = expandJob(job);
-        } catch (TokenReplacerOverflowException ignored) {
-            return null;
-        }
-        CommandTaskKick kick = new CommandTaskKick(task.getHostUUID(),
-                                                   task.getJobKey(),
-                                                   job.getOwner(),
-                                                   job.getGroup(),
-                                                   job.getPriority(),
-                                                   job.getCopyOfTasks().size(),
-                                                   job.getMaxRunTime() != null ? (job.getMaxRunTime() * 60000) : 0,
-                                                   job.getRunCount(),
-                                                   expandedJob,
-                                                   LessStrings.join(jobCmd.getCommand(), " "),
-                                                   job.getHourlyBackups(),
-                                                   job.getDailyBackups(),
-                                                   job.getWeeklyBackups(),
-                                                   job.getMonthlyBackups(),
-                                                   getTaskReplicaTargets(task.getAllReplicas()),
-                                                   job.getAutoRetry(),
-                                                   task.getStarts());
-        return kick;
     }
 
     List<HostState> getHealthyHostStatesHousingTask(JobTask task, boolean allowReplicas) {
@@ -2676,7 +2628,7 @@ public class Spawn implements Codable, AutoCloseable {
                     try {
                         job.setTaskState(task, JobTaskState.IDLE);
                         log.info("[task.cantbegin] kicking {}", task.getJobKey());
-                        startTask(cantBegin.getJobUuid(), cantBegin.getNodeID(), 1, true);
+                        startTask(cantBegin.getJobUuid(), cantBegin.getNodeID(), cantBegin.priority, true);
                     } catch (Exception ex) {
                         log.warn("[task.schedule] failed to reschedule task for {}", task.getJobKey(), ex);
                     }
@@ -2921,7 +2873,7 @@ public class Spawn implements Codable, AutoCloseable {
             // unexpected hosts
             boolean changed = false;
             if (!expectedHostsMissingTask.isEmpty()) {
-                swapTask(task, expectedHostsWithTask.iterator().next(), false);
+                swapTask(task, expectedHostsWithTask.iterator().next(), false, 0);
                 copyTaskToReplicas(task);
                 changed = true;
             }
@@ -3231,22 +3183,22 @@ public class Spawn implements Codable, AutoCloseable {
                     iter.remove();
                     continue;
                 }
-                if (systemManager.isQuiesced() && (key.priority < 1)) {
+                if ((job.getPriority() + key.priority) >= systemManager.quiescentLevel()) {
+                    boolean kicked = kickOnExistingHosts(job,
+                                                         task,
+                                                         now - key.creationTime,
+                                                         key.priority,
+                                                         !job.getDontAutoBalanceMe());
+                    if (kicked) {
+                        log.info("[task.queue] removing kicked task {}", task.getJobKey());
+                        iter.remove();
+                    }
+                } else {
                     skippedQuiesceCount++;
                     log.debug("[task.queue] skipping {} because spawn is quiesced and the kick wasn't manual", key);
                     if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {
                         job.setTaskState(task, JobTaskState.QUEUED);
                         queueJobTaskUpdateEvent(job);
-                    }
-                } else {
-                    boolean kicked = kickOnExistingHosts(job,
-                                                         task,
-                                                         null,
-                                                         now - key.creationTime,
-                                                         !job.getDontAutoBalanceMe());
-                    if (kicked) {
-                        log.info("[task.queue] removing kicked task {}", task.getJobKey());
-                        iter.remove();
                     }
                 }
             } catch (Exception ex) {

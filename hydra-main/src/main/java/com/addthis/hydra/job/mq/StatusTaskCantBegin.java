@@ -14,17 +14,21 @@
 package com.addthis.hydra.job.mq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, defaultImpl = StatusTaskCantBegin.class)
 public class StatusTaskCantBegin extends AbstractJobMessage {
 
+    @JsonProperty public final int priority;
+
     @JsonCreator
-    private StatusTaskCantBegin() {
-        super();
+    private StatusTaskCantBegin(@JsonProperty("priority") int priority) {
+        this.priority = priority;
     }
 
-    public StatusTaskCantBegin(String host, String job, int node) {
+    public StatusTaskCantBegin(String host, String job, int node, int priority) {
         super(host, job, node);
+        this.priority = priority;
     }
 }

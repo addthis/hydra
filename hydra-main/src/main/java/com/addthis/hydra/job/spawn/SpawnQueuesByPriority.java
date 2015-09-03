@@ -87,19 +87,15 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         return queueLock.tryLock();
     }
 
-    public boolean addTaskToQueue(int jobPriority, JobKey task, int kickPriority, boolean toHead) {
+    public void addTaskToQueue(int jobPriority, JobKey task, int kickPriority, boolean toHead) {
         queueLock.lock();
         try {
-            LinkedList<SpawnQueueItem> queue = this.get(jobPriority);
-            if (queue == null) {
-                queue = new LinkedList<>();
-                this.put(jobPriority, queue);
-            }
+            int totalPriority = jobPriority + kickPriority;
+            LinkedList<SpawnQueueItem> queue = this.computeIfAbsent(totalPriority, i -> new LinkedList<>());
             if (toHead) {
-                queue.add(0, new SpawnQueueItem(task, kickPriority));
-                return true;
+                queue.addFirst(new SpawnQueueItem(task, kickPriority));
             }
-            return queue.add(new SpawnQueueItem(task, kickPriority));
+            queue.addLast(new SpawnQueueItem(task, kickPriority));
         } finally {
             queueLock.unlock();
         }
@@ -108,9 +104,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     public boolean remove(int priority, JobKey task) {
         queueLock.lock();
         try {
-
-            LinkedList<SpawnQueueItem> queue = get(priority);
-            if (queue != null) {
+            for (LinkedList<SpawnQueueItem> queue : headMap(priority, true).values()) {
                 ListIterator<SpawnQueueItem> iter = queue.listIterator();
                 while (iter.hasNext()) {
                     JobKey nextKey = iter.next();

@@ -18,7 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.Job;
@@ -31,12 +31,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@JsonIgnoreProperties({"queryHost", "spawnHost", "debug", "queryPort"}) // ignore legacy fields
+@JsonIgnoreProperties({"queryHost", "spawnHost", "debug", "queryPort", "quiesce"}) // ignore legacy fields
 public class SpawnState implements Codable {
     private static final Logger log = LoggerFactory.getLogger(SpawnState.class);
 
     public final String uuid;
-    @JsonProperty final AtomicBoolean quiesce;
+    @JsonProperty final AtomicInteger quiescentLevel;
     @JsonProperty final CopyOnWriteArraySet<String> disabledHosts;
 
     final transient ConcurrentMap<String, Job> jobs = new ConcurrentHashMap<>();
@@ -44,7 +44,7 @@ public class SpawnState implements Codable {
 
     @JsonCreator
     SpawnState(@JsonProperty("uuid") String uuid,
-               @JsonProperty("quiesce") AtomicBoolean quiesce,
+               @JsonProperty("quiescentLevel") AtomicInteger quiescentLevel,
                @JsonProperty("disabledHosts") CopyOnWriteArraySet<String> disabledHosts) {
         if (uuid == null) {
             this.uuid = UUID.randomUUID().toString();
@@ -52,7 +52,7 @@ public class SpawnState implements Codable {
         } else {
             this.uuid = uuid;
         }
-        this.quiesce = quiesce;
+        this.quiescentLevel = quiescentLevel;
         this.disabledHosts = disabledHosts;
     }
 

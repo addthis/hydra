@@ -102,7 +102,7 @@ public class SystemManagerImpl implements SystemManager {
         }
         return gitProperties;
     }
-    
+
     @Override
     public Settings getSettings() {
         String disabled = Joiner.on(',').skipNulls().join(spawn.spawnState.disabledHosts);
@@ -144,14 +144,24 @@ public class SystemManagerImpl implements SystemManager {
         return p;
     }
 
+    @Override public int quiescentLevel() {
+        return spawn.spawnState.quiescentLevel.get();
+    }
+
     @Override
     public boolean isQuiesced() {
-        return spawn.spawnState.quiesce.get();
+        return spawn.spawnState.quiescentLevel.get() > 0;
     }
 
     @Override
     public boolean quiesceCluster(boolean quiesce, String username) {
-        if (spawn.spawnState.quiesce.compareAndSet(!quiesce, quiesce)) {
+        int desiredQuiescentLevel;
+        if (quiesce) {
+            desiredQuiescentLevel = 100;
+        } else {
+            desiredQuiescentLevel = 0;
+        }
+        if (spawn.spawnState.quiescentLevel.compareAndSet(100 - desiredQuiescentLevel, desiredQuiescentLevel)) {
             SpawnMetrics.quiesceCount.clear();
             if (quiesce) {
                 SpawnMetrics.quiesceCount.inc();
@@ -160,7 +170,7 @@ public class SystemManagerImpl implements SystemManager {
             spawn.sendClusterQuiesceEvent(username);
             log.info("User {} has {} the cluster.", username, (quiesce ? "quiesced" : "unquiesed"));
         }
-        return spawn.spawnState.quiesce.get();
+        return isQuiesced();
     }
 
     @Override

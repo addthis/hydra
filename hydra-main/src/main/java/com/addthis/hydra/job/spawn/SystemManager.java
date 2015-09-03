@@ -36,8 +36,11 @@ public interface SystemManager {
 
     /** Returns git properties */
     public Properties getGitProperties();
-    
-    /** Returns {@code true} if spawn is quiesced */
+
+    /** Returns the priority level required for jobs to transition from queued to running. */
+    public int quiescentLevel();
+
+    /** Returns {@code true} if the quiescentLevel is nonzero. */
     public boolean isQuiesced();
 
     /** Set the quiesce status of the cluster and returns the new status */

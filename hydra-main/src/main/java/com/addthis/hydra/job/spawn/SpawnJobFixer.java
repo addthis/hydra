@@ -56,7 +56,7 @@ public class SpawnJobFixer {
             job.setTaskState(task, JobTaskState.IDLE, true);
             recentlyFixedTaskCache.put(task.getJobKey(), true);
             if (errorCode != JobTaskErrorCode.HOST_FAILED) {
-                spawn.scheduleTask(job, task, null);
+                spawn.scheduleTask(job, task, 0);
             }
         } else if (errorCode == JobTaskErrorCode.REBALANCE_PAUSE) {
             job.setTaskState(task, JobTaskState.IDLE, true);

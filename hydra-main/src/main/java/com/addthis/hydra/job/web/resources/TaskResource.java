@@ -43,9 +43,12 @@ public class TaskResource {
     @Path("/start")
     @Produces(MediaType.APPLICATION_JSON)
     public Response startTask(@QueryParam("job") Optional<String> jobId,
-            @QueryParam("task") Optional<Integer> task) {
+                              @QueryParam("task") Optional<Integer> task,
+                              @QueryParam("priority") Optional<Integer> priority) {
         try {
-            spawn.startTask(jobId.or(""), task.or(-1), 1, false);
+            int bonusPriority = priority.or(0);
+            // if there is any bonus priority, go ahead and let this task jump to the head of its queue (break ties)
+            spawn.startTask(jobId.or(""), task.or(-1), bonusPriority, bonusPriority > 0);
             return Response.ok().build();
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();

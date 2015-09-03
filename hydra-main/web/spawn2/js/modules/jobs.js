@@ -603,12 +603,13 @@ function(
                 this.remove([job]);
             }
         },
-        kickSelected:function(jobIds){
+        kickSelected:function(jobIds, priority){
             var self = this;
             var count = jobIds.length;
             var parameters = {};
             parameters["jobid"] = jobIds.join();
-            parameters["priority"] = 1;
+            // all known callers will manually set priority, but can never be too careful
+            parameters["priority"] = priority || 0;
             app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/start",
@@ -929,11 +930,11 @@ function(
         handleKickButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
             if(app.isQuiesced){
-                alertify.confirm("Cluster is quiesced, are you sure you want to kick "+ids.length+" job(s)?", function (e) {
-                    self.collection.kickSelected(ids);
+                alertify.confirm("Cluster is quiesced, do you want to kick "+ids.length+" job(s) with extra priority?", function (e) {
+                    self.collection.kickSelected(ids, 100);
                 });
             }else{
-                self.collection.kickSelected(ids);
+                self.collection.kickSelected(ids, 0);
             }
         },
         handleStopButtonClick:function(event){

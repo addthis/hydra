@@ -145,14 +145,16 @@ function(
                 alertify.error("Error stopped task: "+self.id+" <br/>"+e.responseText);
             });
         },
-        kick:function(notify){
+        kick:function(notify, priority){
+            priority = priority || 0;
             notify = notify || false;
             var self = this;
             $.ajax({
                 url: "/task/start",
                 data:{
-                    job:this.get("jobUuid"),
-                    task:this.get("node")
+                    job: this.get("jobUuid"),
+                    task: this.get("node"),
+                    priority: priority
                 },
                 type: "GET",
                 dataType: "text"
@@ -426,10 +428,19 @@ function(
         },
         handleKickButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
-            _.each(ids,function(id){
-                self.collection.get(id).kick(false);
-            });
-            alertify.message("Kicked "+ids.length+" tasks.");
+            if (app.isQuiesced) {
+                alertify.confirm("Cluster is quiesced, do you want to kick " + ids.length + " task(s) with extra priority?", function (e) {
+                    _.each(ids,function(id){
+                        self.collection.get(id).kick(false, 100);
+                    });
+                    alertify.message("Kicked "+ids.length+" tasks.");
+                });
+            } else {
+                _.each(ids,function(id){
+                    self.collection.get(id).kick(false, 0);
+                });
+                alertify.message("Kicked "+ids.length+" tasks.");
+            }
         },
         handleStopButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
@@ -593,7 +604,15 @@ function(
             }
         },
         handleKickButtonClick:function(){
-            this.model.kick(true);
+            var self = this;
+            if (app.isQuiesced) {
+                alertify.confirm("Cluster is quiesced, do you want to kick " + self.model.get("jobUuid") +
+                        "/" + self.configModel.get("node") + " with extra priority?", function (e) {
+                    self.model.kick(true, 100);
+                });
+            } else {
+                this.model.kick(true, 0);
+            }
         },
         handleStopButtonClick:function(){
             this.model.stop(true);

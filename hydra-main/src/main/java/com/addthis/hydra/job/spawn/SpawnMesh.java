@@ -129,22 +129,6 @@ public class SpawnMesh implements MessageListener {
             } else {
                 send(out, "ignored. send yes=1 to initiate shutdown");
             }
-        } else if (fileName.endsWith("/job/list")) {
-            // TODO
-            send(out, "TODO");
-        } else if (fileName.endsWith("/task/get.config")) {
-            if (options != null && options.containsKey("job") && options.containsKey("task")) {
-                Job job = spawn.getJob(options.get("job"));
-                JobTask task = spawn.getTask(job.getId(), getInt(options, "task", -1));
-                CommandTaskKick kick = spawn.getCommandTaskKick(job, task);
-                if (kick == null) {
-                    send(out, "{error:'no such job or task'}");
-                } else {
-                    send(out, kick);
-                }
-            } else {
-                send(out, "{error:'missing job and/or task parameters'}");
-            }
         }
     }
 
