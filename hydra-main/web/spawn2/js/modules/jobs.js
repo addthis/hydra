@@ -310,7 +310,7 @@ function(
             var self = this;
             var parameters = {};
             parameters["jobid"] = self.id;
-            parameters["priority"] = priority || 0;
+            parameters["priority"] = priority || 2;
             app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/start",
@@ -609,7 +609,7 @@ function(
             var parameters = {};
             parameters["jobid"] = jobIds.join();
             // all known callers will manually set priority, but can never be too careful
-            parameters["priority"] = priority || 0;
+            parameters["priority"] = priority || 2;
             app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/start",
@@ -934,7 +934,7 @@ function(
                     self.collection.kickSelected(ids, 100);
                 });
             }else{
-                self.collection.kickSelected(ids, 0);
+                self.collection.kickSelected(ids, 2);
             }
         },
         handleStopButtonClick:function(event){
@@ -1779,7 +1779,7 @@ function(
                     confirmIfInvalid(100);
                 });
             }else{
-                confirmIfInvalid(0);
+                confirmIfInvalid(2);
             }
         },
         handleRebalanceButtonClick:function(event){

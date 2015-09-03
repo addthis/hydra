@@ -146,7 +146,7 @@ function(
             });
         },
         kick:function(notify, priority){
-            priority = priority || 0;
+            priority = priority || 2;
             notify = notify || false;
             var self = this;
             $.ajax({
@@ -437,7 +437,7 @@ function(
                 });
             } else {
                 _.each(ids,function(id){
-                    self.collection.get(id).kick(false, 0);
+                    self.collection.get(id).kick(false, 2);
                 });
                 alertify.message("Kicked "+ids.length+" tasks.");
             }
@@ -611,7 +611,7 @@ function(
                     self.model.kick(true, 100);
                 });
             } else {
-                this.model.kick(true, 0);
+                this.model.kick(true, 2);
             }
         },
         handleStopButtonClick:function(){
