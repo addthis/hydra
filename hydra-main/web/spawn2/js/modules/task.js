@@ -607,7 +607,7 @@ function(
             var self = this;
             if (app.isQuiesced) {
                 alertify.confirm("Cluster is quiesced, do you want to kick " + self.model.get("jobUuid") +
-                        "/" + self.configModel.get("node") + " with extra priority?", function (e) {
+                        "/" + self.model.get("node") + " with extra priority?", function (e) {
                     self.model.kick(true, 100);
                 });
             } else {
