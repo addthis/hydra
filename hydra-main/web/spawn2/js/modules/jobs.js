@@ -306,11 +306,11 @@ function(
                 dataType: "text"
             });
         },
-        kick : function(){
+        kick : function(priority){
             var self = this;
             var parameters = {};
             parameters["jobid"] = self.id;
-            parameters["priority"] = 1;
+            parameters["priority"] = priority || 0;
             app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/start",
@@ -1758,28 +1758,28 @@ function(
                 }
             }
             var params = this.parameterCollection.toJSON();
-            var confirmIfInvalid = function(){
+            var confirmIfInvalid = function(priority){
                 var validatePromise = self.model.validate(config,params);
                 validatePromise.done(function(data){
                     if (data.result=="preExpansionError" || data.result=="postExpansionError") {
                         alertify.confirm("Job failed validation, are you sure you want to kick?", function (e) {
-                            self.model.kick();
+                            self.model.kick(priority);
                         });
                     } else {
-                        self.model.kick();
+                        self.model.kick(priority);
                     }
                 }).fail(function(data){
                     alertify.confirm("Something went wrong with checking validation, do you still want to kick?", function (e) {
-                        self.model.kick();
+                        self.model.kick(priority);
                     });
                 });
             };
             if(app.isQuiesced){
-                alertify.confirm("Cluster is quiesced, are you sure you want to kick job '"+this.model.get("description")+"'?", function (e) {
-                    confirmIfInvalid();
+                alertify.confirm("Cluster is quiesced, do you want to kick job '"+this.model.get("description")+"' with extra priority?", function (e) {
+                    confirmIfInvalid(100);
                 });
             }else{
-                confirmIfInvalid();
+                confirmIfInvalid(0);
             }
         },
         handleRebalanceButtonClick:function(event){
