@@ -65,6 +65,7 @@
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest</at.test.excluded.groups>
 
     <!-- addthis dependency versions -->
+    <hydra.contrib.version>5.5.7</hydra.contrib.version>
     <hydra.dep.bark.version>2.1.5</hydra.dep.bark.version>
     <hydra.dep.basis.version>3.0.4</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.7.5</hydra.dep.bundle.version>
@@ -329,6 +330,11 @@
 
       <!-- addthis oss -->
       <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-hdfs</artifactId>
+        <version>${hydra.contrib.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.addthis</groupId>
         <artifactId>basis</artifactId>
         <version>${hydra.dep.basis.version}</version>
@@ -383,11 +389,6 @@
       <dependency>
         <groupId>com.addthis.hydra</groupId>
         <artifactId>hydra-filters</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.addthis.hydra</groupId>
-        <artifactId>hydra-hdfs</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
