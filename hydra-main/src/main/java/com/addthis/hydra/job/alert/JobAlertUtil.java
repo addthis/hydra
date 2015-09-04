@@ -56,10 +56,13 @@ import static com.google.common.base.Objects.firstNonNull;
 
 public class JobAlertUtil {
     private static final Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
-    private static final String queryURLBase = "http://" + Parameter.value("spawn.queryhost") + ":2222/query/call";
+    private static final String queryURLBase = "http://" +
+                                               Parameter.value("alert.query.host", Parameter.value("spawn.queryhost"))
+                                               + ":2222/query/call";
     private static final String defaultOps = "gather=s";
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
+    private static final int alertQueryBackoff = Parameter.intValue("alert.query.backoff", 10_000);
     @VisibleForTesting
     static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
                                                                                 .appendMonthOfYear(2)
@@ -157,9 +160,10 @@ public class JobAlertUtil {
      * @return The number of hits along the specified path
      */
     public static long getQueryCount(String jobId, String checkPath) {
+        String queryURL = getQueryURL(jobId, checkPath, defaultOps, defaultOps);
 
-        HashSet<String> result = JSONFetcher.staticLoadSet(getQueryURL(jobId, checkPath, defaultOps, defaultOps),
-                alertQueryTimeout, alertQueryRetries, null);
+        HashSet<String> result = new JSONFetcher.SetLoader(queryURL)
+                .setContention(alertQueryTimeout, alertQueryRetries, alertQueryBackoff).load();
         if (result == null || result.isEmpty()) {
             log.warn("Found no data for job={} checkPath={}; returning zero", jobId, checkPath);
             return 0;

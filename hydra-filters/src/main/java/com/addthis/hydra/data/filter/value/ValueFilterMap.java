@@ -71,9 +71,6 @@ public class ValueFilterMap extends AbstractValueFilterContextual implements Sup
     /** The timeout value when mapURL is used. */
     @JsonProperty private int httpTimeout = 60000;
 
-    /** If true, then print out a http trace when mapURL is used. Default is false. */
-    @JsonProperty private boolean httpTrace;
-
     @VisibleForTesting
     ValueFilterMap() {}
 
@@ -101,15 +98,10 @@ public class ValueFilterMap extends AbstractValueFilterContextual implements Sup
         return this;
     }
 
-    public ValueFilterMap setHttpTrace(boolean trace) {
-        httpTrace = trace;
-        return this;
-    }
-
     @Override
     public void postDecode() {
         if (map == null && mapURL != null) {
-            setMap(new JSONFetcher(httpTimeout, httpTrace).loadMap(mapURL));
+            setMap(new JSONFetcher(httpTimeout).loadMap(mapURL));
         }
     }
 

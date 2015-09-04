@@ -50,65 +50,34 @@ import org.slf4j.LoggerFactory;
 
 public class JSONFetcher {
 
+    private static final int DEFAULT_TIMEOUT = 60_000;
+
     private static final Logger log = LoggerFactory.getLogger(JSONFetcher.class);
 
-    public static HashMap<String, String> staticLoadMap(String mapURL) {
-        return new JSONFetcher().loadMap(mapURL);
-    }
-
-    public static HashMap<String, String> staticLoadMap(String mapURL, HashMap<String, String> map) {
-        return new JSONFetcher().loadMap(mapURL, map);
-    }
-
     public static JSONArray staticLoadJSONArray(String mapURL, int urlTimeout, int urlRetries) {
-        return new JSONFetcher(urlTimeout, urlRetries, false).loadJSONArray(mapURL);
-    }
-
-    public static HashMap<String, String> staticLoadMap(String mapURL, int urlTimeout, int urlRetries, HashMap<String, String> map) {
-        return new JSONFetcher(urlTimeout, urlRetries, false).loadMap(mapURL, map);
-    }
-
-    public static HashSet<String> staticLoadSet(String mapURL) {
-        return new JSONFetcher().loadSet(mapURL);
-    }
-
-    public static HashSet<String> staticLoadSet(String mapURL, HashSet<String> set) {
-        return new JSONFetcher().loadSet(mapURL, set);
-    }
-
-    public static HashSet<String> staticLoadSet(String mapURL, int urlTimeout, int urlRetries, HashSet<String> set) {
-        return new JSONFetcher(urlTimeout, urlRetries, false).loadSet(mapURL, set);
-    }
-
-    public static HashSet<String> staticLoadCSVSet(String mapURL, int urlTimeout, int urlRetries, HashSet<String> set) {
-        return new JSONFetcher(urlTimeout, urlRetries, false).loadCSVSet(mapURL, set);
+        return new JSONFetcher(urlTimeout, urlRetries).loadJSONArray(mapURL);
     }
 
     private final int timeout;
-    private final int retries;
-    private final boolean trace;
-    private final int backoffMillis;
+
     @Nonnull
     private final Retryer<byte[]> retryer;
 
     public JSONFetcher() {
-        this(60000, false);
+        this(DEFAULT_TIMEOUT);
     }
 
-    public JSONFetcher(int timeout, boolean trace) {
-        this(timeout, 0, trace);
+    public JSONFetcher(int timeout) {
+        this(timeout, 0);
     }
 
-    public JSONFetcher(int timeout, int retries, boolean trace) {
-        this(timeout, retries, trace, 0);
+    public JSONFetcher(int timeout, int retries) {
+        this(timeout, retries, 0);
     }
 
-    public JSONFetcher(int timeout, int retries, boolean trace, int backoffMillis) {
+    public JSONFetcher(int timeout, int retries, int backoffMillis) {
         Preconditions.checkArgument(retries >= 0, "retries argument must be a non-negative integer");
         this.timeout = timeout;
-        this.retries = retries;
-        this.trace = trace;
-        this.backoffMillis = backoffMillis;
         RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
                 .<byte[]>newBuilder()
                 .retryIfExceptionOfType(IOException.class)
@@ -150,10 +119,6 @@ public class JSONFetcher {
         } catch (Exception e) {
             throw Throwables.propagate(e);
         }
-    }
-
-    public HashSet<String> loadSet(String mapURL) {
-        return loadSet(mapURL, new HashSet<>());
     }
 
     /**
@@ -248,4 +213,59 @@ public class JSONFetcher {
             throw Throwables.propagate(e);
         }
     }
+
+    public static class SetLoader {
+        private final String url;
+        private int timeout = DEFAULT_TIMEOUT;
+        private int retries;
+        private int backoff;
+        private boolean csv;
+        private HashSet<String> target;
+
+        public SetLoader(String url) {
+            this.url = url;
+        }
+
+        public SetLoader setContention(int timeout, int retries, int backoff) {
+            this.timeout = timeout;
+            this.retries = retries;
+            this.backoff = backoff;
+            return this;
+        }
+
+        public SetLoader setTimeout(int timeout) {
+            this.timeout = timeout;
+            return this;
+        }
+
+        public SetLoader setRetries(int retries) {
+            this.retries = retries;
+            return this;
+        }
+
+        public SetLoader setBackoff(int backoff) {
+            this.backoff = backoff;
+            return this;
+        }
+
+        public SetLoader setCsv(boolean csv) {
+            this.csv = csv;
+            return this;
+        }
+
+        public SetLoader setTarget(HashSet<String> target) {
+            this.target = target;
+            return this;
+        }
+
+        public HashSet<String> load() {
+            JSONFetcher fetcher = new JSONFetcher(timeout, retries, backoff);
+            if (csv) {
+                return fetcher.loadCSVSet(url, target);
+            } else {
+                return fetcher.loadSet(url, target);
+            }
+        }
+    }
+
 }

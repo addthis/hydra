@@ -185,18 +185,20 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     @Override public void postDecode() {
         if (valueURL != null) {
+            JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(valueURL)
+                    .setContention(urlTimeout, urlRetries, urlBackoff);
             if (urlReturnsCSV) {
-                value = new ConstantTypedField<>(JSONFetcher.staticLoadCSVSet(valueURL, urlTimeout, urlRetries, null));
-            } else {
-                value = new ConstantTypedField<>(JSONFetcher.staticLoadSet(valueURL, urlTimeout, urlRetries, null));
+                loader.setCsv(true);
             }
+            value = new ConstantTypedField<>(loader.load());
         }
         if (matchURL != null) {
+            JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(matchURL)
+                    .setContention(urlTimeout, urlRetries, urlBackoff).setTarget(match);
             if (urlReturnsCSV) {
-                match = JSONFetcher.staticLoadCSVSet(matchURL, urlTimeout, urlRetries, match);
-            } else {
-                match = JSONFetcher.staticLoadSet(matchURL, urlTimeout, urlRetries, match);
+                loader.setCsv(true);
             }
+            match = loader.load();
             if (match != null) {
                 ArrayList<Pattern> np = new ArrayList<>();
                 for (String s : match) {
@@ -206,11 +208,12 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             }
         }
         if (findURL != null) {
+            JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(findURL)
+                    .setContention(urlTimeout, urlRetries, urlBackoff).setTarget(find);
             if (urlReturnsCSV) {
-                find = JSONFetcher.staticLoadCSVSet(findURL, urlTimeout, urlRetries, find);
-            } else {
-                find = JSONFetcher.staticLoadSet(findURL, urlTimeout, urlRetries, find);
+                loader.setCsv(true);
             }
+            find = loader.load();
             if (find != null) {
                 ArrayList<Pattern> np = new ArrayList<>();
                 for (String s : find) {
@@ -220,13 +223,12 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             }
         }
         if (containsURL != null) {
-            HashSet<String> tmp;
+            JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(containsURL)
+                    .setContention(urlTimeout, urlRetries, urlBackoff);
             if (urlReturnsCSV) {
-                tmp = JSONFetcher.staticLoadCSVSet(containsURL, urlTimeout, urlRetries, null);
-            } else {
-                tmp = JSONFetcher.staticLoadSet(containsURL);
+                loader.setCsv(true);
             }
-            contains = new ConstantTypedField<>(tmp);
+            contains = new ConstantTypedField<>(loader.load());
         }
         if (contains instanceof Supplier) {
             Set<String> candidates = ((Supplier<Set<String>>) contains).get();
