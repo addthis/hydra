@@ -310,7 +310,7 @@ public class CloseableBundleCMSLimit implements CloseableBundleFilter {
 
         protected boolean removeEldestEntry(Map.Entry<String, CountMinSketch> eldest) {
             try {
-                if (size() >= cacheSize) {
+                if (size() > cacheSize) {
                     String key = eldest.getKey();
                     CountMinSketch value = eldest.getValue();
                     writeSketch(key, value);
