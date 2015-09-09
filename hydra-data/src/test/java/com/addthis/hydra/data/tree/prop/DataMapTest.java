@@ -20,12 +20,13 @@ import com.addthis.hydra.store.kv.PageEncodeType;
 
 import org.junit.Test;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-public class DataMapTest extends TestCase {
+public class DataMapTest {
 
     @Test
-    public void testSparseEncodeDecode() throws Exception {
+    public void sparseEncodeDecode() throws Exception {
         int size = 100;
         DataMap dataMap = new DataMap(size);
         long val = 1232432425l;
@@ -40,7 +41,7 @@ public class DataMapTest extends TestCase {
     }
 
     @Test
-    public void testSparseEncodingSize() throws Exception {
+    public void sparseEncodingSize() throws Exception {
         int size = 10000;
         DataMap dataMap = new DataMap(size);
         long initValue = 1232432425l;

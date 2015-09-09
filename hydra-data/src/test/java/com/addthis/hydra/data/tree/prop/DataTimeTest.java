@@ -16,11 +16,14 @@ package com.addthis.hydra.data.tree.prop;
 import com.addthis.codec.binary.CodecBin2;
 import com.addthis.hydra.store.kv.PageEncodeType;
 
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class DataTimeTest extends TestCase {
+import static org.junit.Assert.assertTrue;
+
+public class DataTimeTest {
 
 
+    @Test
     public void testSparseEncodeDecode() throws Exception {
         DataTime time = new DataTime();
         long first = System.currentTimeMillis();

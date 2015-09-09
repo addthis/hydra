@@ -13,13 +13,18 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
+import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
@@ -28,6 +33,8 @@ import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 public final class DataCopy extends TreeNodeData<DataCopy.Config> {
 
@@ -48,7 +55,8 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
      * (eg. if none of the values passed the filter). Little unsure of
      * the syntax/escaping/point of \; here.
      *
-     * <p>% operations are not supported</p>
+     * <p>% operations with no arguments return two levels of nodes. The first level
+     * are key nodes and the second level are value nodes.</p>
      *
      * @user-reference
      */
@@ -59,8 +67,14 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
          * names and stored under the label. This field
          * is required.
          */
-        @FieldConfig(codable = true, required = true)
-        private HashMap<String, AutoField> key;
+        @FieldConfig(codable = true)
+        private Map<String, AutoField> key;
+
+        /**
+         * Bundle fields that contain ValueMap objects to be stored in the data attachment.
+         */
+        @FieldConfig(codable = true)
+        private AutoField[] map;
 
         /**
          * A mapping from labels to value filters. Before a value is stored under a label
@@ -68,7 +82,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
          * The default is no filters.
          */
         @FieldConfig(codable = true)
-        private HashMap<String, ValueFilter> op;
+        private Map<String, ValueFilter> op;
 
         @Override
         public DataCopy newInstance() {
@@ -84,23 +98,37 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode tn, DataCopy.Config conf) {
         Bundle p = state.getBundle();
-        // copy values from pipeline
-        for (Entry<String, AutoField> s : conf.key.entrySet()) {
-            ValueObject v = s.getValue().getValue(p);
-            if (v != null) {
-                if (conf.op != null) {
-                    ValueFilter fo = conf.op.get(s.getKey());
-                    if (fo != null) {
-                        v = fo.filter(v, p);
-                        if (v == null) {
-                            continue;
-                        }
-                    }
-                }
-                dat.put(s.getKey(), v.toString());
+        // copy values from bundle
+        if (conf.key != null) {
+            for (Entry<String, AutoField> entry : conf.key.entrySet()) {
+                ValueObject value = entry.getValue().getValue(p);
+                insertKeyValuePair(conf, p, entry.getKey(), value);
             }
         }
+        if (conf.map != null) {
+           for (AutoField field : conf.map) {
+               ValueObject valueObject = field.getValue(p);
+               if (valueObject != null) {
+                   ValueMap valueMap = valueObject.asMap();
+                   for (ValueMapEntry entry : valueMap) {
+                       insertKeyValuePair(conf, p, entry.getKey(), entry.getValue());
+                   }
+               }
+           }
+        }
         return true;
+    }
+
+    private void insertKeyValuePair(Config conf, Bundle p, String key, ValueObject value) {
+        if (conf.op != null) {
+            ValueFilter fo = conf.op.get(key);
+            if ((fo != null) && (value != null)) {
+                value = fo.filter(value, p);
+            }
+        }
+        if (value != null) {
+            dat.put(key, value.toString());
+        }
     }
 
     @Override
@@ -127,6 +155,35 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
             return ValueFactory.create(dv);
         } else {
             return null;
+        }
+    }
+
+    /**
+     * Convenience method to convert an node into an array of size one.
+     */
+    private static VirtualTreeNode[] generateSingletonArray(VirtualTreeNode value) {
+        VirtualTreeNode[] result = new VirtualTreeNode[1];
+        result[0] = value;
+        return result;
+    }
+
+    @Override
+    public List<DataTreeNode> getNodes(DataTreeNode node, String key) {
+        if (dat == null) {
+            return ImmutableList.of();
+        }
+        if (Strings.isNullOrEmpty(key)) {
+            List<DataTreeNode> result = new ArrayList<>();
+            for (Map.Entry<String, String> entry : dat.entrySet()) {
+                String dataKey = entry.getKey();
+                String dataValue = entry.getValue();
+                VirtualTreeNode child = new VirtualTreeNode(dataValue, 1);
+                VirtualTreeNode parent = new VirtualTreeNode(dataKey, 1, generateSingletonArray(child));
+                result.add(parent);
+            }
+            return result;
+        } else {
+            return ImmutableList.of();
         }
     }
 }
