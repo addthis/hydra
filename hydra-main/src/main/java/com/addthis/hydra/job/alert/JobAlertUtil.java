@@ -217,6 +217,8 @@ public class JobAlertUtil {
         String ops = firstNonNull(alert.canaryOps, "");
         String rops = firstNonNull(alert.canaryRops, "");
         String filter = alert.canaryFilter;
+        // prevent query results from overwhelming spawn
+        ops += ";limit=1000;merge=kkkkkkkkkkkk";
         String url = getQueryURL(jobId, query, ops, rops);
         log.trace("Emitting query with url {}", url);
         JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
