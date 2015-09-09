@@ -18,6 +18,7 @@ import java.util.List;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.codec.config.Configs;
@@ -58,6 +59,27 @@ public class DataCopyTest {
         assertNull(dataCopy.getValue("foo"));
         dataCopy.updateChildData(generateUpdater(bundle), null, config);
         assertEquals(ValueFactory.create("bar"), dataCopy.getValue("foo"));
+    }
+
+    @Test
+    public void copySet() throws Exception {
+        AutoField foo = AutoField.newAutoField("foo");
+        DataCopy.Config config = Configs.decodeObject(DataCopy.Config.class, "set: {foo: bar}");
+        Bundle bundle = new ListBundle();
+        DataCopy dataCopy = config.newInstance();
+        ValueArray valueArray = ValueFactory.createArray(3);
+        valueArray.add(ValueFactory.create("foo"));
+        valueArray.add(ValueFactory.create("foo"));
+        valueArray.add(ValueFactory.create("bar"));
+        valueArray.add(ValueFactory.create("baz"));
+        foo.setValue(bundle, valueArray);
+        assertNull(dataCopy.getValue("foo"));
+        dataCopy.updateChildData(generateUpdater(bundle), null, config);
+        List<DataTreeNode> nodes = dataCopy.getNodes(null, "");
+        assertEquals(3, nodes.size());
+        assertNotNull(nodes.get(0).getNode("bar"));
+        assertNotNull(nodes.get(1).getNode("bar"));
+        assertNotNull(nodes.get(2).getNode("bar"));
     }
 
     @Test

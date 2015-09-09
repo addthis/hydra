@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
@@ -77,6 +78,12 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
         private AutoField[] map;
 
         /**
+         * Mapping from field name to a constant label. Can be used to store sets of keys.
+         */
+        @FieldConfig(codable = true)
+        private Map<String, String> set;
+
+        /**
          * A mapping from labels to value filters. Before a value is stored under a label
          * if it has a value filter then the filter is applied.
          * The default is no filters.
@@ -116,6 +123,17 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
                }
            }
         }
+        if (conf.set != null) {
+            for (Entry<String, String> entry : conf.set.entrySet()) {
+                ValueObject keyObject = AutoField.newAutoField(entry.getKey()).getValue(p);
+                if (keyObject != null) {
+                    ValueArray keyArray = keyObject.asArray();
+                    for (ValueObject object : keyArray) {
+                        insertKeyValuePair(object.toString(), entry.getValue());
+                    }
+                }
+            }
+        }
         return true;
     }
 
@@ -127,9 +145,16 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
             }
         }
         if (value != null) {
-            dat.put(key, value.toString());
+            insertKeyValuePair(key, value.toString());
         }
     }
+
+    private void insertKeyValuePair(String key, String value) {
+        if (value != null) {
+            dat.put(key, value);
+        }
+    }
+
 
     @Override
     public Collection<String> getValueTypes() {
