@@ -40,7 +40,11 @@ class UpdateEventRunnable implements Runnable {
         int jobscheduled = 0;
         int joberrored = 0;
         int tasktotal = 0;
+        int taskprocessing = 0;
+        int taskreplicating = 0;
+        int taskbackingup = 0;
         int taskbusy = 0;
+        int taskrebalancing = 0;
         int taskerrored = 0;
         int taskqueued = 0;
         int taskQueuedNoSlot = 0;
@@ -54,14 +58,35 @@ class UpdateEventRunnable implements Runnable {
                     tasktotal++;
                     switch (jn.getState()) {
                         case ALLOCATED:
+                            taskbusy++;
+                            break;
                         case BUSY:
+                            taskprocessing++;
+                            taskbusy++;
+                            break;
                         case BACKUP:
+                            taskbackingup++;
+                            taskbusy++;
+                            break;
                         case REPLICATE:
+                            taskreplicating++;
+                            taskbusy++;
+                            break;
                         case REBALANCE:
+                            taskrebalancing++;
+                            taskbusy++;
+                            break;
                         case REVERT:
+                            taskbusy++;
+                            break;
                         case SWAPPING:
+                            taskbusy++;
+                            break;
                         case MIGRATING:
+                            taskbusy++;
+                            break;
                         case FULL_REPLICATE:
+                            taskreplicating++;
                             taskbusy++;
                             break;
                         case ERROR:
@@ -138,7 +163,11 @@ class UpdateEventRunnable implements Runnable {
         SpawnMetrics.queuedTaskNoSlotCount.set(taskQueuedNoSlot);
         SpawnMetrics.failTaskCount.set(taskerrored);
         SpawnMetrics.totalJobCount.set(jobtotal);
+        SpawnMetrics.processingTaskCount.set(taskprocessing);
+        SpawnMetrics.replicatingTaskCount.set(taskreplicating);
+        SpawnMetrics.backingUpTaskCount.set(taskbackingup);
         SpawnMetrics.runningJobCount.set(jobrunning);
+        SpawnMetrics.rebalancingTaskCount.set(taskrebalancing);
         SpawnMetrics.queuedJobCount.set(jobscheduled);
         SpawnMetrics.failJobCount.set(joberrored);
         SpawnMetrics.hungJobCount.set(jobshung);
