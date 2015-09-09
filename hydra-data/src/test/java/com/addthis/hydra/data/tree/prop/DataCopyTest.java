@@ -62,6 +62,20 @@ public class DataCopyTest {
     }
 
     @Test
+    public void copyFields() throws Exception {
+        AutoField foo = AutoField.newAutoField("foo");
+        AutoField bar = AutoField.newAutoField("bar");
+        DataCopy.Config config = Configs.decodeObject(DataCopy.Config.class, "fields: {foo: bar}");
+        Bundle bundle = new ListBundle();
+        DataCopy dataCopy = config.newInstance();
+        foo.setValue(bundle, ValueFactory.create("hello"));
+        bar.setValue(bundle, ValueFactory.create("world"));
+        assertNull(dataCopy.getValue("foo"));
+        dataCopy.updateChildData(generateUpdater(bundle), null, config);
+        assertEquals(ValueFactory.create("world"), dataCopy.getValue("hello"));
+    }
+
+    @Test
     public void copySet() throws Exception {
         AutoField foo = AutoField.newAutoField("foo");
         DataCopy.Config config = Configs.decodeObject(DataCopy.Config.class, "set: {foo: bar}");

@@ -84,6 +84,12 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
         private Map<String, String> set;
 
         /**
+         * Mapping from field name to a a field name.
+         */
+        @FieldConfig(codable = true)
+        private Map<String, AutoField> fields;
+
+        /**
          * A mapping from labels to value filters. Before a value is stored under a label
          * if it has a value filter then the filter is applied.
          * The default is no filters.
@@ -110,6 +116,15 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
             for (Entry<String, AutoField> entry : conf.key.entrySet()) {
                 ValueObject value = entry.getValue().getValue(p);
                 insertKeyValuePair(conf, p, entry.getKey(), value);
+            }
+        }
+        if (conf.fields != null) {
+            for (Entry<String, AutoField> entry : conf.fields.entrySet()) {
+                ValueObject value = entry.getValue().getValue(p);
+                String key = AutoField.newAutoField(entry.getKey()).getString(p).orElse(null);
+                if (key != null) {
+                    insertKeyValuePair(conf, p, key, value);
+                }
             }
         }
         if (conf.map != null) {
