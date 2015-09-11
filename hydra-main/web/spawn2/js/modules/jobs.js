@@ -2008,7 +2008,7 @@ function(
         template: _.template(jobSettingTemplate),
         events: _.defaults({
             "keyup input":"handleInputKeyUp",
-            "change input":"handleInputKeyUp",
+            "change input[type!='checkbox']":"handleInputKeyUp",
             "click input[type='checkbox']":"handleCheckboxClick"
         }, DetailView.prototype.events),
         initialize:function(options){

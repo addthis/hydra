@@ -23,8 +23,8 @@ import com.google.common.collect.Sets;
 
 public class KVUtils {
 
-    /** String values that are mapped to boolean {@code true} */
-    private static final Set<String> TRUE_STR_VALUES = Sets.newHashSet("true", "1");
+    /** String values that are mapped to boolean {@code true}. */
+    private static final Set<String> TRUE_STR_VALUES = Sets.newHashSet("true", "1", "on", "yes", "why not?");
 
     private static String findFirstNonNullValue(KVPairs kv, String[] keys) {
         for (String key : keys) {
@@ -80,7 +80,7 @@ public class KVUtils {
      */
     public static boolean getBooleanValue(KVPairs kv, boolean defaultValue, String... keys) {
         String v = findFirstNonEmptyValue(kv, keys);
-        return v == null ? defaultValue : TRUE_STR_VALUES.contains(v);
+        return v == null ? defaultValue : TRUE_STR_VALUES.contains(v.toLowerCase());
     }
     
     /** 
