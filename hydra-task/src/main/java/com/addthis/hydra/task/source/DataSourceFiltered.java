@@ -15,21 +15,20 @@ package com.addthis.hydra.task.source;
 
 import javax.annotation.Nonnull;
 
-import java.util.Arrays;
-import java.util.NoSuchElementException;
-
 import java.nio.file.Path;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
 import com.google.common.collect.ImmutableList;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * This data source <span class="hydra-summary">applies a filter to an input source</span>.
- * <p/>
- * <p>Example:</p>
+ * <p>
+ * Example:
+ * <p>
  * <pre>
  *  source.filter {
  *      filter.concat {in:["YMD", "HMS"], out:"TIME", join:" "}
@@ -43,17 +42,11 @@ import com.google.common.collect.ImmutableList;
  */
 public class DataSourceFiltered extends TaskDataSource {
 
-    /**
-     * Underlying data source from which data is fetched. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private TaskDataSource stream;
+    /** Underlying data source from which data is fetched. */
+    @JsonProperty(required = true) private TaskDataSource stream;
 
-    /**
-     * Apply this filter to each bundle that is retrieved to the data source. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private BundleFilter filter;
+    /** Apply this filter to each bundle that is retrieved to the data source. */
+    @JsonProperty(required = true) private BundleFilter filter;
 
     private Bundle peek;
 
@@ -82,15 +75,13 @@ public class DataSourceFiltered extends TaskDataSource {
 
     @Override
     public Bundle next() {
-        Bundle ret = null;
-        if ((ret = peek()) == null) {
-            throw new NoSuchElementException();
-        }
-        if (stream.next() == null) {
-            throw new RuntimeException("next() return null after non-null peek");
+        Bundle filtered = peek();
+        if (filtered == null) {
+            return null;
         }
         peek = null;
-        return ret;
+        // peek might not be exactly equal to what we return here due to mutating filters on peek and other factors
+        return stream.next();
     }
 
     @Nonnull @Override
