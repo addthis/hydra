@@ -57,7 +57,7 @@ public class JavaSimpleCompiler {
         List<String> optionList = new ArrayList<>();
         String classpath = System.getProperty("java.class.path");
         log.info("Classpath is " + classpath);
-        optionList.addAll(Arrays.asList("-cp", classpath,"-Dfile.encoding=UTF-8"));
+        optionList.addAll(Arrays.asList("-cp", classpath, "-encoding", "UTF-8"));
         Iterable<? extends JavaFileObject> compilationUnits =
                 fileManager.getJavaFileObjects(sourceFile);
         boolean success = compiler.getTask(null, fileManager, diagnostics,
