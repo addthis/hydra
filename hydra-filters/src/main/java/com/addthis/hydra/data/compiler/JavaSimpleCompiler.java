@@ -57,11 +57,10 @@ public class JavaSimpleCompiler {
         List<String> optionList = new ArrayList<>();
         String classpath = System.getProperty("java.class.path");
         log.info("Classpath is " + classpath);
-        optionList.addAll(Arrays.asList("-cp", classpath));
-        JavaCompiler javaCompiler = ToolProvider.getSystemJavaCompiler();
+        optionList.addAll(Arrays.asList("-cp", classpath,"-Dfile.encoding=UTF-8"));
         Iterable<? extends JavaFileObject> compilationUnits =
                 fileManager.getJavaFileObjects(sourceFile);
-        boolean success = javaCompiler.getTask(null, fileManager, diagnostics,
+        boolean success = compiler.getTask(null, fileManager, diagnostics,
                 optionList, null, compilationUnits).call();
 
         return success;
