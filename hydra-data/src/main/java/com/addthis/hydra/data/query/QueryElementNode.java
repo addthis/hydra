@@ -209,7 +209,7 @@ public class QueryElementNode implements Codable {
     @VisibleForTesting
     String extractDefaultValue(String tok) {
         // this parsing method is not compatible with valid regex queries, and a fix is somewhat non-trivial
-        if (regex) {
+        if (regex()) {
             return tok;
         }
         int startDefault = -1;
