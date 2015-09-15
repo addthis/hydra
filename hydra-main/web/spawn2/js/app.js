@@ -96,7 +96,7 @@ function(
                                 app.user.set("username", username);
                                 app.user.set("token", token);
                             } else {
-                                alertify.error("Invalid credentials. Please login.", 0);
+                                alertify.error("Invalid credentials. Please login. (Click to dismiss)", 0);
                             }
                         },
                         error: function(error) {
