@@ -58,8 +58,8 @@ class AuthenticationManagerNested extends AuthenticationManager {
         this.inner = inner;
         this.outer = outer;
         this.closer = Closer.create();
-        closer.register(inner);
         closer.register(outer);
+        closer.register(inner);
         log.info("Registering nested authentication");
     }
 
