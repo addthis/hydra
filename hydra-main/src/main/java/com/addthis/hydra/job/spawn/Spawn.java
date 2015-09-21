@@ -34,6 +34,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -194,7 +195,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
     @Nonnull final PermissionsManager permissionsManager;
     @Nonnull final JobDefaults jobDefaults;
-    @Nonnull final SpawnQueuesByPriority taskQueuesByPriority;
+    @Nonnull final SpawnQueueManager taskQueuesByPriority;
 
     private volatile int lastQueueSize = 0;
 
@@ -410,16 +411,16 @@ public class Spawn implements Codable, AutoCloseable {
         this.spawnMQ = spawnMQ;
     }
 
-    private SpawnQueuesByPriority loadSpawnQueue() throws Exception {
+    private SpawnQueueManager loadSpawnQueue() throws Exception {
         String queueFromZk = spawnDataStore.get(SPAWN_QUEUE_PATH);
         if (queueFromZk == null) {
-            return new SpawnQueuesByPriority();
+            return new SpawnQueueManager(new TreeMap<>());
         }
         try {
-            return new ObjectMapper().readValue(queueFromZk, SpawnQueuesByPriority.class);
+            return new ObjectMapper().readValue(queueFromZk, SpawnQueueManager.class);
         } catch (Exception ex) {
             log.warn("[task.queue] exception during spawn queue deserialization: ", ex);
-            return new SpawnQueuesByPriority();
+            return new SpawnQueueManager(new TreeMap<>());
         }
     }
 
@@ -1827,10 +1828,7 @@ public class Spawn implements Codable, AutoCloseable {
             int numQueuedWaitingOnError = 0;
             taskQueuesByPriority.lock();
             try {
-                LinkedList<JobKey>[] queues =
-                        taskQueuesByPriority.values().toArray(new LinkedList[taskQueuesByPriority.size()]);
-
-                for (LinkedList<JobKey> queue : queues) {
+                for (LinkedList<? extends JobKey> queue : taskQueuesByPriority.getQueues()) {
                     numQueued += queue.size();
                     for (JobKey key : queue) {
                         Job job = getJob(key);
@@ -2400,7 +2398,7 @@ public class Spawn implements Codable, AutoCloseable {
                 return true;
             }
         }
-        if (SpawnQueuesByPriority.isMigrationEnabled()
+        if (SpawnQueueManager.isMigrationEnabled()
             && !job.getQueryConfig().getCanQuery()
             && !job.getDontAutoBalanceMe()
             && attemptMigrateTask(job, task, timeOnQueue)) {
@@ -2418,7 +2416,6 @@ public class Spawn implements Codable, AutoCloseable {
      * priority, so we try priority 2 tasks before priority 1, etc.
      */
     public void kickJobsOnQueue() {
-        LinkedList[] queues = null;
         boolean success = false;
         while (!success && !shuttingDown.get()) {
             // need the job lock first
@@ -2428,8 +2425,7 @@ public class Spawn implements Codable, AutoCloseable {
                     success = true;
                     taskQueuesByPriority.setStoppedJob(false);
                     taskQueuesByPriority.updateAllHostAvailSlots(hostManager.listHostStatus(null));
-                    queues = taskQueuesByPriority.values().toArray(new LinkedList[taskQueuesByPriority.size()]);
-                    for (LinkedList<SpawnQueueItem> queue : queues) {
+                    for (LinkedList<SpawnQueueItem> queue : taskQueuesByPriority.getQueues()) {
                         iterateThroughTaskQueue(queue);
                     }
                     new UpdateEventRunnable(this).run();

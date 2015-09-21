@@ -15,6 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import javax.annotation.Nullable;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,11 +38,14 @@ import com.addthis.hydra.job.mq.JobKey;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueueItem>> {
-    private static final Logger log = LoggerFactory.getLogger(SpawnQueuesByPriority.class);
+public class SpawnQueueManager {
+    private static final Logger log = LoggerFactory.getLogger(SpawnQueueManager.class);
 
     // Periodically refresh hostAvailSlots to the actual availableSlots count
     private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 20_000);
@@ -97,8 +101,12 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         }
     };
 
-    public SpawnQueuesByPriority() {
-        super((int1, int2) -> -int1.compareTo(int2));
+    private final TreeMap<Integer, LinkedList<SpawnQueueItem>> mappedQueues;
+
+    @JsonCreator
+    public SpawnQueueManager(TreeMap<Integer, LinkedList<SpawnQueueItem>> mappedQueues) {
+        this.mappedQueues = new TreeMap<>((int1, int2) -> -int1.compareTo(int2));
+        this.mappedQueues.putAll(mappedQueues);
         this.migrateHosts = CacheBuilder.newBuilder()
                                         .expireAfterWrite(TASK_MIGRATION_INTERVAL_PER_HOST, TimeUnit.MILLISECONDS)
                                         .build();
@@ -116,11 +124,15 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         return this.queueLock.tryLock();
     }
 
+    public Collection<LinkedList<SpawnQueueItem>> getQueues() {
+        return this.mappedQueues.values();
+    }
+
     public void addTaskToQueue(int jobPriority, JobKey task, int kickPriority, boolean toHead) {
         this.queueLock.lock();
         try {
             int totalPriority = jobPriority + kickPriority;
-            LinkedList<SpawnQueueItem> queue = this.computeIfAbsent(totalPriority, i -> new LinkedList<>());
+            LinkedList<SpawnQueueItem> queue = this.mappedQueues.computeIfAbsent(totalPriority, i -> new LinkedList<>());
             if (toHead) {
                 queue.addFirst(new SpawnQueueItem(task, kickPriority));
             } else {
@@ -134,7 +146,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     public boolean remove(int priority, JobKey task) {
         this.queueLock.lock();
         try {
-            for (LinkedList<SpawnQueueItem> queue : this.headMap(priority, true).values()) {
+            for (LinkedList<SpawnQueueItem> queue : this.mappedQueues.headMap(priority, true).values()) {
                 ListIterator<SpawnQueueItem> iter = queue.listIterator();
                 while (iter.hasNext()) {
                     JobKey nextKey = iter.next();
@@ -153,7 +165,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     public int getTaskQueuedCount(int priority) {
         this.queueLock.lock();
         try {
-            LinkedList<SpawnQueueItem> queueForPriority = this.get(priority);
+            LinkedList<SpawnQueueItem> queueForPriority = this.mappedQueues.get(priority);
             if (queueForPriority != null) {
                 return queueForPriority.size();
             }
@@ -221,7 +233,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
             }
         }
         this.lastAvailSlotsUpdate = JitterClock.globalTime();
-        log.trace("[SpawnQueuesByPriority] Host Avail Slots: {}", this.hostAvailSlots);
+        log.trace("[SpawnQueueManager] Host Avail Slots: {}", this.hostAvailSlots);
     }
 
     public void updateHostAvailSlots(HostState host) {
@@ -319,4 +331,8 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         this.stoppedJob.set(stopped);
     }
 
+    // Used for serialization
+    @JsonValue private TreeMap<Integer, LinkedList<SpawnQueueItem>> getMappedQueues() {
+        return this.mappedQueues;
+    }
 }
