@@ -2400,7 +2400,7 @@ public class Spawn implements Codable, AutoCloseable {
                 return true;
             }
         }
-        if (taskQueuesByPriority.isMigrationEnabled()
+        if (SpawnQueuesByPriority.isMigrationEnabled()
             && !job.getQueryConfig().getCanQuery()
             && !job.getDontAutoBalanceMe()
             && attemptMigrateTask(job, task, timeOnQueue)) {
@@ -3119,10 +3119,6 @@ public class Spawn implements Codable, AutoCloseable {
             }
             if (forMigration && !taskQueuesByPriority.shouldMigrateTaskToHost(task, host.getHostUuid())) {
                 // Not a valid migration target
-                continue;
-            }
-            if (isNewTask(task) && !taskQueuesByPriority.shouldKickNewTaskOnHost(timeOnQueue, host)) {
-                // Not a valid target for new tasks
                 continue;
             }
             if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
