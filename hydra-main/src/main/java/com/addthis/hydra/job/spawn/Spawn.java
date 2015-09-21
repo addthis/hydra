@@ -188,14 +188,13 @@ public class Spawn implements Codable, AutoCloseable {
 
     @Nonnull public final HostManager hostManager;
 
-    SpawnQueuesByPriority taskQueuesByPriority;
-
     @Nonnull final Lock jobLock;
     @Nonnull final SpawnState spawnState;
     @Nonnull final ConcurrentMap<String, ClientEventListener> listeners;
     @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
     @Nonnull final PermissionsManager permissionsManager;
     @Nonnull final JobDefaults jobDefaults;
+    @Nonnull final SpawnQueuesByPriority taskQueuesByPriority;
 
     private volatile int lastQueueSize = 0;
 
@@ -253,9 +252,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
         this.listeners = new ConcurrentHashMap<>();
 
-        this.taskQueuesByPriority = new SpawnQueuesByPriority();
         this.webSocketManager = new WebSocketManager();
-        this.spawnJobFixer = new SpawnJobFixer(this);
 
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -280,6 +277,8 @@ public class Spawn implements Codable, AutoCloseable {
         }
         this.hostManager = new HostManager(zkClient);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
+        this.taskQueuesByPriority = loadSpawnQueue();
+        this.spawnJobFixer = new SpawnJobFixer(this);
         this.systemManager = new SystemManagerImpl(this,
                                                    debug,
                                                    queryHttpHost + ":" + queryPort,
@@ -293,7 +292,6 @@ public class Spawn implements Codable, AutoCloseable {
         jobMacroManager = new JobMacroManager(this);
         jobCommandManager = new JobCommandManager(this);
         jobOnFinishStateHandler = new JobOnFinishStateHandlerImpl(this);
-        loadSpawnQueue();
         // fix up null pointers
         for (Job job : spawnState.jobs.values()) {
             if (job.getSubmitTime() == null) {
@@ -412,15 +410,16 @@ public class Spawn implements Codable, AutoCloseable {
         this.spawnMQ = spawnMQ;
     }
 
-    @VisibleForTesting public void loadSpawnQueue() throws Exception {
+    private SpawnQueuesByPriority loadSpawnQueue() throws Exception {
         String queueFromZk = spawnDataStore.get(SPAWN_QUEUE_PATH);
         if (queueFromZk == null) {
-            return;
+            return new SpawnQueuesByPriority();
         }
         try {
-            taskQueuesByPriority = new ObjectMapper().readValue(queueFromZk, SpawnQueuesByPriority.class);
+            return new ObjectMapper().readValue(queueFromZk, SpawnQueuesByPriority.class);
         } catch (Exception ex) {
             log.warn("[task.queue] exception during spawn queue deserialization: ", ex);
+            return new SpawnQueuesByPriority();
         }
     }
 

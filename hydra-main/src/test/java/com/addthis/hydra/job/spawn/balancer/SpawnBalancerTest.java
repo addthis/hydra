@@ -381,7 +381,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         // FIXME spawn2 can't be instantiated due to 5050 already being used by spawn
         try (Spawn spawn2 = Configs.newDefault(Spawn.class)) {
             spawn2.getSystemManager().quiesceCluster(true, "unknown");
-            spawn2.loadSpawnQueue();
             assertEquals("should have one queued task", 1, spawn.getTaskQueuedCount());
         }
     }
