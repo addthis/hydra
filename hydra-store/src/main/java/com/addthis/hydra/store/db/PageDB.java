@@ -70,7 +70,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
         // Optional parameters - initialized to default values;
         protected String dbname = defaultDbName;
-        protected PageFactory<DBKey, V> pageFactory;
+        protected PageFactory<DBKey, V> pageFactory = ConcurrentPage.ConcurrentPageFactory.singleton;
 
         public Builder(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages) {
             this.dir = dir;
@@ -124,7 +124,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
                 this.eps =  new NonConcurrentPageCache.Builder<>(keyCoder, store, maxPageSize)
                         .maxPages(maxPages).pageFactory(factory).build();
                 break;
-            case CONUCRRENT:
+            case CONCURRENT:
             default:
                 this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize)
                         .maxPages(maxPages).pageFactory(factory).build();

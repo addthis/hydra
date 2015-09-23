@@ -50,7 +50,7 @@ public class ConcurrentPage<K, V extends BytesCodable> extends AbstractPage<K, V
 
         @Override
         public TYPE getType() {
-            return TYPE.CONUCRRENT;
+            return TYPE.CONCURRENT;
         }
 
         private ConcurrentPageFactory() {

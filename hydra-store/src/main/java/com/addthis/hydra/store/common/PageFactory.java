@@ -22,7 +22,7 @@ import com.addthis.hydra.store.kv.PagedKeyValueStore;
 
 public abstract class PageFactory<K, V extends BytesCodable> {
 
-    public enum TYPE {CONUCRRENT, NON_CONCURRENT}
+    public enum TYPE {CONCURRENT, NON_CONCURRENT}
 
     protected abstract Page<K, V> newPage(AbstractPageCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType);
 
