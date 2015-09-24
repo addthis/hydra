@@ -25,7 +25,7 @@ public class EmailUtil {
 
     private static final Logger log = LoggerFactory.getLogger(EmailUtil.class);
 
-    public static void email(String to, String subject, String body) {
+    public static boolean email(String to, String subject, String body) {
         try {
             String[] cmd = {"mailx", "-s " + subject, to};
             ProcessExecutor executor = new ProcessExecutor.Builder(cmd).setStdin(body).build();
@@ -40,8 +40,10 @@ public class EmailUtil {
                 log.warn("Stderr was non-empty in email with subject: {} to : {} due to subshell error : {} {}",
                          subject, to, exitValue, standardError);
             }
+            return success && (exitValue == 0);
         } catch (Exception e) {
             log.warn("Unable to send email with subject: {} to : {}", subject, to, e);
+            return false;
         }
     }
 }

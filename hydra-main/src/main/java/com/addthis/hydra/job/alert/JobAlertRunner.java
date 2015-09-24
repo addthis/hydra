@@ -272,7 +272,9 @@ public class JobAlertRunner {
             sb.append(entry.getValue());
             sb.append("\n------------------------------\n");
         }
-        EmailUtil.email(jobAlert.email, subject, sb.toString());
+        if (!EmailUtil.email(jobAlert.email, subject, sb.toString())) {
+            log.error("Unable to send email for alert {}", jobAlert.alertId);
+        }
     }
 
     private void loadAlertMap() {
