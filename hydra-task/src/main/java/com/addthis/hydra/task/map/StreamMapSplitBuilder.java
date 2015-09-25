@@ -21,6 +21,7 @@ import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -40,6 +41,7 @@ public class StreamMapSplitBuilder extends StreamBuilder {
      * (map field will also be excluded)
      * The bundle will be emitted even if there is no map field in the bundle. */
     @JsonProperty private boolean emitOriginal = false;
+    @JsonProperty private BundleFilter emitFilter;
     
     @Override
     public void init() {}
@@ -54,10 +56,12 @@ public class StreamMapSplitBuilder extends StreamBuilder {
                 Bundle newBundle = Bundles.deepCopyBundle(bundle);
                 keyField.setValue(newBundle, ValueFactory.create(entry.getKey()));
                 valueField.setValue(newBundle, entry.getValue());
-                emitter.emit(newBundle);
+                if (emitFilter == null || emitFilter.filter(newBundle)) {
+                    emitter.emit(newBundle);
+                }
             }
         }
-        if (emitOriginal) {
+        if (emitOriginal && (emitFilter == null || emitFilter.filter(bundle))) {
             emitter.emit(bundle);
         }
     }

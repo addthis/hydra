@@ -123,4 +123,92 @@ public class StreamMapSplitBuilderTest {
         builder.process(bundle, emitter);
         verify(emitter, never()).emit(any());;
     }
+
+    @Test
+    public void emitFilter() throws IOException {
+        map.put("hello", ValueFactory.create("is it me you're looking for?"));
+        map.put("you say", ValueFactory.create("good-bye"));
+        map.put("I say", ValueFactory.create("hello"));
+
+        bundle.setValue(bundle.getFormat().getField("foo"), map);
+        bundle.setValue(bundle.getFormat().getField("bar"), ValueFactory.create("lyrics"));
+
+        builder = Configs.decodeObject(StreamMapSplitBuilder.class, "field: foo, keyField: key, valueField: value, emitFilter: {from: value, to: baz}");
+        builder.process(bundle, emitter);
+
+        ArgumentCaptor<Bundle> bundleCapture = ArgumentCaptor.forClass(Bundle.class);
+        verify(emitter, times(3)).emit(bundleCapture.capture());
+        List<Bundle> newBundles = bundleCapture.getAllValues();
+
+        for (Bundle newBundle: newBundles) {
+            assertEquals("lyrics", newBundle.getValue(newBundle.getFormat().getField("bar")).asString().asNative());
+            String baz = newBundle.getValue(newBundle.getFormat().getField("baz")).asString().asNative();
+            String key = newBundle.getValue(newBundle.getFormat().getField("key")).asString().asNative();
+            String value = newBundle.getValue(newBundle.getFormat().getField("value")).asString().asNative();
+            assertEquals("Filter to copy field didn't work", value, baz);
+            assertTrue(key.equals("hello") || key.equals("you say") || key.equals("I say"));
+            switch (key) {
+                case "hello":
+                    assertEquals("is it me you're looking for?", value);
+                    break;
+                case "you say":
+                    assertEquals("good-bye", value);
+                    break;
+                case "I say":
+                    assertEquals("hello", value);
+                    break;
+                default:
+                    fail("An unexpected bundle was emitted");
+                    break;
+            }
+        }
+    }
+
+    @Test
+    public void emitFilterEmitOriginal() throws IOException {
+
+        map.put("hello", ValueFactory.create("is it me you're looking for?"));
+        map.put("you say", ValueFactory.create("good-bye"));
+        map.put("I say", ValueFactory.create("hello"));
+
+        bundle.setValue(bundle.getFormat().getField("foo"), map);
+        bundle.setValue(bundle.getFormat().getField("bar"), ValueFactory.create("lyrics"));
+
+        builder = Configs.decodeObject(StreamMapSplitBuilder.class, "field: foo, keyField: key, valueField: value, emitOriginal: true, emitFilter: {from.const: 42, to: baz}");
+        builder.process(bundle, emitter);
+
+        ArgumentCaptor<Bundle> bundleCapture = ArgumentCaptor.forClass(Bundle.class);
+        verify(emitter, times(4)).emit(bundleCapture.capture());
+        List<Bundle> newBundles = bundleCapture.getAllValues();
+
+        int nullPreKey = 0;
+        for (Bundle newBundle: newBundles) {
+            assertEquals("lyrics", newBundle.getValue(newBundle.getFormat().getField("bar")).asString().asNative());
+            long baz = newBundle.getValue(newBundle.getFormat().getField("baz")).asLong().asNative();
+            final ValueObject preKey = newBundle.getValue(newBundle.getFormat().getField("key"));
+            if (preKey == null) {
+                nullPreKey++;
+                continue;
+            }
+            String key = preKey.asString().asNative();
+            String value = newBundle.getValue(newBundle.getFormat().getField("value")).asString().asNative();
+            assertEquals("Constant filter value set didn't work", 42L, baz);
+            assertTrue(key.equals("hello") || key.equals("you say") || key.equals("I say"));
+            switch (key) {
+                case "hello":
+                    assertEquals("is it me you're looking for?", value);
+                    break;
+                case "you say":
+                    assertEquals("good-bye", value);
+                    break;
+                case "I say":
+                    assertEquals("hello", value);
+                    break;
+                default:
+                    fail("An unexpected bundle was emitted");
+                    break;
+            }
+        }
+        assertEquals(1, nullPreKey);
+    }
 }
