@@ -2597,13 +2597,15 @@ public class Spawn implements Codable, AutoCloseable {
                 if (job == null) {
                     log.warn("[task.begin] on dead job {} from {}", begin.getJobKey(), begin.getHostUuid());
                 } else {
+                    long now = System.currentTimeMillis();
                     if (job.getStartTime() == null) {
-                        job.setStartTime(System.currentTimeMillis());
+                        job.setStartTime(now);
                     }
                     task = job.getTask(begin.getNodeID());
                     if (checkTaskMessage(task, begin.getHostUuid())) {
                         job.setTaskState(task, JobTaskState.BUSY);
                         task.incrementStarts();
+                        task.setStartTime(now);
                         queueJobTaskUpdateEvent(job);
                     }
                 }
