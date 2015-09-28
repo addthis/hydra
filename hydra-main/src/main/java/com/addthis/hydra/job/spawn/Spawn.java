@@ -429,7 +429,7 @@ public class Spawn implements Codable, AutoCloseable {
         try {
             taskQueuesByPriority.lock();
             try {
-                spawnDataStore.put(SPAWN_QUEUE_PATH, new String(om.writeValueAsBytes(taskQueuesByPriority)));
+                spawnDataStore.put(SPAWN_QUEUE_PATH, om.writeValueAsString(taskQueuesByPriority));
             } finally {
                 taskQueuesByPriority.unlock();
             }
