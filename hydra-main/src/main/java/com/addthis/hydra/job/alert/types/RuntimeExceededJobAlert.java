@@ -78,9 +78,11 @@ public class RuntimeExceededJobAlert extends AbstractJobAlert {
             }
             List<JobTask> jobTasks = job.getCopyOfTasks();
             for (JobTask jobTask : jobTasks) {
-                long startTime = jobTask.getStartTime();
-                if (jobTask.isRunning() && (startTime > 0) && ((currentTime - startTime) > timeoutMillis)) {
-                    return "Task " + jobTask.getTaskID() + " startTime is " + new Date(startTime);
+                if (jobTask.isRunning()) {
+                    long startTime = jobTask.getStartTime();
+                    if ((startTime > 0) && ((currentTime - startTime) > timeoutMillis)) {
+                        return "Task " + jobTask.getTaskID() + " startTime is " + new Date(startTime);
+                    }
                 }
             }
         }

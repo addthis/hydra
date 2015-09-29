@@ -2603,9 +2603,9 @@ public class Spawn implements Codable, AutoCloseable {
                     }
                     task = job.getTask(begin.getNodeID());
                     if (checkTaskMessage(task, begin.getHostUuid())) {
-                        job.setTaskState(task, JobTaskState.BUSY);
-                        task.incrementStarts();
                         task.setStartTime(now);
+                        task.incrementStarts();
+                        job.setTaskState(task, JobTaskState.BUSY);
                         queueJobTaskUpdateEvent(job);
                     }
                 }
