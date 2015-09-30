@@ -29,6 +29,7 @@ import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessStrings;
 
+import com.addthis.codec.annotations.Time;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -49,6 +50,9 @@ import org.slf4j.LoggerFactory;
 
 
 public class JSONFetcher {
+
+    @Time(TimeUnit.SECONDS)
+    private static final int WAIT_MULTIPLIER = 10;
 
     private static final int DEFAULT_TIMEOUT = 60_000;
 
@@ -83,7 +87,8 @@ public class JSONFetcher {
                 .retryIfExceptionOfType(IOException.class)
                 .withStopStrategy(StopStrategies.stopAfterAttempt(retries + 1));
         if (backoffMillis > 0) {
-            retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(backoffMillis, TimeUnit.MILLISECONDS));
+            retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(
+                    TimeUnit.SECONDS.toMillis(WAIT_MULTIPLIER), backoffMillis, TimeUnit.MILLISECONDS));
         } else {
             retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
         }
