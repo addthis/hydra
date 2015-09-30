@@ -54,6 +54,7 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
     @FieldConfig private int state;
     @FieldConfig private int runCount;
     @FieldConfig private int starts;
+    @FieldConfig private long startTime;
     @FieldConfig private int errors;
     @FieldConfig private long fileCount;
     @FieldConfig private long fileBytes;
@@ -158,6 +159,14 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
 
     public int incrementStarts() {
         return ++starts;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(long time) {
+        this.startTime = time;
     }
 
     public int getErrors() {

@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
+import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.alert.AbstractJobAlert;
 import com.addthis.hydra.job.alert.SuppressChanges;
 import com.addthis.meshy.MeshyClient;
@@ -68,10 +69,21 @@ public class RuntimeExceededJobAlert extends AbstractJobAlert {
     @Nullable @Override
     protected String testAlertActiveForJob(@Nullable MeshyClient meshClient, Job job, String previousErrorMessage) {
         long currentTime = System.currentTimeMillis();
-        if ((job.getState() == JobState.RUNNING) && (job.getStartTime() != null)) {
-            long runningTime = currentTime - job.getStartTime();
-            if (runningTime > TimeUnit.MINUTES.toMillis(timeout)) {
-                return "Job startTime is " + new Date(job.getStartTime());
+        Long jobStartTime = job.getStartTime();
+        if ((job.getState() == JobState.RUNNING) && (jobStartTime != null)) {
+            long runningTime = currentTime - jobStartTime;
+            long timeoutMillis = TimeUnit.MINUTES.toMillis(timeout);
+            if (runningTime > timeoutMillis) {
+                return "Job startTime is " + new Date(jobStartTime);
+            }
+            List<JobTask> jobTasks = job.getCopyOfTasks();
+            for (JobTask jobTask : jobTasks) {
+                if (jobTask.isRunning()) {
+                    long startTime = jobTask.getStartTime();
+                    if ((startTime > 0) && ((currentTime - startTime) > timeoutMillis)) {
+                        return "Task " + jobTask.getTaskID() + " startTime is " + new Date(startTime);
+                    }
+                }
             }
         }
         return null;
