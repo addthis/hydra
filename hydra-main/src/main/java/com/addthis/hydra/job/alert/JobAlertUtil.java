@@ -60,8 +60,8 @@ public class JobAlertUtil {
     private static final String defaultOps = "gather=s";
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
-    private static final int alertQueryMinBackoff = Parameter.intValue("alert.query.backoff", 10_000);
-    private static final int alertQueryMaxBackoff = Parameter.intValue("alert.query.backoff", 120_000);
+    private static final int alertQueryMinBackoff = Parameter.intValue("alert.query.backoff.min", 10_000);
+    private static final int alertQueryMaxBackoff = Parameter.intValue("alert.query.backoff.max", 120_000);
     @VisibleForTesting
     static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
                                                                                 .appendMonthOfYear(2)
