@@ -29,7 +29,6 @@ import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessStrings;
 
-import com.addthis.codec.annotations.Time;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -50,9 +49,6 @@ import org.slf4j.LoggerFactory;
 
 
 public class JSONFetcher {
-
-    @Time(TimeUnit.SECONDS)
-    private static final int WAIT_MULTIPLIER = 10;
 
     private static final int DEFAULT_TIMEOUT = 60_000;
 
@@ -76,19 +72,19 @@ public class JSONFetcher {
     }
 
     public JSONFetcher(int timeout, int retries) {
-        this(timeout, retries, 0);
+        this(timeout, retries, 0, 0);
     }
 
-    public JSONFetcher(int timeout, int retries, int backoffMillis) {
+    public JSONFetcher(int timeout, int retries, int minBackoff, int maxBackoff) {
         Preconditions.checkArgument(retries >= 0, "retries argument must be a non-negative integer");
         this.timeout = timeout;
         RetryerBuilder<byte[]> retryerBuilder = RetryerBuilder
                 .<byte[]>newBuilder()
                 .retryIfExceptionOfType(IOException.class)
                 .withStopStrategy(StopStrategies.stopAfterAttempt(retries + 1));
-        if (backoffMillis > 0) {
+        if ((minBackoff > 0) && (maxBackoff > 0)) {
             retryerBuilder.withWaitStrategy(WaitStrategies.exponentialWait(
-                    TimeUnit.SECONDS.toMillis(WAIT_MULTIPLIER), backoffMillis, TimeUnit.MILLISECONDS));
+                    minBackoff, maxBackoff, TimeUnit.MILLISECONDS));
         } else {
             retryerBuilder.withWaitStrategy(WaitStrategies.noWait());
         }
@@ -223,7 +219,8 @@ public class JSONFetcher {
         private final String url;
         private int timeout = DEFAULT_TIMEOUT;
         private int retries;
-        private int backoff;
+        private int minBackoff;
+        private int maxBackoff;
         private boolean csv;
         private HashSet<String> target;
 
@@ -231,10 +228,11 @@ public class JSONFetcher {
             this.url = url;
         }
 
-        public SetLoader setContention(int timeout, int retries, int backoff) {
+        public SetLoader setContention(int timeout, int retries, int minBackoff, int maxBackoff) {
             this.timeout = timeout;
             this.retries = retries;
-            this.backoff = backoff;
+            this.minBackoff = minBackoff;
+            this.maxBackoff = maxBackoff;
             return this;
         }
 
@@ -248,9 +246,12 @@ public class JSONFetcher {
             return this;
         }
 
-        public SetLoader setBackoff(int backoff) {
-            this.backoff = backoff;
-            return this;
+        public void setMinBackoff(int backoff) {
+            this.minBackoff = backoff;
+        }
+
+        public void setMaxBackoff(int backoff) {
+            this.maxBackoff = backoff;
         }
 
         public SetLoader setCsv(boolean csv) {
@@ -264,7 +265,7 @@ public class JSONFetcher {
         }
 
         public HashSet<String> load() {
-            JSONFetcher fetcher = new JSONFetcher(timeout, retries, backoff);
+            JSONFetcher fetcher = new JSONFetcher(timeout, retries, minBackoff, maxBackoff);
             if (csv) {
                 return fetcher.loadCSVSet(url, target);
             } else {

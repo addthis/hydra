@@ -45,8 +45,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
-import org.apache.commons.lang3.StringUtils;
-
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.slf4j.Logger;
@@ -62,7 +60,8 @@ public class JobAlertUtil {
     private static final String defaultOps = "gather=s";
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
-    private static final int alertQueryBackoff = Parameter.intValue("alert.query.backoff", 10_000);
+    private static final int alertQueryMinBackoff = Parameter.intValue("alert.query.backoff", 10_000);
+    private static final int alertQueryMaxBackoff = Parameter.intValue("alert.query.backoff", 120_000);
     @VisibleForTesting
     static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
                                                                                 .appendMonthOfYear(2)
@@ -163,7 +162,7 @@ public class JobAlertUtil {
         String queryURL = getQueryURL(jobId, checkPath, defaultOps, defaultOps);
 
         HashSet<String> result = new JSONFetcher.SetLoader(queryURL)
-                .setContention(alertQueryTimeout, alertQueryRetries, alertQueryBackoff).load();
+                .setContention(alertQueryTimeout, alertQueryRetries, alertQueryMinBackoff, alertQueryMaxBackoff).load();
         if (result == null || result.isEmpty()) {
             log.warn("Found no data for job={} checkPath={}; returning zero", jobId, checkPath);
             return 0;

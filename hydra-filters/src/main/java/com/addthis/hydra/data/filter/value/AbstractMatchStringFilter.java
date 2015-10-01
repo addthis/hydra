@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -15,6 +16,7 @@ import com.addthis.bundle.util.ConstantTypedField;
 import com.addthis.bundle.util.TypedField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
@@ -86,7 +88,9 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
      */
     final private int urlRetries;
 
-    final private int urlBackoff;
+    final private int urlMinBackoff;
+
+    final private int urlMaxBackoff;
 
     final private boolean not;
 
@@ -107,7 +111,8 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               boolean toLower,
                               int urlTimeout,
                               int urlRetries,
-                              int urlBackoff,
+                              int urlMinBackoff,
+                              int urlMaxBackoff,
                               boolean not) {
         this.value = value;
         this.valueURL = valueURL;
@@ -121,7 +126,8 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         this.toLower = toLower;
         this.urlTimeout = urlTimeout;
         this.urlRetries = urlRetries;
-        this.urlBackoff = urlBackoff;
+        this.urlMinBackoff = urlMinBackoff;
+        this.urlMaxBackoff = urlMaxBackoff;
         this.not = not;
         if (match != null) {
             ArrayList<Pattern> np = new ArrayList<>();
@@ -186,7 +192,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     @Override public void postDecode() {
         if (valueURL != null) {
             JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(valueURL)
-                    .setContention(urlTimeout, urlRetries, urlBackoff);
+                    .setContention(urlTimeout, urlRetries, urlMinBackoff, urlMaxBackoff);
             if (urlReturnsCSV) {
                 loader.setCsv(true);
             }
@@ -194,7 +200,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         }
         if (matchURL != null) {
             JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(matchURL)
-                    .setContention(urlTimeout, urlRetries, urlBackoff).setTarget(match);
+                    .setContention(urlTimeout, urlRetries, urlMinBackoff, urlMaxBackoff).setTarget(match);
             if (urlReturnsCSV) {
                 loader.setCsv(true);
             }
@@ -209,7 +215,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         }
         if (findURL != null) {
             JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(findURL)
-                    .setContention(urlTimeout, urlRetries, urlBackoff).setTarget(find);
+                    .setContention(urlTimeout, urlRetries, urlMinBackoff, urlMaxBackoff).setTarget(find);
             if (urlReturnsCSV) {
                 loader.setCsv(true);
             }
@@ -224,7 +230,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         }
         if (containsURL != null) {
             JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(containsURL)
-                    .setContention(urlTimeout, urlRetries, urlBackoff);
+                    .setContention(urlTimeout, urlRetries, urlMinBackoff, urlMaxBackoff);
             if (urlReturnsCSV) {
                 loader.setCsv(true);
             }
@@ -253,9 +259,10 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               @JsonProperty("containsURL") String containsURL,
                               @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                               @JsonProperty("toLower") boolean toLower,
-                              @JsonProperty("urlTimeout") int urlTimeout,
+                              @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
                               @JsonProperty("urlRetries") int urlRetries,
-                              @JsonProperty("urlBackoff") int urlBackoff) {
+                              @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
+                              @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff) {
             super(value,
                   valueURL,
                   match,
@@ -268,7 +275,8 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                   toLower,
                   urlTimeout,
                   urlRetries,
-                  urlBackoff,
+                  urlMinBackoff,
+                  urlMaxBackoff,
                   false);
         }
 

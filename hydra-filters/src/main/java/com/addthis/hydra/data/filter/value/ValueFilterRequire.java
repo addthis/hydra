@@ -15,8 +15,10 @@ package com.addthis.hydra.data.filter.value;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.util.TypedField;
+import com.addthis.codec.annotations.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -62,9 +64,10 @@ public class ValueFilterRequire extends AbstractMatchStringFilter {
                        @JsonProperty("containsURL") String containsURL,
                        @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                        @JsonProperty("toLower") boolean toLower,
-                       @JsonProperty("urlTimeout") int urlTimeout,
+                       @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
                        @JsonProperty("urlRetries") int urlRetries,
-                       @JsonProperty("urlBackoff") int urlBackoff
+                       @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
+                       @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff
     ) {
         super(value,
               valueURL,
@@ -78,7 +81,8 @@ public class ValueFilterRequire extends AbstractMatchStringFilter {
               toLower,
               urlTimeout,
               urlRetries,
-              urlBackoff,
+              urlMinBackoff,
+              urlMaxBackoff,
               false);
     }
 
