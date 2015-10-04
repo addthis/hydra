@@ -286,8 +286,7 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
         return purgeSetSize.get() > getNumPagesInMemory();
     }
 
-
-
+    @Override
     protected V doPut(K key, V value) {
         V prev;
 
@@ -324,6 +323,7 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
         return prev;
     }
 
+    @Override
     protected void doRemove(K start, K end) {
         while (true) {
             if (mustEvictPage()) {
@@ -385,6 +385,7 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
         }
     }
 
+    @Override
     protected V doRemove(K key) {
         if (mustEvictPage()) {
             BackgroundEvictionTask task = getEvictionTask();
@@ -491,6 +492,7 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
      * return page is not in a transient state. It is not guaranteed that the
      * return page has been loaded into memory, ie. (page.keys != null).
      */
+    @Override
     protected Page<K, V> loadPage(K key, Page<K, V> current) {
         assert (current == null || current.isWriteLockedByCurrentThread());
 
@@ -653,35 +655,6 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
         }
     }
 
-    private class SkipListCacheKeyValue implements Map.Entry<K, V> {
-
-        final K key;
-        V value;
-
-        public SkipListCacheKeyValue(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
-
-
-        @Override
-        public K getKey() {
-            return key;
-        }
-
-        @Override
-        public V getValue() {
-            return value;
-        }
-
-        @Override
-        public V setValue(V value) {
-            V prevValue = put(key, value);
-            this.value = value;
-            return prevValue;
-        }
-    }
-
     /**
      * Close without scheduling any unfinished background tasks.
      * The background eviction thread(s) are shut down regardless of
@@ -820,6 +793,7 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
 
     }
 
+    @Override
     protected void addToPurgeSet(Page<K, V> page) {
         if (!page.getFirstKey().equals(negInf)) {
             if (purgeSet.add(page.getFirstKey())) {

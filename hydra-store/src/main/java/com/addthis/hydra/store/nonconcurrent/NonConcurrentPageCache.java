@@ -96,11 +96,12 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
 
     }
 
-
+    @Override
     public V remove(K key) {
         return doRemove(key);
     }
 
+    @Override
     protected V doPut(K key, V value) {
         V prev;
 
@@ -185,6 +186,7 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
         }
     }
 
+    @Override
     protected V doRemove(K key) {
         // even though we are removing data from the cache we may
         // need to page new data into the cache to perform that removal
@@ -313,6 +315,7 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
         return false;
     }
 
+    @Override
     protected void addToPurgeSet(Page<K, V> page) {
         if (!page.getFirstKey().equals(negInf)) {
             K minKey = page.getFirstKey();
