@@ -332,9 +332,9 @@ public final class KeyTopper implements Codable, BytesCodable {
 
     @Override
     public void bytesDecode(byte[] b, long version) {
-        map = new HashMap<>();
         errors = null;
         if (b.length == 0) {
+            map = new HashMap<>();
             return;
         }
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
@@ -348,6 +348,7 @@ public final class KeyTopper implements Codable, BytesCodable {
             int mapSize = Varint.readUnsignedVarInt(byteBuf);
             try {
                 if (mapSize > 0) {
+                    map = new HashMap<>(mapSize);
                     for (int i = 0; i < mapSize; i++) {
                         int keyLength = Varint.readUnsignedVarInt(byteBuf);
                         byte[] keybytes = new byte[keyLength];
@@ -362,6 +363,8 @@ public final class KeyTopper implements Codable, BytesCodable {
                             }
                         }
                     }
+                } else {
+                   map = new HashMap<>();
                 }
             } catch (Exception e) {
                 throw Throwables.propagate(e);
