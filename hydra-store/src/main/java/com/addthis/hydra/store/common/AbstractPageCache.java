@@ -1052,6 +1052,11 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
      */
     protected Page<K, V> constructNewPage(Page<K, V> current, Page<K, V> next,
                                           K externalKey, byte[] floorPageEncoded, boolean lock) {
+
+        while (shouldEvictPage() || mustEvictPage()) {
+          fixedNumberEviction(fixedNumberEvictions);
+        }
+
         Page<K, V> newPage = pageFactory.generateEmptyPage(this, externalKey, null);
         newPage.decode(floorPageEncoded);
         if (lock) {
@@ -1061,9 +1066,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         assert (compareKeys(current.getFirstKey(), newPage.getFirstKey()) < 0);
         assert (next == null || compareKeys(next.getFirstKey(), newPage.getFirstKey()) > 0);
 
-        while (shouldEvictPage() || mustEvictPage()) {
-            fixedNumberEviction(fixedNumberEvictions);
-        }
+
         Page<K, V> oldPage = getCache().putIfAbsent(externalKey, newPage);
         assert (oldPage == null);
 
