@@ -20,9 +20,8 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundlePrinter;
-import com.addthis.codec.annotations.FieldConfig;
 
-import com.clearspring.analytics.util.Preconditions;
+import com.google.common.base.Preconditions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
