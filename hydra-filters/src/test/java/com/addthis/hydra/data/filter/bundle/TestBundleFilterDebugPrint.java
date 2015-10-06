@@ -30,7 +30,7 @@ public class TestBundleFilterDebugPrint {
     @Test
     public void mapBundle() {
         // The map bundle converts everything into a string.
-        BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
+        BundleFilterDebugPrint bf = new BundleFilterDebugPrint("", false, 100, 0).enableCacheOutput();
         MapBundle bundle = createBundle(new String[]{"hello", "1", "dog", "food", "foo", null});
         bf.filter(bundle);
         assertEquals("{\"dog\" = \"food\" , \"foo\" = null , \"hello\" = \"1\"}", bf.getCacheOutput());
@@ -38,7 +38,7 @@ public class TestBundleFilterDebugPrint {
 
     @Test
     public void kvBundle() {
-        BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
+        BundleFilterDebugPrint bf = new BundleFilterDebugPrint("", false, 100, 0).enableCacheOutput();
         KVBundleFormat bundleFormat = new KVBundleFormat();
         KVBundle bundle = new KVBundle(bundleFormat);
         bundle.setValue(bundleFormat.getField("hello"), ValueFactory.create(1));
@@ -52,7 +52,7 @@ public class TestBundleFilterDebugPrint {
 
     @Test
     public void kvBundleArray() {
-        BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
+        BundleFilterDebugPrint bf = new BundleFilterDebugPrint("", false, 100, 0).enableCacheOutput();
         KVBundleFormat bundleFormat = new KVBundleFormat();
         KVBundle bundle = new KVBundle(bundleFormat);
         ValueArray array = ValueFactory.createArray(3);
@@ -67,7 +67,7 @@ public class TestBundleFilterDebugPrint {
 
     @Test
     public void kvBundleMap() {
-        BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
+        BundleFilterDebugPrint bf = new BundleFilterDebugPrint("", false, 100, 0).enableCacheOutput();
         KVBundleFormat bundleFormat = new KVBundleFormat();
         KVBundle bundle = new KVBundle(bundleFormat);
         ValueMap map = ValueFactory.createMap();

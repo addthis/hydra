@@ -22,6 +22,11 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundlePrinter;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.clearspring.analytics.util.Preconditions;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,32 +45,42 @@ import org.slf4j.LoggerFactory;
  */
 public class BundleFilterDebugPrint implements BundleFilter {
 
+    private static final int MAX_BUNDLE_LIMIT = 1000;
+
     private static final Logger log = LoggerFactory.getLogger(BundleFilterDebugPrint.class);
 
     /**
      * A string prefix to pre-append to the debugging information. Default is "".
      */
-    @FieldConfig(codable = true)
-    private String prefix = "";
+    private final String prefix;
 
     /**
      * If true then this filter returns false. Default is false (ie. the filter returns true).
      */
-    @FieldConfig(codable = true)
-    private boolean fail = false;
+    private final boolean fail;
 
     /**
      * Maximum number of bundles to print. Default is 100.
      */
-    @FieldConfig(codable = true)
-    private long maxBundles = 100;
+    private final long maxBundles;
 
     /**
      * Optionally specify to print a bundle every N seconds if
      * parameter is a positive integer. Default is 0.
      */
-    @FieldConfig(codable = true)
-    private long every = 0;
+    private final long every;
+
+    @JsonCreator
+    public BundleFilterDebugPrint(@JsonProperty("prefix") String prefix,
+                                  @JsonProperty("fail") boolean fail,
+                                  @JsonProperty("maxBundles") long maxBundles,
+                                  @JsonProperty("every") long every) {
+        Preconditions.checkArgument(maxBundles < MAX_BUNDLE_LIMIT, "Max bundles must be < " + MAX_BUNDLE_LIMIT);
+        this.prefix = prefix;
+        this.fail = fail;
+        this.maxBundles = maxBundles;
+        this.every = every;
+    }
 
     private final AtomicLong bundleCounter = new AtomicLong();
 
