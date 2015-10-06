@@ -14,7 +14,6 @@
 package com.addthis.hydra.data.tree.concurrent;
 
 import java.io.File;
-import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,22 +23,20 @@ import java.util.concurrent.CyclicBarrier;
 
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.LessFiles;
 
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.store.db.CloseOperation;
 
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class TestConcurrentTree {
 
@@ -53,21 +50,8 @@ public class TestConcurrentTree {
     static final int slowNumElements = 100000;
     static final int slowNumThreads = 8;
 
-    private File makeTemporaryDirectory() throws IOException {
-        final File temp;
-
-        temp = File.createTempFile("temp", Long.toString(System.nanoTime()));
-
-        if (!(temp.delete())) {
-            throw new IOException("Could not delete temp file: " + temp.getAbsolutePath());
-        }
-
-        if (!(temp.mkdir())) {
-            throw new IOException("Could not create temp directory: " + temp.getAbsolutePath());
-        }
-
-        return temp;
-    }
+    @Rule
+    public final TemporaryFolder tempFolder = new TemporaryFolder();
 
     static final class InsertionThread extends Thread {
 
@@ -167,102 +151,84 @@ public class TestConcurrentTree {
     @Test
     public void getOrCreateOneThread() throws Exception {
         log.info("getOrCreateOneThread");
-        File dir = makeTemporaryDirectory();
-        try {
-            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
-            for (int i = 0; i < 1000; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                assertNotNull(node);
-                assertEquals(Integer.toString(i), node.getName());
-                node.release();
-            }
-            for (int i = 0; i < 1000; i++) {
-                ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
-                assertNotNull(node);
-                assertEquals(1, node.getLeaseCount());
-                assertEquals(Integer.toString(i), node.getName());
-                node.release();
-            }
-            tree.close(false, close);
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+        File dir = tempFolder.newFolder();
+        ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
+        for (int i = 0; i < 1000; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+            assertNotNull(node);
+            assertEquals(Integer.toString(i), node.getName());
+            node.release();
         }
+        for (int i = 0; i < 1000; i++) {
+            ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
+            assertNotNull(node);
+            assertEquals(1, node.getLeaseCount());
+            assertEquals(Integer.toString(i), node.getName());
+            node.release();
+        }
+        tree.close(false, close);
     }
 
     @Test
     public void recursiveDeleteOneThread() throws Exception {
         log.info("recursiveDeleteOneThread");
-        File dir = makeTemporaryDirectory();
-        try {
-            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
-            ConcurrentTreeNode parent = tree.getOrCreateNode(root, "hello", null);
-            for (int i = 0; i < (TreeCommonParameters.cleanQMax << 1); i++) {
-                ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(i), null);
-                assertNotNull(child);
-                assertEquals(Integer.toString(i), child.getName());
-                parent.release();
-                parent = child;
-            }
+        File dir = tempFolder.newFolder();
+        ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
+        ConcurrentTreeNode parent = tree.getOrCreateNode(root, "hello", null);
+        for (int i = 0; i < (TreeCommonParameters.cleanQMax << 1); i++) {
+            ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(i), null);
+            assertNotNull(child);
+            assertEquals(Integer.toString(i), child.getName());
             parent.release();
-
-            assertEquals(1, root.getNodeCount());
-            assertEquals(TreeCommonParameters.cleanQMax, tree.getCache().size());
-
-            tree.deleteNode(root, "hello");
-            tree = waitForDeletion(tree, dir);
-            assertEquals(2, tree.getCache().size());
-            assertEquals(0, root.getNodeCount());
-            assertTrue(tree.getTreeTrashNode().getCounter() >= 1);
-            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
-            tree.close(false, close);
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+            parent = child;
         }
+        parent.release();
+
+        assertEquals(1, root.getNodeCount());
+        assertEquals(TreeCommonParameters.cleanQMax, tree.getCache().size());
+
+        tree.deleteNode(root, "hello");
+        tree = waitForDeletion(tree, dir);
+        assertEquals(2, tree.getCache().size());
+        assertEquals(0, root.getNodeCount());
+        assertTrue(tree.getTreeTrashNode().getCounter() >= 1);
+        assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
+        tree.close(false, close);
     }
 
     @Test
     public void recursiveDeleteMultiThreads() throws Exception {
         log.info("recursiveDeleteMultiThreads");
-        File dir = makeTemporaryDirectory();
-        try {
-            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(8).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
-            for (int i = 0; i < fastNumThreads; i++) {
-                ConcurrentTreeNode parent = tree.getOrCreateNode(root, Integer.toString(i), null);
-                for (int j = 0; j < TreeCommonParameters.cleanQMax; j++) {
-                    ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(j), null);
-                    assertNotNull(child);
-                    assertEquals(Integer.toString(j), child.getName());
-                    parent.release();
-                    parent = child;
-                }
+        File dir = tempFolder.newFolder();
+        ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(8).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
+        for (int i = 0; i < fastNumThreads; i++) {
+            ConcurrentTreeNode parent = tree.getOrCreateNode(root, Integer.toString(i), null);
+            for (int j = 0; j < TreeCommonParameters.cleanQMax; j++) {
+                ConcurrentTreeNode child = tree.getOrCreateNode(parent, Integer.toString(j), null);
+                assertNotNull(child);
+                assertEquals(Integer.toString(j), child.getName());
                 parent.release();
+                parent = child;
             }
-
-            assertEquals(TreeCommonParameters.cleanQMax, tree.getCache().size());
-
-            assertEquals(fastNumThreads, root.getNodeCount());
-
-            for (int i = 0; i < fastNumThreads; i++) {
-                tree.deleteNode(root, Integer.toString(i));
-            }
-
-            tree = waitForDeletion(tree, dir);
-            assertEquals(2, tree.getCache().size());
-            assertEquals(0, root.getNodeCount());
-
-            tree.close(false, close);
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+            parent.release();
         }
+
+        assertEquals(TreeCommonParameters.cleanQMax, tree.getCache().size());
+
+        assertEquals(fastNumThreads, root.getNodeCount());
+
+        for (int i = 0; i < fastNumThreads; i++) {
+            tree.deleteNode(root, Integer.toString(i));
+        }
+
+        tree = waitForDeletion(tree, dir);
+        assertEquals(2, tree.getCache().size());
+        assertEquals(0, root.getNodeCount());
+
+        tree.close(false, close);
     }
 
     @Test
@@ -278,51 +244,45 @@ public class TestConcurrentTree {
 
     private void getOrCreateMultiThread(int numElements, int numThreads) throws Exception {
         log.info("getOrCreateMultiThread");
-        File dir = makeTemporaryDirectory();
-        try {
-            ArrayList<Integer> values = new ArrayList<>(numElements);
-            final CyclicBarrier barrier = new CyclicBarrier(numThreads);
-            ArrayList<Integer> threadId = new ArrayList<>(numElements);
-            InsertionThread[] threads = new InsertionThread[numThreads];
-            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
+        File dir = tempFolder.newFolder();
+        ArrayList<Integer> values = new ArrayList<>(numElements);
+        final CyclicBarrier barrier = new CyclicBarrier(numThreads);
+        ArrayList<Integer> threadId = new ArrayList<>(numElements);
+        InsertionThread[] threads = new InsertionThread[numThreads];
+        ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
 
-            for (int i = 0; i < numElements; i++) {
-                values.add(i);
-                threadId.add(i % numThreads);
-            }
-
-            for (int i = 0; i < numThreads; i++) {
-                threads[i] = new InsertionThread(barrier, values, threadId, i, tree, root);
-            }
-
-            Collections.shuffle(values);
-
-            for (int i = 0; i < numThreads; i++) {
-                threads[i].start();
-            }
-
-            for (int i = 0; i < numThreads; i++) {
-                threads[i].join();
-            }
-
-            for (int i = 0; i < numThreads; i++) {
-                assertEquals(numElements / numThreads, threads[i].counter);
-            }
-
-            for (int i = 0; i < numElements; i++) {
-                ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
-                assertNotNull(node);
-                assertEquals(1, node.getLeaseCount());
-                assertEquals(Integer.toString(i), node.getName());
-                node.release();
-            }
-            tree.close(false, close);
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+        for (int i = 0; i < numElements; i++) {
+            values.add(i);
+            threadId.add(i % numThreads);
         }
+
+        for (int i = 0; i < numThreads; i++) {
+            threads[i] = new InsertionThread(barrier, values, threadId, i, tree, root);
+        }
+
+        Collections.shuffle(values);
+
+        for (int i = 0; i < numThreads; i++) {
+            threads[i].start();
+        }
+
+        for (int i = 0; i < numThreads; i++) {
+            threads[i].join();
+        }
+
+        for (int i = 0; i < numThreads; i++) {
+            assertEquals(numElements / numThreads, threads[i].counter);
+        }
+
+        for (int i = 0; i < numElements; i++) {
+            ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
+            assertNotNull(node);
+            assertEquals(1, node.getLeaseCount());
+            assertEquals(Integer.toString(i), node.getName());
+            node.release();
+        }
+        tree.close(false, close);
     }
 
     @Test
@@ -339,35 +299,29 @@ public class TestConcurrentTree {
 
     private void deleteOneThread(int numDeletionThreads) throws Exception {
         int tests = 10_000;
-        File dir = makeTemporaryDirectory();
-        try {
-            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numDeletionThreads).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
-            for (int i = 0; i < tests; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                assertNotNull(node);
-                assertEquals(1, node.getLeaseCount());
-                assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
-                child.release();
-                node.release();
-            }
-            for (int i = 0; i < tests; i++) {
-                assertTrue("failed to delete node: " + i, tree.deleteNode(root, Integer.toString(i)));
-            }
-            for (int i = 0; i < tests; i++) {
-                ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), false);
-                assertNull(node);
-            }
-            tree = waitForDeletion(tree, dir);
-            assertTrue(tree.getTreeTrashNode().getCounter() >= tests);
-            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
-            tree.close(false, close);
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+        File dir = tempFolder.newFolder();
+        ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numDeletionThreads).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
+        for (int i = 0; i < tests; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+            assertNotNull(node);
+            assertEquals(1, node.getLeaseCount());
+            assertEquals(Integer.toString(i), node.getName());
+            ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+            child.release();
+            node.release();
         }
+        for (int i = 0; i < tests; i++) {
+            assertTrue("failed to delete node: " + i, tree.deleteNode(root, Integer.toString(i)));
+        }
+        for (int i = 0; i < tests; i++) {
+            ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), false);
+            assertNull(node);
+        }
+        tree = waitForDeletion(tree, dir);
+        assertTrue(tree.getTreeTrashNode().getCounter() >= tests);
+        assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
+        tree.close(false, close);
     }
 
     /**
@@ -424,136 +378,142 @@ public class TestConcurrentTree {
 
     private void iterateAndDelete(int numThreads, int numElements) throws Exception {
         log.info("iterateAndDelete {} {}", numThreads, numElements);
-        File dir = makeTemporaryDirectory();
-        try {
-            ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numThreads).
-                    maxPageSize(5).maxCacheSize(500).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
+        File dir = tempFolder.newFolder();
+        ConcurrentTree tree = new TreeBuilder(dir).numDeletionThreads(numThreads).
+                maxPageSize(5).maxCacheSize(500).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
 
-            for (int i = 0; i < numElements; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                assertNotNull(node);
-                assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
-                child.release();
-                node.release();
-            }
-
-            Random rng = new Random();
-
-            ClosableIterator<DataTreeNode> iterator = tree.getIterator();
-            try {
-                int counter = 0;
-                while(iterator.hasNext()) {
-                    DataTreeNode node = iterator.next();
-                    if (rng.nextFloat() < 0.8) {
-                        String name = node.getName();
-                        tree.deleteNode(root, name);
-                        counter++;
-                    }
-                }
-                log.info("Deleted " + (((float) counter) / numElements * 100.0) + " % of nodes");
-            } finally {
-                iterator.close();
-            }
-
-            tree.close(false, close);
-
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+        for (int i = 0; i < numElements; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+            assertNotNull(node);
+            assertEquals(Integer.toString(i), node.getName());
+            ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+            child.release();
+            node.release();
         }
 
+        Random rng = new Random();
+
+        ClosableIterator<DataTreeNode> iterator = tree.getIterator();
+        try {
+            int counter = 0;
+            while(iterator.hasNext()) {
+                DataTreeNode node = iterator.next();
+                if (rng.nextFloat() < 0.8) {
+                    String name = node.getName();
+                    tree.deleteNode(root, name);
+                    counter++;
+                }
+            }
+            log.info("Deleted " + (((float) counter) / numElements * 100.0) + " % of nodes");
+        } finally {
+            iterator.close();
+        }
+
+        tree.close(false, close);
     }
 
     private void deleteMultiThread(int numElements, int numThreads, int numDeletionThreads) throws Exception {
         log.info("deleteMultiThread {} {} {}", numElements, numThreads, numDeletionThreads);
-        File dir = makeTemporaryDirectory();
-        try {
-            ArrayList<Integer> values = new ArrayList<>(numElements);
-            final CyclicBarrier barrier = new CyclicBarrier(numThreads);
-            ArrayList<Integer> threadId = new ArrayList<>(numElements);
-            DeletionThread[] threads = new DeletionThread[numThreads];
-            ConcurrentTree tree = new TreeBuilder(dir)
-                    .numDeletionThreads(numDeletionThreads).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
+        File dir = tempFolder.newFolder();
+        ArrayList<Integer> values = new ArrayList<>(numElements);
+        final CyclicBarrier barrier = new CyclicBarrier(numThreads);
+        ArrayList<Integer> threadId = new ArrayList<>(numElements);
+        DeletionThread[] threads = new DeletionThread[numThreads];
+        ConcurrentTree tree = new TreeBuilder(dir)
+                .numDeletionThreads(numDeletionThreads).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
 
-            for (int i = 0; i < numElements; i++) {
-                values.add(i);
-                threadId.add(i % numThreads);
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                assertNotNull(node);
-                assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
-                child.release();
-                node.release();
-            }
-
-            for (int i = 0; i < numThreads; i++) {
-                threads[i] = new DeletionThread(barrier, values, threadId, i, tree, root);
-            }
-
-            Collections.shuffle(values);
-
-            for (int i = 0; i < numThreads; i++) {
-                threads[i].start();
-            }
-
-            for (int i = 0; i < numThreads; i++) {
-                threads[i].join();
-            }
-
-            for (int i = 0; i < numThreads; i++) {
-                assertEquals(numElements / numThreads, threads[i].counter);
-            }
-
-            for (int i = 0; i < numElements; i++) {
-                ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
-                assertNull(node);
-            }
-            tree = waitForDeletion(tree, dir);
-            assertTrue(tree.getTreeTrashNode().getCounter() >= numElements);
-            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
-            tree.close(false, close);
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+        for (int i = 0; i < numElements; i++) {
+            values.add(i);
+            threadId.add(i % numThreads);
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+            assertNotNull(node);
+            assertEquals(Integer.toString(i), node.getName());
+            ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+            child.release();
+            node.release();
         }
+
+        for (int i = 0; i < numThreads; i++) {
+            threads[i] = new DeletionThread(barrier, values, threadId, i, tree, root);
+        }
+
+        Collections.shuffle(values);
+
+        for (int i = 0; i < numThreads; i++) {
+            threads[i].start();
+        }
+
+        for (int i = 0; i < numThreads; i++) {
+            threads[i].join();
+        }
+
+        for (int i = 0; i < numThreads; i++) {
+            assertEquals(numElements / numThreads, threads[i].counter);
+        }
+
+        for (int i = 0; i < numElements; i++) {
+            ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
+            assertNull(node);
+        }
+        tree = waitForDeletion(tree, dir);
+        assertTrue(tree.getTreeTrashNode().getCounter() >= numElements);
+        assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
+        tree.close(false, close);
     }
 
     @Test
     public void maximumNodeIdentifier() throws Exception {
-        File dir = makeTemporaryDirectory();
-        try {
-            ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
-            ConcurrentTreeNode root = tree.getRootNode();
-            for (int i = 0; i < 1000; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                assertNotNull(node);
-                assertEquals(1, node.getLeaseCount());
-                assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
-                child.release();
-                node.release();
-            }
-            assertTrue(tree.setNextNodeDB(Integer.MAX_VALUE));
-            for (int i = 1000; i < 2000; i++) {
-                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                assertNotNull(node);
-                assertEquals(1, node.getLeaseCount());
-                assertEquals(Integer.toString(i), node.getName());
-                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
-                child.release();
-                node.release();
-            }
-            tree.close(false, close);
-        } finally {
-            if (dir != null) {
-                LessFiles.deleteDir(dir);
-            }
+        File dir = tempFolder.newFolder();
+        ConcurrentTree tree = new TreeBuilder(dir).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
+        for (int i = 0; i < 1000; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+            assertNotNull(node);
+            assertEquals(1, node.getLeaseCount());
+            assertEquals(Integer.toString(i), node.getName());
+            ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+            child.release();
+            node.release();
         }
+        assertTrue(tree.setNextNodeDB(Integer.MAX_VALUE));
+        for (int i = 1000; i < 2000; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+            assertNotNull(node);
+            assertEquals(1, node.getLeaseCount());
+            assertEquals(Integer.toString(i), node.getName());
+            ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+            child.release();
+            node.release();
+        }
+        tree.close(false, close);
     }
 
+    @Test @Ignore("known failure")
+    public void backgroundTrashDeletion() throws Exception {
+        File dir = tempFolder.newFolder();
+        ConcurrentTree tree = new TreeBuilder(dir).maxPageSize(16).numDeletionThreads(0).multiThreadedTree();
+        ConcurrentTreeNode root = tree.getRootNode();
+        for (int i = 0; i < slowNumElements; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+            assertNotNull(node);
+            assertEquals(1, node.getLeaseCount());
+            assertEquals(Integer.toString(i), node.getName());
+            ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+            child.release();
+            node.release();
+        }
+        for (int i = 0; i < slowNumElements; i++) {
+            assertTrue(root.deleteNode(Integer.toString(i)));
+        }
+        tree.close();
+        tree = new TreeBuilder(dir).numDeletionThreads(4).maxCacheSize(16).multiThreadedTree();
+        for (int i = 0; i < slowNumElements; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i + slowNumElements), null);
+            node.release();
+        }
+        tree.foregroundNodeDeletion(() -> false);
+        tree.close();
+    }
 }
