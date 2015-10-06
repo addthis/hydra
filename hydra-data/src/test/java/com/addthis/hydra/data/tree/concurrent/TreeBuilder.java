@@ -15,12 +15,11 @@ package com.addthis.hydra.data.tree.concurrent;
 
 import java.io.File;
 
-import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.tree.nonconcurrent.NonConcurrentTree;
+import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.nonconcurrent.NonConcurrentPage;
 import com.addthis.hydra.store.skiplist.ConcurrentPage;
-import com.addthis.hydra.store.common.PageFactory;
 
 public class TreeBuilder {
 
@@ -72,7 +71,7 @@ public class TreeBuilder {
     }
 
     public NonConcurrentTree singleThreadedTree() throws Exception {
-        pageFactory = concurrentPageFactory;
+        pageFactory = nonConcurrentPageFactory;
         return new NonConcurrentTree(root, maxCache, maxPageSize, pageFactory);
     }
 
