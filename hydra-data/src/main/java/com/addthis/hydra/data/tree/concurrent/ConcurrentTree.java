@@ -31,9 +31,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
+import java.nio.charset.StandardCharsets;
+
 import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
-import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
@@ -48,13 +50,13 @@ import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
 import com.addthis.hydra.data.tree.TreeNodeData;
+import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.skiplist.ConcurrentPage;
-import com.addthis.hydra.store.common.PageFactory;
 import com.addthis.hydra.store.skiplist.SkipListCache;
 import com.addthis.hydra.store.util.MeterFileLogger;
 import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
@@ -62,6 +64,7 @@ import com.addthis.hydra.store.util.NamedThreadFactory;
 import com.addthis.hydra.store.util.Raw;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.Files;
 import com.google.common.util.concurrent.AtomicDouble;
 
 import com.yammer.metrics.Metrics;
@@ -157,20 +160,21 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             logger = null;
         }
         source = new PageDB.Builder<>(root, ConcurrentTreeNode.class, maxPageSize, maxCacheSize)
-                .pageFactory(factory).build();
+                .pageFactory(factory)
+                .build();
         source.setCacheMem(TreeCommonParameters.maxCacheMem);
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);
         // create cache
-        cache = new MediatedEvictionConcurrentHashMap.
-                Builder<CacheKey, ConcurrentTreeNode>().
-                mediator(new CacheMediator(source)).
-                maximumWeightedCapacity(cleanQSize).build();
+        cache = new MediatedEvictionConcurrentHashMap.Builder<CacheKey, ConcurrentTreeNode>()
+                .mediator(new CacheMediator(source))
+                .maximumWeightedCapacity(cleanQSize)
+                .build();
 
         // get stored next db id
         idFile = new File(root, "nextID");
         if (idFile.exists() && idFile.isFile() && idFile.length() > 0) {
-            nextDBID = new AtomicLong(Long.parseLong(LessBytes.toString(LessFiles.read(idFile))));
+            nextDBID = new AtomicLong(Long.parseLong(Files.toString(idFile, StandardCharsets.UTF_8)));
         } else {
             nextDBID = new AtomicLong(1);
         }
@@ -470,7 +474,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             }
         }
         log.debug("[sync] end nextdb={}", nextDBID);
-        LessFiles.write(idFile, LessBytes.toBytes(nextDBID.toString()), false);
+        Files.write(nextDBID.toString(), idFile, StandardCharsets.UTF_8);
     }
 
     @Override
