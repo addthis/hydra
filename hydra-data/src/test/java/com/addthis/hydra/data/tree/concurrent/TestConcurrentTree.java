@@ -43,6 +43,8 @@ public class TestConcurrentTree {
 
     private static final CloseOperation close = CloseOperation.TEST;
 
+    static final int veryFastNumElements = 1000;
+
     static final int fastNumElements = 10000;
     static final int fastNumThreads = 8;
 
@@ -494,7 +496,7 @@ public class TestConcurrentTree {
         File dir = tempFolder.newFolder();
         ConcurrentTree tree = new TreeBuilder(dir).maxPageSize(16).numDeletionThreads(0).multiThreadedTree();
         ConcurrentTreeNode root = tree.getRootNode();
-        for (int i = 0; i < slowNumElements; i++) {
+        for (int i = 0; i < veryFastNumElements; i++) {
             ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
             assertNotNull(node);
             assertEquals(1, node.getLeaseCount());
@@ -503,13 +505,13 @@ public class TestConcurrentTree {
             child.release();
             node.release();
         }
-        for (int i = 0; i < slowNumElements; i++) {
+        for (int i = 0; i < veryFastNumElements; i++) {
             assertTrue(root.deleteNode(Integer.toString(i)));
         }
         tree.close();
         tree = new TreeBuilder(dir).numDeletionThreads(4).maxCacheSize(16).multiThreadedTree();
-        for (int i = 0; i < slowNumElements; i++) {
-            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i + slowNumElements), null);
+        for (int i = 0; i < veryFastNumElements; i++) {
+            ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i + veryFastNumElements), null);
             node.release();
         }
         tree.foregroundNodeDeletion(() -> false);

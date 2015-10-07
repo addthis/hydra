@@ -149,13 +149,6 @@ public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K,
         this.lock = initLock();
     }
 
-    @SuppressWarnings("unused")
-    public boolean upgradeLockAndTestStamp(long oldStamp) {
-        readUnlock();
-        writeLock();
-        return (writeStamp == oldStamp);
-    }
-
     public void readLock() {
         lock.readLock().lock();
     }

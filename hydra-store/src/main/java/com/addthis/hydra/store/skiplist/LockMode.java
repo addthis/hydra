@@ -14,5 +14,5 @@
 package com.addthis.hydra.store.skiplist;
 
 public enum LockMode {
-    READMODE, WRITEMODE, NONE
+    READMODE, WRITEMODE
 }

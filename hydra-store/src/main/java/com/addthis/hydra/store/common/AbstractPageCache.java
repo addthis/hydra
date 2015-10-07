@@ -337,7 +337,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
     protected void pushPageToDisk(Page<K, V> current, ByteBufOutputStream byteStream) {
 
-        assert (!useLocks || current.isWriteLockedByCurrentThread());
+        assert isWriteLockedByCurrentThread(current);
         assert (!current.inTransientState());
         assert (current.keys() != null);
 
@@ -368,7 +368,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
     }
 
     protected void pullPageHelper(Page<K, V> current, byte[] page) {
-        assert (!useLocks || current.isWriteLockedByCurrentThread());
+        assert isWriteLockedByCurrentThread(current);
         current.decode(page);
         getEvictionQueue().offer(current);
         updateMemoryEstimate(current.getMemoryEstimate());
@@ -377,13 +377,13 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
     protected void pullPageFromDisk(Page<K, V> current, LockMode mode) {
 
-        if (useLocks && mode == LockMode.READMODE) {
-            current.readUnlock();
-            current.writeLock();
+        if (mode == LockMode.READMODE) {
+            readUnlock(current);
+            writeLock(current);
         }
 
         try {
-            assert (!useLocks || current.isWriteLockedByCurrentThread());
+            assert isWriteLockedByCurrentThread(current);
             if (current.inTransientState()) {
                 return;
             }
@@ -396,8 +396,8 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 pullPageHelper(current, page);
             }
         } finally {
-            if (useLocks && mode == LockMode.READMODE) {
-                current.downgradeLock();
+            if (mode == LockMode.READMODE) {
+                downgradeLock(current);
             }
         }
     }
@@ -433,18 +433,16 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
     }
 
     public EvictionStatus attemptPageEviction(Page<K, V> page, IterationMode iteration, ByteBufOutputStream byteStream) {
-        if (useLocks) {
-            if (page.isReadLockedByCurrentThread() || page.isWriteLockedByCurrentThread()) {
+            if (useLocks && (page.isReadLockedByCurrentThread() || page.isWriteLockedByCurrentThread())) {
                 return EvictionStatus.NO_STATUS;
             }
             if (iteration == IterationMode.OPTIMISTIC) {
-                if (!page.writeTryLock()) {
+                if (!writeTryLock(page)) {
                     return EvictionStatus.TRYLOCK_FAIL;
                 }
             } else {
-                page.writeLock();
+                writeLock(page);
             }
-        }
 
         try {
             if (page.inTransientState()) {
@@ -468,9 +466,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
             return EvictionStatus.SUCCESS;
         } finally {
-            if (useLocks) {
-                writeUnlockAndNull(page);
-            }
+            writeUnlockAndNull(page);
         }
     }
 
@@ -571,9 +567,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 splitPage(newPage);
             }
         } finally {
-            if (useLocks) {
-                writeUnlockAndNull(newPage);
-            }
+            writeUnlockAndNull(newPage);
         }
         return newPage;
     }
@@ -596,7 +590,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         assert (!target.inTransientState());
 
         if (target.keys() == null) {
-            pullPageFromDisk(target, useLocks ? LockMode.WRITEMODE : null);
+            pullPageFromDisk(target, LockMode.WRITEMODE);
         }
 
         int newSize = target.size() / 2;
@@ -613,9 +607,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
         Page<K, V> sibling = pageFactory.generateSiblingPage(this,
                 sibMinKey, target.getNextFirstKey(), sibSize, sibKeys, sibValues, sibRawValues, target.getEncodeType());
-        if (useLocks) {
-            sibling.writeLock();
-        }
+        writeLock(sibling);
 
         byte[] encodeKey;
         byte[] placeHolder;
@@ -829,9 +821,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 return null;
             }
         } finally {
-            if (useLocks) {
-                page.readUnlock();
-            }
+            readUnlock(page);
         }
     }
 
@@ -855,10 +845,6 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         return locatePage(key, returnMode, false);
     }
 
-    protected Page<K, V> locatePage(K key) {
-        return locatePage(key, LockMode.NONE);
-    }
-
     protected Page<K, V> locatePage(K key, LockMode returnMode, boolean exact) {
         LockMode currentMode = returnMode;
 
@@ -867,16 +853,12 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         Page<K, V> current = null;
 
         do {
-            if (useLocks) {
-                unlockAndNull(current, currentMode);
-            }
+            unlockAndNull(current, currentMode);
             Map.Entry<K, Page<K, V>> cacheEntry = getCache().floorEntry(key);
 
             current = cacheEntry.getValue();
 
-            if (useLocks) {
-                current.modeLock(currentMode);
-            }
+            modeLock(current, currentMode);
 
             assert (current.getFirstKey().equals(cacheEntry.getKey()));
 
@@ -905,17 +887,15 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                     if (current.getFirstKey().equals(key)) {
                         returnPage = true;
                     } else if (pageLoad) {
-                        if (useLocks) {
-                            current.modeUnlock(currentMode);
-                        }
+                        unlockAndNull(current, currentMode);
                         return null;
                     }
                 }
                 if (returnPage) {
                     current.setTimeStamp(generateTimestamp());
 
-                    if (useLocks && (currentMode == LockMode.WRITEMODE && returnMode == LockMode.READMODE)) {
-                        current.downgradeLock();
+                    if (currentMode == LockMode.WRITEMODE && returnMode == LockMode.READMODE) {
+                        downgradeLock(current);
                     }
 
                     return current;
@@ -926,12 +906,10 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
              * The key was not found in a page on memory.
              * We must load a page from external storage.
              */
-            if (!current.inTransientState() && (!useLocks || currentMode == LockMode.WRITEMODE)) {
+            if (!current.inTransientState() && currentMode == LockMode.WRITEMODE) {
                 current = loadPage(key, current);
             } else {
-                if (useLocks) {
-                    current.modeUnlock(currentMode);
-                }
+                unlockAndNull(current, currentMode);
                 current = loadPage(key, null);
                 pageLoad = true;
             }
@@ -945,117 +923,143 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
      * (greatest key less than or equal to) of the input key. Current can
      * be used as a hint to locate the new page. If current is non-null then
      * it must be write-locked.
-     * <p>
+     * <p/>
      * The target page is returned and it is either read-locked or write-locked
      * depending on the {@param mode} parameter. It is guaranteed that the
      * return page is not in a transient state. It is not guaranteed that the
      * return page has been loaded into memory, ie. (page.keys != null).
      */
     protected Page<K, V> loadPage(K key, Page<K, V> current) {
+        assert (current == null || isWriteLockedByCurrentThread(current));
+
         Page<K, V> next = null, cachePage;
 
-        byte[] encodedKey = keyCoder.keyEncode(key);
+        try {
+            byte[] encodedKey = keyCoder.keyEncode(key);
 
-        while (true) {
-            byte[] externalKeyEncoded = externalStore.floorKey(encodedKey);
-
-            /** Key of the page that will be loaded from disk. */
-            K externalKey = keyCoder.keyDecode(externalKeyEncoded);
-
-            if ((current != null) && (compareKeys(current.getFirstKey(), externalKey) >= 0)) {
-                String errorMessage =
-                        "[CORRUPT PAGE STORE] current page key is greater or equal than the one being pulled from" +
-                                " disk (%s >= %s). This is unexpected and likely to lead to an infinite loop if allowed.";
-                throw new AssertionError(String.format(errorMessage, current.getFirstKey(), externalKey));
-            }
-            assert (compareKeys(key, externalKey) >= 0);
-
-            // Transfer ownership of the 'current' variable to the inner method
-            // to handle failures.
-            Page<K, V> currentCopy = current;
-
-            /** Locate the nearest page in cache that less than or equal to the new page. */
-            cachePage = loadPageCacheFloorEntry(currentCopy, externalKey);
-
-            if (cachePage.getFirstKey().equals(externalKey)) {
-                cachePage.setTimeStamp(generateTimestamp());
-                return cachePage;
-            } else {
-                current = cachePage;
-            }
-
-            assert (!current.inTransientState());
-
-            findnext:
             while (true) {
-                do {
-                    Map.Entry<K, Page<K, V>> higherEntry = getCache().higherEntry(current.getFirstKey());
-                    if (higherEntry == null) {
-                        break findnext;
+                byte[] externalKeyEncoded = externalStore.floorKey(encodedKey);
+
+                /** Key of the page that will be loaded from disk. */
+                K externalKey = keyCoder.keyDecode(externalKeyEncoded);
+
+                if ((current != null) && (compareKeys(current.getFirstKey(), externalKey) >= 0)) {
+                    String errorMessage =
+                            "[CORRUPT PAGE STORE] current page key is greater or equal than the one being pulled from" +
+                            " disk (%s >= %s). This is unexpected and likely to lead to an infinite loop if allowed.";
+                    throw new AssertionError(String.format(errorMessage, current.getFirstKey(), externalKey));
+                }
+                assert (compareKeys(key, externalKey) >= 0);
+
+                // Transfer ownership of the 'current' variable to the inner method
+                // to handle failures.
+                Page<K, V> currentCopy = current;
+                current = null;
+
+                /** Locate the nearest page in cache that less than or equal to the new page. */
+                cachePage = loadPageCacheFloorEntry(currentCopy, externalKey);
+
+                if (cachePage.getFirstKey().equals(externalKey)) {
+                    cachePage.setTimeStamp(generateTimestamp());
+                    return cachePage;
+                } else {
+                    current = cachePage;
+                }
+
+                assert (!current.inTransientState());
+
+                findnext:
+                while (true) {
+                    do {
+                        writeUnlockAndNull(next);
+                        Map.Entry<K, Page<K, V>> higherEntry = getCache().higherEntry(current.getFirstKey());
+                        if (higherEntry == null) {
+                            break findnext;
+                        }
+                        next = higherEntry.getValue();
+                        writeLock(next);
                     }
-                    next = higherEntry.getValue();
-                }
-                while (next.inTransientState());
+                    while (next.inTransientState());
 
-                if (compareKeys(next.getFirstKey(), externalKey) >= 0) {
-                    break;
+                    if (compareKeys(next.getFirstKey(), externalKey) >= 0) {
+                        break;
+                    }
+                    writeUnlockAndNull(current);
+                    current = next;
+                    next = null;
                 }
-                current = next;
+
+                if (next != null && next.getFirstKey().equals(externalKey)) {
+                    current = writeUnlockAndNull(current);
+                    cachePage = next;
+                    next = null;
+                    cachePage.setTimeStamp(generateTimestamp());
+                    return cachePage;
+                }
+
+                byte[] floorPageEncoded = externalStore.get(externalKeyEncoded);
+
+                if (floorPageEncoded == null) {
+                    current = writeUnlockAndNull(current);
+                    next = writeUnlockAndNull(next);
+                    continue;
+                }
+
+                Page<K, V> newPage = constructNewPage(current, next, externalKey, floorPageEncoded);
+                current = null;
                 next = null;
+                return newPage;
             }
-
-            if (next != null && next.getFirstKey().equals(externalKey)) {
-                cachePage = next;
-                cachePage.setTimeStamp(generateTimestamp());
-                return cachePage;
-            }
-
-            byte[] floorPageEncoded = externalStore.get(externalKeyEncoded);
-
-            if (floorPageEncoded == null) {
-                continue;
-            }
-
-            Page<K, V> newPage = constructNewPage(current, next, externalKey, floorPageEncoded, false);
-            current = null;
-            next = null;
-            return newPage;
+        } finally {
+            writeUnlockAndNull(current);
+            writeUnlockAndNull(next);
         }
     }
-
 
     /**
      * Helper method for loadPage().
      */
     private Page<K, V> loadPageCacheFloorEntry(Page<K, V> current, K externalKey) {
-        while (true) {
-            Map.Entry<K, Page<K, V>> cacheEntry = getCache().floorEntry(externalKey);
-            K cacheKey = cacheEntry.getKey();
-            Page<K, V> cachePage = cacheEntry.getValue();
+        boolean useHint = false;
+        try {
+            while (true) {
+                Map.Entry<K, Page<K, V>> cacheEntry = getCache().floorEntry(externalKey);
+                K cacheKey = cacheEntry.getKey();
+                Page<K, V> cachePage = cacheEntry.getValue();
 
-            assert (cacheKey.equals(cachePage.getFirstKey()));
+                assert (cacheKey.equals(cachePage.getFirstKey()));
 
-            /** If the nearest page in cache equals the new page then return. */
-            /** If we did not provide a hint then begin with the nearest page in cache. */
-            /** If we provided a hint and it was incorrect then do not use the hint. */
-            if (cacheKey.equals(externalKey) || current == null || !cacheKey.equals(current.getFirstKey())) {
-                if (!cachePage.inTransientState()) {
-                    return cachePage;
+                /** If the nearest page in cache equals the new page then return. */
+                /** If we did not provide a hint then begin with the nearest page in cache. */
+                /** If we provided a hint and it was incorrect then do not use the hint. */
+                if (cacheKey.equals(externalKey) || current == null || !cacheKey.equals(current.getFirstKey())) {
+                    current = writeUnlockAndNull(current);
+                    writeLock(cachePage);
+                    if (cachePage.inTransientState()) {
+                        writeUnlockAndNull(cachePage);
+                        continue;
+                    } else {
+                        return cachePage;
+                    }
+                }
+                /** Else we are using the hint that was provided. */
+                else {
+                    useHint = true;
+                    return current;
                 }
             }
-            /** Else we are using the hint that was provided. */
-            else {
-                return current;
+        } finally {
+            if (!useHint) {
+                writeUnlockAndNull(current);
             }
         }
-
     }
 
     /**
      * Helper method for loadPage().
      */
     protected Page<K, V> constructNewPage(Page<K, V> current, Page<K, V> next,
-                                          K externalKey, byte[] floorPageEncoded, boolean lock) {
+                                          K externalKey, byte[] floorPageEncoded) {
 
         Page<K, V> newPage = pageFactory.generateEmptyPage(this, externalKey, null);
         newPage.decode(floorPageEncoded);
@@ -1078,9 +1082,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
             fixedNumberEviction(fixedNumberEvictions);
         }
 
-        if (lock) {
-            newPage.writeLock();
-        }
+        writeLock(newPage);
         getEvictionQueue().offer(newPage);
         return newPage;
     }
@@ -1116,9 +1118,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 }
 
                 currentPage = currentEntry.getValue();
-                if (useLocks) {
-                    currentPage.writeLock();
-                }
+                writeLock(currentPage);
                 if (currentPage.inTransientState()) {
                     continue;
                 }
@@ -1144,10 +1144,8 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 }
                 return;
             } finally {
-                if (useLocks) {
-                    writeUnlockAndNull(currentPage);
-                    writeUnlockAndNull(prevPage);
-                }
+                writeUnlockAndNull(currentPage);
+                writeUnlockAndNull(prevPage);
             }
 
         }
@@ -1181,6 +1179,12 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         return prev;
     }
 
+    protected void modeLock(Page<K, V> input, LockMode mode) {
+        if (useLocks) {
+            input.modeLock(mode);
+        }
+    }
+
     /**
      * Internal helper method.
      * If the input page is null then do nothing. Otherwise
@@ -1202,17 +1206,52 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         return unlockAndNull(input, LockMode.WRITEMODE);
     }
 
+    protected boolean writeTryLock(Page<K,V> input) {
+        return useLocks ? input.writeTryLock() : true;
+    }
+
+    protected void writeLock(Page<K,V> input) {
+        if (useLocks) {
+            input.writeLock();
+        }
+    }
+
+    protected void readLock(Page<K,V> input) {
+        if (useLocks) {
+            input.readLock();
+        }
+    }
+
+    protected void readUnlock(Page<K,V> input) {
+        if (useLocks) {
+            input.readUnlock();
+        }
+    }
+
+    protected void downgradeLock(Page<K,V> input) {
+        if (useLocks) {
+            input.downgradeLock();
+        }
+    }
+
+    protected boolean isReadLockedByCurrentThread(Page<K,V> input) {
+        return !useLocks || input.isReadLockedByCurrentThread();
+    }
+
+    protected boolean isWriteLockedByCurrentThread(Page<K,V> input) {
+        return !useLocks || input.isWriteLockedByCurrentThread();
+    }
+
+
     /**
      * Helper method for {@link #getFirstKey()}.
      */
     protected K firstKeyFastPath() {
         Page<K, V> leftSentinel = getCache().firstEntry().getValue();
-        if (useLocks) {
-            leftSentinel.readLock();
-        }
+        readLock(leftSentinel);
         try {
             if (leftSentinel.keys() == null) {
-                pullPageFromDisk(leftSentinel, useLocks ? LockMode.READMODE : null);
+                pullPageFromDisk(leftSentinel, LockMode.READMODE);
             }
 
             assert (!leftSentinel.inTransientState());
@@ -1221,9 +1260,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 return leftSentinel.keys().get(0);
             }
         } finally {
-            if (useLocks) {
-                leftSentinel.readUnlock();
-            }
+            readUnlock(leftSentinel);
         }
         return null;
     }
@@ -1239,9 +1276,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         K currentKey = currentPage.getFirstKey();
         byte[] currentKeyEncoded = keyCoder.keyEncode(currentKey);
 
-        if (useLocks) {
-            currentPage.writeLock();
-        }
+        writeLock(currentPage);
 
         try {
             // Slow path: we load each page from disk searching for the first key.
@@ -1249,7 +1284,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 assert (!currentPage.inTransientState());
 
                 if (currentPage.keys() == null) {
-                    pullPageFromDisk(currentPage, useLocks ? LockMode.WRITEMODE : null);
+                    pullPageFromDisk(currentPage, LockMode.WRITEMODE);
                 }
 
                 if (currentPage.size() > 0) {
@@ -1268,9 +1303,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 currentKeyEncoded = keyCoder.keyEncode(currentKey);
             }
         } finally {
-            if (useLocks) {
-                currentPage.writeUnlock();
-            }
+            writeUnlockAndNull(currentPage);
         }
     }
 
@@ -1279,21 +1312,17 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
      */
     protected K lastKeyFastPath() {
         Page<K, V> maxPage = getCache().lastEntry().getValue();
-        if (useLocks) {
-            maxPage.readLock();
-        }
+        readLock(maxPage);
         try {
             if (maxPage.keys() == null) {
-                pullPageFromDisk(maxPage, useLocks ? LockMode.READMODE : null);
+                pullPageFromDisk(maxPage, LockMode.READMODE);
             }
 
             if (!maxPage.inTransientState() && maxPage.getNextFirstKey() == null && maxPage.size() > 0) {
                 return maxPage.keys().get(maxPage.size() - 1);
             }
         } finally {
-            if (useLocks) {
-                maxPage.readUnlock();
-            }
+            readUnlock(maxPage);
         }
         return null;
 
@@ -1421,16 +1450,16 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         }
 
         private void nextHelper(K target, boolean inclusive, boolean acquireLock) {
-            if (useLocks && acquireLock) {
-                page.readLock();
+            if (acquireLock) {
+                readLock(page);
             }
 
             try {
-                assert !useLocks || page.isReadLockedByCurrentThread();
+                assert isReadLockedByCurrentThread(page);
 
                 if (page.keys() == null) {
                     pullPageFromDisk(page, LockMode.READMODE);
-                    assert !useLocks || page.isReadLockedByCurrentThread();
+                    assert isReadLockedByCurrentThread(page);
                 }
 
                 if (page.inTransientState()) {
@@ -1441,7 +1470,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
                     page = unlockAndNull(page, LockMode.READMODE);
                     page = newPage;
-                    assert !useLocks || page.isReadLockedByCurrentThread();
+                    assert isReadLockedByCurrentThread(page);
                     stamp = -1;
                 }
 
@@ -1464,7 +1493,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
 
                 if (position == page.size() && !moveForward(target, inclusive)) {
-                    assert !useLocks || page.isReadLockedByCurrentThread();
+                    assert isReadLockedByCurrentThread(page);
                     return;
                 }
 
@@ -1499,16 +1528,12 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
                 K higherKey = keyCoder.keyDecode(higherKeyEncoded);
 
-                if (useLocks) {
-                    page.readUnlock();
-                }
+                readUnlock(page);
 
                 Page<K, V> higherPage = locatePage(higherKey, LockMode.READMODE, true);
 
                 if (higherPage == null) {
-                    if (useLocks) {
-                        page.readLock();
-                    }
+                    readLock(page);
                     continue;
                 }
 
@@ -1757,17 +1782,13 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         final ByteBufOutputStream byteStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
         try {
             for (Page<K, V> page : getEvictionQueue()) {
-                if (useLocks) {
-                    page.writeLock();
-                }
+                writeLock(page);
                 try {
                     if (!page.inTransientState() && page.keys() != null) {
                         pushPageToDisk(page, byteStream);
                     }
                 } finally {
-                    if (useLocks) {
-                        page.writeUnlock();
-                    }
+                    writeUnlockAndNull(page);
                 }
             }
         } finally {
@@ -1783,7 +1804,6 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
     protected abstract V doRemove(K key);
 
     protected abstract V doPut(K key, V value);
-
 
     @Override
     public Iterator<Map.Entry<K, V>> range(K start) {

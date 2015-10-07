@@ -96,6 +96,10 @@ public class NonConcurrentPageCache<K, V extends BytesCodable> extends AbstractP
 
     }
 
+    protected Page<K, V> locatePage(K key) {
+        return locatePage(key, null);
+    }
+
     @Override
     public V remove(K key) {
         return doRemove(key);
