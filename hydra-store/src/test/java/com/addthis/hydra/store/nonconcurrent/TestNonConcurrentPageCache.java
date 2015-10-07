@@ -13,23 +13,28 @@
  */
 package com.addthis.hydra.store.nonconcurrent;
 
-import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.LessFiles;
-import com.addthis.hydra.store.DBIntValue;
-import com.addthis.hydra.store.db.CloseOperation;
-import com.addthis.hydra.store.kv.ByteStore;
-import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
-import com.addthis.hydra.store.skiplist.SimpleIntKeyCoder;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import java.io.File;
 import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+
+import com.addthis.basis.test.SlowTest;
+import com.addthis.basis.util.LessFiles;
+
+import com.addthis.hydra.store.DBIntValue;
+import com.addthis.hydra.store.db.CloseOperation;
+import com.addthis.hydra.store.kv.ByteStore;
+import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
+import com.addthis.hydra.store.skiplist.SimpleIntKeyCoder;
+
+import com.google.common.base.Throwables;
+
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
@@ -344,7 +349,7 @@ public class TestNonConcurrentPageCache {
 
             cache.doClose(false, CloseOperation.NONE);
         } catch (Exception ex) {
-            fail();
+            throw Throwables.propagate(ex);
         } finally {
             if (directory != null) {
                 if (!LessFiles.deleteDir(directory)) {

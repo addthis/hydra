@@ -569,7 +569,10 @@ public class SkipListCache<K, V extends BytesCodable> extends AbstractPageCache<
                     continue;
                 }
 
-                return constructNewPage(current, next, externalKey, floorPageEncoded, true);
+                Page<K, V> newPage = constructNewPage(current, next, externalKey, floorPageEncoded, true);
+                current = null;
+                next = null;
+                return newPage;
             }
         } finally {
             writeUnlockAndNull(current);

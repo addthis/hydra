@@ -434,6 +434,9 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
     public EvictionStatus attemptPageEviction(Page<K, V> page, IterationMode iteration, ByteBufOutputStream byteStream) {
         if (useLocks) {
+            if (page.isReadLockedByCurrentThread() || page.isWriteLockedByCurrentThread()) {
+                return EvictionStatus.NO_STATUS;
+            }
             if (iteration == IterationMode.OPTIMISTIC) {
                 if (!page.writeTryLock()) {
                     return EvictionStatus.TRYLOCK_FAIL;
@@ -883,8 +886,6 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         boolean pageLoad = false;
 
         while (true) {
-            assert (!current.inTransientState());
-
             K currentFirstKey = current.getFirstKey();
 
             assert (ckey.compareTo(currentFirstKey) >= 0);
@@ -1015,7 +1016,10 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 continue;
             }
 
-            return constructNewPage(current, next, externalKey, floorPageEncoded, false);
+            Page<K, V> newPage = constructNewPage(current, next, externalKey, floorPageEncoded, false);
+            current = null;
+            next = null;
+            return newPage;
         }
     }
 
@@ -1053,19 +1057,12 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
     protected Page<K, V> constructNewPage(Page<K, V> current, Page<K, V> next,
                                           K externalKey, byte[] floorPageEncoded, boolean lock) {
 
-        while (shouldEvictPage() || mustEvictPage()) {
-          fixedNumberEviction(fixedNumberEvictions);
-        }
-
         Page<K, V> newPage = pageFactory.generateEmptyPage(this, externalKey, null);
         newPage.decode(floorPageEncoded);
-        if (lock) {
-            newPage.writeLock();
-        }
+
         assert (newPage.getFirstKey().equals(externalKey));
         assert (compareKeys(current.getFirstKey(), newPage.getFirstKey()) < 0);
         assert (next == null || compareKeys(next.getFirstKey(), newPage.getFirstKey()) > 0);
-
 
         Page<K, V> oldPage = getCache().putIfAbsent(externalKey, newPage);
         assert (oldPage == null);
@@ -1073,6 +1070,17 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
         updateMemoryEstimate(newPage.getMemoryEstimate());
         cacheSize.getAndIncrement();
         numPagesInMemory.getAndIncrement();
+
+        writeUnlockAndNull(current);
+        writeUnlockAndNull(next);
+
+        while (shouldEvictPage() || mustEvictPage()) {
+            fixedNumberEviction(fixedNumberEvictions);
+        }
+
+        if (lock) {
+            newPage.writeLock();
+        }
         getEvictionQueue().offer(newPage);
         return newPage;
     }
@@ -1418,9 +1426,11 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
             }
 
             try {
+                assert !useLocks || page.isReadLockedByCurrentThread();
 
                 if (page.keys() == null) {
                     pullPageFromDisk(page, LockMode.READMODE);
+                    assert !useLocks || page.isReadLockedByCurrentThread();
                 }
 
                 if (page.inTransientState()) {
@@ -1431,6 +1441,7 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
 
                     page = unlockAndNull(page, LockMode.READMODE);
                     page = newPage;
+                    assert !useLocks || page.isReadLockedByCurrentThread();
                     stamp = -1;
                 }
 
@@ -1447,12 +1458,13 @@ public abstract class AbstractPageCache<K, V extends BytesCodable> implements Pa
                 }
 
                 while (position < page.size() && page.values().get(position) == null
-                        && nullRawValue(page.rawValues().get(position))) {
+                       && nullRawValue(page.rawValues().get(position))) {
                     position++;
                 }
 
 
                 if (position == page.size() && !moveForward(target, inclusive)) {
+                    assert !useLocks || page.isReadLockedByCurrentThread();
                     return;
                 }
 

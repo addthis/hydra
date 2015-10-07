@@ -1,11 +1,12 @@
 package com.addthis.hydra.store.common;
 
+import java.util.ArrayList;
+
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.skiplist.LockMode;
-import io.netty.buffer.ByteBufOutputStream;
 
-import java.util.ArrayList;
+import io.netty.buffer.ByteBufOutputStream;
 
 public interface Page<K, V extends BytesCodable> {
     void initialize();
@@ -79,6 +80,8 @@ public interface Page<K, V extends BytesCodable> {
     void writeLock();
 
     boolean isWriteLockedByCurrentThread();
+
+    boolean isReadLockedByCurrentThread();
 
     void readUnlock();
 

@@ -1,39 +1,46 @@
 package com.addthis.hydra.store.common;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.zip.GZIPInputStream;
+
 import com.addthis.basis.io.GZOut;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Varint;
+
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.KeyCoder;
 import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.skiplist.LockMode;
 import com.addthis.hydra.store.skiplist.SkipListCache;
+
 import com.google.common.base.Throwables;
+
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
 import com.jcraft.jzlib.InflaterInputStream;
 import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
 import com.yammer.metrics.core.Histogram;
+
+import org.xerial.snappy.SnappyInputStream;
+import org.xerial.snappy.SnappyOutputStream;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
-import org.xerial.snappy.SnappyInputStream;
-import org.xerial.snappy.SnappyOutputStream;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.zip.GZIPInputStream;
 
 public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K, V> {
 
@@ -200,6 +207,10 @@ public abstract class AbstractPage<K, V extends BytesCodable> implements Page<K,
 
     public boolean isWriteLockedByCurrentThread() {
         return lock.isWriteLockedByCurrentThread();
+    }
+
+    public boolean isReadLockedByCurrentThread() {
+        return lock.getReadHoldCount() > 0;
     }
 
     /**

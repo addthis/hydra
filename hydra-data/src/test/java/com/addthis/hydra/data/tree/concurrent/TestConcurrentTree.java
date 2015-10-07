@@ -28,7 +28,6 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.store.db.CloseOperation;
 
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -490,7 +489,7 @@ public class TestConcurrentTree {
         tree.close(false, close);
     }
 
-    @Test @Ignore("known failure")
+    @Test
     public void backgroundTrashDeletion() throws Exception {
         File dir = tempFolder.newFolder();
         ConcurrentTree tree = new TreeBuilder(dir).maxPageSize(16).numDeletionThreads(0).multiThreadedTree();
