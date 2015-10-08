@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -146,12 +147,17 @@ public class SpawnQueueManager {
     public boolean remove(int priority, JobKey task) {
         this.queueLock.lock();
         try {
-            for (LinkedList<SpawnQueueItem> queue : this.mappedQueues.headMap(priority, true).values()) {
-                ListIterator<SpawnQueueItem> iter = queue.listIterator();
+            Iterator<LinkedList<SpawnQueueItem>> qIter = this.mappedQueues.headMap(priority, true).values().iterator();
+            while (qIter.hasNext()) {
+                LinkedList<SpawnQueueItem> subQueue = qIter.next();
+                ListIterator<SpawnQueueItem> iter = subQueue.listIterator();
                 while (iter.hasNext()) {
                     JobKey nextKey = iter.next();
                     if ((nextKey != null) && nextKey.matches(task)) {
                         iter.remove();
+                        if (subQueue.isEmpty()) {
+                            qIter.remove();
+                        }
                         return true;
                     }
                 }

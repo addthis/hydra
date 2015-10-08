@@ -2425,8 +2425,13 @@ public class Spawn implements Codable, AutoCloseable {
                     success = true;
                     taskQueuesByPriority.setStoppedJob(false);
                     taskQueuesByPriority.updateAllHostAvailSlots(hostManager.listHostStatus(null));
-                    for (LinkedList<SpawnQueueItem> queue : taskQueuesByPriority.getQueues()) {
-                        iterateThroughTaskQueue(queue);
+                    Iterator<LinkedList<SpawnQueueItem>> qIter = taskQueuesByPriority.getQueues().iterator();
+                    while (qIter.hasNext()) {
+                        LinkedList<SpawnQueueItem> subQueue = qIter.next();
+                        iterateThroughTaskQueue(subQueue);
+                        if (subQueue.isEmpty()) {
+                            qIter.remove();
+                        }
                     }
                     new UpdateEventRunnable(this).run();
                     sendTaskQueueUpdateEvent();
