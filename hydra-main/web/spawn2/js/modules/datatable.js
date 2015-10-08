@@ -637,7 +637,7 @@ function(){
                     "bStateSave": true,
                     "bServerSide":false,
                     "bCaseInsensitive":true,
-                    //"bDeferRender": true,
+                    "bDeferRender": true,
                     //"bScrollCollapse":self.collapsible,
                     "sInfoEmpty":this.emptyMessage,
                     //"bScrollAutoCss": true,

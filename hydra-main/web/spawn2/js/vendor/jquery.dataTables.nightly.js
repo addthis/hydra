@@ -11677,11 +11677,7 @@
 		 */
 		function ( sData )
 		{
-			var iParse = Date.parse(sData);
-			if ( (iParse !== null && !isNaN(iParse)) || (typeof sData === 'string' && sData.length === 0) )
-			{
-				return 'date';
-			}
+			//NOPE
 			return null;
 		},
 		

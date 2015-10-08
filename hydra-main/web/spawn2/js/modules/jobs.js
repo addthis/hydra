@@ -1059,6 +1059,7 @@ function(
                     "sTitle":"Submitted",
                     "sClass":"job-submitTime center",
                     "mData": "submitTime",
+                    "sType": "date",
                     "sWidth":"8%",
                     "bSearchable":false,
                     "mRender":function(val){
@@ -1071,6 +1072,7 @@ function(
                     "sTitle":"Ended",
                     "sClass":"job-endTime center",
                     "mData": "endTime",
+                    "sType": "date",
                     "sWidth":"8%",
                     "bSearchable":false,
                     "mRender":function(val){
