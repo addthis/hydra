@@ -181,7 +181,8 @@ public abstract class AbstractJobAlert implements Codable {
         return CodecJSON.encodeJSON(this);
     }
 
-    public ImmutableMap<String, String> checkAlertForJobs(Set<Job> jobs, MeshyClient meshyClient) {
+    public ImmutableMap<String, String> checkAlertForJobs(Spawn spawn, MeshyClient meshyClient) {
+        Set<Job> jobs = getAlertJobs(spawn);
         long now = System.currentTimeMillis();
         long delayMillis = TimeUnit.MINUTES.toMillis(delay);
         ImmutableMap.Builder<String, String> newActiveJobsBuilder = new ImmutableMap.Builder<>();
@@ -255,7 +256,7 @@ public abstract class AbstractJobAlert implements Codable {
      */
     @JsonIgnore public abstract String isValid();
 
-    @Nonnull public Set<Job> getAlertJobs(Spawn spawn) {
+    @Nonnull private Set<Job> getAlertJobs(Spawn spawn) {
         if (jobIds != null) {
             if (jobIds.size() == 1 && jobIds.get(0).equals(WILDCARD_JOB_STRING)) {
                 return streamingJobSet(spawn);
