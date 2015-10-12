@@ -211,6 +211,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         // log rops prior to mutating query
         String[] opsLog = query.getOps();
         // creates query for worker and updates local query ops (!mutates query!)
+        // query and remoteQuery are exact copies except that: query's ops contains the first element of the original,
+        // and remoteQuery's ops contains the rest (i.e. query contains ops, and remoteQuery contains rops)
         Query remoteQuery = query.createPipelinedQuery();
 
 

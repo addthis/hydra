@@ -133,12 +133,36 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
         }
     }
 
-    boolean tryActivateSource(QueryTaskSourceOption option) {
-        return option.tryActivate(meshy, queryOptions);
+    /**
+     * Attemps to active one of the options of the given QueryTaskSource.
+     *
+     * @param taskSource the QueryTaskSource to activate
+     * @return {@code true} if one of the options is activated; {@code false} if none of the
+     *         options can be/is activated
+     */
+    boolean tryActivateSource(QueryTaskSource taskSource) {
+        for (QueryTaskSourceOption option : taskSource.options) {
+            if (option.tryActivate(meshy, queryOptions)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    void replaceQuerySource(QueryTaskSource taskSource, QueryTaskSourceOption option) throws Exception {
+    /**
+     * Resets a QueryTaskSource and attempts to replace the previously selected option with a new one.
+     *
+     * @param taskSource
+     * @throws Exception
+     * @return {@code true} if a new option is activated; {@code false} if selected option is {@code null} or the new
+     *         option could not be activated.
+     */
+    boolean replaceQuerySource(QueryTaskSource taskSource) throws Exception {
+        QueryTaskSourceOption option = taskSource.getSelectedSource();
         taskSource.reset();
+        if (option == null) {
+            return false;
+        }
         // Invoked when a cached FileReference throws an IO Exception
         // Get a fresh FileReference and make a new QuerySource with that FileReference
         //      and the same parameters otherwise
@@ -148,7 +172,7 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
                 taskSource.options[i] = newOption;
             }
         }
-        newOption.tryActivate(meshy, queryOptions);
+        return newOption.tryActivate(meshy, queryOptions);
     }
 
     @Override

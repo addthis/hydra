@@ -81,6 +81,12 @@ public final class HttpQueryCallHandler {
         query.setParameterIfNotYetSet("allocator", kv.getValue("allocator"));
         query.setParameterIfNotYetSet("allowPartial", kv.getValue("allowPartial"));
         query.setParameterIfNotYetSet("tasks", kv.getValue("tasks"));
+        // use lazy allocator if maxSimul parameter is specified
+        String maxSimul = kv.getValue("maxSimul");
+        if (maxSimul != null) {
+            query.setParameter("allocator", "lazy");
+            query.setParameter("maxSimul", maxSimul);
+        }
 
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
