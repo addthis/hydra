@@ -75,7 +75,7 @@
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
 
     <!-- external dependency versions -->
-    <hydra.dep.log4j2.version>2.1</hydra.dep.log4j2.version>
+    <hydra.dep.log4j2.version>2.4.1</hydra.dep.log4j2.version>
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.10</hydra.dep.commons-codec.version>
@@ -281,6 +281,11 @@
         <version>${hydra.dep.log4j2.version}</version>
         <scope>import</scope>
         <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-jcl</artifactId>
+        <version>${hydra.dep.log4j2.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
