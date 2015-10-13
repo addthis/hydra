@@ -59,7 +59,7 @@ public class QueryTask implements Runnable {
                 sourceAggregator.needScheduling = true;
                 return;
             }
-            // XXX both provider and readFrame update sourceAggregator.completed
+            // NOTE: both provider and readFrame update sourceAggregator.completed
             List<QueryTaskSource> taskSources = taskSourceProvider.get();
             int bundlesProcessed = readFrame(taskSources, AggregateConfig.FRAME_READER_READS);
             if (bundlesProcessed > 0) {
@@ -184,17 +184,6 @@ public class QueryTask implements Runnable {
         } else {
             return null;
         }
-    }
-
-    private static class FrameReadResult {
-        public final int bundlesProcessed;
-        public final int complete;
-
-        public FrameReadResult(int bundlesProcessed, int complete) {
-            this.bundlesProcessed = bundlesProcessed;
-            this.complete = complete;
-        }
-
     }
 
     private interface FrameReadTaskSourceProvider {
