@@ -254,7 +254,7 @@ public class JobAlertRunner {
         boolean hasDescription = LessStrings.isNotEmpty(description);
         String subject;
         if (hasDescription) {
-            subject = reason + ' ' + description;
+            subject = reason + ' ' + description.split("\n")[0];
         } else {
             subject = String.format("%s %s - %s - %s", reason, jobAlert.getTypeString(),
                                     JobAlertRunner.getClusterHead(), errors.keySet());
