@@ -222,7 +222,13 @@ public class JobAlertUtil {
         log.trace("Emitting query with url {}", url);
         JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
         StringBuilder errorBuilder = new StringBuilder();
-        errorBuilder.append(array.toString() + "\n");
+        if (array.length() == 0) {
+            errorBuilder.append("Header row is missing.\n");
+        } else if (array.length() == 1) {
+            errorBuilder.append("No data is present (only header row).\n");
+        } else {
+            errorBuilder.append(array.toString() + "\n");
+        }
         /**
          * Test the following conditions:
          * - the array contains two or more values
