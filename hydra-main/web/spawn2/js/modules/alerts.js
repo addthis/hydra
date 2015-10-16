@@ -217,7 +217,7 @@ function(
             	"click #deleteAlertButton":"handleDeleteButtonClick",
         		"click #saveAlertButton":"handleSaveButtonClick",
         		"keyup input":"handleInputKeyUp",
-        		"keyup textarea":"handleTextAreaKeyUp"
+        		"keyup textarea":"handleInputKeyUp"
         	},
         	initialize:function(){},
         	render:function(){
@@ -277,19 +277,6 @@ function(
         		var name = input.attr("name");
         		var value = input.val();
         		this.model.set(name,value);
-        	},
-        	handleTextAreaKeyUp:function(event){
-        		var txt=$(event.currentTarget);
-        		var name = txt.attr("name");
-        		var value = txt.val();
-        		var jobs = [];
-        		_.each(value.split(','),function(job){
-            		var trimmed = $.trim(job);
-               		if(!_.isEmpty(trimmed)){
-                   		jobs.push(trimmed);
-               		}
-        		});
-        		this.model.set(name,jobs);
         	},
         	updateFormOptions:function() {
         		var type = parseInt($("#alertType").val());
