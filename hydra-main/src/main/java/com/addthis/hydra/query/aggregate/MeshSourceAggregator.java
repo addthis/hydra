@@ -136,7 +136,6 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
     /**
      * Attemps to active one of the options of the given QueryTaskSource.
      *
-     * @param taskSource the QueryTaskSource to activate
      * @return {@code true} if one of the options is activated; {@code false} if none of the
      *         options can be/is activated
      */
@@ -152,17 +151,12 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
     /**
      * Resets a QueryTaskSource and attempts to replace the previously selected option with a new one.
      *
-     * @param taskSource
-     * @throws Exception
      * @return {@code true} if a new option is activated; {@code false} if selected option is {@code null} or the new
      *         option could not be activated.
      */
     boolean replaceQuerySource(QueryTaskSource taskSource) throws Exception {
         QueryTaskSourceOption option = taskSource.getSelectedSource();
         taskSource.reset();
-        if (option == null) {
-            return false;
-        }
         // Invoked when a cached FileReference throws an IO Exception
         // Get a fresh FileReference and make a new QuerySource with that FileReference
         //      and the same parameters otherwise

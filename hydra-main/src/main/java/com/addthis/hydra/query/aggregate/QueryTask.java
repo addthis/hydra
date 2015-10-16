@@ -22,12 +22,16 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.data.query.Query;
+
+import com.google.common.base.Strings;
+import com.google.common.primitives.Ints;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +43,13 @@ public class QueryTask implements Runnable {
     private final MeshSourceAggregator sourceAggregator;
 
     private int pollFailures = 0;
-    private final AutoField sourceField;
-    private final FrameReadTaskSourceProvider taskSourceProvider;
+    @Nullable final AutoField sourceField;
+    private final Supplier<List<QueryTaskSource>> queryTaskSourceSupplier;
 
     public QueryTask(MeshSourceAggregator sourceAggregator) {
         this.sourceAggregator = sourceAggregator;
         this.sourceField = getSourceField(sourceAggregator.query);
-        this.taskSourceProvider = createTaskSourceProvider(sourceAggregator);
+        this.queryTaskSourceSupplier = createQueryTaskSourceSupplier(sourceAggregator);
     }
 
     @Override
@@ -59,9 +63,9 @@ public class QueryTask implements Runnable {
                 sourceAggregator.needScheduling = true;
                 return;
             }
-            // NOTE: both provider and readFrame update sourceAggregator.completed
-            List<QueryTaskSource> taskSources = taskSourceProvider.get();
-            int bundlesProcessed = readFrame(taskSources, AggregateConfig.FRAME_READER_READS);
+            // NOTE: both provider and readBundles update sourceAggregator.completed
+            List<QueryTaskSource> taskSources = queryTaskSourceSupplier.get();
+            int bundlesProcessed = readBundles(taskSources, AggregateConfig.FRAME_READER_READS);
             if (bundlesProcessed > 0) {
                 sourceAggregator.queryPromise.tryProgress(0, bundlesProcessed);
             }
@@ -85,7 +89,7 @@ public class QueryTask implements Runnable {
         }
     }
 
-    private int readFrame(List<QueryTaskSource> taskSources, int maxReads) throws Exception {
+    private int readBundles(List<QueryTaskSource> taskSources, int maxReads) throws Exception {
         int bundlesProcessed = 0;
         int complete = 0;
         boolean processedBundle = true;
@@ -150,27 +154,20 @@ public class QueryTask implements Runnable {
         }
     }
 
-    private FrameReadTaskSourceProvider createTaskSourceProvider(MeshSourceAggregator sourceAggregator) {
+    private Supplier<List<QueryTaskSource>> createQueryTaskSourceSupplier(MeshSourceAggregator sourceAggregator) {
         Query query = sourceAggregator.query;
         int totalTasks = sourceAggregator.totalTasks;
         int maxSimul = getMaxSimul(query.getParameter("maxSimul"), totalTasks);
         if (maxSimul == totalTasks) {
-            return new DefaultFrameReadTaskSourceProvider(sourceAggregator);
+            return new DefaultQueryTaskSourceSupplier(sourceAggregator);
         } else {
-            return new MaxSimulFrameReadTaskSourceProvider(sourceAggregator, maxSimul);
+            return new MaxSimulQueryTaskSourceSupplier(sourceAggregator, maxSimul);
         }
     }
 
     private int getMaxSimul(@Nullable String maxSimulQueryParam, int totalTasks) {
-        if (maxSimulQueryParam == null) {
-            return totalTasks;
-        }
-        try {
-            int n = Integer.parseInt(maxSimulQueryParam);
-            return (0 < n && n <= totalTasks) ? n : totalTasks;
-        } catch (Exception e) {
-            return totalTasks;
-        }
+        Integer n = Ints.tryParse(Strings.nullToEmpty(maxSimulQueryParam));
+        return (n != null && 0 < n && n <= totalTasks) ? n : totalTasks;
     }
 
     private static AutoField getSourceField(Query query) {
@@ -186,15 +183,11 @@ public class QueryTask implements Runnable {
         }
     }
 
-    private interface FrameReadTaskSourceProvider {
-        List<QueryTaskSource> get();
-    }
-
-    private static class DefaultFrameReadTaskSourceProvider implements FrameReadTaskSourceProvider {
+    private static class DefaultQueryTaskSourceSupplier implements Supplier<List<QueryTaskSource>> {
 
         private final MeshSourceAggregator sourceAggregator;
 
-        private DefaultFrameReadTaskSourceProvider(MeshSourceAggregator sourceAggregator) {
+        private DefaultQueryTaskSourceSupplier(MeshSourceAggregator sourceAggregator) {
             this.sourceAggregator = sourceAggregator;
         }
 
@@ -213,12 +206,12 @@ public class QueryTask implements Runnable {
         }
     }
 
-    private static class MaxSimulFrameReadTaskSourceProvider implements FrameReadTaskSourceProvider {
+    private static class MaxSimulQueryTaskSourceSupplier implements Supplier<List<QueryTaskSource>> {
 
         private final MeshSourceAggregator sourceAggregator;
         private final int maxSimul;
 
-        private MaxSimulFrameReadTaskSourceProvider(MeshSourceAggregator sourceAggregator, int maxSimul) {
+        private MaxSimulQueryTaskSourceSupplier(MeshSourceAggregator sourceAggregator, int maxSimul) {
             this.sourceAggregator = sourceAggregator;
             this.maxSimul = maxSimul;
         }
