@@ -80,11 +80,11 @@ public class TaskDataOutputChain extends DataOutputTypeList {
 
     @Override
     protected void open() {
-        log.warn("[init] beginning init chain");
+        log.info("[init] beginning init chain");
         for (int i = 0; i < outputs.length; i++) {
             outputs[i].open();
         }
-        log.warn("[init] all outputs initialized");
+        log.info("[init] all outputs initialized");
     }
 
     @Override public void send(Bundle row) throws DataChannelError {
@@ -115,19 +115,19 @@ public class TaskDataOutputChain extends DataOutputTypeList {
     }
 
     @Override public void sendComplete() {
-        log.warn("[sendComplete] forwarding completion signal to all outputs");
+        log.info("[sendComplete] forwarding completion signal to all outputs");
         for (TaskDataOutput output : outputs) {
             output.sendComplete();
         }
-        log.warn("[sendComplete] forwarding complete");
+        log.info("[sendComplete] forwarding complete");
     }
 
     @Override public void sourceError(Throwable er) {
-        log.warn("[sourceError] forwarding to all outputs" + er);
+        log.info("[sourceError] forwarding to all outputs: ", er);
         for (TaskDataOutput output : outputs) {
             output.sourceError(er);
         }
-        log.warn("[sourceError] forwarding complete");
+        log.info("[sourceError] forwarding complete");
     }
 
 
