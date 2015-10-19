@@ -123,11 +123,11 @@ public class TaskDataOutputChain extends DataOutputTypeList {
     }
 
     @Override public void sourceError(Throwable er) {
-        log.info("[sourceError] forwarding to all outputs: ", er);
+        log.error("[sourceError] forwarding to all outputs: ", er);
         for (TaskDataOutput output : outputs) {
             output.sourceError(er);
         }
-        log.info("[sourceError] forwarding complete");
+        log.error("[sourceError] forwarding complete");
     }
 
 
