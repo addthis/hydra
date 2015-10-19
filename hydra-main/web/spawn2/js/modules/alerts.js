@@ -49,7 +49,7 @@ function(
         			timeout:this.get("timeout"),
         			delay:this.get("delay"),
         			email:this.get("email"),
-        			description:((this.get("description") instanceof Array) ? this.get("description")[0] : this.get("description")),
+        			description:this.get("description"),
         			jobIds:this.get("jobIds").split(","),
         			suppressChanges:this.get("suppressChanges"),
         			canaryPath:this.get("canaryPath"),
