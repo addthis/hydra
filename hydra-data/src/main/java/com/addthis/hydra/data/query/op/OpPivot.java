@@ -27,7 +27,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.table.DataTableFactory;
-import com.addthis.bundle.util.BundleColumnBinder;
+import com.addthis.bundle.util.IndexField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
@@ -100,24 +100,21 @@ public class OpPivot extends AbstractQueryOp {
         LABEL_ASC, LABEL_DES, SUM_ASC, SUM_DES
     }
 
-    private BundleColumnBinder rowbinder;
-    private BundleColumnBinder colbinder;
-    private BundleField        cellField;
-    private BundleField        labelCol;
-    private BundleField        sumCol;
-    private PivotOp cellop = PivotOp.SUM;
-    private PivotOp   rowop;
-    private PivotOp   colop;
-    private SortOp    sortop;
-    private DataTable output;
+    private BundleField labelCol;
+    private BundleField sumCol;
+    private PivotOp     cellop = PivotOp.SUM;
+    private PivotOp     rowop;
+    private PivotOp     colop;
+    private SortOp      sortop;
+    private DataTable   output;
 
     private final LinkedHashMap<String, BundleField> outCellField = new LinkedHashMap<>();
     private final SortedMap<String, Bundle>          pivot        = new TreeMap<>();
 
-    private final DataTableFactory          tableFactory;
-    private final String[]                  rowkeys;
-    private final String[]                  colkeys;
-    private final String                    cellkey;
+    private final DataTableFactory  tableFactory;
+    private final IndexField[]      rowFields;
+    private final IndexField[]      colFields;
+    private final IndexField        cellField;
     private final ChannelProgressivePromise queryPromise;
 
     public OpPivot(DataTableFactory tableFactory,
@@ -128,9 +125,9 @@ public class OpPivot extends AbstractQueryOp {
         this.output = tableFactory.createTable(0);
         this.queryPromise = queryPromise;
         String[] parg = LessStrings.splitArray(args, ",");
-        rowkeys = LessStrings.splitArray(parg[0], ":");
-        colkeys = LessStrings.splitArray(parg[1], ":");
-        cellkey = parg[2];
+        rowFields = parseIndexFields(parg[0]);
+        colFields = parseIndexFields(parg[1]);
+        cellField = new IndexField(Integer.parseInt(parg[2]));
         if (parg.length >= 4) {
             List<PivotOp> pop = new LinkedList<>();
             for (int i = 3; i < parg.length; i++) {
@@ -174,6 +171,15 @@ public class OpPivot extends AbstractQueryOp {
         }
     }
 
+    private IndexField[] parseIndexFields(String s) {
+        String[] input = s.split(":");
+        IndexField[] fields = new IndexField[input.length];
+        for (int i = 0; i < input.length; i++) {
+            fields[i] = new IndexField(Integer.parseInt(input[i]));
+        }
+        return fields;
+    }
+
     private Numeric doOp(PivotOp op, Numeric accum, Numeric cell) {
         if (accum == null || cell == null) {
             //System.out.println("accum = " + accum + "  cell = " + cell);
@@ -199,16 +205,13 @@ public class OpPivot extends AbstractQueryOp {
 
     @Override
     public void send(Bundle row) {
-        if (rowbinder == null) {
-            rowbinder = new BundleColumnBinder(row, rowkeys);
-            colbinder = new BundleColumnBinder(row, colkeys);
-            cellField = row.getFormat().getField(cellkey);
+        if (labelCol == null) {
             labelCol = output.getFormat().getField("__row__");
         }
         /** generate column key or create if missing */
         String colkey = "";
-        for (BundleField colfield : colbinder.getFields()) {
-            colkey = colkey.concat(row.getValue(colfield).toString());
+        for (IndexField field : colFields) {
+            colkey = colkey.concat(field.getValue(row).toString());
         }
         BundleField pivotCell = outCellField.get(colkey);
         if (pivotCell == null) {
@@ -217,8 +220,8 @@ public class OpPivot extends AbstractQueryOp {
         }
         /** generate row key and fetch row */
         String rowkey = "";
-        for (BundleField rowfield : rowbinder.getFields()) {
-            rowkey = rowkey.concat(row.getValue(rowfield).toString());
+        for (IndexField field : rowFields) {
+            rowkey = rowkey.concat(field.getValue(row).toString());
         }
         Bundle pivotrow = pivot.get(rowkey);
         /** fill new row or append nulls to a short row */
@@ -228,7 +231,7 @@ public class OpPivot extends AbstractQueryOp {
             pivot.put(rowkey, pivotrow);
         }
         /** fetch column cell from pivot and matching column cell from row */
-        ValueObject inputValue = row.getValue(cellField);
+        ValueObject inputValue = cellField.getValue(row);
         ValueObject pivotValue = pivotrow.getValue(pivotCell);
         if (pivotValue == null) {
             pivotValue = inputValue;
