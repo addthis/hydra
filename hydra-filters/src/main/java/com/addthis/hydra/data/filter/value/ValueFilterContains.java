@@ -120,7 +120,7 @@ public class ValueFilterContains extends AbstractValueFilter {
                     return not ? null : returnMatch ? ValueFactory.create(match) : input;
                 }
             }
-        } else if (type == ValueObject.TYPE.STRING && value != null) {
+        } else if (value != null) {
             return compareInputAsString(input);
         }
 
@@ -129,10 +129,13 @@ public class ValueFilterContains extends AbstractValueFilter {
 
     @Nullable
     private ValueObject compareInputAsString(@Nonnull ValueObject input) {
-        assert (input.getObjectType() == ValueObject.TYPE.STRING);
         assert (value != null);
 
         String cmp = ValueUtil.asNativeString(input);
+
+        if (cmp == null) {
+            return null;
+        }
 
         Iterator<SearchResult> matcher = dictionary.progressiveSearch(cmp);
 
