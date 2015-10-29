@@ -18,7 +18,7 @@ import org.junit.Test;
 public class TestOpPivot extends TestOp {
 
     @Test
-    public void testPivot() throws Exception {
+    public void useCellAndRowOps() throws Exception {
         doOpTest(
                 new DataTableHelper().
                         tr().td("x", "a", "1").
@@ -31,5 +31,21 @@ public class TestOpPivot extends TestOp {
                         tr().td("b", "0", "2", "0", "2").
                         tr().td("c", "0", "0", "3", "3")
         );
+    }
+
+    @Test
+    public void useNoOps() throws Exception {
+        doOpTest(
+                new DataTableHelper()
+                        .tr().td("x", "a", "1")
+                        .tr().td("y", "b", "2")
+                        .tr().td("z", "c", "3"),
+                "pivot=1,0,2",
+                new DataTableHelper()
+                        .tr().tdNull().td("x", "y", "z")
+                        .tr().td("a", "1").tdNull().tdNull()
+                        .tr().td("b").tdNull().td("2").tdNull()
+                        .tr().td("c").tdNull().tdNull().td("3")
+                );
     }
 }

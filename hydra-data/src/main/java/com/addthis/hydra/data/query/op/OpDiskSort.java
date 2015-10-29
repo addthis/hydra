@@ -349,12 +349,6 @@ public class OpDiskSort extends AbstractRowOp {
      * @return
      */
     private static int stringCompare(ValueObject s1, ValueObject s2) {
-        if (s1 == OpPivot.MIN || s2 == OpPivot.MAX) {
-            return -1;
-        }
-        if (s1 == OpPivot.MAX || s2 == OpPivot.MIN) {
-            return 1;
-        }
         if (s1 == s2) {
             return 0;
         }

@@ -13,21 +13,19 @@
  */
 package com.addthis.hydra.data.query;
 
-import com.addthis.hydra.data.query.op.OpPivot;
-
 import org.junit.Test;
 
 public class TestOpDepivot extends TestOp {
 
     @Test
-    public void testDepivot() throws Exception {
+    public void defaultsAndArbitraryIndexLabel() throws Exception {
         doOpTest(
                 new DataTableHelper().
-                        tr().td(new OpPivot.PivotMarkMin()).td("a", "b").td(new OpPivot.PivotMarkMin()).
+                        tr().td("index").td("a", "b").td().
                         tr().td("aaa", "1", "3", "4").
                         tr().td("bbb", "2", "2", "4").
                         tr().td("ccc", "3", "1", "4"),
-                "depivot",
+                "depivot=row,col,val",
                 new DataTableHelper().
                         tr().td("aaa", "a", "1").
                         tr().td("aaa", "b", "3").
@@ -36,5 +34,24 @@ public class TestOpDepivot extends TestOp {
                         tr().td("ccc", "a", "3").
                         tr().td("ccc", "b", "1")
         );
+    }
+
+    @Test
+    public void defaultsPlusCopyMetadata() throws Exception {
+        doOpTest(
+                new DataTableHelper()
+                        .tr().td("index").td("a", "b").td()
+                        .tr().td("aaa", "1", "3", "1")
+                        .tr().td("bbb", "2", "2", "2")
+                        .tr().td("ccc", "3", "1", "1"),
+                "depivot=row,col,val,extra",
+                new DataTableHelper()
+                        .tr().td("aaa", "a", "1", "1")
+                        .tr().td("aaa", "b", "3", "1")
+                        .tr().td("bbb", "a", "2", "2")
+                        .tr().td("bbb", "b", "2", "2")
+                        .tr().td("ccc", "a", "3", "1")
+                        .tr().td("ccc", "b", "1", "1")
+                );
     }
 }

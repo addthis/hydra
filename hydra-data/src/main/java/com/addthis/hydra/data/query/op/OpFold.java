@@ -28,7 +28,7 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.hydra.data.query.AbstractBufferOp;
+import com.addthis.hydra.data.query.AbstractQueryOp;
 
 import io.netty.channel.ChannelProgressivePromise;
 
@@ -65,7 +65,7 @@ import io.netty.channel.ChannelProgressivePromise;
  * @user-reference
  * @hydra-name fold
  */
-public class OpFold extends AbstractBufferOp implements BundleFormatted {
+public class OpFold extends AbstractQueryOp implements BundleFormatted {
 
     private final BundleField[] outputFields;
     private final ListBundleFormat format;
@@ -104,14 +104,9 @@ public class OpFold extends AbstractBufferOp implements BundleFormatted {
     }
 
     @Override
-    public List<Bundle> finish() {
-        return folded != null ? createRows(folded) : null;
-    }
-
-    @Override
-    public List<Bundle> next(Bundle row) {
+    public void send(Bundle row) {
         BundleColumnBinder inputBinder = getSourceColumnBinder(row, inputFields);
-        List<Bundle> retval = null;
+        Bundle retval = null;
         String key = "";
         for (int i = 0; i < keycols.length; i++) {
             ValueObject o = inputBinder.getColumn(row, i);
@@ -121,7 +116,7 @@ public class OpFold extends AbstractBufferOp implements BundleFormatted {
         }
         if (folded == null || (lastkey != null && !lastkey.equals(key))) {
             if (folded != null) {
-                retval = createRows(folded);
+                retval = folded;
             }
             folded = new ListBundle(format);
             for (BundleField nullField : outputFields) {
@@ -145,7 +140,16 @@ public class OpFold extends AbstractBufferOp implements BundleFormatted {
                 break;
             }
         }
-        return retval;
+        if (retval != null) {
+            getNext().send(retval);
+        }
     }
 
+    @Override
+    public void sendComplete() {
+        if (folded != null) {
+            getNext().send(folded);
+        }
+        getNext().sendComplete();
+    }
 }

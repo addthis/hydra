@@ -13,10 +13,10 @@
  */
 package com.addthis.hydra.data.query.op;
 
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map.Entry;
+import java.util.Queue;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -38,7 +38,6 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.hydra.data.query.AbstractQueryOp;
@@ -49,11 +48,10 @@ import io.netty.channel.ChannelProgressivePromise;
 /**
  * <p>This query operation <span class="hydra-summary">pivots a column by row and column keys</span>.
  * <p/>
- * <p>The syntax is pivot=[rowkeys],[colkeys],[colval],[colop],[rowop],[sort]. [rowkeys] is a sequence
- * of one or more row numbers delimited by colon characters. [colkeys] is a sequence of one or more
- * column numbers delimited by colon characters. [colval] is a column number. [colop] and
- * [rowop] are one of "max", "min", or "sum". [sort] is either "a" for ascending
- * or "d" for descending.
+ * <p>The syntax is pivot=[rowkeys],[colkeys],[valkey],[cellop],[rowop],[colop],[sort]. [rowkeys] is a sequence of
+ * one or more row numbers delimited by colon characters. [colkeys] is a sequence of one or more * column numbers
+ * delimited by colon characters. [colval] is a column number. [colop] and * [rowop] are one of "max", "min", or
+ * "sum". [sort] is either "a" for ascending * or "d" for descending.
  * <p/>
  * <p>This operation transforms the entire table into a new output table. The values of the
  * output table are derived from the values that are in the [colval] column. The rows of the new
@@ -88,8 +86,6 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class OpPivot extends AbstractQueryOp {
 
-    public static final PivotMarkMin MIN = new PivotMarkMin();
-    public static final PivotMarkMin MAX = new PivotMarkMax();
     public static final ValueLong ZERO = ValueFactory.create(0);
 
     private static enum PivotOp {
@@ -132,7 +128,7 @@ public class OpPivot extends AbstractQueryOp {
         colkeys = LessStrings.splitArray(parg[1], ":");
         cellkey = parg[2];
         if (parg.length >= 4) {
-            List<PivotOp> pop = new LinkedList<>();
+            Queue<PivotOp> pop = new ArrayDeque<>(parg.length - 3);
             for (int i = 3; i < parg.length; i++) {
                 switch (parg[i]) {
                     case "sum":
@@ -168,9 +164,9 @@ public class OpPivot extends AbstractQueryOp {
                         break;
                 }
             }
-            cellop = pop.remove(0);
-            rowop = pop.size() > 0 ? pop.remove(0) : null;
-            colop = pop.size() > 0 ? pop.remove(0) : null;
+            cellop = pop.poll();
+            rowop = pop.poll();
+            colop = pop.poll();
         }
     }
 
@@ -240,7 +236,9 @@ public class OpPivot extends AbstractQueryOp {
 
     @Override
     public void sendComplete() {
-        sumCol = output.getFormat().getField("__sum__");
+        if (rowop != null) {
+            sumCol = output.getFormat().getField("__sum__");
+        }
         // create and send pivot header
         ListBundle header = (ListBundle) output.createBundle();
         for (Entry<String, BundleField> e : outCellField.entrySet()) {
@@ -330,132 +328,6 @@ public class OpPivot extends AbstractQueryOp {
             output.append(footer);
         }
         getNext().sendTable(output);
-    }
-
-    /**
-     * special markers to help sorting pivots
-     */
-    public static class PivotMarkMax extends PivotMarkMin {
-
-        @Override
-        public PivotMarkMax max(Numeric val) {
-            return this;
-        }
-
-        @Override
-        public Numeric min(Numeric val) {
-            return val;
-        }
-    }
-
-    /**
-     * special markers to help sorting pivots.
-     * must be ValueCustom instead of ValueObect
-     * so that it survives serialization
-     */
-    public static class PivotMarkMin implements ValueCustom<Long>, Numeric {
-
-        @Override
-        public String toString() {
-            return "";
-        }
-
-        @Override
-        public PivotMarkMin avg(int count) {
-            return this;
-        }
-
-        @Override
-        public Numeric diff(Numeric val) {
-            return val;
-        }
-
-        @Override
-        public Numeric max(Numeric val) {
-            return val;
-        }
-
-        @Override
-        public Numeric min(Numeric val) {
-            return this;
-        }
-
-        @Override
-        public Numeric sum(Numeric val) {
-            return val;
-        }
-
-        @Override
-        public Numeric prod(Numeric val) {
-            return val;
-        }
-
-        @Override
-        public Numeric divide(Numeric val) {
-            return val;
-        }
-
-        public Long toLong() {
-            return Long.MAX_VALUE;
-        }
-
-        @Override
-        public ValueLong asLong() {
-            return ValueFactory.create(toLong());
-        }
-
-        @Override
-        public ValueString asString() {
-            return ValueFactory.create("");
-        }
-
-        @Override
-        public TYPE getObjectType() {
-            return TYPE.CUSTOM;
-        }
-
-        @Override public Long asNative() {
-            return Long.MAX_VALUE;
-        }
-
-        @Override
-        public ValueBytes asBytes() throws ValueTranslationException {
-            throw new ValueTranslationException();
-        }
-
-        @Override
-        public ValueArray asArray() throws ValueTranslationException {
-            throw new ValueTranslationException();
-        }
-
-        @Override
-        public Numeric asNumeric() throws ValueTranslationException {
-            return this;
-        }
-
-        @Override
-        public ValueDouble asDouble() throws ValueTranslationException {
-            throw new ValueTranslationException();
-        }
-
-        @Override
-        public ValueCustom asCustom() throws ValueTranslationException {
-            return this;
-        }
-
-        @Override
-        public ValueMap asMap() throws ValueTranslationException {
-            return ValueFactory.createMap();
-        }
-
-        @Override
-        public void setValues(ValueMap map) {
-        }
-
-        @Override
-        public ValueSimple asSimple() {
-            return asLong();
-        }
     }
 
     /**
