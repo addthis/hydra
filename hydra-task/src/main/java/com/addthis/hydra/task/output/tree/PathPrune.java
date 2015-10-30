@@ -107,6 +107,13 @@ public class PathPrune extends PathElement {
     @Nullable
     private final DateTimeFormatter nameFormat;
 
+    /**
+     * Optional argument. It is a hint to the prune implementation that
+     * the nameFormat is also the lexicographic order of the nodes.
+     * Can be used to improve prune performance. Default is false.
+     */
+    private final boolean sortedNames;
+
     @Nullable
     private final ImmutableSet<String> excludes;
 
@@ -122,7 +129,8 @@ public class PathPrune extends PathElement {
                      @JsonProperty("allLeaves") boolean allLeaves,
                      @JsonProperty("relativeDown") int relativeDown,
                      @JsonProperty("preempt") boolean preempt,
-                     @JsonProperty("excludes") ImmutableSet<String> excludes) {
+                     @JsonProperty("excludes") ImmutableSet<String> excludes,
+                     @JsonProperty("sortedNames") boolean sortedNames) {
         this.ttl = ttl;
         this.timePropKey = timePropKey;
         this.ignoreMissingTimeProp = ignoreMissingTimeProp;
@@ -130,6 +138,7 @@ public class PathPrune extends PathElement {
         this.relativeDown = relativeDown;
         this.preempt = preempt;
         this.excludes = excludes;
+        this.sortedNames = sortedNames;
         if (nameFormat != null && timezone != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat).withZone(DateTimeZone.forID(timezone));
         } else if (nameFormat != null) {
@@ -213,19 +222,24 @@ public class PathPrune extends PathElement {
         int deleted = 0;
         int kept = 0;
         int total = 0;
+        boolean skip = false;
         try {
             while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
+                long nodeTime = 0;
                 DataTreeNode treeNode = keyNodeItr.next();
                 boolean delete;
                 if (allLeaves) {
                     delete = true;
                 } else {
-                    long nodeTime = getNodeTime(treeNode);
+                    nodeTime = getNodeTime(treeNode);
                     delete = ((nodeTime > 0) && ((now - nodeTime) > ttl));
                 }
                 if (delete) {
                     root.deleteNode(treeNode.getName());
                     deleted++;
+                } else if (sortedNames && (nodeTime > 0) && (nameFormat != null)) {
+                    skip = true;
+                    break;
                 } else {
                     kept++;
                 }
@@ -236,7 +250,12 @@ public class PathPrune extends PathElement {
                 }
             }
         } finally {
-            logger.info("Iterated through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
+            if (skip) {
+                logger.info("Iterated through children of {}, deleted: {} and skipped remaining nodes",
+                            root.getName(), deleted);
+            } else {
+                logger.info("Iterated through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
+            }
             keyNodeItr.close();
         }
     }
@@ -260,6 +279,9 @@ public class PathPrune extends PathElement {
         return false;
     }
 
+    /**
+     * Return the time associated with a node or -1 for an invalid time.
+     */
     @VisibleForTesting long getNodeTime(DataTreeNode treeNode) {
         if ((excludes != null) && (excludes.contains(treeNode.getName()))) {
             return -1;
