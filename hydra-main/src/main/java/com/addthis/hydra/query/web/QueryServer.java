@@ -13,18 +13,19 @@
  */
 package com.addthis.hydra.query.web;
 
-import java.io.IOException;
-
 import java.util.concurrent.ThreadFactory;
 
+import com.addthis.basis.jvm.Shutdown;
+
 import com.addthis.codec.config.Configs;
+import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.loadbalance.NextQueryTask;
 import com.addthis.hydra.query.loadbalance.QueryQueue;
 import com.addthis.hydra.query.tracker.QueryTracker;
-import com.addthis.hydra.common.util.CloseTask;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -54,13 +55,19 @@ public class QueryServer implements AutoCloseable {
     private final EventExecutorGroup executorGroup;
     private final ServerBootstrap serverBootstrap;
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) {
         if ((args.length > 0) && ("--help".equals(args[0]) || "-h".equals(args[0]))) {
             out.println("usage: qmaster");
         }
-        QueryServer queryServer = Configs.newDefault(QueryServer.class);
-        queryServer.run();
-        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(queryServer), "Query Master Shutdown Hook"));
+        Shutdown.createWithShutdownHook(() -> {
+            try {
+                QueryServer queryServer = Configs.newDefault(QueryServer.class);
+                queryServer.run();
+                return queryServer;
+            } catch (Exception e) {
+                throw Throwables.propagate(e);
+            }
+        }, CloseTask::new);
     }
 
     @JsonCreator
