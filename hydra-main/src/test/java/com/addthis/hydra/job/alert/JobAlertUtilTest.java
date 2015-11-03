@@ -16,6 +16,8 @@ package com.addthis.hydra.job.alert;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.job.alert.JobAlertUtil;
 
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -27,6 +29,15 @@ public class JobAlertUtilTest {
         String expanded = JobAlertUtil.expandDateMacro("{{now}}/{{now-1}},{{now}},123442/{{now, {{now}}");
         String now = DateUtil.getDateTime(JobAlertUtil.ymdFormatter, "{{now}}").toString(JobAlertUtil.ymdFormatter);
         String nowMinus1 = DateUtil.getDateTime(JobAlertUtil.ymdFormatter, "{{now-1}}").toString(JobAlertUtil.ymdFormatter);
+        assertEquals(String.format("%s/%s,%s,123442/{{now, %s",now,nowMinus1,now,now), expanded);
+    }
+
+    @Test
+    public void withFormatter() {
+        DateTimeFormatter format = DateTimeFormat.forPattern("yyyyww");
+        String expanded = JobAlertUtil.expandDateMacro("{{now::yyyyww}}/{{now-1::yyyyww}},{{now::yyyyww}},123442/{{now, {{now::yyyyww}}");
+        String now = DateUtil.getDateTime(format, "{{now}}").toString(format);
+        String nowMinus1 = DateUtil.getDateTime(format, "{{now-1}}").toString(format);
         assertEquals(String.format("%s/%s,%s,123442/{{now, %s",now,nowMinus1,now,now), expanded);
     }
 

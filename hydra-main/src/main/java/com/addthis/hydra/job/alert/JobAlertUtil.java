@@ -45,6 +45,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.slf4j.Logger;
@@ -79,6 +80,8 @@ public class JobAlertUtil {
             Pattern.quote("{{now") +
             // optional increment or decrement adjustment
             "(([+-]\\d+)(h)?)?" +
+            // optional date time format
+            "(::.+?)?" +
             // optional timezone
             "(:.+?)?" +
             // suffix literal
@@ -282,13 +285,21 @@ public class JobAlertUtil {
         StringBuffer sb = new StringBuffer();
         Matcher matcher = DATE_MACRO_PATTERN.matcher(path);
         while (matcher.find()) {
-            if (matcher.group(3) != null) {
-                String match = "{{now" + matcher.group(2) + Strings.nullToEmpty(matcher.group(4)) + "}}";
-                matcher.appendReplacement(sb, DateUtil.getDateTime(ymdhFormatter, match, true).toString(ymdhFormatter));
-            } else {
-                String match = matcher.group();
-                matcher.appendReplacement(sb, DateUtil.getDateTime(ymdFormatter, match, false).toString(ymdFormatter));
+            DateTimeFormatter formatter = null;
+            boolean hourly = false;
+            String match;
+            if (matcher.group(4) != null) {
+                formatter = DateTimeFormat.forPattern(matcher.group(4).substring(2));
             }
+            if (matcher.group(3) != null) {
+                match = "{{now" + matcher.group(2) + Strings.nullToEmpty(matcher.group(5)) + "}}";
+                hourly = true;
+                formatter = (formatter != null) ? formatter : ymdhFormatter;
+            } else {
+                match = "{{now" + matcher.group(1) + Strings.nullToEmpty(matcher.group(5)) + "}}";
+                formatter = (formatter != null) ? formatter : ymdFormatter;
+            }
+            matcher.appendReplacement(sb, DateUtil.getDateTime(formatter, match, hourly).toString(formatter));
         }
         matcher.appendTail(sb);
         return sb.toString();
