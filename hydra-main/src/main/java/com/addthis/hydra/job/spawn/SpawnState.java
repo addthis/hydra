@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import javax.annotation.Nonnull;
+
 import java.util.Iterator;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,7 +58,7 @@ public class SpawnState implements Codable {
         this.disabledHosts = disabledHosts;
     }
 
-    public Iterator<Job> jobsIterator() {
+    @Nonnull public Iterator<Job> jobsIterator() {
         return jobs.values().iterator();
     }
 }

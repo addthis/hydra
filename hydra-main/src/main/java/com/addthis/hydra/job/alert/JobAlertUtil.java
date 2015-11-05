@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.LessStrings;
+import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
@@ -223,7 +223,10 @@ public class JobAlertUtil {
         ops += ";limit=1000;merge=kkkkkkkkkkkk";
         String url = getQueryURL(jobId, query, ops, rops);
         log.trace("Emitting query with url {}", url);
-        JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
+        JSONArray array = new JSONFetcher(alertQueryTimeout,
+                                          alertQueryRetries,
+                                          alertQueryMinBackoff,
+                                          alertQueryMinBackoff).loadJSONArray(url);
         StringBuilder errorBuilder = new StringBuilder();
         if (array.length() == 0) {
             errorBuilder.append("Header row is missing.\n");

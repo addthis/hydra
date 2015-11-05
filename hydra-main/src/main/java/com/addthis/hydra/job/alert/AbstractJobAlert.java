@@ -114,7 +114,7 @@ public abstract class AbstractJobAlert implements Codable {
      * This is a trade-off where the most recent message for an alert
      * is not emailed with the advantage of no continuous spam of emails.
      */
-    @JsonProperty @Nonnull public final SuppressChanges suppressChanges;
+    @Nonnull @JsonProperty public final SuppressChanges suppressChanges;
 
     /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
     @JsonProperty protected volatile ImmutableMap<String, String> activeJobs;
@@ -124,9 +124,9 @@ public abstract class AbstractJobAlert implements Codable {
     @JsonProperty protected volatile long lastAlertTime;
 
     /** Running count of consecutive canary query exceptions. Reset on success. */
-    protected final transient AtomicInteger consecutiveCanaryExceptionCount = new AtomicInteger(0);
+    protected final transient AtomicInteger consecutiveCanaryExceptionCount;
 
-    private transient Iterator<Job> streamingIterator = null;
+    private transient Iterator<Job> streamingIterator;
 
 
     private static <K,V> ImmutableMap<K,V> immutableOrEmpty(Map<K,V> input) {
@@ -137,15 +137,15 @@ public abstract class AbstractJobAlert implements Codable {
         }
     }
 
-    public AbstractJobAlert(@Nullable String alertId,
-                            String description,
-                            @Time(TimeUnit.MINUTES) long delay,
-                            String email,
-                            List<String> jobIds,
-                            SuppressChanges suppressChanges,
-                            long lastAlertTime,
-                            Map<String, String> activeJobs,
-                            Map<String, Long> activeTriggerTimes) {
+    protected AbstractJobAlert(@Nullable String alertId,
+                               String description,
+                               @Time(TimeUnit.MINUTES) long delay,
+                               String email,
+                               List<String> jobIds,
+                               SuppressChanges suppressChanges,
+                               long lastAlertTime,
+                               Map<String, String> activeJobs,
+                               Map<String, Long> activeTriggerTimes) {
         if (alertId == null) {
             String newAlertId = UUID.randomUUID().toString();
             log.debug("creating new alert with uuid: {}", newAlertId);
@@ -161,6 +161,8 @@ public abstract class AbstractJobAlert implements Codable {
         this.activeJobs = immutableOrEmpty(activeJobs);
         this.activeTriggerTimes = immutableOrEmpty(activeTriggerTimes);
         this.lastAlertTime = lastAlertTime;
+        this.streamingIterator = null;
+        this.consecutiveCanaryExceptionCount = new AtomicInteger(0);
     }
 
     // getters/setters that trigger ser/deser and are not vanilla (also have in-code usages)
@@ -234,7 +236,7 @@ public abstract class AbstractJobAlert implements Codable {
     @Nullable
     protected String handleCanaryException(Exception ex, @Nullable String previousErrorMessage) {
         log.warn("Exception during canary check for alert {} : ", alertId, ex);
-        // special handling for SocketTimeoutException which is mostly trasient
+        // special handling for SocketTimeoutException which is mostly transient
         if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
             int c = consecutiveCanaryExceptionCount.incrementAndGet();
             if (c >= MAX_CONSECUTIVE_CANARY_EXCEPTION) {
@@ -313,7 +315,7 @@ public abstract class AbstractJobAlert implements Codable {
     public String toString() {
         try {
             return CodecJSON.encodeString(this);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             return super.toString();
         }
     }

@@ -184,7 +184,11 @@ public class JSONFetcher {
         } catch (ExecutionException e) {
             throw Throwables.propagate(e.getCause());
         } catch (RetryException e) {
-            throw new IOException("Max retries exceeded");
+            if (e.getLastFailedAttempt().hasException()) {
+                throw new IOException("Max retries exceeded", e.getLastFailedAttempt().getExceptionCause());
+            } else {
+                throw new IOException("Max retries exceeded", e);
+            }
         }
     }
 
