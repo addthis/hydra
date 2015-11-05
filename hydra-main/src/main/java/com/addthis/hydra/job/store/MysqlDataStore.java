@@ -17,6 +17,7 @@ import javax.sql.rowset.serial.SerialBlob;
 
 import java.util.Properties;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -25,8 +26,8 @@ import java.sql.SQLException;
 
 import com.addthis.basis.util.Parameter;
 
+import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
-import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.LZFException;
 
 import org.slf4j.Logger;
@@ -150,7 +151,7 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
     @Override
     protected Blob valueToDBType(String value) throws SQLException {
         if (value != null) {
-            return new SerialBlob(LZFEncoder.encode(value.getBytes()));
+            return new SerialBlob(value.getBytes(StandardCharsets.UTF_8));
         } else {
             return null;
         }
@@ -161,7 +162,13 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
         try {
             if (dbValue != null) {
                 byte[] blobBytes = dbValue.getBytes(1L, (int) dbValue.length());
-                return new String(LZFDecoder.decode(blobBytes));
+                // make best guess whether value was previously compressed with LZF
+                if ((blobBytes[0] == LZFChunk.BYTE_Z) && (blobBytes[1] == LZFChunk.BYTE_V)) {
+                    byte[] decodedBytes = LZFDecoder.decode(blobBytes);
+                    return new String(decodedBytes, StandardCharsets.UTF_8);
+                } else {
+                    return new String(blobBytes, StandardCharsets.UTF_8);
+                }
             } else {
                 return null;
             }
