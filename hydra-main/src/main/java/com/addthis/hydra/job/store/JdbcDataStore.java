@@ -13,20 +13,17 @@
  */
 package com.addthis.hydra.job.store;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLTransactionRollbackException;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 import com.addthis.basis.util.Parameter;
 
@@ -36,10 +33,13 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  *
  */
-public abstract class JdbcDataStore implements SpawnDataStore {
+public abstract class JdbcDataStore<T> implements SpawnDataStore {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcDataStore.class);
 
@@ -199,7 +199,8 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             }
             ResultSet resultSet = executeAndTimeQuery(preparedStatement);
             while (resultSet.next()) {
-                rv.put(resultSet.getString(pathKey), dbTypeToValue(resultSet.getObject(valueKey, getValueType())));
+                T resultSetObject = resultSet.getObject(valueKey, getValueType());
+                rv.put(resultSet.getString(pathKey), dbTypeToValue(resultSetObject));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -207,9 +208,9 @@ public abstract class JdbcDataStore implements SpawnDataStore {
         return rv;
     }
 
-    protected abstract <T> T valueToDBType(String value) throws SQLException;
+    protected abstract T valueToDBType(String value) throws SQLException;
 
-    protected abstract <T> String dbTypeToValue(T dbValue) throws SQLException;
+    protected abstract String dbTypeToValue(T dbValue) throws SQLException;
 
     @Override
     public void put(String path, String value) throws Exception {
@@ -405,7 +406,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
 
     protected abstract String getGetChildrenTemplate();
     
-    protected abstract Class getValueType();
+    protected abstract Class<T> getValueType();
 
     public static int getMaxPathLength() {
         return maxPathLength;

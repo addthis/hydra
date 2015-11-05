@@ -15,29 +15,28 @@ package com.addthis.hydra.job.store;
 
 import javax.sql.rowset.serial.SerialBlob;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
-import com.addthis.basis.util.Parameter;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Properties;
 
 import java.sql.Blob;
+import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+import com.addthis.basis.util.Parameter;
 
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.LZFException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A class for storing spawn configuration data into a mysql database. Reads and
  * writes values from a single table.
  */
-public class MysqlDataStore extends JdbcDataStore {
+public class MysqlDataStore extends JdbcDataStore<Blob> {
 
     private static final Logger log = LoggerFactory.getLogger(MysqlDataStore.class);
     private static final String driverClass = Parameter.value("sql.datastore.driverclass", "org.drizzle.jdbc.DrizzleDriver");
@@ -144,21 +143,28 @@ public class MysqlDataStore extends JdbcDataStore {
     }
 
     @Override
-    protected Class getValueType() {
+    protected Class<Blob> getValueType() {
         return Blob.class;
     }
 
     @Override
     protected Blob valueToDBType(String value) throws SQLException {
-        return value != null ? new SerialBlob(LZFEncoder.encode(value.getBytes())) : null;
+        if (value != null) {
+            return new SerialBlob(LZFEncoder.encode(value.getBytes()));
+        } else {
+            return null;
+        }
     }
 
     @Override
-    protected <T> String dbTypeToValue(T dbValue) throws SQLException {
+    protected String dbTypeToValue(Blob dbValue) throws SQLException {
         try {
-            return dbValue != null
-                    ? new String(LZFDecoder.decode(((Blob) dbValue).getBytes(1l, (int) ((Blob) dbValue).length())))
-                    : null;
+            if (dbValue != null) {
+                byte[] blobBytes = dbValue.getBytes(1L, (int) dbValue.length());
+                return new String(LZFDecoder.decode(blobBytes));
+            } else {
+                return null;
+            }
         } catch (LZFException ex) {
             //Couldn't deal with the data
             throw new SQLException(ex);

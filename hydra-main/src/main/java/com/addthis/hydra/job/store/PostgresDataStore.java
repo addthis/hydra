@@ -13,25 +13,24 @@
  */
 package com.addthis.hydra.job.store;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.SQLException;
-
 import java.util.Properties;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 import com.addthis.basis.util.Parameter;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class for storing spawn configuration data into a PostgreSQL database.
  * Reads and writes values from a single master table which uses partitioning
- * {@link http://www.postgresql.org/docs/9.1/static/ddl-partitioning.html}.
+ * <a href="http://www.postgresql.org/docs/9.1/static/ddl-partitioning.html">ddl partitioning.</a>
  */
-public class PostgresDataStore extends JdbcDataStore {
+public class PostgresDataStore extends JdbcDataStore<String> {
 
     private static final Logger log = LoggerFactory.getLogger(PostgresDataStore.class);
 
@@ -141,7 +140,7 @@ public class PostgresDataStore extends JdbcDataStore {
     }
 
     @Override
-    protected Class getValueType() {
+    protected Class<String> getValueType() {
         return String.class;
     }
     
@@ -151,8 +150,8 @@ public class PostgresDataStore extends JdbcDataStore {
     }
 
     @Override
-    protected <T> String dbTypeToValue(T dbValue) throws SQLException {
-        return (String) dbValue;
+    protected String dbTypeToValue(String dbValue) throws SQLException {
+        return dbValue;
     }
 
 }

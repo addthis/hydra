@@ -191,7 +191,9 @@ public class JobConfigManager {
      */
     private Map<String, String> fetchJobData(String jobId) {
         String jobPath = getJobPath(jobId);
-        String[] queryPaths = new String[] {jobPath, jobPath + configChildName, jobPath + queryConfigChildName, jobPath + alertChildName, jobPath + tasksChildName, jobPath + taskChildName};
+        String[] queryPaths =
+                {jobPath, jobPath + configChildName, jobPath + queryConfigChildName, jobPath + alertChildName,
+                 jobPath + tasksChildName, jobPath + taskChildName};
         return spawnDataStore.get(queryPaths);
     }
 
@@ -276,7 +278,7 @@ public class JobConfigManager {
         private final List<String> chunk;
         private final JobConfigManager jobConfigManager;
 
-        public MapChunkLoader(JobConfigManager jobConfigManager, Map<String, IJob> jobs, List<String> chunk) {
+        private MapChunkLoader(JobConfigManager jobConfigManager, Map<String, IJob> jobs, List<String> chunk) {
             this.jobs = jobs;
             this.chunk = chunk;
             this.jobConfigManager = jobConfigManager;
