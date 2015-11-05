@@ -70,7 +70,7 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 
 @ChannelHandler.Sharable
-public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
+public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
 
@@ -124,12 +124,6 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         } else {
             spawnDataStoreHandler = null;
         }
-
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                shutdown();
-            }
-        });
     }
 
     public SpawnDataStoreHandler getSpawnDataStoreHandler() {
@@ -148,15 +142,12 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         return tracker;
     }
 
-    protected void shutdown() {
+    @Override public void close() {
         try {
             if (spawnDataStoreHandler != null) {
                 spawnDataStoreHandler.close();
             }
             meshy.close();
-            if (tracker != null) {
-                tracker.close();
-            }
         } catch (Exception e) {
             log.error("arbitrary exception during mqmaster shutdown", e);
         }

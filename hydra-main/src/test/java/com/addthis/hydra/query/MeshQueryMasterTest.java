@@ -64,7 +64,7 @@ public class MeshQueryMasterTest {
 
     @After
     public void after() throws InterruptedException {
-        meshQueryMaster.shutdown();
+        meshQueryMaster.close();
         LessFiles.deleteDir(new File(tmpRoot));
     }
 

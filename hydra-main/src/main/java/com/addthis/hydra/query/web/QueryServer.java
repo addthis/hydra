@@ -54,6 +54,8 @@ public class QueryServer implements AutoCloseable {
     private final EventLoopGroup workerGroup;
     private final EventExecutorGroup executorGroup;
     private final ServerBootstrap serverBootstrap;
+    private final MeshQueryMaster meshQueryMaster;
+    private final QueryTracker queryTracker;
 
     public static void main(String[] args) {
         if ((args.length > 0) && ("--help".equals(args[0]) || "-h".equals(args[0]))) {
@@ -80,8 +82,8 @@ public class QueryServer implements AutoCloseable {
         workerGroup = new NioEventLoopGroup();
         executorGroup = new DefaultEventExecutorGroup(queryThreads, queryThreadFactory);
 
-        QueryTracker queryTracker = new QueryTracker();
-        MeshQueryMaster meshQueryMaster = new MeshQueryMaster(queryTracker);
+        queryTracker = new QueryTracker();
+        meshQueryMaster = new MeshQueryMaster(queryTracker);
         HttpQueryHandler httpQueryHandler = new HttpQueryHandler(queryTracker, meshQueryMaster, queryQueue);
         ChannelHandler queryServerInitializer = new QueryServerInitializer(httpQueryHandler);
 
@@ -115,6 +117,10 @@ public class QueryServer implements AutoCloseable {
         // no sync because there is apparently no easy way to interrupt the take() calls?
         log.info("shutting down query group");
         executorGroup.shutdownGracefully();
+        log.info("shutting down mesh query master");
+        meshQueryMaster.close();
+        log.info("shutting down query tracker");
+        queryTracker.close();
         log.info("query server shutdown complete");
     }
 }
