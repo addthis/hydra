@@ -14,8 +14,6 @@
 
 package com.addthis.hydra.query.spawndatastore;
 
-import java.io.IOException;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -32,7 +30,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-public class SpawnDataStoreHandler {
+public class SpawnDataStoreHandler implements AutoCloseable {
 
     /**
      * A ZooKeeper/Priam backed data structure that keeps track of
@@ -64,16 +62,15 @@ public class SpawnDataStoreHandler {
     /**
      * a cache of job configuration data, used to reduce load placed on ZK server with high volume queries
      */
-    private final LoadingCache<String, IJob> jobConfigurationCache = CacheBuilder.newBuilder()
+    private final LoadingCache<String, IJob> jobConfigurationCache = CacheBuilder
+            .newBuilder()
             .maximumSize(2000)
             .refreshAfterWrite(10, TimeUnit.MINUTES)
-            .build(
-                    new CacheLoader<String, IJob>() {
-                        public IJob load(String jobId) throws IOException {
-                            return jobConfigManager.getJob(jobId);
-                        }
-                    }
-            );
+            .build(new CacheLoader<String, IJob>() {
+                @Override public IJob load(String key) {
+                    return jobConfigManager.getJob(key);
+                }
+            });
 
     public SpawnDataStoreHandler() throws Exception {
         spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
@@ -83,7 +80,7 @@ public class SpawnDataStoreHandler {
         this.aliasBiMap.loadCurrentValues();
     }
 
-    public void close() {
+    @Override public void close() {
         spawnDataStore.close();
     }
 

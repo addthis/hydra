@@ -26,6 +26,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.addthis.basis.annotations.Scaling;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
@@ -44,6 +45,7 @@ import com.yammer.metrics.core.TimerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.basis.annotations.Scaling.Scale.SETUP;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
 
 /**
@@ -76,11 +78,9 @@ public class JobConfigManager {
     private static final String taskChildName        = "/task";
 
     private final SpawnDataStore spawnDataStore;
-    private final Map<String, IJob> jobs;
 
     public JobConfigManager(SpawnDataStore spawnDataStore) {
         this.spawnDataStore = spawnDataStore;
-        this.jobs = loadJobs();
     }
 
     public void writeUpdateIfDataNotNull(String path, String data) throws Exception {
@@ -100,12 +100,17 @@ public class JobConfigManager {
             final String jobCodec = new String(codec.encode(job.getRootData()));
             jobSizePersistHisto.update(jobCodec.length());
             spawnDataStore.putAsChild(SPAWN_JOB_CONFIG_PATH, job.getId(), jobCodec);
-            writeUpdateIfDataNotNull(jobPath + configChildName,
-                                     job.getConfig() == null ? "" : job.getConfig());
-            writeUpdateIfDataNotNull(jobPath + queryConfigChildName,
-                                     job.getQueryConfig() == null ?
-                                     "" :
-                                     new String(codec.encode(job.getQueryConfig())));
+            if (job.getConfig() == null) {
+                writeUpdateIfDataNotNull(jobPath + configChildName, "");
+            } else {
+                writeUpdateIfDataNotNull(jobPath + configChildName, job.getConfig());
+            }
+            if (job.getQueryConfig() == null) {
+                writeUpdateIfDataNotNull(jobPath + queryConfigChildName, "");
+            } else {
+                writeUpdateIfDataNotNull(jobPath + queryConfigChildName,
+                                         new String(codec.encode(job.getQueryConfig())));
+            }
             // this is just a marker so that we know to use the 'new' configuration
             spawnDataStore.put(jobPath + tasksChildName, "");
         } finally {
@@ -178,7 +183,7 @@ public class JobConfigManager {
             }
             return createJobFromQueryData(jobId, queryData);
         } catch (Exception e) {
-            logger.error("Failure creating job: " + jobId, e);
+            logger.error("Failure creating job: {}", jobId, e);
             throw new RuntimeException(e);
         }
     }
@@ -202,7 +207,7 @@ public class JobConfigManager {
                                     String config,
                                     JobQueryConfig jqc) throws Exception {
         List<JobTask> tasks = new ArrayList<>();
-        List<String> children = (spawnDataStore.getChildrenNames(jobPath + taskChildName));
+        List<String> children = spawnDataStore.getChildrenNames(jobPath + taskChildName);
         Collections.sort(children);
         for (String taskId : children) {
             String taskString = spawnDataStore.get(jobPath + taskChildName + "/" + taskId);
@@ -210,29 +215,6 @@ public class JobConfigManager {
             tasks.add(task);
         }
         return new ZnodeJob(rznd, config, jqc, tasks);
-    }
-
-    /**
-     * Load the data for a series of job ids using a single query, then create each job using the queried data
-     *
-     * @param jobIdChunk The list of job ids to load
-     * @return A map of the form {jobId : job}
-     * @throws Exception
-     */
-    private Map<String, IJob> loadJobChunk(List<String> jobIdChunk) throws Exception {
-        Map<String, IJob> rv = new HashMap<>();
-        for (String jobId : jobIdChunk) {
-            try {
-                rv.put(jobId, createJobFromQueryData(jobId, fetchJobData(jobId)));
-            } catch (Exception ex) {
-                logger.error("Failed while reconstituting job {}", jobId, ex);
-            }
-        }
-        return rv;
-    }
-
-    public Map<String, IJob> getJobs() {
-        return jobs;
     }
 
     public String getConfig(String jobUUID) {
@@ -250,7 +232,8 @@ public class JobConfigManager {
      *
      * @return A map of all jobs found in the SpawnDataStore
      */
-    private Map<String, IJob> loadJobs() {
+    @Scaling(SETUP)
+    public Map<String, IJob> loadJobs() {
         final Map<String, IJob> jobs = new HashMap<>();
         List<String> jobNodes = spawnDataStore.getChildrenNames(SPAWN_JOB_CONFIG_PATH);
         if (jobNodes != null) {
@@ -287,13 +270,26 @@ public class JobConfigManager {
         @Override
         public void run() {
             try {
-                Map<String, IJob> chunkMap = jobConfigManager.loadJobChunk(chunk);
+                Map<String, IJob> rv = new HashMap<>();
+                for (String jobId : chunk) {
+                    loadChunk(rv, jobId);
+                }
                 synchronized (jobs) {
-                    jobs.putAll(chunkMap);
+                    jobs.putAll(rv);
                 }
             } catch (Exception e) {
-                logger.error("While getting all jobs, error getting: " + chunk, e);
+                logger.error("While getting all jobs, error getting: {}", chunk, e);
                 throw new RuntimeException(e);
+            }
+        }
+
+        private void loadChunk(Map<String, IJob> rv, String jobId) {
+            try {
+                IJob jobFromQueryData =
+                        jobConfigManager.createJobFromQueryData(jobId, jobConfigManager.fetchJobData(jobId));
+                rv.put(jobId, jobFromQueryData);
+            } catch (Exception ex) {
+                logger.error("Failed while reconstituting job {}", jobId, ex);
             }
         }
     }

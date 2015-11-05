@@ -2519,7 +2519,7 @@ public class Spawn implements Codable, AutoCloseable {
     @VisibleForTesting protected void loadJobs() {
         jobLock.lock();
         try {
-            for (IJob iJob : jobConfigManager.getJobs().values()) {
+            for (IJob iJob : jobConfigManager.loadJobs().values()) {
                 if (iJob != null) {
                     putJobInSpawnState(new Job(iJob));
                 }
