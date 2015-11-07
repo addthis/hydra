@@ -163,7 +163,7 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
             if (dbValue != null) {
                 byte[] blobBytes = dbValue.getBytes(1L, (int) dbValue.length());
                 // make best guess whether value was previously compressed with LZF
-                if ((blobBytes[0] == LZFChunk.BYTE_Z) && (blobBytes[1] == LZFChunk.BYTE_V)) {
+                if ((blobBytes.length > 0) && (blobBytes[0] == LZFChunk.BYTE_Z) && (blobBytes[1] == LZFChunk.BYTE_V)) {
                     byte[] decodedBytes = LZFDecoder.decode(blobBytes);
                     return new String(decodedBytes, StandardCharsets.UTF_8);
                 } else {
