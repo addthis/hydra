@@ -364,14 +364,15 @@ public class QueryEngine {
                     if (tn == null && !next.emptyok()) {
                         break;
                     }
-                    if (next.hasData()) {
-                        if (skip > 0) {
-                            skip--;
-                            continue;
-                        }
-                        count += next.update(prefix, tn);
-                        limit--;
+                    if (skip > 0) {
+                        skip--;
+                        continue;
                     }
+                    int updates = next.update(prefix, tn);
+                    if (updates > 0) {
+                        count += updates;
+                    }
+                    limit--;
                 }
                 if (!queryPromise.isDone()) {
                     tableSearch(null, prefix, path, pathIndex + 1, sink, collect + count, queryPromise);
@@ -402,30 +403,19 @@ public class QueryEngine {
                 }
 
                 DataTreeNode tn = iter.next();
-                if (next.hasData()) {
-                    if (tn == null && !next.emptyok()) {
-                        return;
-                    }
-                    if (skip > 0) {
-                        skip--;
-                        continue;
-                    }
-                    int count = next.update(prefix, tn);
-                    if (count > 0) {
-                        if (!queryPromise.isDone()) {
-                            tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect + count, queryPromise);
-                        }
-                        prefix.pop(count);
-                        limit--;
-                    }
-                } else {
-                    if (skip > 0) {
-                        skip--;
-                        continue;
-                    }
+                if (tn == null && !next.emptyok()) {
+                    return;
+                }
+                if (skip > 0) {
+                    skip--;
+                    continue;
+                }
+                int count = next.update(prefix, tn);
+                if (count >= 0) {
                     if (!queryPromise.isDone()) {
-                        tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect, queryPromise);
+                        tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect + count, queryPromise);
                     }
+                    prefix.pop(count);
                     limit--;
                 }
             }

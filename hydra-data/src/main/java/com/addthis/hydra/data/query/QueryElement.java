@@ -211,6 +211,7 @@ public class QueryElement implements SuperCodable {
 
     public int update(FieldValueList fvlist, DataTreeNode tn) {
         if (tn == null) {
+            // whether or not the entire node being null is the business of the isnullokay operator in the caller
             return 0;
         }
         int updates = 0;
@@ -223,7 +224,7 @@ public class QueryElement implements SuperCodable {
                 ValueObject val = p.getValue(tn);
                 if (val == null && !emptyok()) {
                     fvlist.rollback();
-                    return 0;
+                    return -1;
                 }
                 if (p.show()) {
                     fvlist.push(p.field(fvlist.getFormat()), val);
@@ -236,7 +237,7 @@ public class QueryElement implements SuperCodable {
                 for (ValueObject val : f.getValues(tn)) {
                     if (val == null && !emptyok()) {
                         fvlist.rollback();
-                        return 0;
+                        return -1;
                     }
                     if (f.show()) {
                         fvlist.push(f.field(fvlist.getFormat()), val);
