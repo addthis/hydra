@@ -226,7 +226,7 @@ public class JobAlertUtil {
         JSONArray array = new JSONFetcher(alertQueryTimeout,
                                           alertQueryRetries,
                                           alertQueryMinBackoff,
-                                          alertQueryMinBackoff).loadJSONArray(url);
+                                          alertQueryMaxBackoff).loadJSONArray(url);
         StringBuilder errorBuilder = new StringBuilder();
         if (array.length() == 0) {
             errorBuilder.append("Header row is missing.\n");
