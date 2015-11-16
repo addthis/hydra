@@ -28,7 +28,6 @@ Guide
     user-reference
     spawn-balancing
     metrics
-    console-query
     performance-tuning
     gdrive-export
 
