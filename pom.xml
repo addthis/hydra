@@ -65,7 +65,7 @@
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest</at.test.excluded.groups>
 
     <!-- addthis dependency versions -->
-    <hydra.contrib.version>5.5.5</hydra.contrib.version>
+    <hydra.contrib.version>5.5.18</hydra.contrib.version>
     <hydra.dep.bark.version>2.1.5</hydra.dep.bark.version>
     <hydra.dep.basis.version>3.0.4</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.7.5</hydra.dep.bundle.version>
