@@ -14,21 +14,27 @@
 
 package com.addthis.hydra.query.aggregate;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
-import com.addthis.bundle.util.NoopField;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.data.query.Query;
 
+import com.google.common.base.Strings;
+import com.google.common.primitives.Ints;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.addthis.bundle.value.ValueFactory.create;
 
 public class QueryTask implements Runnable {
 
@@ -37,11 +43,13 @@ public class QueryTask implements Runnable {
     private final MeshSourceAggregator sourceAggregator;
 
     private int pollFailures = 0;
-    private final AutoField sourceField;
+    @Nullable final AutoField sourceField;
+    private final Supplier<List<QueryTaskSource>> queryTaskSourceSupplier;
 
     public QueryTask(MeshSourceAggregator sourceAggregator) {
         this.sourceAggregator = sourceAggregator;
         this.sourceField = getSourceField(sourceAggregator.query);
+        this.queryTaskSourceSupplier = createQueryTaskSourceSupplier(sourceAggregator);
     }
 
     @Override
@@ -55,54 +63,13 @@ public class QueryTask implements Runnable {
                 sourceAggregator.needScheduling = true;
                 return;
             }
-            QueryTaskSource[] taskSources = sourceAggregator.taskSources;
-            int bundlesProcessed = 0;
-            int complete = 0;
-            boolean processedBundle = true;
-            while (processedBundle && (bundlesProcessed < AggregateConfig.FRAME_READER_READS)) {
-                complete = 0;
-                processedBundle = false;
-                for (int i = 0; i < taskSources.length; i++) {
-                    QueryTaskSource taskSource = taskSources[i];
-                    if (taskSource.complete()) {
-                        complete += 1;
-                        continue;
-                    }
-                    try {
-                        Bundle nextBundle = taskSource.next();
-                        if (nextBundle != null) {
-                            sourceField.setValue(nextBundle,
-                                                 create(taskSource.getSelectedSource().queryReference.name));
-                            sourceAggregator.consumer.send(nextBundle);
-                            processedBundle = true;
-                            bundlesProcessed += 1;
-                        } else if (!taskSource.oneHasResponded()
-                                   && taskSource.hasNoActiveSources()
-                                   && !sourceAggregator.queryPromise.isDone()) {
-                            log.debug("query task has no active options; attempting to lease one");
-                            for (QueryTaskSourceOption option : taskSource.options) {
-                                if (sourceAggregator.tryActivateSource(option)) {
-                                    log.debug("task option leased and activated successfully");
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (IOException io) {
-                        if (taskSource.lines == 0) {
-                            // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
-                            sourceAggregator.replaceQuerySource(taskSource, taskSource.getSelectedSource());
-                        } else {
-                            // This query source has started sending lines. Need to fail the query.
-                            throw io;
-                        }
-                    }
-                }
-            }
+            // NOTE: both provider and readBundles update sourceAggregator.completed
+            List<QueryTaskSource> taskSources = queryTaskSourceSupplier.get();
+            int bundlesProcessed = readBundles(taskSources, AggregateConfig.FRAME_READER_READS);
             if (bundlesProcessed > 0) {
                 sourceAggregator.queryPromise.tryProgress(0, bundlesProcessed);
             }
-            sourceAggregator.completed = complete;
-            if (complete == taskSources.length) {
+            if (sourceAggregator.completed == sourceAggregator.totalTasks) {
                 if (!sourceAggregator.queryPromise.trySuccess()) {
                     log.warn("Tried to complete queryPromise {} , but failed", sourceAggregator.queryPromise);
                 }
@@ -122,6 +89,57 @@ public class QueryTask implements Runnable {
         }
     }
 
+    private int readBundles(List<QueryTaskSource> taskSources, int maxReads) throws Exception {
+        int bundlesProcessed = 0;
+        int complete = 0;
+        boolean processedBundle = true;
+        while (processedBundle && (bundlesProcessed < maxReads)) {
+            complete = 0;
+            processedBundle = false;
+            for (QueryTaskSource taskSource : taskSources) {
+                if (taskSource.complete()) {
+                    complete++;
+                    continue;
+                }
+                try {
+                    Bundle nextBundle = taskSource.next();
+                    if (nextBundle != null) {
+                        maybeInjectSourceField(nextBundle, taskSource);
+                        sourceAggregator.consumer.send(nextBundle);
+                        processedBundle = true;
+                        bundlesProcessed++;
+                    } else if (!isActivated(taskSource) && !sourceAggregator.queryPromise.isDone()) {
+                        log.debug("query task has no active options; attempting to lease one");
+                        if (sourceAggregator.tryActivateSource(taskSource)) {
+                            log.debug("task option leased and activated successfully");
+                        }
+                    }
+                } catch (IOException io) {
+                    if (taskSource.lines == 0) {
+                        // This QuerySource does not have this file anymore. Signal to the caller that a retry may
+                        // resolve the issue.
+                        sourceAggregator.replaceQuerySource(taskSource);
+                    } else {
+                        // This query source has started sending lines. Need to fail the query.
+                        throw io;
+                    }
+                }
+            }
+        }
+        sourceAggregator.completed += complete;
+        return bundlesProcessed;
+    }
+
+    private static boolean isActivated(QueryTaskSource taskSource) {
+        return taskSource.oneHasResponded() || !taskSource.hasNoActiveSources();
+    }
+
+    private void maybeInjectSourceField(Bundle nextBundle, QueryTaskSource taskSource) {
+        if (sourceField != null) {
+            sourceField.setValue(nextBundle, ValueFactory.create(taskSource.getSelectedSource().queryReference.name));
+        }
+    }
+
     private void rescheduleSelfWithBackoff() {
         if (pollFailures <= 25) {
             sourceAggregator.executor.execute(this);
@@ -136,6 +154,22 @@ public class QueryTask implements Runnable {
         }
     }
 
+    private Supplier<List<QueryTaskSource>> createQueryTaskSourceSupplier(MeshSourceAggregator sourceAggregator) {
+        Query query = sourceAggregator.query;
+        int totalTasks = sourceAggregator.totalTasks;
+        int maxSimul = getMaxSimul(query.getParameter("maxSimul"), totalTasks);
+        if (maxSimul == totalTasks) {
+            return new DefaultQueryTaskSourceSupplier(sourceAggregator);
+        } else {
+            return new MaxSimulQueryTaskSourceSupplier(sourceAggregator, maxSimul);
+        }
+    }
+
+    private int getMaxSimul(@Nullable String maxSimulQueryParam, int totalTasks) {
+        Integer n = Ints.tryParse(Strings.nullToEmpty(maxSimulQueryParam));
+        return (n != null && 0 < n && n <= totalTasks) ? n : totalTasks;
+    }
+
     private static AutoField getSourceField(Query query) {
         String sourceFieldName = query.getParameter("injectSource");
         if (sourceFieldName != null) {
@@ -145,7 +179,70 @@ public class QueryTask implements Runnable {
                 throw new UncheckedIOException(e);
             }
         } else {
-            return new NoopField();
+            return null;
+        }
+    }
+
+    private static class DefaultQueryTaskSourceSupplier implements Supplier<List<QueryTaskSource>> {
+
+        private final MeshSourceAggregator sourceAggregator;
+
+        private DefaultQueryTaskSourceSupplier(MeshSourceAggregator sourceAggregator) {
+            this.sourceAggregator = sourceAggregator;
+        }
+
+        @Override public List<QueryTaskSource> get() {
+            List<QueryTaskSource> list = new ArrayList<>(sourceAggregator.totalTasks);
+            int complete = 0;
+            for (QueryTaskSource taskSource : sourceAggregator.taskSources) {
+                if (taskSource.complete()) {
+                    complete++;
+                } else {
+                    list.add(taskSource);
+                }
+            }
+            sourceAggregator.completed = complete;
+            return list;
+        }
+    }
+
+    private static class MaxSimulQueryTaskSourceSupplier implements Supplier<List<QueryTaskSource>> {
+
+        private final MeshSourceAggregator sourceAggregator;
+        private final int maxSimul;
+
+        private MaxSimulQueryTaskSourceSupplier(MeshSourceAggregator sourceAggregator, int maxSimul) {
+            this.sourceAggregator = sourceAggregator;
+            this.maxSimul = maxSimul;
+        }
+
+        @Override public List<QueryTaskSource> get() {
+            List<QueryTaskSource> list = new ArrayList<>(maxSimul);
+            List<QueryTaskSource> inactive = new ArrayList<>(sourceAggregator.totalTasks);
+            int complete = 0;
+            // separate active and inactive sources. add all active ones to the return list
+            for (QueryTaskSource taskSource : sourceAggregator.taskSources) {
+                if (taskSource.complete()) {
+                    complete++;
+                } else if (isActivated(taskSource)) {
+                    list.add(taskSource);
+                } else {
+                    inactive.add(taskSource);
+                }
+            }
+            sourceAggregator.completed = complete;
+            // if not enough active sources, try to activate more add to the return list
+            if (list.size() < maxSimul) {
+                for (QueryTaskSource taskSource: inactive) {
+                    if (sourceAggregator.tryActivateSource(taskSource)) {
+                        list.add(taskSource);
+                    }
+                    if (list.size() == maxSimul) {
+                        break;
+                    }
+                }
+            }
+            return list;
         }
     }
 }
