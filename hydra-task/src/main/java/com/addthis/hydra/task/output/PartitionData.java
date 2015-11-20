@@ -43,7 +43,7 @@ class PartitionData {
         int padTo = DEFAULT_PADDING;
         int startPartitionIndex = target.indexOf(PART_PREFIX);
         if (startPartitionIndex >= 0) {
-            int closePartitionIndex = target.indexOf(PART_POSTFIX);
+            int closePartitionIndex = target.indexOf(PART_POSTFIX, startPartitionIndex);
             if (closePartitionIndex > startPartitionIndex) {
                 replacement = target.substring(startPartitionIndex, closePartitionIndex + 2);
                 String[] tok = LessStrings.splitArray(target.substring(startPartitionIndex + 2, closePartitionIndex),
