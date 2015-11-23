@@ -335,11 +335,6 @@
 
       <!-- addthis oss -->
       <dependency>
-        <groupId>com.addthis.hydra.contrib</groupId>
-        <artifactId>hydra-hdfs</artifactId>
-        <version>${hydra.contrib.version}</version>
-      </dependency>
-      <dependency>
         <groupId>com.addthis</groupId>
         <artifactId>basis</artifactId>
         <version>${hydra.dep.basis.version}</version>
