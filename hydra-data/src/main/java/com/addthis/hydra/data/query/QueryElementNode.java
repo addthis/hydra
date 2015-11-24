@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.BundleField;
@@ -439,7 +439,19 @@ public class QueryElementNode implements Codable {
                         return Iterators.concat(metaIterator.iterator());
                     }
                 } else if (rangeStrict()) {
-                    return parent.getIterator(match.length > 0 ? match[0] : null, match.length > 1 ? match[1] : null);
+                    if (match.length <= 2) {
+                        return parent.getIterator(match.length > 0 ? match[0] : null, match.length > 1 ? match[1] : null);
+                    } else {
+                        List<Iterator<DataTreeNode>> metaIterator = new ArrayList<>((match.length + 1) / 2);
+                        for (int i = 0; i < match.length; i += 2) {
+                            if (match.length > (i + 1)) {
+                                metaIterator.add(parent.getIterator(match[i], match[i + 1]));
+                            } else {
+                                metaIterator.add(parent.getIterator(match[i], null));
+                            }
+                        }
+                        return Iterators.concat(metaIterator.iterator());
+                    }
                 } else if (data == null) {
                     return new LazyNodeMatch(parent, match, defaultNode);
                 } else {
