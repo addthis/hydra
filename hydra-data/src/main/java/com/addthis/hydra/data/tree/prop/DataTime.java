@@ -26,6 +26,7 @@ import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -100,16 +101,16 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
 
     @Override
     public ValueObject getValue(String key) {
-        if (key == null) {
-            return null;
-        } else if (key.equals("first")) {
-            return ValueFactory.create(first);
-        } else if (key.equals("last")) {
-            return ValueFactory.create(last);
-        } else if (key.equals("life")) {
-            return ValueFactory.create(last - first);
-        } else {
-            return null;
+        checkNotNull(key, "Data Attachment 'time' requires a key during lookups");
+        switch (key) {
+            case "first":
+                return ValueFactory.create(first);
+            case "last":
+                return ValueFactory.create(last);
+            case "life":
+                return ValueFactory.create(last - first);
+            default:
+                throw new IllegalArgumentException("Unknown key for Data Attachment 'time': try first/last/life?");
         }
     }
 
