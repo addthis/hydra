@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.JitterClock;
 
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.prop.DataTime;
@@ -171,7 +170,11 @@ public class PathPrune extends PathElement {
         return result;
     }
 
-    public void findAndPruneChildren(final TreeMapState state, final DataTreeNode root, long now, int depth, List<String> treePaths) {
+    public void findAndPruneChildren(final TreeMapState state,
+                                     final DataTreeNode root,
+                                     long now,
+                                     int depth,
+                                     List<String> treePaths) {
         if ((depth == 0) && ((treePaths == null) || (treePaths.size() == 0))) {
             pruneChildren(state, root, now);
         } else if (treePaths != null) {
