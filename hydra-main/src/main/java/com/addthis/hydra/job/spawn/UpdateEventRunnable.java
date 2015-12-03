@@ -34,74 +34,82 @@ class UpdateEventRunnable implements Runnable {
 
     @Override
     public void run() {
-        int jobtotal = 0;
-        int jobshung = 0;
-        int jobrunning = 0;
-        int jobscheduled = 0;
-        int joberrored = 0;
-        int tasktotal = 0;
-        int taskprocessing = 0;
-        int taskreplicating = 0;
-        int taskbackingup = 0;
-        int taskbusy = 0;
-        int taskrebalancing = 0;
-        int taskerrored = 0;
-        int taskqueued = 0;
+        int slotsAvailable = 0;
+        int slotsTotal = 0;
+        int jobsTotal = 0;
+        int jobsHung = 0;
+        int jobsRunning = 0;
+        int jobsScheduled = 0;
+        int jobsErrored = 0;
+        int tasksTotal = 0;
+        int tasksProcessing = 0;
+        int tasksReplicating = 0;
+        int tasksBackingUp = 0;
+        int tasksBusy = 0;
+        int tasksRebalancing = 0;
+        int tasksErrored = 0;
+        int tasksQueued = 0;
         int taskQueuedNoSlot = 0;
         long files = 0;
         long bytes = 0;
         spawn.jobLock.lock();
         try {
+            for (HostState hostState : spawn.hostManager.monitored.values()) {
+                if (hostState.isUp()) {
+                    slotsAvailable += hostState.getAvailableTaskSlots();
+                    slotsTotal += hostState.getMaxTaskSlots();
+                }
+            }
             for (Job job : spawn.spawnState.jobs.values()) {
-                jobtotal++;
+                jobsTotal++;
                 for (JobTask jn : job.getCopyOfTasks()) {
-                    tasktotal++;
+                    tasksTotal++;
                     switch (jn.getState()) {
                         case ALLOCATED:
-                            taskbusy++;
+                            tasksBusy++;
                             break;
                         case BUSY:
-                            taskprocessing++;
-                            taskbusy++;
+                            tasksProcessing++;
+                            tasksBusy++;
                             break;
                         case BACKUP:
-                            taskbackingup++;
-                            taskbusy++;
+                            tasksBackingUp++;
+                            tasksBusy++;
                             break;
                         case REPLICATE:
-                            taskreplicating++;
-                            taskbusy++;
+                            tasksReplicating++;
+                            tasksBusy++;
                             break;
                         case REBALANCE:
-                            taskrebalancing++;
-                            taskbusy++;
+                            tasksRebalancing++;
+                            tasksBusy++;
                             break;
                         case REVERT:
-                            taskbusy++;
+                            tasksBusy++;
                             break;
                         case SWAPPING:
-                            taskbusy++;
+                            tasksBusy++;
                             break;
                         case MIGRATING:
-                            taskbusy++;
+                            tasksBusy++;
                             break;
                         case FULL_REPLICATE:
-                            taskreplicating++;
-                            taskbusy++;
+                            tasksReplicating++;
+                            tasksBusy++;
                             break;
                         case ERROR:
-                            taskerrored++;
+                            tasksErrored++;
                             break;
                         case IDLE:
                             break;
                         case QUEUED:
-                            taskqueued++;
+                            tasksQueued++;
                             break;
                         case QUEUED_HOST_UNAVAIL:
-                            taskqueued++;
+                            tasksQueued++;
                             break;
                         case QUEUED_NO_SLOT:
-                            taskqueued++;
+                            tasksQueued++;
                             taskQueuedNoSlot++;
                             break;
                     }
@@ -112,18 +120,18 @@ class UpdateEventRunnable implements Runnable {
                     case IDLE:
                         break;
                     case RUNNING:
-                        jobrunning++;
+                        jobsRunning++;
                         if (job.getStartTime() != null && job.getMaxRunTime() != null &&
                             (JitterClock.globalTime() - job.getStartTime() > job.getMaxRunTime() * 2)) {
-                            jobshung++;
+                            jobsHung++;
                         }
                         break;
                     case SCHEDULED:
-                        jobscheduled++;
+                        jobsScheduled++;
                         break;
                 }
                 if (job.getState() == JobState.ERROR) {
-                    joberrored++;
+                    jobsErrored++;
                 }
             }
         } finally {
@@ -142,35 +150,39 @@ class UpdateEventRunnable implements Runnable {
         events.put("commands", (long) spawn.getJobCommandManager().size());
         events.put("macros", (long) spawn.getJobMacroManager().size());
         events.put("jobs", (long) spawn.spawnState.jobs.size());
-        events.put("jobs_running", (long) jobrunning);
-        events.put("jobs_scheduled", (long) jobscheduled);
-        events.put("jobs_errored", (long) joberrored);
-        events.put("jobs_hung", (long) jobshung);
-        events.put("jobs_total", (long) jobtotal);
-        events.put("tasks_busy", (long) taskbusy);
-        events.put("tasks_queued", (long) taskqueued);
+        events.put("jobs_running", (long) jobsRunning);
+        events.put("jobs_scheduled", (long) jobsScheduled);
+        events.put("jobs_errored", (long) jobsErrored);
+        events.put("jobs_hung", (long) jobsHung);
+        events.put("jobs_total", (long) jobsTotal);
+        events.put("tasks_busy", (long) tasksBusy);
+        events.put("tasks_queued", (long) tasksQueued);
         events.put("tasks_queued_no_slot", (long) taskQueuedNoSlot);
-        events.put("tasks_errored", (long) taskerrored);
-        events.put("tasks_total", (long) tasktotal);
+        events.put("tasks_errored", (long) tasksErrored);
+        events.put("tasks_total", (long) tasksTotal);
+        events.put("slots_available", (long) slotsAvailable);
+        events.put("slots_total", (long) slotsTotal);
         events.put("files", files);
         events.put("bytes", bytes);
         events.put("disk_used", diskUsed);
         events.put("disk_capacity", diskCapacity);
         spawn.spawnFormattedLogger.periodicState(events);
-        SpawnMetrics.totalTaskCount.set(tasktotal);
-        SpawnMetrics.runningTaskCount.set(taskbusy);
-        SpawnMetrics.queuedTaskCount.set(taskqueued);
+        SpawnMetrics.totalTaskCount.set(tasksTotal);
+        SpawnMetrics.runningTaskCount.set(tasksBusy);
+        SpawnMetrics.queuedTaskCount.set(tasksQueued);
         SpawnMetrics.queuedTaskNoSlotCount.set(taskQueuedNoSlot);
-        SpawnMetrics.failTaskCount.set(taskerrored);
-        SpawnMetrics.totalJobCount.set(jobtotal);
-        SpawnMetrics.processingTaskCount.set(taskprocessing);
-        SpawnMetrics.replicatingTaskCount.set(taskreplicating);
-        SpawnMetrics.backingUpTaskCount.set(taskbackingup);
-        SpawnMetrics.runningJobCount.set(jobrunning);
-        SpawnMetrics.rebalancingTaskCount.set(taskrebalancing);
-        SpawnMetrics.queuedJobCount.set(jobscheduled);
-        SpawnMetrics.failJobCount.set(joberrored);
-        SpawnMetrics.hungJobCount.set(jobshung);
+        SpawnMetrics.failTaskCount.set(tasksErrored);
+        SpawnMetrics.totalJobCount.set(jobsTotal);
+        SpawnMetrics.processingTaskCount.set(tasksProcessing);
+        SpawnMetrics.replicatingTaskCount.set(tasksReplicating);
+        SpawnMetrics.backingUpTaskCount.set(tasksBackingUp);
+        SpawnMetrics.runningJobCount.set(jobsRunning);
+        SpawnMetrics.rebalancingTaskCount.set(tasksRebalancing);
+        SpawnMetrics.queuedJobCount.set(jobsScheduled);
+        SpawnMetrics.failJobCount.set(jobsErrored);
+        SpawnMetrics.hungJobCount.set(jobsHung);
         SpawnMetrics.diskAvailablePercent.set(diskAvailable);
+        SpawnMetrics.availableSlotCount.set(slotsAvailable);
+        SpawnMetrics.totalSlotCount.set(slotsTotal);
     }
 }
