@@ -814,11 +814,10 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     }
 
     @Override public void close() throws Exception {
+        log.info("[minion] stopping");
         jetty.stop();
         if (!shutdown.getAndSet(true)) {
             writeState();
-            log.info("[minion] stopping and sending updated stats to spawn");
-            sendHostStatus();
             if (runner != null) {
                 runner.stopTaskRunner();
             }
