@@ -814,10 +814,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     }
 
     @Override public void close() throws Exception {
-        log.info("[minion] stopping");
-        jetty.stop();
         if (!shutdown.getAndSet(true)) {
-            writeState();
+            log.info("[minion] stopping");
+            jetty.stop();
             if (runner != null) {
                 runner.stopTaskRunner();
             }
@@ -827,13 +826,14 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 log.warn("", ex);
             }
             disconnectFromMQ();
-        }
-        MoreExecutors.shutdownAndAwaitTermination(messageTaskExecutorService, 120, TimeUnit.SECONDS);
-        MoreExecutors.shutdownAndAwaitTermination(promoteDemoteTaskExecutorService, 120, TimeUnit.SECONDS);
-        minionTaskDeleter.stopDeletionThread();
-        if ((zkClient != null) && (zkClient.getState() == CuratorFrameworkState.STARTED)) {
-            minionGroupMembership.removeFromGroup("/minion/up", getUUID());
-            zkClient.close();
+            MoreExecutors.shutdownAndAwaitTermination(messageTaskExecutorService, 120, TimeUnit.SECONDS);
+            MoreExecutors.shutdownAndAwaitTermination(promoteDemoteTaskExecutorService, 120, TimeUnit.SECONDS);
+            minionTaskDeleter.stopDeletionThread();
+            if ((zkClient != null) && (zkClient.getState() == CuratorFrameworkState.STARTED)) {
+                minionGroupMembership.removeFromGroup("/minion/up", getUUID());
+                zkClient.close();
+            }
+            writeState();
         }
     }
 }
