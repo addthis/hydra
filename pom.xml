@@ -23,7 +23,7 @@
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.5.21-SNAPSHOT</version>
+  <version>5.5.21</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -469,6 +469,6 @@
     <connection>scm:git:git@github.com:addthis/hydra.git</connection>
     <developerConnection>scm:git:git@github.com:addthis/hydra.git</developerConnection>
     <url>https://github.com/addthis/hydra</url>
-    <tag>v4.2.2</tag>
+    <tag>v5.5.21</tag>
   </scm>
 </project>
