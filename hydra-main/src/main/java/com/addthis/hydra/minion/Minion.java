@@ -273,7 +273,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             connectToMQ(queueType);
             updateJobsMeta(rootDir);
             if (liveEverywhereMarkerFile.createNewFile()) {
-                log.warn("cutover to live-everywhere tasks");
+                log.info("cutover to live-everywhere tasks");
             }
             writeState();
             if (!Strings.isNullOrEmpty(queueType)) {
@@ -289,7 +289,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             log.info("[minion.start] pid for minion process is: {}", minionPid);
             minionTaskDeleter.startDeletionThread();
         } catch (Exception ex) {
-            log.warn("Exception during startup", ex);
+            log.error("Exception during startup", ex);
         }
     }
 
@@ -312,7 +312,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         }
         wait = JitterClock.globalTime() - wait;
         if (wait > 1000 || getJettyPort() <= 0) {
-            log.warn("[init] jetty to > {}ms to start.  on port {}", wait, getJettyPort());
+            log.warn("[init] jetty took > {}ms to start.  on port {}", wait, getJettyPort());
         }
     }
 
@@ -564,7 +564,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             tasks.put(key.toString(), task);
         }
         if (task.restoreTaskState(taskRoot)) {
-            log.warn("[import.task] {} as {}", key, task.isRunning() ? "running" : "idle");
+            log.info("[import.task] {} as {}", key, task.isRunning() ? "running" : "idle");
             return true;
         } else {
             log.warn("[import.task] {} failed", key);
@@ -577,7 +577,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         try {
             LessFiles.write(stateFile, LessBytes.toBytes(CodecJSON.encodeString(this)), false);
         } catch (IOException io) {
-            log.warn("", io);
+            log.warn("Error writing minion state to disk: ", io);
             /* assume disk failure: set diskReadOnly=true and exit */
             diskHealthCheck.onFailure();
         } finally {
@@ -764,7 +764,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             for (Iterator<CommandTaskKick> iter = jobQueue.iterator(); iter.hasNext(); ) {
                 CommandTaskKick kick = iter.next();
                 if (kick.getJobKey().matches(key)) {
-                    log.warn("[task.stop] removing from queue {} kick={} key={}", kick.getJobKey(), kick, key);
+                    log.info("[task.stop] removing from queue {} kick={} key={}", kick.getJobKey(), kick, key);
                     if (sendToSpawn) {
                         try {
                             sendStatusMessage(new StatusTaskEnd(uuid, kick.getJobUuid(), kick.getNodeID(), 0, 0, 0));
@@ -785,7 +785,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         task.id = jobID;
         task.node = node;
         task.taskRoot = new File(rootDir, task.id + "/" + task.node);
-        log.warn("[task.new] restore {}/{} root={}", task.id, task.node, task.taskRoot);
+        log.info("[task.new] restore {}/{} root={}", task.id, task.node, task.taskRoot);
         tasks.put(task.getJobKey().toString(), task);
         task.initializeFileVariables();
         writeState();
@@ -822,8 +822,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             }
             try {
                 Thread.sleep(1000);
-            } catch (Exception ex) {
-                log.warn("", ex);
+            } catch (InterruptedException ex) {
+                log.warn("Minion interrupted while sleeping (for mystery reasons) during shutdown: ", ex);
             }
             disconnectFromMQ();
             MoreExecutors.shutdownAndAwaitTermination(messageTaskExecutorService, 120, TimeUnit.SECONDS);
