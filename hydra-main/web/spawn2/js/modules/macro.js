@@ -127,6 +127,7 @@ function(
                 {
                     "sTitle":"Modified",
                     "sClass":"macro-modified",
+                    "sType": "date",
                     "mData": "modified",
                     "sWidth":"10%",
                     "mRender":function(val,type,data){

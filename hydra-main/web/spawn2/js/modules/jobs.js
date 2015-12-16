@@ -1264,6 +1264,7 @@ function(
                 {
                     "sTitle":"Submitted",
                     "sClass":"job-submitTime center",
+                    "sType": "date",
                     "mData": "submitTime",
                     "sWidth":"7%",
                     "bSearchable":false,
@@ -1281,6 +1282,7 @@ function(
                 {
                     "sTitle":"Ended",
                     "sClass":"job-endTime center",
+                    "sType": "date",
                     "mData": "endTime",
                     "sWidth":"7%",
                     "bSearchable":false,
@@ -2306,6 +2308,7 @@ function(
                 {
                     "sTitle":"Time",
                     "sClass":"hist-time",
+                    "sType": "date",
                     "mData": "time",
                     "mRender":function(val,type,data){
                         return util.convertToDateTimeText(val);
