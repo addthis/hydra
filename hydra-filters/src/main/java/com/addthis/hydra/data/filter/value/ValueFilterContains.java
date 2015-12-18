@@ -18,6 +18,8 @@ import javax.annotation.Nullable;
 
 import java.util.Iterator;
 
+import com.addthis.ahocorasick.AhoCorasick;
+import com.addthis.ahocorasick.SearchResult;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
@@ -25,9 +27,6 @@ import com.addthis.bundle.value.ValueObject;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import org.arabidopsis.ahocorasick.AhoCorasick;
-import org.arabidopsis.ahocorasick.SearchResult;
 
 /**
  * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">checks for strings, arrays or maps
@@ -85,7 +84,7 @@ public class ValueFilterContains extends AbstractValueFilter {
         this.key = key;
         this.not = not;
         this.returnMatch = returnMatch;
-        this.dictionary = (value != null) ? new AhoCorasick() : null;
+        this.dictionary = (value != null) ? AhoCorasick.builder().build() : null;
         if (dictionary != null) {
             for (String pattern : value) {
                 dictionary.add(pattern);

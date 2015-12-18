@@ -55,6 +55,10 @@
       <groupId>com.clearspring.analytics</groupId>
       <artifactId>stream</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>ahocorasick</artifactId>
+    </dependency>
 
     <!-- 3rd party deps -->
     <dependency>
@@ -74,11 +78,6 @@
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
       <version>1.7.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.lucene</groupId>
-      <artifactId>lucene-analyzers</artifactId>
-      <version>3.6.2</version>
     </dependency>
     <dependency>
       <groupId>com.github.rholder</groupId>

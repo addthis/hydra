@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import com.addthis.ahocorasick.AhoCorasick;
+import com.addthis.ahocorasick.SearchResult;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoParam;
 import com.addthis.bundle.util.ConstantTypedField;
@@ -21,9 +23,6 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import org.arabidopsis.ahocorasick.AhoCorasick;
-import org.arabidopsis.ahocorasick.SearchResult;
 
 abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual implements SuperCodable {
 
@@ -239,7 +238,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         if (contains instanceof Supplier) {
             Set<String> candidates = ((Supplier<Set<String>>) contains).get();
             if (candidates != null) {
-                containsDictionary = new AhoCorasick();
+                containsDictionary = AhoCorasick.builder().build();
                 candidates.forEach(containsDictionary::add);
                 containsDictionary.prepare();
             }
