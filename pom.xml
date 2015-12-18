@@ -73,7 +73,7 @@
     <hydra.dep.meshy.version>3.3.6</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.1.4</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
-    <hydra.dep.ahocorasick.version>1.5.2</hydra.dep.ahocorasick.version>
+    <hydra.dep.ahocorasick.version>1.5.4</hydra.dep.ahocorasick.version>
 
     <!-- external dependency versions -->
     <hydra.dep.log4j2.version>2.4.1</hydra.dep.log4j2.version>
