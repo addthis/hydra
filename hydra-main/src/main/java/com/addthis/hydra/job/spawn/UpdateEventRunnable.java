@@ -54,12 +54,6 @@ class UpdateEventRunnable implements Runnable {
         long bytes = 0;
         spawn.jobLock.lock();
         try {
-            for (HostState hostState : spawn.hostManager.monitored.values()) {
-                if (hostState.isUp()) {
-                    slotsAvailable += hostState.getAvailableTaskSlots();
-                    slotsTotal += hostState.getMaxTaskSlots();
-                }
-            }
             for (Job job : spawn.spawnState.jobs.values()) {
                 jobsTotal++;
                 for (JobTask jn : job.getCopyOfTasks()) {
@@ -142,6 +136,8 @@ class UpdateEventRunnable implements Runnable {
         for (HostState host : spawn.hostManager.getLiveHosts(null)) {
             diskUsed += host.getUsed().getDisk();
             diskCapacity += host.getMax().getDisk();
+            slotsAvailable += host.getAvailableTaskSlots();
+            slotsTotal += host.getMaxTaskSlots();
         }
         float diskAvailable = ((float) diskUsed) / ((float) diskCapacity);
         events.clear();
