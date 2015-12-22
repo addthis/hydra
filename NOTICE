@@ -8,6 +8,7 @@ This product also includes the following third-party components
 
 Aho-Corasick automaton (http://bitbucket.org/jlanchas/aho-corasick/)
 Copyright (c) 2005, 2008 Danny Yoo
+New BSD License
 
 jQuery (http://jquery.org/)
 Copyright 2012 jQuery Foundation and other contributors
@@ -63,5 +64,16 @@ Copyright Brian Turek 2008-2013
 Underscore.js (http://underscorejs.org)
 (c) 2009-2013 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 
+HoltWinters 
+Copyright 2011 Nishant Chandra <nishant.chandra at gmail dot com>
+http://adorio-research.org/wordpress/?p=1230
+http://www.itl.nist.gov/div898/handbook/pmc/section4/pmc435.htm
+Apache License, Version 2.0
 
+Derivative work based on Yammer Metrics (https://github.com/dropwizard/metrics)
+Copyright (c) 2010-2014 Coda Hale, Yammer.com
+Apache License, Version 2.0
 
+Derivative work based on Netty (https://github.com/netty/netty)
+Copyright 2011 The Netty Project
+Apache License, Version 2.0
