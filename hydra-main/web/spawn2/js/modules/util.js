@@ -64,8 +64,8 @@ define([],function(){
                 return "-";
             }
         },
-        convertToDateTimeText: function(time,format){
-            format= format || "MM/dd/yy HH:mm";
+        convertToDateTimeText: function(time){
+            var format = "dd/MM/yy HH:mm";
             if(time && time>0)
                 return new Date(time).toString(format);
             else

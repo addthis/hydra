@@ -1063,7 +1063,7 @@ function(
                     "sWidth":"8%",
                     "bSearchable":false,
                     "mRender":function(val){
-                        return util.convertToDateTimeText(val,"MM/dd/yy HH:mm");
+                        return util.convertToDateTimeText(val);
                     },
                     "aDataSort":[0],
                     "aTargets":[8]
@@ -1076,7 +1076,7 @@ function(
                     "sWidth":"8%",
                     "bSearchable":false,
                     "mRender":function(val){
-                        return util.convertToDateTimeText(val,"MM/dd/yy HH:mm");
+                        return util.convertToDateTimeText(val);
                     },
                     "aDataSort":[1],
                     "aTargets":[9]
@@ -1269,7 +1269,7 @@ function(
                     "sWidth":"7%",
                     "bSearchable":false,
                     "mRender":function(val){
-                        return util.convertToDateTimeText(val,"MM/dd HH:mm");
+                        return util.convertToDateTimeText(val);
                     },
                     "aDataSort":[5],
                     "aTargets":[6]
@@ -1287,7 +1287,7 @@ function(
                     "sWidth":"7%",
                     "bSearchable":false,
                     "mRender":function(val){
-                        return util.convertToDateTimeText(val,"MM/dd HH:mm");
+                        return util.convertToDateTimeText(val);
                     },
                     "aDataSort":[7],
                     "aTargets":[8]
