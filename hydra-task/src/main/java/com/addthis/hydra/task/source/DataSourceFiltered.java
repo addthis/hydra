@@ -63,7 +63,7 @@ public class DataSourceFiltered extends TaskDataSource {
     @Override
     public Bundle peek() {
         Bundle tmp = null;
-        while (peek == null && (tmp = stream.peek()) != null) {
+        while ((peek == null) && ((tmp = stream.peek()) != null)) {
             if (!filter.filter(tmp)) {
                 stream.next();
                 continue;
@@ -75,13 +75,20 @@ public class DataSourceFiltered extends TaskDataSource {
 
     @Override
     public Bundle next() {
-        Bundle filtered = peek();
-        if (filtered == null) {
-            return null;
-        }
+        Bundle next = peek;
         peek = null;
-        // peek might not be exactly equal to what we return here due to mutating filters on peek and other factors
-        return stream.next();
+        while (next == null) {
+            next = stream.next();
+            if (next == null) {
+                return null;
+            }
+            if (filter.filter(next)) {
+                return next;
+            } else {
+                next = null;
+            }
+        }
+        return null;
     }
 
     @Nonnull @Override
