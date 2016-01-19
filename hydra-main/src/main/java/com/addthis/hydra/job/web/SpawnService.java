@@ -26,6 +26,7 @@ import com.addthis.hydra.job.web.resources.AlertResource;
 import com.addthis.hydra.job.web.resources.AliasResource;
 import com.addthis.hydra.job.web.resources.AuthenticationResource;
 import com.addthis.hydra.job.web.resources.CommandResource;
+import com.addthis.hydra.job.web.resources.GroupsResource;
 import com.addthis.hydra.job.web.resources.HostResource;
 import com.addthis.hydra.job.web.resources.JobsResource;
 import com.addthis.hydra.job.web.resources.ListenResource;
@@ -119,6 +120,7 @@ public class SpawnService {
         SystemResource systemResource = new SystemResource(spawn);
         ListenResource listenResource = new ListenResource(spawn, systemResource, pollTimeout);
         JobsResource jobsResource = new JobsResource(spawn, new JobRequestHandlerImpl(spawn));
+        GroupsResource groupsResource = new GroupsResource(spawn, configuration);
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
         CommandResource commandResource = new CommandResource(spawn.getJobCommandManager());
         TaskResource taskResource = new TaskResource(spawn);
@@ -131,6 +133,7 @@ public class SpawnService {
         servlets.addResource(systemResource);
         servlets.addResource(listenResource);
         servlets.addResource(jobsResource);
+        servlets.addResource(groupsResource);
         servlets.addResource(macroResource);
         servlets.addResource(commandResource);
         servlets.addResource(taskResource);

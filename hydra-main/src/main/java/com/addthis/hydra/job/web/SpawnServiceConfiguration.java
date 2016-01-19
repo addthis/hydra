@@ -34,6 +34,7 @@ public class SpawnServiceConfiguration {
     public final boolean defaultSSL;
     public final int authenticationTimeout;
     public final int sudoTimeout;
+    public final int groupResourceUpdateInterval;
 
     @Nullable public final String keyStorePath;
     @Nullable public final String keyStorePassword;
@@ -56,6 +57,7 @@ public class SpawnServiceConfiguration {
                                      @JsonProperty(value = "defaultSSL", required = true) boolean defaultSSL,
                                      @Time(SECONDS) @JsonProperty(value = "authTimeout", required = true) int authenticationTimeout,
                                      @Time(SECONDS) @JsonProperty(value = "sudoTimeout", required = true) int sudoTimeout,
+                                     @Time(SECONDS) @JsonProperty(value = "groupResourceUpdateInterval") int groupInterval,
                                      @JsonProperty(value = "keyStorePath") String keyStorePath,
                                      @JsonProperty(value = "keyStorePassword") String keyStorePassword,
                                      @JsonProperty(value = "keyManagerPassword") String keyManagerPassword) {
@@ -65,6 +67,7 @@ public class SpawnServiceConfiguration {
         this.defaultSSL = defaultSSL;
         this.authenticationTimeout = authenticationTimeout;
         this.sudoTimeout = sudoTimeout;
+        this.groupResourceUpdateInterval = groupInterval;
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword;
         this.keyManagerPassword = keyManagerPassword;
