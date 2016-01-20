@@ -65,11 +65,16 @@ define([],function(){
             }
         },
         convertToDateTimeText: function(time){
-            var format = "dd/MM/yy HH:mm";
-            if(time && time>0)
-                return new Date(time).toString(format);
-            else
+            var preferredLanguage = navigator.languages || navigator.language;
+            if (time && time > 0) {
+                var dateTime = new Date(time);
+                return dateTime.toLocaleString(preferredLanguage,{
+                    year: "2-digit", month: "2-digit", day: "2-digit",
+                    hour: "2-digit", minute: "2-digit"
+                });
+            } else {
                 return "-";
+            }
         },
         fromCamelToTitleCase:function(str){
             if (str == null || str == "") {
