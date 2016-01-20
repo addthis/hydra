@@ -104,6 +104,11 @@ public class SystemManagerImpl implements SystemManager {
     }
 
     @Override
+    public String getSpawnHost() {
+        return spawnHost;
+    }
+
+    @Override
     public Settings getSettings() {
         String disabled = Joiner.on(',').skipNulls().join(spawn.spawnState.disabledHosts);
         return new Settings.Builder().setDebug(debug)

@@ -34,6 +34,8 @@ public interface SystemManager {
 
     public Settings getSettings();
 
+    public String getSpawnHost();
+
     /** Returns git properties */
     public Properties getGitProperties();
 

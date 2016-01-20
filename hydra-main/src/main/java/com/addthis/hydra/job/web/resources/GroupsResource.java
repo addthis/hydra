@@ -14,20 +14,31 @@
 package com.addthis.hydra.job.web.resources;
 
 import javax.ws.rs.GET;
-import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import java.io.PrintWriter;
+
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
@@ -43,10 +54,14 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Path("/group")
+@javax.ws.rs.Path("/group")
 public class GroupsResource {
 
     private static final Logger log = LoggerFactory.getLogger(GroupsResource.class);
+
+    private static final String DEFAULT_GROUP = "UNKNOWN";
+
+    private static final String LOG_FILENAME = "disk-usage.txt";
 
     private static final ScheduledExecutorService EXECUTOR =
             Executors.newSingleThreadScheduledExecutor(
@@ -55,9 +70,9 @@ public class GroupsResource {
                             .setNameFormat("spawn-group-resource")
                             .build());
 
-    private static final String DEFAULT_GROUP = "UNKNOWN";
-
     private final Spawn spawn;
+
+    private final Path logDirectory;
 
     private volatile double adjustedRatio;
 
@@ -69,30 +84,62 @@ public class GroupsResource {
         this.spawn = spawn;
         this.diskUsage = ImmutableMap.of();
         this.diskSummary = ImmutableMap.of();
+        this.logDirectory = (configuration.groupLogDir != null) ? Paths.get(configuration.groupLogDir) : null;
         EXECUTOR.scheduleWithFixedDelay(this::updateDiskQuotas,
-                                        configuration.groupResourceUpdateInterval,
-                                        configuration.groupResourceUpdateInterval,
+                                        configuration.groupUpdateInterval,
+                                        configuration.groupUpdateInterval,
+                                        TimeUnit.SECONDS);
+        EXECUTOR.scheduleWithFixedDelay(this::logDiskQuotas,
+                                        configuration.groupLogInterval,
+                                        configuration.groupLogInterval,
                                         TimeUnit.SECONDS);
     }
 
+    @SuppressWarnings("unused")
     private static class MinimalJob {
         final String id;
+        final String creator;
+        final String owner;
         final String description;
+        final long createTimeMillis;
+        final String createTime;
         final long rawBytes;
         long adjustedBytes;
+        double percentileBytes;
+        final String link;
 
-        MinimalJob(String id, String description, long rawTotal) {
-            this.id = id;
-            this.description = description;
-            this.rawBytes = rawTotal;
+        MinimalJob(Spawn spawn, Job job, long rawBytes) {
+            this.id = job.getId();
+            this.creator = job.getCreator();
+            this.owner = job.getOwner();
+            this.description = job.getDescription();
+            this.createTimeMillis = job.getCreateTime();
+            Instant instant = Instant.ofEpochMilli(createTimeMillis);
+            ZonedDateTime dateTime = ZonedDateTime.ofInstant(instant, ZoneId.systemDefault());
+            this.createTime = dateTime.format(DateTimeFormatter.RFC_1123_DATE_TIME);
+            this.rawBytes = rawBytes;
+            this.link = "http://" + spawn.getSystemManager().getSpawnHost() +
+                        "/spawn2/index.html#jobs/" + id + "/conf";
         }
 
         public String getId() {
             return id;
         }
 
+        public String getCreator() {
+            return creator;
+        }
+
+        public String getOwner() {
+            return owner;
+        }
+
         public String getDescription() {
             return description;
+        }
+
+        public String getCreateTime() {
+            return createTime;
         }
 
         public long getRawBytes() {
@@ -102,10 +149,48 @@ public class GroupsResource {
         public long getAdjustedBytes() {
             return adjustedBytes;
         }
+
+        public double getPercentileBytes() {
+            return percentileBytes;
+        }
+
+        public String getLink() {
+            return link;
+        }
+
+        void adjustBytes(double adjustedRatio, long diskCapacity) {
+            adjustedBytes = (long) (rawBytes * adjustedRatio);
+            percentileBytes = adjustedBytes / ((double) diskCapacity);
+        }
     }
 
     private static final Comparator<MinimalJob> DISK_USAGE_COMPARATOR =
             (j1, j2) -> Long.compare(j2.rawBytes, j1.rawBytes);
+
+    private static final Comparator<MinimalJob> CREATE_TIME_COMPARATOR =
+            (j1, j2) -> Long.compare(j2.createTimeMillis, j1.createTimeMillis);
+
+    private void logDiskQuotas() {
+        try {
+            if (logDirectory == null) {
+                return;
+            }
+            Files.createDirectories(logDirectory);
+            Path logfile = logDirectory.resolve(LOG_FILENAME);
+            long timestamp = System.currentTimeMillis();
+            ImmutableMap<String, Double> summary = this.diskSummary;
+            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(logfile,
+                                                                              StandardOpenOption.CREATE,
+                                                                              StandardOpenOption.WRITE,
+                                                                              StandardOpenOption.APPEND))) {
+                for (Map.Entry<String, Double> entry : summary.entrySet()) {
+                    writer.printf("%d\t%s\t%.3f%n", timestamp, entry.getKey(), entry.getValue());
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Error logging group resource: ", ex);
+        }
+    }
 
     private void updateDiskQuotas() {
         try {
@@ -115,27 +200,24 @@ public class GroupsResource {
                 diskUsed += host.getUsed().getDisk();
                 diskCapacity += host.getMax().getDisk();
             }
-            Map<String, SortedSet<MinimalJob>> quotas = new HashMap<>();
+            Map<String, List<MinimalJob>> quotas = new HashMap<>();
             long totalBytes = 0;
             spawn.acquireJobLock();
             try {
                 Iterator<Job> jobIterator = spawn.getSpawnState().jobsIterator();
                 while (jobIterator.hasNext()) {
                     Job job = jobIterator.next();
-                    String id = job.getId();
-                    String description = job.getDescription();
                     String group = job.getGroup();
                     if (Strings.isNullOrEmpty(group)) {
                         group = DEFAULT_GROUP;
                     }
-                    SortedSet<MinimalJob> groupJobs = quotas.computeIfAbsent(group, (k) ->
-                            new TreeSet<>(DISK_USAGE_COMPARATOR));
+                    List<MinimalJob> groupJobs = quotas.computeIfAbsent(group, (k) -> new ArrayList<>());
                     long bytes = 0;
                     for (JobTask jobTask : job.getCopyOfTasks()) {
                         bytes += jobTask.getByteCount();
                     }
                     totalBytes += bytes;
-                    MinimalJob minimalJob = new MinimalJob(id, description, bytes);
+                    MinimalJob minimalJob = new MinimalJob(spawn, job, bytes);
                     groupJobs.add(minimalJob);
                 }
             } finally {
@@ -144,12 +226,12 @@ public class GroupsResource {
             adjustedRatio = diskUsed / ((double) totalBytes);
             for (Collection<MinimalJob> jobs : quotas.values()) {
                 for (MinimalJob job : jobs) {
-                    job.adjustedBytes = (long) (job.rawBytes * adjustedRatio);
+                    job.adjustBytes(adjustedRatio, diskCapacity);
                 }
             }
             ImmutableMap.Builder<String, ImmutableList<MinimalJob>> diskUsageBuilder = ImmutableMap.builder();
             ImmutableMap.Builder<String, Double> diskSummaryBuilder = ImmutableMap.builder();
-            for (Map.Entry<String, SortedSet<MinimalJob>> entry : quotas.entrySet()) {
+            for (Map.Entry<String, List<MinimalJob>> entry : quotas.entrySet()) {
                 diskUsageBuilder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
                 long groupBytes = 0;
                 for (MinimalJob job : entry.getValue()) {
@@ -165,21 +247,39 @@ public class GroupsResource {
     }
 
     @GET
-    @Path("/disk/ratio")
+    @javax.ws.rs.Path("/disk/ratio")
     @Produces(MediaType.APPLICATION_JSON)
     public double getAdjustedRatio() {
         return adjustedRatio;
     }
 
-    @GET
-    @Path("/disk/usage")
-    @Produces(MediaType.APPLICATION_JSON)
-    public ImmutableMap<String, ImmutableList<MinimalJob>> getDiskUsage() {
-        return diskUsage;
+    private Map<String, List<MinimalJob>> generateUsageOutput(Comparator<MinimalJob> comparator) {
+        ImmutableMap<String, ImmutableList<MinimalJob>> data = diskUsage;
+        Map<String, List<MinimalJob>> result = new HashMap<>();
+        for (Map.Entry<String, ImmutableList<MinimalJob>> entry : data.entrySet()) {
+            List<MinimalJob> list = new ArrayList<>(entry.getValue());
+            Collections.sort(list, comparator);
+            result.put(entry.getKey(), list);
+        }
+        return result;
     }
 
     @GET
-    @Path("/disk/summary")
+    @javax.ws.rs.Path("/disk/usage/size")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String, List<MinimalJob>> getDiskUsageBySize() {
+        return generateUsageOutput(DISK_USAGE_COMPARATOR);
+    }
+
+    @GET
+    @javax.ws.rs.Path("/disk/usage/date")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String, List<MinimalJob>> getDiskUsageByDate() {
+        return generateUsageOutput(CREATE_TIME_COMPARATOR);
+    }
+
+    @GET
+    @javax.ws.rs.Path("/disk/summary")
     @Produces(MediaType.APPLICATION_JSON)
     public ImmutableMap<String, Double> getDiskSummary() {
         return diskSummary;
