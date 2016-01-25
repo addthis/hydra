@@ -15,6 +15,7 @@ package com.addthis.hydra.job.web.resources;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import java.io.PrintWriter;
@@ -253,13 +254,29 @@ public class GroupsResource {
         return adjustedRatio;
     }
 
-    private Map<String, List<MinimalJob>> generateUsageOutput(Comparator<MinimalJob> comparator) {
+    private Map<String, List<MinimalJob>> generateUsageOutput(Comparator<MinimalJob> comparator,
+                                                              String group,
+                                                              int limit) {
         ImmutableMap<String, ImmutableList<MinimalJob>> data = diskUsage;
         Map<String, List<MinimalJob>> result = new HashMap<>();
-        for (Map.Entry<String, ImmutableList<MinimalJob>> entry : data.entrySet()) {
-            List<MinimalJob> list = new ArrayList<>(entry.getValue());
-            Collections.sort(list, comparator);
-            result.put(entry.getKey(), list);
+        if (group != null) {
+            List<MinimalJob> list = data.get(group);
+            if (list != null) {
+                Collections.sort(list, comparator);
+                if (limit > 0) {
+                    list = list.subList(0, limit);
+                }
+                result.put(group, list);
+            }
+        } else {
+            for (Map.Entry<String, ImmutableList<MinimalJob>> entry : data.entrySet()) {
+                List<MinimalJob> list = new ArrayList<>(entry.getValue());
+                Collections.sort(list, comparator);
+                if (limit > 0) {
+                    list = list.subList(0, limit);
+                }
+                result.put(entry.getKey(), list);
+            }
         }
         return result;
     }
@@ -267,15 +284,17 @@ public class GroupsResource {
     @GET
     @javax.ws.rs.Path("/disk/usage/size")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, List<MinimalJob>> getDiskUsageBySize() {
-        return generateUsageOutput(DISK_USAGE_COMPARATOR);
+    public Map<String, List<MinimalJob>> getDiskUsageBySize(@QueryParam("group") String group,
+                                                            @QueryParam("limit") int limit) {
+        return generateUsageOutput(DISK_USAGE_COMPARATOR, group, limit);
     }
 
     @GET
     @javax.ws.rs.Path("/disk/usage/date")
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, List<MinimalJob>> getDiskUsageByDate() {
-        return generateUsageOutput(CREATE_TIME_COMPARATOR);
+    public Map<String, List<MinimalJob>> getDiskUsageByDate(@QueryParam("group") String group,
+                                                            @QueryParam("limit") int limit) {
+        return generateUsageOutput(CREATE_TIME_COMPARATOR, group, limit);
     }
 
     @GET
