@@ -72,11 +72,11 @@ public abstract class AvailableCache<T> implements AutoCloseable {
                 new ThreadFactoryBuilder().setNameFormat("avail-cache-%d").setDaemon(true).build());
         //noinspection unchecked
         this.loadingCache = cacheBuilder.build(new CacheLoader<String, Optional<T>>() {
-            @Override
             /**
              * If refreshAfterWrite is enabled, this method is called after returning the old value.
              * The new value will be inserted into the cache when the load() operation completes.
              */
+            @Override
             public ListenableFuture<Optional<T>> reload(final String key, Optional<T> oldValue) {
                 ListenableFutureTask<Optional<T>> task = ListenableFutureTask.create(() -> load(key));
                 executor.execute(task);

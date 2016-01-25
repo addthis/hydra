@@ -80,7 +80,7 @@ public class AliasBiMap {
         /* The expiration period for cache values. Off by default, but useful for testing. */
         long cacheExpire = Parameter.longValue("alias.bimap.expire", -1);
         /* The max size of the alias cache */
-        int cacheSize = Parameter.intValue("alias.bimap.cache.size", 100);
+        int cacheSize = Parameter.intValue("alias.bimap.cache.size", 1000);
         mapCache = new AvailableCache<String>(cacheRefresh, cacheExpire, cacheSize, 2) {
             @Override public String fetchValue(String id) {
                 try {
@@ -254,9 +254,9 @@ public class AliasBiMap {
      * @return A list of jobIds, possible null
      */
     public List<String> getJobs(String alias) {
+        refreshAlias(alias);
         mapLock.lock();
         try {
-            refreshAlias(alias);
             return alias2jobs.get(alias);
         } finally {
             mapLock.unlock();
