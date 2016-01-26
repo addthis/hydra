@@ -15,7 +15,6 @@ package com.addthis.hydra.data.util;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
-
 import com.yammer.metrics.stats.CodableUniformSample;
 import com.yammer.metrics.stats.Snapshot;
 
