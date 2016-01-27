@@ -14,7 +14,6 @@
 package com.yammer.metrics.stats;
 
 import com.addthis.codec.annotations.FieldConfig;
-
 import com.google.common.primitives.Longs;
 
 /**
@@ -89,6 +88,6 @@ public class CodableUniformSample implements Sample {
 
     @Override
     public Snapshot getSnapshot() {
-        return new Snapshot(Longs.asList(values));
+        return new Snapshot(Longs.asList(values).subList(0, size()));
     }
 }
