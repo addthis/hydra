@@ -70,7 +70,7 @@ public class Main {
                     default:
                         PluginMap executables = PluginRegistry.defaultRegistry().asMap().get("executables");
                         String name = args[0];
-                        Class clazz = executables.asBiMap().get(name);
+                        Class clazz = executables.getClass(name);
                         if (clazz != null) {
                             boolean showBanner = executables.config().getBoolean("_show-banner");
                             ConfigObject banners = executables.config().getObject("_banners");
