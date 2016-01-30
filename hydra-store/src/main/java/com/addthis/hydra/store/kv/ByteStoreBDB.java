@@ -42,6 +42,8 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentFailureException;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
+import com.sleepycat.je.PreloadConfig;
+import com.sleepycat.je.PreloadStats;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,6 +93,10 @@ public class ByteStoreBDB implements ByteStore {
         bdb_cfg.setDeferredWrite(true);
         SettingsJE.updateDatabaseConfig(settings, bdb_cfg);
         bdb = bdb_env.openDatabase(null, dbname, bdb_cfg);
+        if (ro) {
+            PreloadStats preloadStats = bdb.preload(new PreloadConfig());
+            log.info("preload of bdb complete: {}", preloadStats);
+        }
         if (log.isDebugEnabled()) {
             log.debug(SettingsJE.dumpDebug(bdb));
         }
