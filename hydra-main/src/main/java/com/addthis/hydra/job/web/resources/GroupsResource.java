@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +51,7 @@ import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
@@ -254,30 +256,50 @@ public class GroupsResource {
         return adjustedRatio;
     }
 
+    private void filterByGroup(Map<String, List<MinimalJob>> input, String group) {
+        if (group != null) {
+            input.keySet().retainAll(ImmutableSet.of(group));
+        }
+    }
+
+    private void filterByCreator(Map<String, List<MinimalJob>> input, String creator) {
+        if (creator != null) {
+            for (List<MinimalJob> jobs : input.values()) {
+                jobs.removeIf(job -> !Objects.equals(creator, job.creator));
+            }
+        }
+    }
+
+    private void filterByOwner(Map<String, List<MinimalJob>> input, String owner) {
+        if (owner != null) {
+            for (List<MinimalJob> jobs : input.values()) {
+                jobs.removeIf(job -> !Objects.equals(owner, job.owner));
+            }
+        }
+    }
+
+    private void filterByLimit(Map<String, List<MinimalJob>> input, int limit) {
+        if (limit > 0) {
+            input.replaceAll((key, value) -> value.subList(0, limit));
+        }
+    }
+
     private Map<String, List<MinimalJob>> generateUsageOutput(Comparator<MinimalJob> comparator,
                                                               String group,
+                                                              String creator,
+                                                              String owner,
                                                               int limit) {
         ImmutableMap<String, ImmutableList<MinimalJob>> data = diskUsage;
         Map<String, List<MinimalJob>> result = new HashMap<>();
-        if (group != null) {
-            List<MinimalJob> list = data.get(group);
-            if (list != null) {
-                Collections.sort(list, comparator);
-                if (limit > 0) {
-                    list = list.subList(0, limit);
-                }
-                result.put(group, list);
-            }
-        } else {
-            for (Map.Entry<String, ImmutableList<MinimalJob>> entry : data.entrySet()) {
-                List<MinimalJob> list = new ArrayList<>(entry.getValue());
-                Collections.sort(list, comparator);
-                if (limit > 0) {
-                    list = list.subList(0, limit);
-                }
-                result.put(entry.getKey(), list);
-            }
+        for (Map.Entry<String, ImmutableList<MinimalJob>> entry : data.entrySet()) {
+            List<MinimalJob> list = new ArrayList<>(entry.getValue());
+            Collections.sort(list, comparator);
+            result.put(entry.getKey(), list);
         }
+        filterByGroup(result, group);
+        filterByCreator(result, creator);
+        filterByOwner(result, owner);
+        filterByLimit(result, limit);
         return result;
     }
 
@@ -285,16 +307,20 @@ public class GroupsResource {
     @javax.ws.rs.Path("/disk/usage/size")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, List<MinimalJob>> getDiskUsageBySize(@QueryParam("group") String group,
+                                                            @QueryParam("creator") String creator,
+                                                            @QueryParam("owner") String owner,
                                                             @QueryParam("limit") int limit) {
-        return generateUsageOutput(DISK_USAGE_COMPARATOR, group, limit);
+        return generateUsageOutput(DISK_USAGE_COMPARATOR, group, creator, owner, limit);
     }
 
     @GET
     @javax.ws.rs.Path("/disk/usage/date")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, List<MinimalJob>> getDiskUsageByDate(@QueryParam("group") String group,
+                                                            @QueryParam("creator") String creator,
+                                                            @QueryParam("owner") String owner,
                                                             @QueryParam("limit") int limit) {
-        return generateUsageOutput(CREATE_TIME_COMPARATOR, group, limit);
+        return generateUsageOutput(CREATE_TIME_COMPARATOR, group, creator, owner, limit);
     }
 
     @GET
