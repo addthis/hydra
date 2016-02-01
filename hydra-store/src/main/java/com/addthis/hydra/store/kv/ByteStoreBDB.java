@@ -94,7 +94,7 @@ public class ByteStoreBDB implements ByteStore {
         SettingsJE.updateDatabaseConfig(settings, bdb_cfg);
         bdb = bdb_env.openDatabase(null, dbname, bdb_cfg);
         if (ro) {
-            PreloadStats preloadStats = bdb.preload(new PreloadConfig());
+            PreloadStats preloadStats = bdb.preload(new PreloadConfig().setMaxMillisecs(60_000));
             log.info("preload of bdb complete: status: {}, INs: {}, BINs: {}, LNs: {}", preloadStats.getStatus(),
                      preloadStats.getNINsLoaded(), preloadStats.getNBINsLoaded(), preloadStats.getNLNsLoaded());
         }
