@@ -38,7 +38,7 @@ public class WeeklyBackup extends ScheduledBackupType {
         if (dt.monthOfYear().get() == 12 && dt.weekOfWeekyear().get() < 3) {
             return dt.getYearOfCentury() + "53";
         }
-        return Integer.toString(dt.getYearOfCentury()) + String.format("%02d", dt.weekOfWeekyear().get());
+        return Integer.toString(dt.weekyear().get() % 1000) + String.format("%02d", dt.weekOfWeekyear().get());
     }
 
     @Override
