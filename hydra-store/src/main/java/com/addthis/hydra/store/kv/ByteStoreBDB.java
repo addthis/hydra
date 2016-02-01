@@ -94,8 +94,10 @@ public class ByteStoreBDB implements ByteStore {
         SettingsJE.updateDatabaseConfig(settings, bdb_cfg);
         bdb = bdb_env.openDatabase(null, dbname, bdb_cfg);
         if (ro) {
+            long cacheSize = bdb.getEnvironment().getConfig().getCacheSize();
+            long maxPreload = Math.min(cacheSize / 4, 274_877_906_944L);
             PreloadStats preloadStats = bdb.preload(new PreloadConfig().setMaxMillisecs(60_000)
-                                                                       .setMaxBytes(274_877_906_944L));
+                                                                       .setMaxBytes(maxPreload));
             log.info("preload of bdb complete: status: {}, INs: {}, BINs: {}, LNs: {}", preloadStats.getStatus(),
                      preloadStats.getNINsLoaded(), preloadStats.getNBINsLoaded(), preloadStats.getNLNsLoaded());
         }
