@@ -47,8 +47,8 @@
 
     <!-- addthis open source -->
     <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>basis</artifactId>
+      <groupId>com.addthis.basis</groupId>
+      <artifactId>basis-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>

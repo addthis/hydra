@@ -42,7 +42,7 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.core.kvp.KVBundle;
+import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
@@ -590,7 +590,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         }
         if (perform) {
             log.info("{}-chain: {}", message, op);
-            processBundle(new KVBundle(), op);
+            processBundle(new ListBundle(), op);
         } else {
             log.info("skipping {}-chain: {}. Sample rate is {} out of {}", message, op, sample, rate);
         }

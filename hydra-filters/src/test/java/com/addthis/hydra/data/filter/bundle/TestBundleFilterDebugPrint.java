@@ -13,8 +13,9 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import com.addthis.bundle.core.kvp.KVBundle;
-import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.map.MapBundle;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
@@ -39,8 +40,8 @@ public class TestBundleFilterDebugPrint {
     @Test
     public void kvBundle() {
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint("", false, 100, 0).enableCacheOutput();
-        KVBundleFormat bundleFormat = new KVBundleFormat();
-        KVBundle bundle = new KVBundle(bundleFormat);
+        ListBundleFormat bundleFormat = new ListBundleFormat();
+        Bundle bundle = new ListBundle(bundleFormat);
         bundle.setValue(bundleFormat.getField("hello"), ValueFactory.create(1));
         bundle.setValue(bundleFormat.getField("world"), ValueFactory.create(1.0));
         bundle.setValue(bundleFormat.getField("foo"), null);
@@ -53,8 +54,8 @@ public class TestBundleFilterDebugPrint {
     @Test
     public void kvBundleArray() {
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint("", false, 100, 0).enableCacheOutput();
-        KVBundleFormat bundleFormat = new KVBundleFormat();
-        KVBundle bundle = new KVBundle(bundleFormat);
+        ListBundleFormat bundleFormat = new ListBundleFormat();
+        Bundle bundle = new ListBundle(bundleFormat);
         ValueArray array = ValueFactory.createArray(3);
         array.add(ValueFactory.create(1));
         array.add(ValueFactory.create(1.0));
@@ -68,8 +69,8 @@ public class TestBundleFilterDebugPrint {
     @Test
     public void kvBundleMap() {
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint("", false, 100, 0).enableCacheOutput();
-        KVBundleFormat bundleFormat = new KVBundleFormat();
-        KVBundle bundle = new KVBundle(bundleFormat);
+        ListBundleFormat bundleFormat = new ListBundleFormat();
+        Bundle bundle = new ListBundle(bundleFormat);
         ValueMap map = ValueFactory.createMap();
         map.put("foo", ValueFactory.create(1));
         map.put("bar", ValueFactory.create(1.0));

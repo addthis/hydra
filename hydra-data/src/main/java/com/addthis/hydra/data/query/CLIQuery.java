@@ -30,8 +30,8 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
-import com.addthis.bundle.core.kvp.KVBundle;
-import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
@@ -87,7 +87,7 @@ public class CLIQuery {
             for (int i = 0; i < tok.size(); i++) {
                 cols[i] = "" + i;
             }
-            Bundle b = new KVBundle();
+            Bundle b = new ListBundle();
             BundleFormat f = b.getFormat();
             int col = 0;
             for (String t : tok) {
@@ -108,7 +108,7 @@ public class CLIQuery {
 class CMDLineDataChannelOutput implements DataChannelOutput {
 
     private final BufferedWriter out = new BufferedWriter(new OutputStreamWriter(System.out));
-    private final KVBundleFormat format = new KVBundleFormat();
+    private final ListBundleFormat format = new ListBundleFormat();
     private final String outsep;
 
     public CMDLineDataChannelOutput(String outsep) {
@@ -158,7 +158,7 @@ class CMDLineDataChannelOutput implements DataChannelOutput {
 
     @Override
     public Bundle createBundle() {
-        return new KVBundle(format);
+        return new ListBundle(format);
     }
 
     @Override

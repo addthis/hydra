@@ -35,6 +35,10 @@
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.addthis.basis</groupId>
+      <artifactId>basis-netty</artifactId>
+    </dependency>
 
     <!-- 3rd party -->
     <dependency>

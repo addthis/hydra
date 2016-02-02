@@ -28,7 +28,7 @@ import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.kvp.KVBundle;
+import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 public final class MapFeeder implements Runnable {
     private static final Logger log = LoggerFactory.getLogger(MapFeeder.class);
 
-    private static final Bundle TERM_BUNDLE = new KVBundle();
+    private static final Bundle TERM_BUNDLE = new ListBundle();
     private static final DecimalFormat timeFormat = new DecimalFormat("#,###.00");
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final int QUEUE_DEPTH = Parameter.intValue("task.queue.depth", 100);

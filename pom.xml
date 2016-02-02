@@ -67,11 +67,11 @@
     <!-- addthis dependency versions -->
     <hydra.contrib.version>5.5.23</hydra.contrib.version>
     <hydra.dep.bark.version>2.1.5</hydra.dep.bark.version>
-    <hydra.dep.basis.version>3.0.4</hydra.dep.basis.version>
-    <hydra.dep.bundle.version>2.7.5</hydra.dep.bundle.version>
-    <hydra.dep.codec.version>3.4.4</hydra.dep.codec.version>
-    <hydra.dep.meshy.version>3.3.6</hydra.dep.meshy.version>
-    <hydra.dep.muxy.version>2.1.4</hydra.dep.muxy.version>
+    <hydra.dep.basis.version>4.0.2</hydra.dep.basis.version>
+    <hydra.dep.bundle.version>2.8.0</hydra.dep.bundle.version>
+    <hydra.dep.codec.version>3.5.0</hydra.dep.codec.version>
+    <hydra.dep.meshy.version>3.4.0</hydra.dep.meshy.version>
+    <hydra.dep.muxy.version>2.2.0</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
     <hydra.dep.ahocorasick.version>1.5.4</hydra.dep.ahocorasick.version>
 
@@ -336,8 +336,23 @@
 
       <!-- addthis oss -->
       <dependency>
-        <groupId>com.addthis</groupId>
-        <artifactId>basis</artifactId>
+        <groupId>com.addthis.basis</groupId>
+        <artifactId>basis-core</artifactId>
+        <version>${hydra.dep.basis.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.basis</groupId>
+        <artifactId>basis-net</artifactId>
+        <version>${hydra.dep.basis.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.basis</groupId>
+        <artifactId>basis-netty</artifactId>
+        <version>${hydra.dep.basis.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.basis</groupId>
+        <artifactId>basis-time</artifactId>
         <version>${hydra.dep.basis.version}</version>
       </dependency>
       <dependency>

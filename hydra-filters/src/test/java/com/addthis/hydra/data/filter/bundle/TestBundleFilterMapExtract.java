@@ -13,8 +13,9 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import com.addthis.bundle.core.BundleFormat;
-import com.addthis.bundle.core.kvp.KVBundle;
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
@@ -30,8 +31,8 @@ public class TestBundleFilterMapExtract {
     @Test
     public void fieldTest() {
         BundleFilterMapExtract filter = new BundleFilterMapExtract();
-        KVBundle bundle = new KVBundle();
-        BundleFormat format = bundle.getFormat();
+        ListBundleFormat format = new ListBundleFormat();
+        Bundle bundle = new ListBundle(format);
         ValueMap map = ValueFactory.createMap();
         map.put("foo", ValueFactory.create("a"));
         map.put("bar", ValueFactory.create("b"));
@@ -50,8 +51,8 @@ public class TestBundleFilterMapExtract {
     @Test
     public void fieldTestMissing() {
         BundleFilterMapExtract filter = new BundleFilterMapExtract();
-        KVBundle bundle = new KVBundle();
-        BundleFormat format = bundle.getFormat();
+        ListBundleFormat format = new ListBundleFormat();
+        Bundle bundle = new ListBundle(format);
         ValueMap map = ValueFactory.createMap();
         map.put("foo", ValueFactory.create("a"));
         map.put("bar", ValueFactory.create("b"));
@@ -69,8 +70,8 @@ public class TestBundleFilterMapExtract {
     @Test
     public void fieldTestNullValue() {
         BundleFilterMapExtract filter = new BundleFilterMapExtract();
-        KVBundle bundle = new KVBundle();
-        BundleFormat format = bundle.getFormat();
+        ListBundleFormat format = new ListBundleFormat();
+        Bundle bundle = new ListBundle(format);
         ValueMap map = ValueFactory.createMap();
         map.put("foo", ValueFactory.create("a"));
         map.put("bar", ValueFactory.create("b"));
@@ -88,8 +89,8 @@ public class TestBundleFilterMapExtract {
     @Test
     public void indirectionTest() {
         BundleFilterMapExtract filter = new BundleFilterMapExtract();
-        KVBundle bundle = new KVBundle();
-        BundleFormat format = bundle.getFormat();
+        ListBundleFormat format = new ListBundleFormat();
+        Bundle bundle = new ListBundle(format);
         ValueMap map = ValueFactory.createMap();
         map.put("foo", ValueFactory.create("a"));
         map.put("bar", ValueFactory.create("b"));
@@ -108,8 +109,8 @@ public class TestBundleFilterMapExtract {
     @Test
     public void indirectionMissingTest() {
         BundleFilterMapExtract filter = new BundleFilterMapExtract();
-        KVBundle bundle = new KVBundle();
-        BundleFormat format = bundle.getFormat();
+        ListBundleFormat format = new ListBundleFormat();
+        Bundle bundle = new ListBundle(format);
         ValueMap map = ValueFactory.createMap();
         map.put("foo", ValueFactory.create("a"));
         map.put("bar", ValueFactory.create("b"));

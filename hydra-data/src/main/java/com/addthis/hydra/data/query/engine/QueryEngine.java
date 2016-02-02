@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.addthis.basis.util.ClosableIterator;
 
 import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryElement;
@@ -238,7 +238,7 @@ public class QueryEngine {
         try {
             LinkedList<DataTreeNode> stack = new LinkedList<>();
             stack.push(tree);
-            tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, queryPromise);
+            tableSearch(stack, new FieldValueList(new ListBundleFormat()), path, 0, result, 0, queryPromise);
         } catch (QueryException | CancellationException ex) {
             log.debug("", ex);
         } catch (RuntimeException ex)  {
