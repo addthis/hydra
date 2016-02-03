@@ -86,6 +86,7 @@ public class OpPercentileDistribution extends AbstractQueryOp {
         writeLine(label, value, bundleFactory.createBundle(), ".98", snapshot.get98thPercentile());
         writeLine(label, value, bundleFactory.createBundle(), ".99", snapshot.get99thPercentile());
         writeLine(label, value, bundleFactory.createBundle(), ".999", snapshot.get999thPercentile());
+        getNext().sendComplete();
     }
 
     private void writeLine(AutoField labelField,
@@ -102,6 +103,7 @@ public class OpPercentileDistribution extends AbstractQueryOp {
         int suffixNum = 0;
         while (format.getFieldCount() < targetCount) {
             format.getField("__op_percent_dist_anon_" + suffixNum);
+            suffixNum += 1;
         }
     }
 }
