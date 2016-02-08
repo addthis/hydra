@@ -26,9 +26,9 @@ import javax.ws.rs.core.UriInfo;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import java.net.URI;
 
 import org.slf4j.Logger;
@@ -71,9 +71,10 @@ public class AssetsResource {
     public Response getAsset(@PathParam("target") String target) {
         File file = new File(webDir, uriInfo.getPath());
         if (file.exists() && file.isFile()) {
+            InputStream in = null;
             try {
                 OutputStream out = response.getOutputStream();
-                InputStream in = new FileInputStream(file);
+                in = new FileInputStream(file);
                 byte[] buf = new byte[1024];
                 int read = 0;
                 while ((read = in.read(buf)) >= 0) {
@@ -86,6 +87,12 @@ public class AssetsResource {
                 return Response.ok().build();
             } catch (Exception ex) {
                 return Response.serverError().build();
+            } finally {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    log.error("Exception while closing resource", e);
+                }
             }
         } else {
             if (log.isDebugEnabled()) log.debug("[http.unhandled] " + uriInfo.getPath());

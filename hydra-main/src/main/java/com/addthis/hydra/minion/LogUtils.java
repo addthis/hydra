@@ -38,9 +38,10 @@ public final class LogUtils {
     /** Streams task log files from newest to oldest. The returned Stream should be closed. */
     public static Stream<Path> streamTaskLogsByName(JobTask task) throws IOException {
         Path logDir = task.logDir.toPath();
-        return Files.list(logDir)
-                    .filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))
-                    .sorted(Collections.reverseOrder());
+        try(Stream<Path> stream = Files.list(logDir)) {
+            return stream.filter(path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))
+                         .sorted(Collections.reverseOrder());
+        }
     }
 
     public static Optional<Path> getNthNewestLog(JobTask task, int runsAgo, String suffix) throws IOException {

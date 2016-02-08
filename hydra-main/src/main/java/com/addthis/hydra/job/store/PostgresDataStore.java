@@ -43,11 +43,12 @@ public class PostgresDataStore extends JdbcDataStore<String> {
 
     @Override
     protected void runSetupDatabaseCommand(String dbName, String jdbcUrl, Properties properties) throws SQLException {
-        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties)) {
+        String dbSetupCommand = String.format("CREATE DATABASE %s", dbName);
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties);
+             PreparedStatement preparedStatement = connection.prepareStatement(dbSetupCommand)) {
             // Create a connection that excludes the database from the jdbc url.
             // This is necessary to create the database in the event that it does not exist.
-            String dbSetupCommand = String.format("CREATE DATABASE %s", dbName);
-            connection.prepareStatement(dbSetupCommand).execute();
+            preparedStatement.execute();
         } catch (final SQLException se) {
             //the database may already exists
             if (se.getMessage().endsWith("already exists")) {
@@ -60,34 +61,37 @@ public class PostgresDataStore extends JdbcDataStore<String> {
 
     @Override
     protected void runSetupTableCommand() throws SQLException {
-        try (final Connection connection = cpds.getConnection()) {
-            final String tableSetupCommand = new StringBuffer("CREATE TABLE IF NOT EXISTS ").append(tableName).append(" ( ")
-                            .append(getIdKey()).append(" SERIAL PRIMARY KEY, ") // Auto-incrementing int id
-                            .append(getPathKey()).append(" VARCHAR(").append(getMaxPathLength()).append(") NOT NULL, ") // VARCHAR path
-                            .append(getValueKey()).append(" VARCHAR, ")//VARCHAR value
-                            .append(getChildKey()).append(" VARCHAR(").append(getMaxPathLength()).append("), ") // VARCHAR child
-                            .append("CONSTRAINT parent_child UNIQUE (").append(getPathKey()).append(", ").append(getChildKey()).append(")) ") // enforce unique (path, child) combo
-                    .toString();
-            connection.prepareStatement(tableSetupCommand).execute();
-            final String replaceFunctionSetupCommand = String.format(
-                    "CREATE OR REPLACE FUNCTION replace_entry(%s VARCHAR, %s VARCHAR, %s VARCHAR) RETURNS void AS $$\n"
-            + "BEGIN\n"
-            + "        IF EXISTS( SELECT * FROM %s WHERE %s = %s ) THEN\n"
-            + "                UPDATE %s\n"
-            + "                SET %s = %s, %s = %s WHERE %s = %s;\n"
-            + "        ELSE\n"
-            + "                INSERT INTO %s(%s, %s, %s) VALUES( %s, %s, %s );\n"
-            + "        END IF;\n"
-            + "\n"
-            + "        RETURN;\n"
-            + "END;\n"
-            + "$$ LANGUAGE plpgsql;",
-                    getPathKey() + "Var", getValueKey() + "Var", getChildKey() + "Var",
-                    tableName, getPathKey(), getPathKey() + "Var",
-                    tableName,
-                    getValueKey(), getValueKey() + "Var", getChildKey(), getChildKey() + "Var" ,getPathKey(), getPathKey() + "Var",
-                    tableName, getPathKey(), getValueKey(), getChildKey(), getPathKey() + "Var", getValueKey() + "Var", getChildKey() + "Var");
-            connection.prepareStatement(replaceFunctionSetupCommand).execute();
+        final String tableSetupCommand = new StringBuffer("CREATE TABLE IF NOT EXISTS ").append(tableName).append(" ( ")
+                .append(getIdKey()).append(" SERIAL PRIMARY KEY, ") // Auto-incrementing int id
+                .append(getPathKey()).append(" VARCHAR(").append(getMaxPathLength()).append(") NOT NULL, ") // VARCHAR path
+                .append(getValueKey()).append(" VARCHAR, ")//VARCHAR value
+                .append(getChildKey()).append(" VARCHAR(").append(getMaxPathLength()).append("), ") // VARCHAR child
+                .append("CONSTRAINT parent_child UNIQUE (").append(getPathKey()).append(", ").append(getChildKey()).append(")) ") // enforce unique (path, child) combo
+        .toString();
+        final String replaceFunctionSetupCommand = String.format(
+                "CREATE OR REPLACE FUNCTION replace_entry(%s VARCHAR, %s VARCHAR, %s VARCHAR) RETURNS void AS $$\n"
+        + "BEGIN\n"
+        + "        IF EXISTS( SELECT * FROM %s WHERE %s = %s ) THEN\n"
+        + "                UPDATE %s\n"
+        + "                SET %s = %s, %s = %s WHERE %s = %s;\n"
+        + "        ELSE\n"
+        + "                INSERT INTO %s(%s, %s, %s) VALUES( %s, %s, %s );\n"
+        + "        END IF;\n"
+        + "\n"
+        + "        RETURN;\n"
+        + "END;\n"
+        + "$$ LANGUAGE plpgsql;",
+                getPathKey() + "Var", getValueKey() + "Var", getChildKey() + "Var",
+                tableName, getPathKey(), getPathKey() + "Var",
+                tableName,
+                getValueKey(), getValueKey() + "Var", getChildKey(), getChildKey() + "Var" ,getPathKey(), getPathKey() + "Var",
+                tableName, getPathKey(), getValueKey(), getChildKey(), getPathKey() + "Var", getValueKey() + "Var", getChildKey() + "Var");
+        try (final Connection connection = cpds.getConnection();
+            PreparedStatement preparedStatement1 = connection.prepareStatement(tableSetupCommand);
+            PreparedStatement preparedStatement2 = connection.prepareStatement(replaceFunctionSetupCommand)) {
+            preparedStatement1.execute();
+            preparedStatement2.execute();
+            
             try {
                 final String createIndexCommand = String.format("CREATE INDEX ON %s (%s)", tableName, getPathKey());
                 connection.prepareStatement(createIndexCommand).execute();

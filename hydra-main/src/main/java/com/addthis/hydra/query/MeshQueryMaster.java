@@ -18,9 +18,7 @@ import javax.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.net.InetSocketAddress;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,11 +29,11 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.addthis.basis.util.LessStreams;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.query.aggregate.BalancedAllocator;
@@ -50,7 +48,6 @@ import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -246,10 +243,11 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         if (Strings.isNullOrEmpty(tasks)) {
             return Collections.emptySet();
         } else {
-            return LessStreams.stream(TASKS_SPLITTER.split(tasks))
-                              .map(Ints::tryParse)
-                              .filter(i -> i != null)
-                              .collect(Collectors.toSet());
+            try(Stream<String> stream = LessStreams.stream(TASKS_SPLITTER.split(tasks))) {
+                return stream.map(Ints::tryParse)
+                      .filter(i -> i != null)
+                      .collect(Collectors.toSet());
+            }
         }
     }
 
