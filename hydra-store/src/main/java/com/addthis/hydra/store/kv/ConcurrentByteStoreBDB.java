@@ -20,15 +20,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
-
-import com.addthis.hydra.store.db.SettingsJE;
-import com.addthis.hydra.store.util.JEUtil;
 
 import com.sleepycat.je.CheckpointConfig;
 import com.sleepycat.je.Cursor;
@@ -54,7 +52,6 @@ public class ConcurrentByteStoreBDB implements ByteStore {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentByteStoreBDB.class);
 
-    private final SettingsJE settings;
     private final Environment bdb_env;
     private final DatabaseConfig bdb_cfg;
     private final Database bdb;
@@ -71,24 +68,18 @@ public class ConcurrentByteStoreBDB implements ByteStore {
 
     public ConcurrentByteStoreBDB(File dir, String dbname) {
         this.dir = LessFiles.initDirectory(dir);
-        settings = new SettingsJE();
-        EnvironmentConfig bdb_eco = new EnvironmentConfig();
+        Properties bdbProperties = BdbUtils.filterToBdbProps(System.getProperties());
+        EnvironmentConfig bdb_eco = new EnvironmentConfig(bdbProperties);
         bdb_eco.setReadOnly(false);
         bdb_eco.setAllowCreate(true);
         bdb_eco.setTransactional(false);
         bdb_eco.setLockTimeout(2, TimeUnit.MINUTES);
-        JEUtil.mergeSystemProperties(bdb_eco);
-        SettingsJE.updateEnvironmentConfig(settings, bdb_eco);
         bdb_env = new Environment(dir, bdb_eco);
         bdb_cfg = new DatabaseConfig();
         bdb_cfg.setReadOnly(false);
         bdb_cfg.setAllowCreate(true);
         bdb_cfg.setDeferredWrite(true);
-        SettingsJE.updateDatabaseConfig(settings, bdb_cfg);
         bdb = bdb_env.openDatabase(null, dbname, bdb_cfg);
-        if (log.isDebugEnabled()) {
-            log.debug(SettingsJE.dumpDebug(bdb));
-        }
     }
 
 

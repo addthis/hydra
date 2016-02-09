@@ -20,14 +20,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.LessFiles;
-
-import com.addthis.hydra.store.db.SettingsJE;
-import com.addthis.hydra.store.util.JEUtil;
 
 import com.sleepycat.je.CacheMode;
 import com.sleepycat.je.CheckpointConfig;
@@ -56,7 +54,6 @@ public class ByteStoreBDB implements ByteStore {
 
     private static final Logger log = LoggerFactory.getLogger(ByteStoreBDB.class);
 
-    private final SettingsJE settings;
     private final Environment bdb_env;
     private final DatabaseConfig bdb_cfg;
     private final Database bdb;
@@ -69,40 +66,33 @@ public class ByteStoreBDB implements ByteStore {
     private final HashSet<ClosableIterator<Map.Entry<byte[], byte[]>>> openIterators = new HashSet<>();
     private final LockMode lockMode = LockMode.READ_UNCOMMITTED;
     private final OperationStatus opSuccess = OperationStatus.SUCCESS;
-    private final boolean readonly;
+    private final boolean readOnly;
 
-    public ByteStoreBDB(File dir, String dbname, boolean ro) {
+    public ByteStoreBDB(File dir, String dbname, boolean readOnly) {
         this.dir = LessFiles.initDirectory(dir);
-        this.readonly = ro;
-        settings = new SettingsJE();
-        EnvironmentConfig bdb_eco = new EnvironmentConfig();
-        bdb_eco.setReadOnly(ro);
-        bdb_eco.setAllowCreate(!ro);
+        this.readOnly = readOnly;
+        Properties bdbProperties = BdbUtils.filterToBdbProps(System.getProperties());
+        EnvironmentConfig bdb_eco = new EnvironmentConfig(bdbProperties);
+        bdb_eco.setReadOnly(readOnly);
+        bdb_eco.setAllowCreate(!readOnly);
         bdb_eco.setTransactional(false);
-//          bdb_eco.setDurability(Durability.COMMIT_NO_SYNC);
-        if (ro) {
+        if (readOnly) {
             bdb_eco.setConfigParam(EnvironmentConfig.ENV_RUN_CLEANER, "false");    // Disable log cleaner thread
             bdb_eco.setCacheMode(CacheMode.EVICT_LN);
         }
-        JEUtil.mergeSystemProperties(bdb_eco);
-        SettingsJE.updateEnvironmentConfig(settings, bdb_eco);
         bdb_env = new Environment(dir, bdb_eco);
         bdb_cfg = new DatabaseConfig();
-        bdb_cfg.setReadOnly(ro);
+        bdb_cfg.setReadOnly(readOnly);
         bdb_cfg.setAllowCreate(true);
         bdb_cfg.setDeferredWrite(true);
-        SettingsJE.updateDatabaseConfig(settings, bdb_cfg);
         bdb = bdb_env.openDatabase(null, dbname, bdb_cfg);
-        if (ro) {
+        if (readOnly) {
             long cacheSize = bdb.getEnvironment().getConfig().getCacheSize();
             long maxPreload = Math.min(cacheSize / 4, 274_877_906_944L);
             PreloadStats preloadStats = bdb.preload(new PreloadConfig().setMaxMillisecs(60_000)
                                                                        .setMaxBytes(maxPreload));
             log.info("preload of bdb complete: status: {}, INs: {}, BINs: {}, LNs: {}", preloadStats.getStatus(),
                      preloadStats.getNINsLoaded(), preloadStats.getNBINsLoaded(), preloadStats.getNLNsLoaded());
-        }
-        if (log.isDebugEnabled()) {
-            log.debug(SettingsJE.dumpDebug(bdb));
         }
     }
 
@@ -114,7 +104,7 @@ public class ByteStoreBDB implements ByteStore {
 
     @Override
     public boolean isReadOnly() {
-        return readonly;
+        return readOnly;
     }
 
     @Override

@@ -120,8 +120,8 @@ export HYDRA_EXEC=`ls -t ${HYDRA_CONF}/target/hydra-uber-*exec*jar | head -n 1`
 export LOG4J_PROPERTIES="-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager \
 -Dlog4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory -Dlogging.stderr=off"
 
-export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dcs.je.cacheSize=256M \
--Dcs.je.cacheShared=1 -Dcs.je.deferredWrite=1 -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 \
+export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dje.maxMemory=256MiB \
+-Dje.sharedCache=true -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 \
 -Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 \
 -Dmeshy.stream.prefetch=true -Dqmaster.mesh.peer.port=5101"
 
@@ -148,7 +148,7 @@ export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dmeshy.autoMesh=false -
 -Dmeshy.buffers.enable=true -Dmeshy.stream.maxopen=10000"
 
 export JAVA_CMD="java -server ${JAVA_OPTS} -Djava.net.preferIPv4Stack=true -Djava.library.path=${ZMQ_LIBDIR} \
--Dhydra.tree.cache.maxSize=250 -Dhydra.tree.page.maxSize=50 -Dcs.je.cacheSize=200M -Deps.mem.debug=3000"
+-Dhydra.tree.cache.maxSize=250 -Dhydra.tree.page.maxSize=50 -Dje.maxMemory=200MiB -Deps.mem.debug=3000"
 
 # flcow support for linux
 if [ -n "${FLCOW_SO+1}" ]; then
