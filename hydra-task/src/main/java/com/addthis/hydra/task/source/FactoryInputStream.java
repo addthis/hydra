@@ -84,12 +84,13 @@ public abstract class FactoryInputStream implements Codable {
      */
     public static final class InjectorStreamSource extends FactoryInputStream {
 
+        private static final Object lock = new Object();
         public static final String DefautlInjectorKey = "secretDefaultInjectorKey";
         private static final IdentityHashMap<String, LinkedBlockingQueue<InputStream>> park = new IdentityHashMap<>();
 
         public static final void inject(String key, InputStream in) {
             key = key.intern();
-            synchronized (key) {
+            synchronized (lock) {
                 try {
                     LinkedBlockingQueue<InputStream> queue = null;
                     synchronized (park) {
@@ -120,7 +121,7 @@ public abstract class FactoryInputStream implements Codable {
             try {
                 while (queue == null) {
                     key = key.intern();
-                    synchronized (key) {
+                    synchronized (lock) {
                         synchronized (park) {
                             queue = park.get(key);
                         }

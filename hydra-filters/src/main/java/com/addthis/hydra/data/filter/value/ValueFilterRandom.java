@@ -39,6 +39,7 @@ import com.addthis.codec.annotations.FieldConfig;
  */
 public class ValueFilterRandom extends AbstractValueFilter {
 
+    private static final Object lock = new Object();
     private final Random random = new Random();
 
     /**
@@ -91,7 +92,7 @@ public class ValueFilterRandom extends AbstractValueFilter {
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (gaussian) {
-            synchronized (nextGaussian) {
+            synchronized (lock) {
                 return ValueFactory.create(nextGaussian(mu, sigma));
             }
         }
