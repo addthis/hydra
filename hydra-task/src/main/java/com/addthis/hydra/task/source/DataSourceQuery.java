@@ -40,6 +40,7 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.hydra.data.filter.lambda.StringWithValueFilter;
+import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.Tokenizer;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
@@ -199,7 +200,7 @@ public class DataSourceQuery extends TaskDataSource {
             Map<String, String> parameters = new HashMap<>();
             parameters.put("sender", config.jobIdWithNode());
             parameters.put("job", jobId);
-            parameters.put("path", path.get());
+            parameters.put("path", DateUtil.expandDateMacro(path.get()));
             parameters.put("dir", treeDir);
             // the query master should not perform any ops on these queries
             parameters.put("rops", ops);

@@ -14,11 +14,17 @@
 package com.addthis.hydra.data.util;
 
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
 
 /**
  * date helper that understands the {{now}} {{now+offset}} {{now-offset}} syntax.
@@ -29,6 +35,28 @@ public final class DateUtil {
     public static final String NOW_POSTFIX = "}}";
     public static final String OFF = "{{off}}";
     public static final String NOW = NOW_PREFIX + NOW_POSTFIX;
+
+
+    @VisibleForTesting
+    static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
+                                                                                .appendMonthOfYear(2)
+                                                                                .appendDayOfMonth(2).toFormatter();
+    @VisibleForTesting
+    static final DateTimeFormatter ymdhFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
+                                                                                 .appendMonthOfYear(2)
+                                                                                 .appendDayOfMonth(2)
+                                                                                 .appendHourOfDay(2).toFormatter();
+    private static final Pattern DATE_MACRO_PATTERN = Pattern.compile(
+            // prefix literal
+            Pattern.quote("{{now") +
+            // optional increment or decrement adjustment
+            "(([+-]\\d+)(h)?)?" +
+            // optional date time format
+            "(::.+?)?" +
+            // optional timezone
+            "(:.+?)?" +
+            // suffix literal
+            Pattern.quote("}}"));
 
     public static DateTime getDateTime(String format, String date) {
         return getDateTime(getFormatter(format), date, false);
@@ -126,5 +154,36 @@ public final class DateUtil {
         public void remove() {
             throw new UnsupportedOperationException();
         }
+    }
+
+    /**
+     * Split a path up and replace any {{now-1}}-style elements with the YYMMDD equivalent.
+     * {{now-1h}} subtracts one hour from the current time and returns a YYMMDDHH formatted string.
+     *
+     * @param path The input path to process
+     * @return The path with the relevant tokens replaced
+     */
+    public static String expandDateMacro(String path) {
+        StringBuffer sb = new StringBuffer();
+        Matcher matcher = DATE_MACRO_PATTERN.matcher(path);
+        while (matcher.find()) {
+            DateTimeFormatter formatter = null;
+            boolean hourly = false;
+            String match;
+            if (matcher.group(4) != null) {
+                formatter = DateTimeFormat.forPattern(matcher.group(4).substring(2));
+            }
+            if (matcher.group(3) != null) {
+                match = "{{now" + matcher.group(2) + Strings.nullToEmpty(matcher.group(5)) + "}}";
+                hourly = true;
+                formatter = (formatter != null) ? formatter : ymdhFormatter;
+            } else {
+                match = "{{now" + matcher.group(1) + Strings.nullToEmpty(matcher.group(5)) + "}}";
+                formatter = (formatter != null) ? formatter : ymdFormatter;
+            }
+            matcher.appendReplacement(sb, com.addthis.hydra.data.util.DateUtil.getDateTime(formatter, match, hourly).toString(formatter));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 }
