@@ -134,8 +134,12 @@ public class JobExpand {
         } catch (InstantiationException | IllegalAccessException e) {
             log.warn("Class '" + clazz + "' registered for '" + macroName + "' cannot be initialized: " + e, e);
         } catch (ClassCastException e) {
-            log.warn("Class '" + clazz + "' registered for '" + macroName + "' is not JobConfigExpander but '" + o.getClass() + "'");
+            log.warn("Class '" + clazz + "' registered for '" + macroName + "' is not JobConfigExpander but '" + getObjectClassIfNotNull(o) + "'");
         }
+    }
+
+     private static String getObjectClassIfNotNull(Object o) {
+        return o != null ? o.getClass().toString() : null;
     }
 
     private static String macroTemplateParamsHelper(String input, final HashMap<String, String> map)
