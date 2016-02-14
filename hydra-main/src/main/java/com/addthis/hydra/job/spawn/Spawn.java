@@ -1384,7 +1384,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[job.rebalance] job uuid {} not found", jobUUID);
             return new RebalanceOutcome(jobUUID, "job not found", null, null);
         }
-        if (permissionsManager.isExecutable(user, token, sudo, job)) {
+        if (!permissionsManager.isExecutable(user, token, sudo, job)) {
             log.warn("[job.rebalance] insufficient priviledges to rebalance {}", jobUUID);
             return new RebalanceOutcome(jobUUID, "insufficient priviledges", null, null);
         }
