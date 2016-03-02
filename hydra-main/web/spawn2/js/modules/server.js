@@ -14,8 +14,10 @@
 define(["underscore","backbone"],function(_,Backbone){
     var server= _.extend({
         connect:function(){
+            var webSocketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
             _.bindAll(this,'sendText','sendJSON','handleOpen','handleClose','handleMessage','stopHeartbeat','startHeartbeat');
-            this.ws=new WebSocket("ws://"+window.location.host+"/ws?user="+this.user);//this.user.get("username"));
+            this.ws=new WebSocket(webSocketProtocol + '//' +window.location.host+ '/ws?user=' +this.user);
             this.ws.onopen=this.handleOpen;
             this.ws.onclose=this.handleClose;
             this.ws.onmessage=this.handleMessage;
