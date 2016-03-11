@@ -868,8 +868,6 @@ public class JobsResource {
         }
     }
 
-    // http://localhost:5052/job/f641cc5a-e3bf-48c4-a533-c6f35045b45c/log?out=1&lines=10&node=0&runsAgo=0
-
     @GET
     @Path("/{jobID}/log")
     @Produces(MediaType.APPLICATION_JSON)
