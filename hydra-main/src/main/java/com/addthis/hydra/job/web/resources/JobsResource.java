@@ -25,6 +25,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -87,6 +88,7 @@ import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigResolveOptions;
 import com.typesafe.config.ConfigValue;
 
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1279,7 +1281,26 @@ public class JobsResource {
         if (message == null) {
             message = exception.toString();
         }
-        return Response.serverError().entity(message).build();
+
+        String stack = "";
+        for (StackTraceElement s : exception.getStackTrace()) {
+            stack += s + "\n";
+        }
+
+        JSONObject body = new JSONObject();
+        String response;
+
+        try {
+            body.put("error", "A java exception was thrown.");
+            body.put("message", message);
+            body.put("stack", stack);
+            response = body.toString();
+        } catch(JSONException ex) {
+            log.error("[buildServerError]", "failed to construct a json response");
+            response = "{\"error\": \"Failed to serialize java exception. Please see spawn logs for more details.\"}";
+        }
+
+        return Response.serverError().entity(response).build();
     }
 
     private static void emitLogLineForAction(String user, String desc) {
