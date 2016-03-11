@@ -29,10 +29,8 @@ function(
             this.stdout=undefined;
         },
         url:function(){
-            var url= "/job/" + this.jobUuid + "/log?out="+ (this.stdout ? "1" : "0") +
-            "&lines=" + this.lines + "&node=" + this.node + "&runsAgo=" + this.runsAgo +
-            "&minion=" + this.host + "&port=" + this.port;
-
+            var url= "http://"+this.host+":"+this.port+"/job.log?out="+(this.stdout?'1':'0')+
+            "&id="+this.jobUuid+"&lines="+this.lines+"&node="+this.node+"&runsAgo="+this.runsAgo;
             if(!_.isUndefined(this.offset)){
                 url+="&offset="+this.offset;
             }

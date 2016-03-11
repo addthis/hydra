@@ -20,7 +20,6 @@ import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
@@ -90,11 +89,6 @@ import com.typesafe.config.ConfigResolveOptions;
 import com.typesafe.config.ConfigValue;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -868,61 +862,6 @@ public class JobsResource {
         }
     }
 
-    // http://localhost:5052/job/f641cc5a-e3bf-48c4-a533-c6f35045b45c/log?out=1&lines=10&node=0&runsAgo=0
-
-    @GET
-    @Path("/{jobID}/log")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getJobTaskLog(@PathParam("jobID") String jobID,
-                                  @QueryParam("lines") @DefaultValue("50") int lines,
-                                  @QueryParam("runsAgo") @DefaultValue("0") int runsAgo,
-                                  @QueryParam("out") @DefaultValue("1") int out,
-                                  @QueryParam("minion") String minion,
-                                  @QueryParam("port") String port,
-                                  @QueryParam("node") String node) {
-        JSONObject body = new JSONObject();
-        boolean error = false;
-        try {
-            if (minion == null) {
-                body.put("error", "Missing required query parameter 'minion'");
-                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
-            } else if (node == null) {
-                body.put("error", "Missing required query parameter 'node'");
-                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
-            } else if (port == null) {
-                body.put("error", "Missing required query parameter 'node'");
-                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
-            } else {
-                String url = String.format("http://%s:%s/job.log?id=%s&node=%s&runsAgo=%d&lines=%d&out=%d",
-                        minion, port, jobID, node, runsAgo, lines, out);
-                CloseableHttpClient httpclient = HttpClients.createDefault();
-                HttpGet httpGet = new HttpGet(url);
-                CloseableHttpResponse response = httpclient.execute(httpGet);
-
-                try {
-                    HttpEntity entity = response.getEntity();
-                    String responseEncoding = entity.getContentEncoding() != null ?
-                            entity.getContentEncoding().getValue() :
-                            null;
-                    String encoding = responseEncoding == null ? "UTF-8" : responseEncoding;
-                    String responseBody = IOUtils.toString(entity.getContent(), encoding);
-
-                    return Response.status(response.getStatusLine().getStatusCode())
-                            .header("Content-type", response.getFirstHeader("Content-type"))
-                            .entity(responseBody)
-                            .build();
-                } catch (IOException ex) {
-                    return buildServerError(ex);
-                } finally {
-                    response.close();
-                }
-            }
-
-        } catch (Exception ex) {
-            return buildServerError(ex);
-        }
-
-    }
 
     @GET
     @Path("/tasks.get")
