@@ -4,6 +4,9 @@ test.http.get/
 .project
 .settings/
 .idea/
+hydra-auth/
+hydra-main/etc/
+hydra-main/log/
 hydra-local/
 hydra-data/indexes/
 hydra-data/query.tmp
