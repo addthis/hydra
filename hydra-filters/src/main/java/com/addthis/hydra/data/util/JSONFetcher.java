@@ -202,7 +202,7 @@ public class JSONFetcher {
     public HashSet<String> loadSet(String mapURL, HashSet<String> set) {
         try {
             byte[] raw = retrieveBytes(mapURL);
-            String list = LessBytes.toString(raw);
+            String list = LessBytes.toString(raw).trim();
             if (!(list.startsWith("[") && list.endsWith("]"))) {
                 list = LessStrings.cat("[", list, "]");
             }
