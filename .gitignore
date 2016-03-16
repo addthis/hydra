@@ -22,5 +22,4 @@ etc/
 hydra-auth/
 hydra-main/etc/
 hydra-main/log/
-hydra-main/src/main/java/com/addthis/hydra/job/spawn/ExpandedConfigCacheKey.java
 log/
