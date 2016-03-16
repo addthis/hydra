@@ -73,6 +73,7 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -1341,13 +1342,7 @@ public class JobsResource {
             message = exception.toString();
         }
 
-        String stack = "";
-        for (StackTraceElement s : exception.getStackTrace()) {
-            stack += s + "\n";
-        }
-
-        JSONObject body = new JSONObject();
-        String response;
+        String stack = Throwables.getStackTraceAsString(exception);
 
         try {
             body.put("error", "A java exception was thrown.");
