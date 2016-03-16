@@ -18,6 +18,8 @@ import com.addthis.codec.codables.Codable;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 
+import java.util.Objects;
+
 
 /**
  * config-defined templated parameter
@@ -74,17 +76,15 @@ public final class JobParameter implements Codable, Cloneable {
 
     @Override
     public boolean equals(Object o) {
-        if (o.getClass() != JobParameter.class) {
+        if (o.getClass() != JobParameter.class || o == null) {
             return false;
         }
 
         JobParameter other = (JobParameter) o;
 
-        boolean nameEquals = (name != null && other.name != null) ? name.equals(other.name) : name == other.name;
-        boolean valueEquals = (value != null && other.value != null) ? value.equals(other.value) : value == other.value;
-        boolean defaultValueEquals = (defaultValue != null && other.defaultValue != null) ? defaultValue.equals(other.defaultValue) : defaultValue == other.defaultValue;
-
-        return nameEquals && valueEquals && defaultValueEquals;
+        return Objects.equals(name, other.name) &&
+                Objects.equals(value, other.value) &&
+                Objects.equals(defaultValue, other.defaultValue);
     }
 
     @Override
