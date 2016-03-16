@@ -85,6 +85,11 @@
       <artifactId>org.eclipse.jgit</artifactId>
     </dependency>
     <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlets</artifactId>
+        <version>${hydra.dep.jetty.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-servlet</artifactId>
       <version>${hydra.dep.jetty.version}</version>

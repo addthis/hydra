@@ -15,6 +15,7 @@ package com.addthis.hydra.job.web;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.EnumSet;
 
 import com.addthis.basis.util.Parameter;
 
@@ -41,6 +42,7 @@ import com.google.common.base.Strings;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.sun.jersey.api.container.filter.GZIPContentEncodingFilter;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.metrics.reporting.MetricsServlet;
@@ -48,24 +50,29 @@ import com.yammer.metrics.reporting.MetricsServlet;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.GzipHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+
 public class SpawnService {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
-    private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
-    private static final int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
+    private static final int POLL_TIMEOUT = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
 
-    private static final String webDir = Parameter.value("spawn.web.dir", "web");
-    private static final String indexFilename = Parameter.value("spawn.index.file", "index.html");
+    private static final String WEB_DIR = Parameter.value("spawn.web.dir", "web");
+    private static final String INDEX_FILENAME = Parameter.value("spawn.index.file", "index.html");
+    private static final int SPAWN_RESOURCE_MAX_AGE_SECONDS = Parameter.intValue("spawn.web.resource.maxAge", 60 * 60 * 24);
 
     private final SpawnServiceConfiguration configuration;
 
@@ -118,7 +125,7 @@ public class SpawnService {
 
         //instantiate resources
         SystemResource systemResource = new SystemResource(spawn);
-        ListenResource listenResource = new ListenResource(spawn, systemResource, pollTimeout);
+        ListenResource listenResource = new ListenResource(spawn, systemResource, POLL_TIMEOUT);
         JobsResource jobsResource = new JobsResource(spawn, new JobRequestHandlerImpl(spawn));
         GroupsResource groupsResource = new GroupsResource(spawn, configuration);
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
@@ -157,8 +164,9 @@ public class SpawnService {
 
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
-        resourceHandler.setWelcomeFiles(new String[]{indexFilename});
-        resourceHandler.setResourceBase(webDir);
+        resourceHandler.setWelcomeFiles(new String[]{INDEX_FILENAME});
+        resourceHandler.setResourceBase(WEB_DIR);
+        resourceHandler.setCacheControl("max-age=" + SPAWN_RESOURCE_MAX_AGE_SECONDS);
 
         ServletContextHandler handler = new ServletContextHandler();
         webSocketManager.setHandler(handler);
@@ -166,9 +174,13 @@ public class SpawnService {
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[]{resourceHandler, webSocketManager});
 
+        GzipHandler gzipHandler = new GzipHandler();
+        gzipHandler.setHandler(handlers);
+
         ServletContainer servletContainer = new ServletContainer(servlets);
         ServletHolder sh = new ServletHolder(servletContainer);
 
+        handler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
         handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
         handler.addServlet(sh, "/*");
 
@@ -176,7 +188,7 @@ public class SpawnService {
         //jetty stuff
         jetty.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
         //jetty.setHandler(webSocketManager);
-        jetty.setHandler(handlers);
+        jetty.setHandler(gzipHandler);
         jetty.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
