@@ -17,6 +17,9 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+
+import java.util.Objects;
 
 
 /**
@@ -37,10 +40,21 @@ public final class JobParameter implements Codable, Cloneable {
     public JobParameter() {
     }
 
+    @JsonCreator
     public JobParameter(String name, String value, String defaultValue) {
         this.name = name;
         this.value = value;
         this.defaultValue = defaultValue;
+    }
+
+    /**
+     * Copy constructor
+     * @param other
+     */
+    public JobParameter(JobParameter other) {
+        this.name = other.name;
+        this.value = other.value;
+        this.defaultValue = other.defaultValue;
     }
 
     public String getName() {
@@ -66,7 +80,6 @@ public final class JobParameter implements Codable, Cloneable {
     public void setDefaultValue(String defaultValue) {
         this.defaultValue = defaultValue;
     }
-
 
     public String getParamString() {
         return "%[" + (defaultValue != null ? name + ":" + defaultValue : name) + "]%";

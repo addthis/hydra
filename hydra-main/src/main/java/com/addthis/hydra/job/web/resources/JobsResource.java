@@ -42,8 +42,6 @@ import java.util.regex.Pattern;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.TokenReplacerOverflowException;
-
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
@@ -73,18 +71,16 @@ import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
-
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
-import com.fasterxml.jackson.core.JsonLocation;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -103,6 +99,26 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.regex.Pattern;
 
 @Path("/job")
 public class JobsResource implements Closeable {
@@ -391,7 +407,7 @@ public class JobsResource implements Closeable {
                            .build();
         } else {
             try {
-                String expandedJobConfig = spawn.expandJob(id);
+                String expandedJobConfig = spawn.getExpandedJob(id);
                 return formatConfig(format, expandedJobConfig);
             } catch (Exception ex) {
                 return buildServerError(ex);
@@ -401,12 +417,31 @@ public class JobsResource implements Closeable {
 
     @POST
     @Path("/expand")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response expandJobPost(@QueryParam("pairs") KVPairs kv) throws Exception {
+
+        kv.removePair("id");
+        String jobConfig = kv.removePair("config").getValue();
+        String expandedConfig = JobExpand.macroExpand(spawn, jobConfig);
+        Map<String, JobParameter> parameters = JobExpand.macroFindParameters(expandedConfig);
+
+        for (KVPair pair : kv) {
+            String key = pair.getKey().substring(3);
+            String value = pair.getValue();
+            JobParameter param = parameters.get(key);
+            if (param != null) {
+                param.setValue(value);
+            } else {
+                param = new JobParameter();
+                param.setName(key);
+                param.setValue(value);
+                parameters.put(key, param);
+            }
+        }
+
         try {
-            String format = kv.takeValue("format");
-            String expandedConfig = configExpansion(kv);
-            return formatConfig(format, expandedConfig);
+            String expandedJob = spawn.expandConfig(expandedConfig, parameters.values());
+            return formatConfig(null, expandedJob);
         } catch (Exception ex) {
             return buildServerError(ex);
         }
@@ -455,32 +490,6 @@ public class JobsResource implements Closeable {
             default:
                 throw new IllegalArgumentException("invalid config format specified: " + normalizedFormat);
         }
-    }
-
-    private String configExpansion(KVPairs kv) throws TokenReplacerOverflowException {
-        KVPair idPair = kv.removePair("id");
-        String id = (idPair == null) ? null : idPair.getValue();
-        String jobConfig = kv.removePair("config").getValue();
-
-        String expandedConfig = JobExpand.macroExpand(spawn, jobConfig);
-        Map<String, JobParameter> parameters = JobExpand.macroFindParameters(expandedConfig);
-
-        for (KVPair pair : kv) {
-            String key = pair.getKey().substring(3);
-            String value = pair.getValue();
-            JobParameter param = parameters.get(key);
-            if (param != null) {
-                param.setValue(value);
-            } else {
-                param = new JobParameter();
-                param.setName(key);
-                param.setValue(value);
-                parameters.put(key, param);
-            }
-        }
-
-        expandedConfig = spawn.expandJob(id, parameters.values(), jobConfig);
-        return expandedConfig;
     }
 
     /** url called via ajax by client to rebalance a job */
@@ -790,14 +799,14 @@ public class JobsResource implements Closeable {
             return buildServerError(e);
         }
     }
-    
+
     private String jobUpdateAction(String id) {
         return Strings.isNullOrEmpty(id) ? "created" : "updated";
     }
 
     /**
      * Creates or updates a job, and optionally kicks it or its tasks. (THIS IS A LEGACY METHOD!)
-     * 
+     *
      * The functionality of this end point is a legacy from spawn v1's job.submit end point (where
      * one specifies spawn=1 to kick a job). Spawn v2 uses the /job/save end point to create or
      * update a job, and /job/start to kick a job to separate the logic. We keep this end point to
@@ -1134,7 +1143,7 @@ public class JobsResource implements Closeable {
         return rb.build();
     }
 
-    
+
     private static Response validateCreateError(String message, JSONArray lines,
                                                 JSONArray columns, String errorType) throws JSONException {
         JSONObject error = new JSONObject();
@@ -1190,7 +1199,7 @@ public class JobsResource implements Closeable {
             } else {
                 String expandedConfig;
                 try {
-                    expandedConfig = spawn.expandJob(id);
+                    expandedConfig = spawn.getExpandedJob(id);
                 } catch (Exception ex) {
                     JSONArray lineErrors = new JSONArray();
                     JSONArray lineColumns = new JSONArray();
@@ -1225,9 +1234,28 @@ public class JobsResource implements Closeable {
     @Path("/validate")
     @Produces(MediaType.APPLICATION_JSON)
     public Response validateJobPost(@QueryParam("pairs") KVPairs kv) throws Exception {
+        kv.removePair("id");
+        String jobConfig = kv.removePair("config").getValue();
         String expandedConfig;
+        String config = JobExpand.macroExpand(spawn, jobConfig);
+        Map<String, JobParameter> parameters = JobExpand.macroFindParameters(config);
+
+        for (KVPair pair : kv) {
+            String key = pair.getKey().substring(3);
+            String value = pair.getValue();
+            JobParameter param = parameters.get(key);
+            if (param != null) {
+                param.setValue(value);
+            } else {
+                param = new JobParameter();
+                param.setName(key);
+                param.setValue(value);
+                parameters.put(key, param);
+            }
+        }
+
         try {
-            expandedConfig = configExpansion(kv);
+            expandedConfig = spawn.expandConfig(config, parameters.values());
         } catch (Exception ex) {
             JSONArray lineErrors = new JSONArray();
             JSONArray lineColumns = new JSONArray();
