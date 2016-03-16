@@ -61,7 +61,7 @@ public class ScheduledTaskKick implements Runnable {
     @Override public void run() {
         try {
             if (jobConfig == null) {
-                jobConfig = spawn.expandJob(jobId, jobParameters, rawJobConfig);
+                jobConfig = spawn.expandJobToString(rawJobConfig, jobParameters);
             }
             kick.setConfig(jobConfig);
             spawnMQ.sendJobMessage(kick);

@@ -20,6 +20,7 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,6 +41,7 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,7 +50,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import java.text.ParseException;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.LessFiles;
@@ -127,6 +128,9 @@ import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Uninterruptibles;
 
@@ -174,6 +178,8 @@ public class Spawn implements Codable, AutoCloseable {
     private static final int LOG_MAX_AGE = Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
     private static final int LOG_MAX_SIZE = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String LOG_DIR = Parameter.value("spawn.event.log.dir", "log");
+    private static final int EXPANDED_CONFIG_CACHE_MAX_ENTRIES = Parameter.intValue("spawn.expandedConfig.maxEntries", 100);
+    private static final int EXPANDED_CONFIG_CACHE_EXPIRATION_MS = Parameter.intValue("spawn.expandedConfig.maxAge", 20 * 60 * 1000);
 
     public static void main(String... args) throws Exception {
         Spawn spawn = Configs.newDefault(Spawn.class);
@@ -222,6 +228,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final HostFailWorker hostFailWorker;
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
+    @Nonnull private final LoadingCache<ExpandedConfigCacheKey, String> expandedConfigCache;
     @Nullable private final JobStore jobStore;
 
     @JsonCreator private Spawn(@JsonProperty("debug") String debug,
@@ -252,6 +259,27 @@ public class Spawn implements Codable, AutoCloseable {
         this.shuttingDown = new AtomicBoolean(false);
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
         this.listeners = new ConcurrentHashMap<>();
+
+        final Spawn spawn = this;
+        this.expandedConfigCache = CacheBuilder.newBuilder()
+                .maximumSize(EXPANDED_CONFIG_CACHE_MAX_ENTRIES)
+                .expireAfterWrite(EXPANDED_CONFIG_CACHE_EXPIRATION_MS, TimeUnit.MILLISECONDS)
+                .build(new CacheLoader<ExpandedConfigCacheKey, String>() {
+                    @Override
+                    public String load(ExpandedConfigCacheKey s) throws Exception {
+                        // macro recursive expansion
+                        String pass0 = JobExpand.macroExpand(spawn, s.rawConfig);
+                        // template in params that "may" contain other macros
+                        String pass1 = JobExpand.macroTemplateParams(pass0, s.parameters);
+                        // macro recursive expansion again
+                        String pass2 = JobExpand.macroExpand(spawn, pass1);
+                        // replace remaining params not caught in pass 1
+                        String pass3 = JobExpand.macroTemplateParams(pass2, s.parameters);
+                        // inject job metadata from spawn
+                        return JobExpand.magicMacroExpand(spawn, pass3, null);
+                    }
+                });
+
 
         this.webSocketManager = new WebSocketManager();
 
@@ -698,6 +726,8 @@ public class Spawn implements Codable, AutoCloseable {
         // Null out the job config before inserting to reduce the amount stored in memory.
         // Calling getJob will fill it back in -- or call jobConfigManager.getConfig(id)
         job.setConfig(null);
+
+        expandedConfigCache.invalidate(new ExpandedConfigCacheKey(job));
         return spawnState.jobs.put(job.getId(), job);
     }
 
@@ -1663,6 +1693,7 @@ public class Spawn implements Codable, AutoCloseable {
             if (job.getDontDeleteMe()) {
                 return DeleteStatus.JOB_DO_NOT_DELETE;
             }
+            expandedConfigCache.invalidate(new ExpandedConfigCacheKey(job));
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
             log.warn("[job.delete] {}", job.getId());
@@ -1856,28 +1887,18 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    public String expandJob(String jobUUID) throws Exception {
+    public String getExpandedJob(String jobUUID) throws Exception {
         Job job = getJob(jobUUID);
         checkArgument(job != null, "job not found");
-        return expandJob(job);
+        return expandJobToString(job);
     }
 
-    public String expandJob(IJob job) throws TokenReplacerOverflowException {
-        return expandJob(job.getId(), job.getParameters(), getJobConfig(job.getId()));
+    public String expandJobToString(IJob job) throws TokenReplacerOverflowException, ExecutionException {
+        return expandJobToString(job.getConfig(), job.getParameters());
     }
 
-    public String expandJob(String id, Collection<JobParameter> parameters, @Nullable String rawConfig)
-            throws TokenReplacerOverflowException {
-        // macro recursive expansion
-        String pass0 = JobExpand.macroExpand(this, rawConfig);
-        // template in params that "may" contain other macros
-        String pass1 = JobExpand.macroTemplateParams(pass0, parameters);
-        // macro recursive expansion again
-        String pass2 = JobExpand.macroExpand(this, pass1);
-        // replace remaining params not caught in pass 1
-        String pass3 = JobExpand.macroTemplateParams(pass2, parameters);
-        // inject job metadata from spawn
-        return JobExpand.magicMacroExpand(this, pass3, id);
+    public String expandJobToString(    String rawConfig, Collection<JobParameter> parameters) throws ExecutionException {
+        return expandedConfigCache.get(new ExpandedConfigCacheKey(rawConfig, parameters));
     }
 
     public void stopJob(String jobUUID) throws Exception {

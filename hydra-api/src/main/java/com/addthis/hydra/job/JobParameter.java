@@ -67,8 +67,30 @@ public final class JobParameter implements Codable, Cloneable {
         this.defaultValue = defaultValue;
     }
 
-
     public String getParamString() {
         return "%[" + (defaultValue != null ? name + ":" + defaultValue : name) + "]%";
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (o.getClass() != JobParameter.class) {
+            return false;
+        }
+
+        JobParameter other = (JobParameter) o;
+
+        boolean nameEquals = (name != null && other.name != null) ? name.equals(other.name) : name == other.name;
+        boolean valueEquals = (value != null && other.value != null) ? value.equals(other.value) : value == other.value;
+        boolean defaultValueEquals = (defaultValue != null && other.defaultValue != null) ? defaultValue.equals(other.defaultValue) : defaultValue == other.defaultValue;
+
+        return nameEquals && valueEquals && defaultValueEquals;
+    }
+
+    @Override
+    public int hashCode() {
+        return (this.value != null ? this.value.hashCode() : 0) ^
+                (this.name != null ? 27 * this.name.hashCode() : 0) ^
+                (this.defaultValue != null ? 53 * this.defaultValue.hashCode() : 0);
     }
 }
