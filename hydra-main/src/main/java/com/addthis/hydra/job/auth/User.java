@@ -24,6 +24,10 @@ public interface User {
 
     @Nonnull List<String> groups();
 
+    default boolean ignoreDiskQuota() {
+        return false;
+    }
+
     default @Nullable String primaryGroup() {
         List<String> groups = groups();
         if (groups.size() > 0) {

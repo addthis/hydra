@@ -46,11 +46,11 @@ class AuthenticationManagerAllowAll extends AuthenticationManager {
     }
 
     @Override User authenticate(String username, String secret) {
-        return new StaticUser(username, ImmutableList.of(), "unused", "unused");
+        return new StaticUser(username, ImmutableList.of(), "unused", "unused", false);
     }
 
     @Override User getUser(String username) {
-        return new StaticUser(username, ImmutableList.of(), "unused", "unused");
+        return new StaticUser(username, ImmutableList.of(), "unused", "unused", false);
     }
 
     @Override String sudoToken(String username) {

@@ -37,15 +37,24 @@ public class StaticUser implements User {
     @Nullable
     private final String sudo;
 
+    private final boolean ignoreDiskQuota;
+
     @JsonCreator
     public StaticUser(@JsonProperty("name") String name,
                       @JsonProperty("groups") List<String> groups,
                       @JsonProperty("secret") String secret,
-                      @JsonProperty("sudo") String sudo) {
+                      @JsonProperty("sudo") String sudo,
+                      @JsonProperty("ignoreDiskQuota") boolean ignoreDiskQuota) {
         this.name = name;
         this.groups = (groups == null) ? ImmutableList.of() : ImmutableList.copyOf(groups);
         this.secret = secret;
         this.sudo = sudo;
+        this.ignoreDiskQuota = ignoreDiskQuota;
+    }
+
+    @Override
+    public boolean ignoreDiskQuota() {
+        return ignoreDiskQuota;
     }
 
     @Nonnull @Override public String name() {
