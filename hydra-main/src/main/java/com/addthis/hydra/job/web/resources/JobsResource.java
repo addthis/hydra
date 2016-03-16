@@ -25,11 +25,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -876,6 +878,7 @@ public class JobsResource {
     public Response getJobTaskLog(@PathParam("jobID") String jobID,
                                   @QueryParam("lines") @DefaultValue("50") int lines,
                                   @QueryParam("runsAgo") @DefaultValue("0") int runsAgo,
+                                  @QueryParam("offset") @DefaultValue("-1") int offset,
                                   @QueryParam("out") @DefaultValue("1") int out,
                                   @QueryParam("minion") String minion,
                                   @QueryParam("port") String port,
@@ -890,21 +893,25 @@ public class JobsResource {
                 body.put("error", "Missing required query parameter 'node'");
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else if (port == null) {
-                body.put("error", "Missing required query parameter 'node'");
+                body.put("error", "Missing required query parameter 'port'");
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else {
-                String url = String.format("http://%s:%s/job.log?id=%s&node=%s&runsAgo=%d&lines=%d&out=%d",
-                        minion, port, jobID, node, runsAgo, lines, out);
+                URI uri = UriBuilder.fromUri("http://" + minion + ":" + port + "/job.log")
+                        .queryParam("id", jobID)
+                        .queryParam("node", node)
+                        .queryParam("runsAgo", runsAgo)
+                        .queryParam("lines", lines)
+                        .queryParam("out", out)
+                        .queryParam("offset", offset)
+                        .build();
+
                 CloseableHttpClient httpclient = HttpClients.createDefault();
-                HttpGet httpGet = new HttpGet(url);
+                HttpGet httpGet = new HttpGet(uri);
                 CloseableHttpResponse response = httpclient.execute(httpGet);
 
                 try {
                     HttpEntity entity = response.getEntity();
-                    String responseEncoding = entity.getContentEncoding() != null ?
-                            entity.getContentEncoding().getValue() :
-                            null;
-                    String encoding = responseEncoding == null ? "UTF-8" : responseEncoding;
+                    String encoding = entity.getContentEncoding() != null ? entity.getContentEncoding().getValue() : "UTF-8";
                     String responseBody = IOUtils.toString(entity.getContent(), encoding);
 
                     return Response.status(response.getStatusLine().getStatusCode())
