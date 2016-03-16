@@ -91,6 +91,7 @@ import com.typesafe.config.ConfigResolveOptions;
 import com.typesafe.config.ConfigValue;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -1344,15 +1345,11 @@ public class JobsResource {
 
         String stack = Throwables.getStackTraceAsString(exception);
 
-        try {
-            body.put("error", "A java exception was thrown.");
-            body.put("message", message);
-            body.put("stack", stack);
-            response = body.toString();
-        } catch(JSONException ex) {
-            log.error("[buildServerError]", "failed to construct a json response");
-            response = "{\"error\": \"Failed to serialize java exception. Please see spawn logs for more details.\"}";
-        }
+        final String response = "{" +
+                "\"error\": \"A java exception was thrown." +
+                "\"message\": \"" + StringEscapeUtils.escapeEcmaScript(message) + "\"" +
+                "\"stack\": \"" + StringEscapeUtils.escapeEcmaScript(stack) + "\"" +
+                "\"}";
 
         return Response.serverError().entity(response).build();
     }
