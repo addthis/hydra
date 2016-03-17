@@ -407,7 +407,7 @@ public class JobsResource implements Closeable {
                            .build();
         } else {
             try {
-                String expandedJobConfig = spawn.getExpandedJob(id);
+                String expandedJobConfig = spawn.getExpandedConfig(id);
                 return formatConfig(format, expandedJobConfig);
             } catch (Exception ex) {
                 return buildServerError(ex);
@@ -1199,7 +1199,7 @@ public class JobsResource implements Closeable {
             } else {
                 String expandedConfig;
                 try {
-                    expandedConfig = spawn.getExpandedJob(id);
+                    expandedConfig = spawn.getExpandedConfig(id);
                 } catch (Exception ex) {
                     JSONArray lineErrors = new JSONArray();
                     JSONArray lineColumns = new JSONArray();

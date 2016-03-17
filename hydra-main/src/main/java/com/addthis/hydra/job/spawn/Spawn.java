@@ -17,9 +17,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -112,6 +116,8 @@ import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
 import com.addthis.hydra.job.spawn.balancer.SpawnBalancer;
+import com.addthis.hydra.job.spawn.search.JobSearcher;
+import com.addthis.hydra.job.spawn.search.SearchOptions;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
@@ -212,6 +218,7 @@ public class Spawn implements Codable, AutoCloseable {
     private final SpawnJobFixer spawnJobFixer;
     //To track web socket connections
     private final WebSocketManager webSocketManager;
+
     @Nonnull private final File stateFile;
     @Nonnull private final ExecutorService expandKickExecutor;
     @Nonnull private final ScheduledExecutorService scheduledExecutor;
@@ -271,10 +278,16 @@ public class Spawn implements Codable, AutoCloseable {
 
                     @Override
                     public String load(String jobId) throws Exception {
-                        return Spawn.this.getExpandedJob(jobId);
+                        Job job = getJob(jobId);
+                        checkArgument(job != null, "no job exists with id " + jobId);
+                        String config = getJobConfig(jobId);
+                        if (config == null) {
+                            return "";
+                        }
+
+                        return Spawn.this.expandConfig(config, job.getParameters());
                     }
                 });
-
 
         this.webSocketManager = new WebSocketManager();
 
@@ -459,6 +472,14 @@ public class Spawn implements Codable, AutoCloseable {
         } catch (Exception ex) {
             log.warn("[task.queue] exception during spawn queue serialization", ex);
         }
+    }
+
+    public PipedInputStream getSearchResultStream(SearchOptions searchOptions) throws IOException {
+        PipedOutputStream out = new PipedOutputStream();
+        PipedInputStream in = new PipedInputStream(out);
+        JobSearcher js = new JobSearcher(this, searchOptions, out);
+        expandKickExecutor.submit(js);
+        return in;
     }
 
     public ClientEventListener getClientEventListener(String id) {
@@ -1883,12 +1904,22 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     /**
+     * Returns the cached config associated with jobUUID, if there is one, or null otherwise
+     * @param jobUUID
+     * @return expanded job configuration
+     */
+    @Nullable
+    public String getCachedExpandedJob(String jobUUID) {
+        return this.expandedConfigCache.getIfPresent(jobUUID);
+    }
+
+    /**
      * Generate or read an expanded config, keyed on job UID, in the cache.
      * @param jobUUID
      * @return expanded job configuration
      * @throws ExecutionException
      */
-    public String getExpandedJob(String jobUUID) throws ExecutionException {
+    public String getExpandedConfig(String jobUUID) throws ExecutionException {
         Job job = getJob(jobUUID);
         checkArgument(job != null, "job with uid " + jobUUID + " does not exist");
         return this.expandedConfigCache.get(jobUUID);
@@ -1896,7 +1927,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     /**
      * Generate or read an expanded config, keyed on job UID, in the cache. Bypasses the cache if either:
-     *  1) the job has been modified since the request was made
+     *  1) the job has been modified since the request was made (using lastModifiedAt)
      *  2) a null jobUUID is provided
      *  3) a jobUUID which doesn't belong to a job is provided
      * @param jobUUID
@@ -1907,8 +1938,9 @@ public class Spawn implements Codable, AutoCloseable {
      * @throws ExecutionException
      * @throws TokenReplacerOverflowException
      */
-    public String getExpandedJob(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters, long lastModifiedAt) throws ExecutionException, TokenReplacerOverflowException {
+    public String getExpandedConfig(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters, long lastModifiedAt) throws ExecutionException, TokenReplacerOverflowException {
         Job job = getJob(jobUUID);
+
         if (job == null || job.lastModifiedAt() != lastModifiedAt) {
             return expandConfig(rawConfig, parameters);
         }

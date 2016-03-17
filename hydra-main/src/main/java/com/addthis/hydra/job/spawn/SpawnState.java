@@ -61,4 +61,6 @@ public class SpawnState implements Codable {
     @Nonnull public Iterator<Job> jobsIterator() {
         return jobs.values().iterator();
     }
+
+    @Nonnull public Iterator<String> jobIdIterator() {return jobs.keySet().iterator(); }
 }
