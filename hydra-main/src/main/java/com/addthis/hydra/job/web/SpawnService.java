@@ -26,6 +26,7 @@ import com.addthis.hydra.job.web.jersey.OptionalQueryParamInjectableProvider;
 import com.addthis.hydra.job.web.resources.AlertResource;
 import com.addthis.hydra.job.web.resources.AliasResource;
 import com.addthis.hydra.job.web.resources.AuthenticationResource;
+import com.addthis.hydra.job.web.resources.CloseableResource;
 import com.addthis.hydra.job.web.resources.CommandResource;
 import com.addthis.hydra.job.web.resources.GroupsResource;
 import com.addthis.hydra.job.web.resources.HostResource;
@@ -39,6 +40,7 @@ import com.addthis.hydra.util.WebSocketManager;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
@@ -57,7 +59,10 @@ import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+
 import org.eclipse.jetty.servlets.GzipFilter;
+import org.eclipse.jetty.util.component.AbstractLifeCycle;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +85,7 @@ public class SpawnService {
     private final Server jetty;
     private final SpawnConfig servlets;
     private final WebSocketManager webSocketManager;
-
+    private final ImmutableList<CloseableResource> closeableResources;
     private static String readFile(String path) throws IOException {
         return Files.toString(new File(path), Charsets.UTF_8).trim();
     }
@@ -149,6 +154,8 @@ public class SpawnService {
         servlets.addResource(alertResource);
         servlets.addResource(authenticationResource);
 
+        this.closeableResources = ImmutableList.of(jobsResource);
+
         //register providers
         servlets.addProvider(OptionalQueryParamInjectableProvider.class);
         servlets.addProvider(KVPairsProvider.class);
@@ -187,16 +194,15 @@ public class SpawnService {
 
         //jetty stuff
         jetty.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
-        //jetty.setHandler(webSocketManager);
         jetty.setHandler(gzipHandler);
         jetty.start();
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    jetty.stop();
-                } catch (Exception e) {
-                    e.printStackTrace();
+        jetty.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
+            @Override
+            public void lifeCycleStopping(LifeCycle event) {
+                super.lifeCycleStopping(event);
+                for (CloseableResource cr : closeableResources) {
+                    cr.close();
                 }
             }
         });

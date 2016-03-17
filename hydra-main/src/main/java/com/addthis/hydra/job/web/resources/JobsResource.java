@@ -103,7 +103,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Path("/job")
-public class JobsResource {
+public class JobsResource implements CloseableResource {
     private static final Logger log = LoggerFactory.getLogger(JobsResource.class);
 
     @SuppressWarnings("unused")
@@ -116,10 +116,12 @@ public class JobsResource {
     private final Spawn spawn;
     private final JobRequestHandler requestHandler;
     private final CodecJackson validationCodec;
+    private final CloseableHttpClient httpClient;
 
     public JobsResource(Spawn spawn, JobRequestHandler requestHandler) {
         this.spawn = spawn;
         this.requestHandler = requestHandler;
+        this.httpClient = HttpClients.createDefault();
         CodecJackson defaultCodec = Jackson.defaultCodec();
         Config defaultConfig = defaultCodec.getGlobalDefaults();
         if (defaultConfig.hasPath("hydra.validation")) {
@@ -129,6 +131,15 @@ public class JobsResource {
             validationCodec = defaultCodec.withConfig(validationConfig);
         } else {
             validationCodec = defaultCodec;
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            this.httpClient.close();
+        } catch (IOException e) {
+            log.warn("jobsResource failed to close http client on shutdown", e);
         }
     }
 
@@ -905,9 +916,8 @@ public class JobsResource {
                         .queryParam("offset", offset)
                         .build();
 
-                CloseableHttpClient httpclient = HttpClients.createDefault();
                 HttpGet httpGet = new HttpGet(uri);
-                CloseableHttpResponse response = httpclient.execute(httpGet);
+                CloseableHttpResponse response = httpClient.execute(httpGet);
 
                 try {
                     HttpEntity entity = response.getEntity();
