@@ -374,8 +374,7 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response expandJobPost(@QueryParam("pairs") KVPairs kv) throws Exception {
 
-        KVPair idPair = kv.removePair("id");
-        String id = (idPair == null) ? null : idPair.getValue();
+        kv.removePair("id");
         String jobConfig = kv.removePair("config").getValue();
         String expandedConfig = JobExpand.macroExpand(spawn, jobConfig);
         Map<String, JobParameter> parameters = JobExpand.macroFindParameters(expandedConfig);
@@ -395,7 +394,7 @@ public class JobsResource {
         }
 
         try {
-            String expandedJob = spawn.expandJobToString(expandedConfig, parameters.values());
+            String expandedJob = spawn.expandConfig(expandedConfig, parameters.values());
             return formatConfig(null, expandedJob);
         } catch (Exception ex) {
             return buildServerError(ex);
@@ -1125,9 +1124,28 @@ public class JobsResource {
     @Path("/validate")
     @Produces(MediaType.APPLICATION_JSON)
     public Response validateJobPost(@QueryParam("pairs") KVPairs kv) throws Exception {
+        kv.removePair("id");
+        String jobConfig = kv.removePair("config").getValue();
         String expandedConfig;
+        String config = JobExpand.macroExpand(spawn, jobConfig);
+        Map<String, JobParameter> parameters = JobExpand.macroFindParameters(config);
+
+        for (KVPair pair : kv) {
+            String key = pair.getKey().substring(3);
+            String value = pair.getValue();
+            JobParameter param = parameters.get(key);
+            if (param != null) {
+                param.setValue(value);
+            } else {
+                param = new JobParameter();
+                param.setName(key);
+                param.setValue(value);
+                parameters.put(key, param);
+            }
+        }
+
         try {
-//            expandedConfig = configExpansion(kv);
+            expandedConfig = spawn.expandConfig(config, parameters.values());
         } catch (Exception ex) {
             JSONArray lineErrors = new JSONArray();
             JSONArray lineColumns = new JSONArray();
@@ -1136,8 +1154,7 @@ public class JobsResource {
         }
 
         try {
-//            return validateJobConfig(expandedConfig);
-            return Response.ok().build();
+            return validateJobConfig(expandedConfig);
         } catch (Exception ex) {
             JSONArray lineErrors = new JSONArray();
             JSONArray lineColumns = new JSONArray();

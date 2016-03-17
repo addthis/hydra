@@ -38,10 +38,12 @@ public class ScheduledTaskKick implements Runnable {
     public CommandTaskKick kick;
     public Job job;
     public JobTask task;
+    private long lastModifiedAt;
 
     public ScheduledTaskKick(Spawn spawn,
                              String jobId,
                              Collection<JobParameter> jobParameters,
+                             long lastModifiedAt,
                              @Nullable String rawJobConfig,
                              SpawnMQ spawnMQ,
                              CommandTaskKick kick,
@@ -56,12 +58,13 @@ public class ScheduledTaskKick implements Runnable {
         this.kick = kick;
         this.job = job;
         this.task = task;
+        this.lastModifiedAt = lastModifiedAt;
     }
 
     @Override public void run() {
         try {
             if (jobConfig == null) {
-                jobConfig = spawn.expandJobToString(rawJobConfig, jobParameters);
+                jobConfig = spawn.getExpandedJob(jobId, rawJobConfig, jobParameters, lastModifiedAt);
             }
             kick.setConfig(jobConfig);
             spawnMQ.sendJobMessage(kick);

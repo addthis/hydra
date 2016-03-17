@@ -178,7 +178,7 @@ public class Spawn implements Codable, AutoCloseable {
     private static final int LOG_MAX_AGE = Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
     private static final int LOG_MAX_SIZE = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String LOG_DIR = Parameter.value("spawn.event.log.dir", "log");
-    private static final int EXPANDED_CONFIG_CACHE_MAX_ENTRIES = Parameter.intValue("spawn.expandedConfig.maxEntries", 100);
+    private static final int EXPANDED_CONFIG_CACHE_MAX_SIZE_MB = Parameter.intValue("spawn.expandedConfig.maxSizeMb", 100);
     private static final int EXPANDED_CONFIG_CACHE_EXPIRATION_MS = Parameter.intValue("spawn.expandedConfig.maxAge", 20 * 60 * 1000);
 
     public static void main(String... args) throws Exception {
@@ -228,7 +228,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final HostFailWorker hostFailWorker;
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
-    @Nonnull private final LoadingCache<ExpandedConfigCacheKey, String> expandedConfigCache;
+    @Nonnull private final LoadingCache<String, String> expandedConfigCache;
     @Nullable private final JobStore jobStore;
 
     @JsonCreator private Spawn(@JsonProperty("debug") String debug,
@@ -262,21 +262,16 @@ public class Spawn implements Codable, AutoCloseable {
 
         final Spawn spawn = this;
         this.expandedConfigCache = CacheBuilder.newBuilder()
-                .maximumSize(EXPANDED_CONFIG_CACHE_MAX_ENTRIES)
+                .maximumWeight(EXPANDED_CONFIG_CACHE_MAX_SIZE_MB * 1000000l)
+                .weigher((String key, String value) -> {
+                    return key.length() + value.length();
+                })
                 .expireAfterWrite(EXPANDED_CONFIG_CACHE_EXPIRATION_MS, TimeUnit.MILLISECONDS)
-                .build(new CacheLoader<ExpandedConfigCacheKey, String>() {
+                .build(new CacheLoader<String, String>() {
+
                     @Override
-                    public String load(ExpandedConfigCacheKey s) throws Exception {
-                        // macro recursive expansion
-                        String pass0 = JobExpand.macroExpand(spawn, s.rawConfig);
-                        // template in params that "may" contain other macros
-                        String pass1 = JobExpand.macroTemplateParams(pass0, s.parameters);
-                        // macro recursive expansion again
-                        String pass2 = JobExpand.macroExpand(spawn, pass1);
-                        // replace remaining params not caught in pass 1
-                        String pass3 = JobExpand.macroTemplateParams(pass2, s.parameters);
-                        // inject job metadata from spawn
-                        return JobExpand.magicMacroExpand(spawn, pass3, null);
+                    public String load(String jobId) throws Exception {
+                        return Spawn.this.getExpandedJob(jobId);
                     }
                 });
 
@@ -727,7 +722,7 @@ public class Spawn implements Codable, AutoCloseable {
         // Calling getJob will fill it back in -- or call jobConfigManager.getConfig(id)
         job.setConfig(null);
 
-        expandedConfigCache.invalidate(new ExpandedConfigCacheKey(job));
+        expandedConfigCache.invalidate(job.getId());
         return spawnState.jobs.put(job.getId(), job);
     }
 
@@ -1693,7 +1688,7 @@ public class Spawn implements Codable, AutoCloseable {
             if (job.getDontDeleteMe()) {
                 return DeleteStatus.JOB_DO_NOT_DELETE;
             }
-            expandedConfigCache.invalidate(new ExpandedConfigCacheKey(job));
+            expandedConfigCache.invalidate(jobUUID);
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
             log.warn("[job.delete] {}", job.getId());
@@ -1887,18 +1882,59 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    public String getExpandedJob(String jobUUID) throws Exception {
+    /**
+     * Generate or read an expanded config, keyed on job UID, in the cache.
+     * @param jobUUID
+     * @return expanded job configuration
+     * @throws ExecutionException
+     */
+    public String getExpandedJob(String jobUUID) throws ExecutionException {
         Job job = getJob(jobUUID);
-        checkArgument(job != null, "job not found");
-        return expandJobToString(job);
+        checkArgument(job != null, "job with uid " + jobUUID + " does not exist");
+        return this.expandedConfigCache.get(jobUUID);
     }
 
-    public String expandJobToString(IJob job) throws TokenReplacerOverflowException, ExecutionException {
-        return expandJobToString(job.getConfig(), job.getParameters());
+    /**
+     * Generate or read an expanded config, keyed on job UID, in the cache. Bypasses the cache if either:
+     *  1) the job has been modified since the request was made
+     *  2) a null jobUUID is provided
+     *  3) a jobUUID which doesn't belong to a job is provided
+     * @param jobUUID
+     * @param rawConfig - the config to expand. Possibly different from the one owned by Job #jobUUID
+     * @param parameters - the params to expand the config with. Possibly different from the ones owned by Job #jobUUID
+     * @param lastModifiedAt - at the time this request is made, the lastModifiedAt timestamp of the job if one exists
+     * @return the expanded job config
+     * @throws ExecutionException
+     * @throws TokenReplacerOverflowException
+     */
+    public String getExpandedJob(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters, long lastModifiedAt) throws ExecutionException, TokenReplacerOverflowException {
+        Job job = getJob(jobUUID);
+        if (job == null || job.lastModifiedAt() != lastModifiedAt) {
+            return expandConfig(rawConfig, parameters);
+        }
+        else {
+            return this.expandedConfigCache.get(jobUUID);
+        }
     }
 
-    public String expandJobToString(    String rawConfig, Collection<JobParameter> parameters) throws ExecutionException {
-        return expandedConfigCache.get(new ExpandedConfigCacheKey(rawConfig, parameters));
+    /**
+     * Bypass the expanded config cache and generate a new expanded config, not associated with any particular job id.
+     * Don't use this method if you suspect you can benefit from the expanded config cache.
+     * @param rawConfig - raw configration to expand
+     * @param parameters - job parameters to use in expansion
+     * @return expanded job configuration
+     */
+    public String expandConfig(String rawConfig, Collection<JobParameter> parameters) throws TokenReplacerOverflowException, ExecutionException {
+        // macro recursive expansion
+        String pass0 = JobExpand.macroExpand(this, rawConfig);
+        // template in params that "may" contain other macros
+        String pass1 = JobExpand.macroTemplateParams(pass0, parameters);
+        // macro recursive expansion again
+        String pass2 = JobExpand.macroExpand(this, pass1);
+        // replace remaining params not caught in pass 1
+        String pass3 = JobExpand.macroTemplateParams(pass2, parameters);
+        // inject job metadata from spawn
+        return JobExpand.magicMacroExpand(this, pass3, null);
     }
 
     public void stopJob(String jobUUID) throws Exception {
@@ -2356,9 +2392,11 @@ public class Spawn implements Codable, AutoCloseable {
         for (JobParameter parameter : job.getParameters()) {
             jobParameters.add(new JobParameter(parameter.getName(), parameter.getValue(), parameter.getDefaultValue()));
         }
+
         Runnable scheduledKick = new ScheduledTaskKick(this,
                                                        job.getId(),
                                                        jobParameters,
+                                                       job.lastModifiedAt(),
                                                        getJobConfig(job.getId()),
                                                        spawnMQ,
                                                        kick,

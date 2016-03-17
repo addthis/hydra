@@ -17,6 +17,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 import java.util.Objects;
 
@@ -39,10 +40,21 @@ public final class JobParameter implements Codable, Cloneable {
     public JobParameter() {
     }
 
+    @JsonCreator
     public JobParameter(String name, String value, String defaultValue) {
         this.name = name;
         this.value = value;
         this.defaultValue = defaultValue;
+    }
+
+    /**
+     * Copy constructor
+     * @param other
+     */
+    public JobParameter(JobParameter other) {
+        this.name = other.name;
+        this.value = other.value;
+        this.defaultValue = other.defaultValue;
     }
 
     public String getName() {
@@ -71,26 +83,5 @@ public final class JobParameter implements Codable, Cloneable {
 
     public String getParamString() {
         return "%[" + (defaultValue != null ? name + ":" + defaultValue : name) + "]%";
-    }
-
-
-    @Override
-    public boolean equals(Object o) {
-        if (o.getClass() != JobParameter.class || o == null) {
-            return false;
-        }
-
-        JobParameter other = (JobParameter) o;
-
-        return Objects.equals(name, other.name) &&
-                Objects.equals(value, other.value) &&
-                Objects.equals(defaultValue, other.defaultValue);
-    }
-
-    @Override
-    public int hashCode() {
-        return (this.value != null ? this.value.hashCode() : 0) ^
-                (this.name != null ? 27 * this.name.hashCode() : 0) ^
-                (this.defaultValue != null ? 53 * this.defaultValue.hashCode() : 0);
     }
 }
