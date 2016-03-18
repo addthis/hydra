@@ -26,7 +26,6 @@ import com.addthis.hydra.job.web.jersey.OptionalQueryParamInjectableProvider;
 import com.addthis.hydra.job.web.resources.AlertResource;
 import com.addthis.hydra.job.web.resources.AliasResource;
 import com.addthis.hydra.job.web.resources.AuthenticationResource;
-import com.addthis.hydra.job.web.resources.CloseableResource;
 import com.addthis.hydra.job.web.resources.CommandResource;
 import com.addthis.hydra.job.web.resources.GroupsResource;
 import com.addthis.hydra.job.web.resources.HostResource;
@@ -40,11 +39,10 @@ import com.addthis.hydra.util.WebSocketManager;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
+import com.google.common.io.Closer;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import com.sun.jersey.api.container.filter.GZIPContentEncodingFilter;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.metrics.reporting.MetricsServlet;
@@ -68,7 +66,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
 
 public class SpawnService {
 
@@ -85,7 +82,7 @@ public class SpawnService {
     private final Server jetty;
     private final SpawnConfig servlets;
     private final WebSocketManager webSocketManager;
-    private final ImmutableList<CloseableResource> closeableResources;
+    private final Closer resourceCloser;
     private static String readFile(String path) throws IOException {
         return Files.toString(new File(path), Charsets.UTF_8).trim();
     }
@@ -154,7 +151,8 @@ public class SpawnService {
         servlets.addResource(alertResource);
         servlets.addResource(authenticationResource);
 
-        this.closeableResources = ImmutableList.of(jobsResource);
+        resourceCloser = Closer.create();
+        resourceCloser.register(jobsResource);
 
         //register providers
         servlets.addProvider(OptionalQueryParamInjectableProvider.class);
@@ -201,8 +199,10 @@ public class SpawnService {
             @Override
             public void lifeCycleStopping(LifeCycle event) {
                 super.lifeCycleStopping(event);
-                for (CloseableResource cr : closeableResources) {
-                    cr.close();
+                try {
+                    resourceCloser.close();
+                } catch (IOException ex) {
+                    log.error("IOException while closing jetty resources: ", ex);
                 }
             }
         });

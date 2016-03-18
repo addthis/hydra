@@ -27,6 +27,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -103,7 +104,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Path("/job")
-public class JobsResource implements CloseableResource {
+public class JobsResource implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(JobsResource.class);
 
     @SuppressWarnings("unused")
@@ -135,12 +136,8 @@ public class JobsResource implements CloseableResource {
     }
 
     @Override
-    public void close() {
-        try {
-            this.httpClient.close();
-        } catch (IOException e) {
-            log.warn("jobsResource failed to close http client on shutdown", e);
-        }
+    public void close() throws IOException {
+        httpClient.close();
     }
 
     @GET
@@ -895,7 +892,6 @@ public class JobsResource implements CloseableResource {
                                   @QueryParam("port") String port,
                                   @QueryParam("node") String node) {
         JSONObject body = new JSONObject();
-        boolean error = false;
         try {
             if (minion == null) {
                 body.put("error", "Missing required query parameter 'minion'");
@@ -931,7 +927,11 @@ public class JobsResource implements CloseableResource {
                 } catch (IOException ex) {
                     return buildServerError(ex);
                 } finally {
-                    response.close();
+                    try {
+                        response.close();
+                    } catch (IOException ex) {
+                        log.warn("Error while closing response: ", ex);
+                    }
                 }
             }
 
