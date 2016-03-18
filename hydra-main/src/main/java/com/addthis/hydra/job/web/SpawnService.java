@@ -128,7 +128,7 @@ public class SpawnService {
         //instantiate resources
         SystemResource systemResource = new SystemResource(spawn);
         ListenResource listenResource = new ListenResource(spawn, systemResource, POLL_TIMEOUT);
-        JobsResource jobsResource = new JobsResource(spawn, new JobRequestHandlerImpl(spawn));
+        JobsResource jobsResource = new JobsResource(spawn, configuration, new JobRequestHandlerImpl(spawn));
         GroupsResource groupsResource = new GroupsResource(spawn, configuration);
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
         CommandResource commandResource = new CommandResource(spawn.getJobCommandManager());

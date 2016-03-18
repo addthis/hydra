@@ -37,6 +37,7 @@ public class SpawnServiceConfiguration {
     public final int groupUpdateInterval;
     public final String groupLogDir;
     public final int groupLogInterval;
+    public final int maxLogFileLines;
 
     @Nullable public final String keyStorePath;
     @Nullable public final String keyStorePassword;
@@ -61,6 +62,7 @@ public class SpawnServiceConfiguration {
                                      @Time(SECONDS) @JsonProperty(value = "sudoTimeout", required = true) int sudoTimeout,
                                      @Time(SECONDS) @JsonProperty(value = "groupUpdateInterval") int groupUpdateInterval,
                                      @Time(SECONDS) @JsonProperty(value = "groupLogInterval") int groupLogInterval,
+                                     @JsonProperty(value = "maxLogFileLines", required = true) int maxLogFileLines,
                                      @JsonProperty(value = "groupLogDir") String groupLogDir,
                                      @JsonProperty(value = "keyStorePath") String keyStorePath,
                                      @JsonProperty(value = "keyStorePassword") String keyStorePassword,
@@ -74,6 +76,7 @@ public class SpawnServiceConfiguration {
         this.groupUpdateInterval = groupUpdateInterval;
         this.groupLogDir = groupLogDir;
         this.groupLogInterval = groupLogInterval;
+        this.maxLogFileLines = maxLogFileLines;
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword;
         this.keyManagerPassword = keyManagerPassword;

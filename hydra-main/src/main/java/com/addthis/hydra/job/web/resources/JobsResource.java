@@ -66,6 +66,7 @@ import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.JobRequestHandler;
 import com.addthis.hydra.job.web.KVUtils;
+import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.hydra.util.DirectedGraph;
@@ -115,12 +116,14 @@ public class JobsResource implements Closeable {
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private final Spawn spawn;
+    private final int maxLogFileLines;
     private final JobRequestHandler requestHandler;
     private final CodecJackson validationCodec;
     private final CloseableHttpClient httpClient;
 
-    public JobsResource(Spawn spawn, JobRequestHandler requestHandler) {
+    public JobsResource(Spawn spawn, SpawnServiceConfiguration configuration, JobRequestHandler requestHandler) {
         this.spawn = spawn;
+        this.maxLogFileLines = configuration.maxLogFileLines;
         this.requestHandler = requestHandler;
         this.httpClient = HttpClients.createDefault();
         CodecJackson defaultCodec = Jackson.defaultCodec();
@@ -901,6 +904,9 @@ public class JobsResource implements Closeable {
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else if (port == null) {
                 body.put("error", "Missing required query parameter 'port'");
+                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
+            } else if (lines > maxLogFileLines) {
+                body.put("error", "Number of log lines requested " + lines + " is greater than max " + maxLogFileLines);
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else {
                 URI uri = UriBuilder.fromUri("http://" + minion + ":" + port + "/job.log")

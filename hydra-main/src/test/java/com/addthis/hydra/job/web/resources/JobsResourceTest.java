@@ -22,6 +22,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.JobRequestHandler;
+import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 public class JobsResourceTest {
 
     private Spawn spawn;
+    private SpawnServiceConfiguration configuration;
     private JobRequestHandler requestHandler;
     private JobsResource resource;
     private KVPairs kv;
@@ -44,10 +46,11 @@ public class JobsResourceTest {
     public void setUp() {
         // mocks and stubs
         spawn = mock(Spawn.class);
+        configuration = SpawnServiceConfiguration.SINGLETON;
         when(spawn.getPermissionsManager()).thenReturn(PermissionsManager.createManagerAllowAll());
         requestHandler = mock(JobRequestHandler.class);
 
-        resource = new JobsResource(spawn, requestHandler);
+        resource = new JobsResource(spawn, configuration, requestHandler);
         kv = new KVPairs();
     }
 
