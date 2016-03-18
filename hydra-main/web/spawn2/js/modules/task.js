@@ -697,8 +697,12 @@ function(
             this.handleLogClear();
             this.fetchLog();
         },
-        handleLogError:function(){
-            this.$el.find("pre#logContainer").html("Error talking to minion");
+        handleLogError:function(model, resp, options){
+            if (resp.status == 400) {
+                this.$el.find("pre#logContainer").html(resp.responseText);
+            } else {
+                this.$el.find("pre#logContainer").html("Error talking to minion");
+            }
         },
         handleTaskStateChange:function(model){
             var label = this.$el.find("span#taskLabel");
