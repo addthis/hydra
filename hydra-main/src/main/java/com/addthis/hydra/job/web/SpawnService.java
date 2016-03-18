@@ -39,10 +39,10 @@ import com.addthis.hydra.util.WebSocketManager;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
+import com.google.common.io.Closer;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import com.sun.jersey.api.container.filter.GZIPContentEncodingFilter;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.metrics.reporting.MetricsServlet;
@@ -57,13 +57,15 @@ import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+
 import org.eclipse.jetty.servlets.GzipFilter;
+import org.eclipse.jetty.util.component.AbstractLifeCycle;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
 
 public class SpawnService {
 
@@ -80,7 +82,7 @@ public class SpawnService {
     private final Server jetty;
     private final SpawnConfig servlets;
     private final WebSocketManager webSocketManager;
-
+    private final Closer resourceCloser;
     private static String readFile(String path) throws IOException {
         return Files.toString(new File(path), Charsets.UTF_8).trim();
     }
@@ -126,7 +128,7 @@ public class SpawnService {
         //instantiate resources
         SystemResource systemResource = new SystemResource(spawn);
         ListenResource listenResource = new ListenResource(spawn, systemResource, POLL_TIMEOUT);
-        JobsResource jobsResource = new JobsResource(spawn, new JobRequestHandlerImpl(spawn));
+        JobsResource jobsResource = new JobsResource(spawn, configuration, new JobRequestHandlerImpl(spawn));
         GroupsResource groupsResource = new GroupsResource(spawn, configuration);
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
         CommandResource commandResource = new CommandResource(spawn.getJobCommandManager());
@@ -148,6 +150,9 @@ public class SpawnService {
         servlets.addResource(hostResource);
         servlets.addResource(alertResource);
         servlets.addResource(authenticationResource);
+
+        resourceCloser = Closer.create();
+        resourceCloser.register(jobsResource);
 
         //register providers
         servlets.addProvider(OptionalQueryParamInjectableProvider.class);
@@ -187,16 +192,17 @@ public class SpawnService {
 
         //jetty stuff
         jetty.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
-        //jetty.setHandler(webSocketManager);
         jetty.setHandler(gzipHandler);
         jetty.start();
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
+        jetty.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
+            @Override
+            public void lifeCycleStopping(LifeCycle event) {
+                super.lifeCycleStopping(event);
                 try {
-                    jetty.stop();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    resourceCloser.close();
+                } catch (IOException ex) {
+                    log.error("IOException while closing jetty resources: ", ex);
                 }
             }
         });

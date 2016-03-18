@@ -20,14 +20,19 @@ import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +66,7 @@ import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.JobRequestHandler;
 import com.addthis.hydra.job.web.KVUtils;
+import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.hydra.util.DirectedGraph;
@@ -71,6 +77,7 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -87,11 +94,18 @@ import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigResolveOptions;
 import com.typesafe.config.ConfigValue;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Path("/job")
-public class JobsResource {
+public class JobsResource implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(JobsResource.class);
 
     @SuppressWarnings("unused")
@@ -102,12 +116,16 @@ public class JobsResource {
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private final Spawn spawn;
+    private final int maxLogFileLines;
     private final JobRequestHandler requestHandler;
     private final CodecJackson validationCodec;
+    private final CloseableHttpClient httpClient;
 
-    public JobsResource(Spawn spawn, JobRequestHandler requestHandler) {
+    public JobsResource(Spawn spawn, SpawnServiceConfiguration configuration, JobRequestHandler requestHandler) {
         this.spawn = spawn;
+        this.maxLogFileLines = configuration.maxLogFileLines;
         this.requestHandler = requestHandler;
+        this.httpClient = HttpClients.createDefault();
         CodecJackson defaultCodec = Jackson.defaultCodec();
         Config defaultConfig = defaultCodec.getGlobalDefaults();
         if (defaultConfig.hasPath("hydra.validation")) {
@@ -118,6 +136,11 @@ public class JobsResource {
         } else {
             validationCodec = defaultCodec;
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        httpClient.close();
     }
 
     @GET
@@ -860,6 +883,69 @@ public class JobsResource {
         }
     }
 
+    @GET
+    @Path("/{jobID}/log")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getJobTaskLog(@PathParam("jobID") String jobID,
+                                  @QueryParam("lines") @DefaultValue("50") int lines,
+                                  @QueryParam("runsAgo") @DefaultValue("0") int runsAgo,
+                                  @QueryParam("offset") @DefaultValue("-1") int offset,
+                                  @QueryParam("out") @DefaultValue("1") int out,
+                                  @QueryParam("minion") String minion,
+                                  @QueryParam("port") String port,
+                                  @QueryParam("node") String node) {
+        JSONObject body = new JSONObject();
+        try {
+            if (minion == null) {
+                body.put("error", "Missing required query parameter 'minion'");
+                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
+            } else if (node == null) {
+                body.put("error", "Missing required query parameter 'node'");
+                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
+            } else if (port == null) {
+                body.put("error", "Missing required query parameter 'port'");
+                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
+            } else if (lines > maxLogFileLines) {
+                body.put("error", "Number of log lines requested " + lines + " is greater than max " + maxLogFileLines);
+                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
+            } else {
+                URI uri = UriBuilder.fromUri("http://" + minion + ":" + port + "/job.log")
+                        .queryParam("id", jobID)
+                        .queryParam("node", node)
+                        .queryParam("runsAgo", runsAgo)
+                        .queryParam("lines", lines)
+                        .queryParam("out", out)
+                        .queryParam("offset", offset)
+                        .build();
+
+                HttpGet httpGet = new HttpGet(uri);
+                CloseableHttpResponse response = httpClient.execute(httpGet);
+
+                try {
+                    HttpEntity entity = response.getEntity();
+                    String encoding = entity.getContentEncoding() != null ? entity.getContentEncoding().getValue() : "UTF-8";
+                    String responseBody = IOUtils.toString(entity.getContent(), encoding);
+
+                    return Response.status(response.getStatusLine().getStatusCode())
+                            .header("Content-type", response.getFirstHeader("Content-type"))
+                            .entity(responseBody)
+                            .build();
+                } catch (IOException ex) {
+                    return buildServerError(ex);
+                } finally {
+                    try {
+                        response.close();
+                    } catch (IOException ex) {
+                        log.warn("Error while closing response: ", ex);
+                    }
+                }
+            }
+
+        } catch (Exception ex) {
+            return buildServerError(ex);
+        }
+
+    }
 
     @GET
     @Path("/tasks.get")
@@ -1279,7 +1365,16 @@ public class JobsResource {
         if (message == null) {
             message = exception.toString();
         }
-        return Response.serverError().entity(message).build();
+
+        String stack = Throwables.getStackTraceAsString(exception);
+
+        final String response = "{" +
+                "\"error\": \"A java exception was thrown." +
+                "\"message\": \"" + StringEscapeUtils.escapeEcmaScript(message) + "\"" +
+                "\"stack\": \"" + StringEscapeUtils.escapeEcmaScript(stack) + "\"" +
+                "\"}";
+
+        return Response.serverError().entity(response).build();
     }
 
     private static void emitLogLineForAction(String user, String desc) {
