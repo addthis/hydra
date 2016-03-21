@@ -22,8 +22,18 @@ import com.addthis.bundle.value.ValueFactory;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class TestBundleFilterNum {
+
+    @Test
+    public void testNumberFormatException() {
+        BundleFilterNum bfn = new BundleFilterNum("c0,v1,set", null);
+        Bundle bundle = new ListBundle();
+        bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create("hello"));
+        boolean success = bfn.filter(bundle);
+        assertFalse(success);
+    }
 
     @Test
     public void testAdd() {

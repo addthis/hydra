@@ -34,13 +34,19 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
+import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BundleCalculator {
 
+    private static final Logger log = LoggerFactory.getLogger(BundleCalculator.class);
+
     private static final BundleCalculatorVector vector = BundleCalculatorVector.getSingleton();
 
-    private static enum Operation {
+    private enum Operation {
         OP_ADD,
         OP_SUB,
         OP_DIV,
@@ -307,308 +313,317 @@ public class BundleCalculator {
     public Bundle calculate(Bundle line) {
         LinkedList<Numeric> stack = new LinkedList<>();
         long maxcol = line.getCount() - 1;
-        for (MathOp op : ops) {
-            Numeric v1, v2;
-            switch (op.type) {
-                case OP_ADD:
-                    v1 = stack.pop();
-                    if (v1 == vector) {
+        try {
+            for (MathOp op : ops) {
+                Numeric v1, v2;
+                switch (op.type) {
+                    case OP_ADD:
                         v1 = stack.pop();
-                        while (!stack.isEmpty()) {
-                            v1 = v1.sum(stack.pop());
+                        if (v1 == vector) {
+                            v1 = stack.pop();
+                            while (!stack.isEmpty()) {
+                                v1 = v1.sum(stack.pop());
+                            }
+                            stack.push(v1);
+                        } else {
+                            v2 = stack.pop();
+                            stack.push(v1.sum(v2));
                         }
+                        break;
+                    case OP_SUB:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        stack.push(v2.diff(v1));
+                        break;
+                    case OP_MULT: {
+                        v1 = stack.pop();
+                        if (v1 == vector) {
+                            v1 = stack.pop();
+                            long mult = v1.asLong().getLong();
+                            while (!stack.isEmpty()) {
+                                mult *= stack.pop().asLong().getLong();
+                            }
+                            stack.push(ValueFactory.create(mult));
+                        } else {
+                            v2 = stack.pop();
+                            long mult = v1.asLong().getLong() * v2.asLong().getLong();
+                            stack.push(ValueFactory.create(mult));
+                        }
+                        break;
+                    }
+                    case OP_DMULT: {
+                        v1 = stack.pop();
+                        if (v1 == vector) {
+                            v1 = stack.pop();
+                            double mult = v1.asDouble().getDouble();
+                            while (!stack.isEmpty()) {
+                                mult *= stack.pop().asDouble().getDouble();
+                            }
+                            stack.push(ValueFactory.create(mult));
+                        } else {
+                            v2 = stack.pop();
+                            double mult = v1.asDouble().getDouble() * v2.asDouble().getDouble();
+                            stack.push(ValueFactory.create(mult));
+                        }
+                        break;
+                    }
+                    case OP_DIV:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!diverr && v1.asLong().getLong() == 0) {
+                            stack.push(ValueFactory.create(0));
+                        } else {
+                            stack.push(ValueFactory.create(v2.asLong().getLong() / v1.asLong().getLong()));
+                        }
+                        break;
+                    case OP_DDIV:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!diverr && v1.asDouble().getDouble() == 0d) {
+                            stack.push(ValueFactory.create(0));
+                        } else {
+                            stack.push(ValueFactory.create(v2.asDouble().getDouble() / v1.asDouble().getDouble()));
+                        }
+                        break;
+                    case OP_REM:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!diverr && v1.asLong().getLong() == 0) {
+                            stack.push(ValueFactory.create(0));
+                        } else {
+                            stack.push(ValueFactory.create(v2.asLong().getLong() % v1.asLong().getLong()));
+                        }
+                        break;
+                    case OP_LOG:
+                        stack.push(ValueFactory.create(Math.log10(stack.pop().asDouble().getDouble())));
+                        break;
+                    case OP_SQRT:
+                        stack.push(ValueFactory.create(Math.sqrt(stack.pop().asDouble().getDouble())));
+                        break;
+                    case OP_VAL:
+                        stack.push(op.val.asNumeric());
+                        break;
+                    case OP_COLVAL: {
+                        ValueObject target =
+                                getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
+                        insertNumbers(stack, target);
+                        break;
+                    }
+                    case OP_COLARRAY: {
+                        ValueObject target =
+                                getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
+                        ValueArray array = target.asArray();
+                        int size = array.size();
+                        for (int i = 0; i < size; i++) {
+                            stack.push(array.get(i).asNumeric());
+                        }
+                        break;
+                    }
+                    case OP_COLNAMEVAL: {
+                        ValueObject target = line.getValue(line.getFormat().getField(op.val.toString()));
+                        insertNumbers(stack, target);
+                        break;
+                    }
+                    case OP_DUP:
+                        stack.push(stack.peek());
+                        break;
+                    case OP_TOINT:
+                        stack.push(ValueUtil.asNumberOrParseLong(stack.pop(), 10).asLong());
+                        break;
+                    case OP_TOFLOAT:
+                        stack.push(ValueUtil.asNumberOrParseDouble(stack.pop()).asDouble());
+                        break;
+                    case OP_BITS_TOINT:
+                        long bits = Double.doubleToLongBits(stack.pop().asDouble().getDouble());
+                        stack.push(ValueFactory.create(bits));
+                        break;
+                    case OP_BITS_TOFLOAT:
+                        bits = stack.pop().asLong().getLong();
+                        stack.push(ValueFactory.create(Double.longBitsToDouble(bits)));
+                        break;
+                    case OP_DGT:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asDouble().getDouble() > v1.asDouble().getDouble())) {
+                            return null;
+                        }
+                        break;
+                    case OP_DGT_EQ:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asDouble().getDouble() >= v1.asDouble().getDouble())) {
+                            return null;
+                        }
+                        break;
+                    case OP_DLT:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asDouble().getDouble() < v1.asDouble().getDouble())) {
+                            return null;
+                        }
+                        break;
+                    case OP_DLT_EQ:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asDouble().getDouble() <= v1.asDouble().getDouble())) {
+                            return null;
+                        }
+                        break;
+                    case OP_DEQ:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (v2.asDouble().getDouble() != v1.asDouble().getDouble()) {
+                            return null;
+                        }
+                        break;
+                    case OP_GT:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asLong().getLong() > v1.asLong().getLong())) {
+                            return null;
+                        }
+                        break;
+                    case OP_GT_EQ:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asLong().getLong() >= v1.asLong().getLong())) {
+                            return null;
+                        }
+                        break;
+                    case OP_LT:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asLong().getLong() < v1.asLong().getLong())) {
+                            return null;
+                        }
+                        break;
+                    case OP_LT_EQ:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (!(v2.asLong().getLong() <= v1.asLong().getLong())) {
+                            return null;
+                        }
+                        break;
+                    case OP_EQ:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        if (v2.asLong().getLong() != v1.asLong().getLong()) {
+                            return null;
+                        }
+                        break;
+                    case OP_SWAP:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
                         stack.push(v1);
-                    } else {
-                        v2 = stack.pop();
-                        stack.push(v1.sum(v2));
-                    }
-                    break;
-                case OP_SUB:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    stack.push(v2.diff(v1));
-                    break;
-                case OP_MULT: {
-                    v1 = stack.pop();
-                    if (v1 == vector) {
-                        v1 = stack.pop();
-                        long mult = v1.asLong().getLong();
-                        while (!stack.isEmpty()) {
-                            mult *= stack.pop().asLong().getLong();
+                        stack.push(v2);
+                        break;
+                    case OP_SHIFTOUT:
+                        getSourceColumnBinder(line).appendColumn(line, stack.pop());
+                        break;
+                    case OP_SET:
+                        int col = (int) stack.pop().asLong().getLong();
+                        Numeric val = stack.pop();
+                        if (col < 0 || col > maxcol) {
+                            getSourceColumnBinder(line).appendColumn(line, val);
+                        } else {
+                            getSourceColumnBinder(line).setColumn(line, col, val);
                         }
-                        stack.push(ValueFactory.create(mult));
-                    } else {
-                        v2 = stack.pop();
-                        long mult = v1.asLong().getLong() * v2.asLong().getLong();
-                        stack.push(ValueFactory.create(mult));
-                    }
-                    break;
-                }
-                case OP_DMULT:  {
-                    v1 = stack.pop();
-                    if (v1 == vector) {
+                        break;
+                    case OP_POP:
+                        stack.pop();
+                        break;
+                    case OP_MIN:
                         v1 = stack.pop();
-                        double mult = v1.asDouble().getDouble();
-                        while (!stack.isEmpty()) {
-                            mult *= stack.pop().asDouble().getDouble();
+                        if (v1 == vector) {
+                            v1 = stack.pop();
+                            while (!stack.isEmpty()) {
+                                v1 = v1.min(stack.pop());
+                            }
+                            stack.push(v1);
+                        } else {
+                            v2 = stack.pop();
+                            stack.push(v1.min(v2));
                         }
-                        stack.push(ValueFactory.create(mult));
-                    } else {
-                        v2 = stack.pop();
-                        double mult = v1.asDouble().getDouble() * v2.asDouble().getDouble();
-                        stack.push(ValueFactory.create(mult));
-                    }
-                    break;
-                }
-                case OP_DIV:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!diverr && v1.asLong().getLong() == 0) {
-                        stack.push(ValueFactory.create(0));
-                    } else {
-                        stack.push(ValueFactory.create(v2.asLong().getLong() / v1.asLong().getLong()));
-                    }
-                    break;
-                case OP_DDIV:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!diverr && v1.asDouble().getDouble() == 0d) {
-                        stack.push(ValueFactory.create(0));
-                    } else {
-                        stack.push(ValueFactory.create(v2.asDouble().getDouble() / v1.asDouble().getDouble()));
-                    }
-                    break;
-                case OP_REM:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!diverr && v1.asLong().getLong() == 0) {
-                        stack.push(ValueFactory.create(0));
-                    } else {
-                        stack.push(ValueFactory.create(v2.asLong().getLong() % v1.asLong().getLong()));
-                    }
-                    break;
-                case OP_LOG:
-                    stack.push(ValueFactory.create(Math.log10(stack.pop().asDouble().getDouble())));
-                    break;
-                case OP_SQRT:
-                    stack.push(ValueFactory.create(Math.sqrt(stack.pop().asDouble().getDouble())));
-                    break;
-                case OP_VAL:
-                    stack.push(op.val.asNumeric());
-                    break;
-                case OP_COLVAL: {
-                    ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
-                    insertNumbers(stack, target);
-                    break;
-                }
-                case OP_COLARRAY: {
-                    ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
-                    ValueArray array = target.asArray();
-                    int size = array.size();
-                    for (int i = 0; i < size; i++) {
-                        stack.push(array.get(i).asNumeric());
-                    }
-                    break;
-                }
-                case OP_COLNAMEVAL: {
-                    ValueObject target = line.getValue(line.getFormat().getField(op.val.toString()));
-                    insertNumbers(stack, target);
-                    break;
-                }
-                case OP_DUP:
-                    stack.push(stack.peek());
-                    break;
-                case OP_TOINT:
-                    stack.push(ValueUtil.asNumberOrParseLong(stack.pop(), 10).asLong());
-                    break;
-                case OP_TOFLOAT:
-                    stack.push(ValueUtil.asNumberOrParseDouble(stack.pop()).asDouble());
-                    break;
-                case OP_BITS_TOINT:
-                    long bits = Double.doubleToLongBits(stack.pop().asDouble().getDouble());
-                    stack.push(ValueFactory.create(bits));
-                    break;
-                case OP_BITS_TOFLOAT:
-                    bits = stack.pop().asLong().getLong();
-                    stack.push(ValueFactory.create(Double.longBitsToDouble(bits)));
-                    break;
-                case OP_DGT:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asDouble().getDouble() > v1.asDouble().getDouble())) {
-                        return null;
-                    }
-                    break;
-                case OP_DGT_EQ:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asDouble().getDouble() >= v1.asDouble().getDouble())) {
-                        return null;
-                    }
-                    break;
-                case OP_DLT:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asDouble().getDouble() < v1.asDouble().getDouble())) {
-                        return null;
-                    }
-                    break;
-                case OP_DLT_EQ:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asDouble().getDouble() <= v1.asDouble().getDouble())) {
-                        return null;
-                    }
-                    break;
-                case OP_DEQ:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (v2.asDouble().getDouble() != v1.asDouble().getDouble()) {
-                        return null;
-                    }
-                    break;
-                case OP_GT:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asLong().getLong() > v1.asLong().getLong())) {
-                        return null;
-                    }
-                    break;
-                case OP_GT_EQ:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asLong().getLong() >= v1.asLong().getLong())) {
-                        return null;
-                    }
-                    break;
-                case OP_LT:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asLong().getLong() < v1.asLong().getLong())) {
-                        return null;
-                    }
-                    break;
-                case OP_LT_EQ:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (!(v2.asLong().getLong() <= v1.asLong().getLong())) {
-                        return null;
-                    }
-                    break;
-                case OP_EQ:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    if (v2.asLong().getLong() != v1.asLong().getLong()) {
-                        return null;
-                    }
-                    break;
-                case OP_SWAP:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    stack.push(v1);
-                    stack.push(v2);
-                    break;
-                case OP_SHIFTOUT:
-                    getSourceColumnBinder(line).appendColumn(line, stack.pop());
-                    break;
-                case OP_SET:
-                    int col = (int) stack.pop().asLong().getLong();
-                    Numeric val = stack.pop();
-                    if (col < 0 || col > maxcol) {
-                        getSourceColumnBinder(line).appendColumn(line, val);
-                    } else {
-                        getSourceColumnBinder(line).setColumn(line, col, val);
-                    }
-                    break;
-                case OP_POP:
-                    stack.pop();
-                    break;
-                case OP_MIN:
-                    v1 = stack.pop();
-                    if (v1 == vector) {
+                        break;
+                    case OP_MAX:
                         v1 = stack.pop();
-                        while (!stack.isEmpty()) {
-                            v1 = v1.min(stack.pop());
+                        if (v1 == vector) {
+                            v1 = stack.pop();
+                            while (!stack.isEmpty()) {
+                                v1 = v1.max(stack.pop());
+                            }
+                            stack.push(v1);
+                        } else {
+                            v2 = stack.pop();
+                            stack.push(v1.max(v2));
                         }
-                        stack.push(v1);
-                    } else {
-                        v2 = stack.pop();
-                        stack.push(v1.min(v2));
-                    }
-                    break;
-                case OP_MAX:
-                    v1 = stack.pop();
-                    if (v1 == vector) {
+                        break;
+                    case OP_MINIF:
                         v1 = stack.pop();
-                        while (!stack.isEmpty()) {
-                            v1 = v1.max(stack.pop());
-                        }
-                        stack.push(v1);
-                    } else {
                         v2 = stack.pop();
-                        stack.push(v1.max(v2));
-                    }
-                    break;
-                case OP_MINIF:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    stack.push(v1.max(v2).equals(v1) ? v1 : v2);
-                    break;
-                case OP_MAXIF:
-                    v1 = stack.pop();
-                    v2 = stack.pop();
-                    stack.push(v1.min(v2).equals(v1) ? v1 : v2);
-                    break;
-                case OP_MEAN: {
-                    long count = 0;
-                    double mean = 0.0;
+                        stack.push(v1.max(v2).equals(v1) ? v1 : v2);
+                        break;
+                    case OP_MAXIF:
+                        v1 = stack.pop();
+                        v2 = stack.pop();
+                        stack.push(v1.min(v2).equals(v1) ? v1 : v2);
+                        break;
+                    case OP_MEAN: {
+                        long count = 0;
+                        double mean = 0.0;
 
-                    while (!stack.isEmpty()) {
-                        count++;
-                        double num = stack.pop().asDouble().getDouble();
-                        double delta = num - mean;
-                        mean += delta / count;
-                    }
+                        while (!stack.isEmpty()) {
+                            count++;
+                            double num = stack.pop().asDouble().getDouble();
+                            double delta = num - mean;
+                            mean += delta / count;
+                        }
 
-                    stack.push(ValueFactory.create(mean));
-                    break;
+                        stack.push(ValueFactory.create(mean));
+                        break;
+                    }
+                    case OP_VARIANCE: {
+                        long count = 0;
+                        double mean = 0.0;
+                        double m2 = 0.0;
+
+                        while (!stack.isEmpty()) {
+                            count++;
+                            double num = stack.pop().asDouble().getDouble();
+                            double delta = num - mean;
+                            mean += delta / count;
+                            m2 += delta * (num - mean);
+                        }
+
+                        if (count < 2) {
+                            stack.push(ValueFactory.create(0.0));
+                        } else {
+                            double variance = m2 / count;
+                            stack.push(ValueFactory.create(variance));
+                        }
+
+                        break;
+                    }
+                    case OP_VECTOR:
+                        stack.push(vector);
+                        break;
+                    case OP_ABS:
+                        v1 = stack.pop();
+                        stack.push(ValueFactory.create(Math.abs(v1.asDouble().getDouble())));
+                        break;
+                    case OP_HASH:
+                        ValueObject target =
+                                getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
+                        insertNumbers(stack,
+                                      ValueFactory.create(PluggableHashFunction.hash(target.asString().toString())));
+                        break;
+                    default:
+                        break;
                 }
-                case OP_VARIANCE: {
-                    long count = 0;
-                    double mean = 0.0;
-                    double m2 = 0.0;
-
-                    while (!stack.isEmpty()) {
-                        count++;
-                        double num = stack.pop().asDouble().getDouble();
-                        double delta = num - mean;
-                        mean += delta / count;
-                        m2 += delta * (num - mean);
-                    }
-
-                    if (count < 2) {
-                        stack.push(ValueFactory.create(0.0));
-                    } else {
-                        double variance = m2 / count;
-                        stack.push(ValueFactory.create(variance));
-                    }
-
-                    break;
-                }
-                case OP_VECTOR:
-                    stack.push(vector);
-                    break;
-                case OP_ABS:
-                    v1 = stack.pop();
-                    stack.push(ValueFactory.create(Math.abs(v1.asDouble().getDouble())));
-                    break;
-                case OP_HASH:
-                    ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
-                    insertNumbers(stack, ValueFactory.create(PluggableHashFunction.hash(target.asString().toString())));
-                    break;
-                default:
-                    break;
             }
+        } catch (NumberFormatException|ValueTranslationException ex) {
+            log.warn("Error converting string to number: ", ex);
+            return null;
         }
         return line;
     }
