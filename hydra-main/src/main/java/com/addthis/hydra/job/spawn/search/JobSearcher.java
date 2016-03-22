@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PipedOutputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
@@ -57,7 +57,7 @@ public class JobSearcher implements Runnable {
 
         Iterator<String> it = spawn.getSpawnState().jobIdIterator();
 
-        List<String> jobIdsNotInCache = new LinkedList<>();
+        List<String> jobIdsNotInCache = new ArrayList<>();
 
         try {
             outputStream.write("{\"search\": [".getBytes());

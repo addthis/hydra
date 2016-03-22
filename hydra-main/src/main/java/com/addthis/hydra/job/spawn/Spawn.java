@@ -15,6 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.constraints.Size;
 import javax.ws.rs.core.Response;
 
 import java.io.ByteArrayInputStream;
@@ -64,6 +65,7 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
+import com.addthis.codec.annotations.Bytes;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
@@ -116,6 +118,7 @@ import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
 import com.addthis.hydra.job.spawn.balancer.SpawnBalancer;
+import com.addthis.hydra.job.spawn.search.ExpandedConfigCacheSettings;
 import com.addthis.hydra.job.spawn.search.JobSearcher;
 import com.addthis.hydra.job.spawn.search.SearchOptions;
 import com.addthis.hydra.job.store.DataStoreUtil;
@@ -184,8 +187,6 @@ public class Spawn implements Codable, AutoCloseable {
     private static final int LOG_MAX_AGE = Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
     private static final int LOG_MAX_SIZE = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String LOG_DIR = Parameter.value("spawn.event.log.dir", "log");
-    private static final int EXPANDED_CONFIG_CACHE_MAX_SIZE_MB = Parameter.intValue("spawn.expandedConfig.maxSizeMb", 100);
-    private static final int EXPANDED_CONFIG_CACHE_EXPIRATION_MS = Parameter.intValue("spawn.expandedConfig.maxAge", 20 * 60 * 1000);
 
     public static void main(String... args) throws Exception {
         Spawn spawn = Configs.newDefault(Spawn.class);
@@ -261,7 +262,9 @@ public class Spawn implements Codable, AutoCloseable {
                                @Nonnull @JsonProperty(value = "permissionsManager",
                                                       required = true) PermissionsManager permissionsManager,
                                @Nonnull @JsonProperty(value = "jobDefaults",
-                                                      required = true) JobDefaults jobDefaults) throws Exception {
+                                                      required = true) JobDefaults jobDefaults,
+                               @Nonnull @JsonProperty(value = "expandedConfigCache",
+                                                      required = true) ExpandedConfigCacheSettings expandedConfigCacheSettings) throws Exception {
         this.jobLock = new ReentrantLock();
         this.shuttingDown = new AtomicBoolean(false);
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
@@ -269,11 +272,11 @@ public class Spawn implements Codable, AutoCloseable {
 
         final Spawn spawn = this;
         this.expandedConfigCache = CacheBuilder.newBuilder()
-                .maximumWeight(EXPANDED_CONFIG_CACHE_MAX_SIZE_MB * 1000000l)
+                .maximumWeight(expandedConfigCacheSettings.maxSizeBytes)
                 .weigher((String key, String value) -> {
                     return key.length() + value.length();
                 })
-                .expireAfterWrite(EXPANDED_CONFIG_CACHE_EXPIRATION_MS, TimeUnit.MILLISECONDS)
+                .expireAfterWrite(expandedConfigCacheSettings.maxAgeSeconds, TimeUnit.SECONDS)
                 .build(new CacheLoader<String, String>() {
 
                     @Override

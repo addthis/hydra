@@ -28,16 +28,19 @@ public class SearchResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSearch(@QueryParam("q") String q) {
         try {
-            PipedInputStream results = spawn.getSearchResultStream(new SearchOptions(q));
+            final PipedInputStream results = spawn.getSearchResultStream(new SearchOptions(q));
             StreamingOutput stream = new StreamingOutput() {
                 @Override
                 public void write(OutputStream output) throws IOException, WebApplicationException {
                     byte[] buf = new byte[256];
-                    while (results.read(buf) != -1) {
-                        output.write(buf);
-                        output.flush();
+                    try {
+                        while (results.read(buf) != -1) {
+                            output.write(buf);
+                            output.flush();
+                        }
+                    } finally {
+                        results.close();
                     }
-                    results.close();
                 }
             };
             return Response.ok().entity(stream).build();
@@ -45,5 +48,6 @@ public class SearchResource {
             e.printStackTrace();
             return Response.serverError().build();
         }
+
     }
 }
