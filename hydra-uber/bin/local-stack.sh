@@ -111,7 +111,7 @@ EOF
     done
 )
 
-export HYDRA_CONF=$(pwd)/../hydra-uber
+export HYDRA_CONF=$(pwd)/../hydra-uber  
 
 export HYDRA_LOCAL_DIR=$(pwd)/../hydra-local
 
