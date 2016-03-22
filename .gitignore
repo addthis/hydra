@@ -18,3 +18,9 @@ hydra-uber/src/main/resources/hydra-git.properties
 hydra-main/web/spawn2/css/main.min.css
 hydra-main/web/spawn2/js/main.min.js
 /hydra-main/nbactions.xml
+etc/
+hydra-auth/
+hydra-main/etc/
+hydra-main/log/
+log/
+hydra-main/web/spawn2/node_modules/

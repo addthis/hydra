@@ -132,6 +132,7 @@ public class SpawnService {
         GroupsResource groupsResource = new GroupsResource(spawn, configuration);
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
         CommandResource commandResource = new CommandResource(spawn.getJobCommandManager());
+        SearchResource searchResource = new SearchResource(spawn);
         TaskResource taskResource = new TaskResource(spawn);
         AliasResource aliasResource = new AliasResource(spawn);
         HostResource hostResource = new HostResource(spawn);
@@ -145,6 +146,7 @@ public class SpawnService {
         servlets.addResource(groupsResource);
         servlets.addResource(macroResource);
         servlets.addResource(commandResource);
+        servlets.addResource(searchResource);
         servlets.addResource(taskResource);
         servlets.addResource(aliasResource);
         servlets.addResource(hostResource);
