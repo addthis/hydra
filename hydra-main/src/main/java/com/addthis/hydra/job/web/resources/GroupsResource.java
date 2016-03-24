@@ -280,7 +280,7 @@ public class GroupsResource {
 
     private void filterByLimit(Map<String, List<MinimalJob>> input, int limit) {
         if (limit > 0) {
-            input.replaceAll((key, value) -> value.subList(0, limit));
+            input.replaceAll((key, value) -> (value.size() > limit) ? value.subList(0, limit) : value);
         }
     }
 
