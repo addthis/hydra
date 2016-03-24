@@ -26,17 +26,21 @@ module.exports = {
 				exclude: /node_modules/, 
 				loader: 'babel-loader',
 			},
+			{
+				test: /\.css$/, 
+				loader: 'css-loader',
+			},
+			{
+				test: /\.(jpe?g|png|gif|svg)$/i,
+				loader: 'url?limit=10000!img?progressive=true'
+			},
 
 			/* require.js shims */
             {
-                test: require.resolve('./src/js/vendor/dataTables.scroller'),
-                loader: 'imports?jQuery=jquery'
-            },
-            {
-                test: require.resolve('./src/js/modules/datatable'),
+                test: require.resolve('datatables.net'),
                 loader: 'imports?$=jquery,jQuery=jquery'
             },
-            {
+			{
                 test: /node_modules\/bootstrap/,
                 loader: 'imports?$=jquery,jQuery=jquery'
             },
@@ -52,8 +56,6 @@ module.exports = {
 		/* Migrated from RequireJS require.config paths */
 		alias: {
 			'jscookie': 'js-cookie',
-	        'jquery.dataTable': 'vendor/jquery.dataTables.nightly',
-	        'dataTable.scroller': 'vendor/dataTables.scroller',
 	        'domReady': 'vendor/domReady',
 	        'date': 'vendor/date',
 	        'json': 'vendor/json',

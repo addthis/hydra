@@ -14,10 +14,14 @@
 define([
     "underscore",
     "jquery",
-    "backbone",
-    "jquery.dataTable"
+    "datatables.net",
+    "datatables.net-dt/css/jquery.dataTables.css",
+    "backbone"
 ],
-function(_){
+function(_, $, dt){
+    // Attach datatables plugin to jquery
+    dt.call($);
+
     $.fn.dataTableExt.sErrMode = 'throw';
     $.fn.dataTableExt.oApi.fnStandingRedraw = function(oSettings) {
         if(oSettings.oFeatures.bServerSide === false){
@@ -466,7 +470,7 @@ function(_){
             console.log("[fnDataUpdate] threw exception: " + e);
         }
     };
-    jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay ) {
+    $.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay ) {
         var _that = this;
 
         if ( iDelay === undefined ) {

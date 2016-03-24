@@ -1036,7 +1036,7 @@ function(
                     "bSearchable":true
                 },
                 {
-                    "mData": "stateText",
+                    "mData": "state",
                     "bVisible":false,
                     "bSearchable":true
                 },
@@ -1049,6 +1049,7 @@ function(
                     "mRender":function(val){
                         return "<div class='label "+StateLabels[val]+"'>"+States[val]+"</div>";
                     },
+                    "sType": "num",
                     "aDataSort":[5],
                     "aTargets":[6]
                 },
@@ -1257,6 +1258,7 @@ function(
                         var html = "<span class='label "+StateLabels[val]+"'>"+States[val]+"</span>";
                         return html;
                     },
+                    "sType": "num",
                     "aDataSort":[3],
                     "aTargets":[4]
                 },//3
