@@ -114,7 +114,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
 
     private String tryExpandJobConfigParam(String jobConfig) throws IllegalArgumentException {
         try {
-            return JobExpand.macroExpand(spawn, jobConfig);
+            return JobExpand.macroExpand(spawn.getJobMacroManager(), spawn.getAliasManager(), jobConfig);
         } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }

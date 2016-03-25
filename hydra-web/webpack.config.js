@@ -12,41 +12,8 @@
 
 var path = require('path');
 
-module.exports = {
-	entry: 'main',
-    output: {
-        filename: 'main.js',
-        publicPath: '/spawn2/build/',
-        path: path.resolve(__dirname, '../hydra-main/web/spawn2/build')
-    },
-	module: {
-		loaders: [
-			{
-				test: /\.es6\.js$/, 
-				exclude: /node_modules/, 
-				loader: 'babel-loader',
-			},
-			{
-				test: /\.css$/, 
-				loader: 'css-loader',
-			},
-			{
-				test: /\.(jpe?g|png|gif|svg)$/i,
-				loader: 'url?limit=10000!img?progressive=true'
-			},
-
-			/* require.js shims */
-            {
-                test: require.resolve('datatables.net'),
-                loader: 'imports?$=jquery,jQuery=jquery'
-            },
-			{
-                test: /node_modules\/bootstrap/,
-                loader: 'imports?$=jquery,jQuery=jquery'
-            },
-		]
-	},
-	resolve: {
+function getResolve() {
+	return {
 		root: [
 			__dirname + '/src/js'
 		],
@@ -69,6 +36,66 @@ module.exports = {
 	        'git.template': '../../templates/git.properties.html'
 		},
 		extensions: ['', '.es6.js', '.js']
-	},
-	devtool: '#source-map'
+	};
 }
+
+function getLoaders() {
+	return [
+		{
+			test: /\.es6.js$/, 
+			exclude: /node_modules/, 
+			loader: 'babel-loader',
+			query: {
+				presets: ['stage-0', 'es2015', 'react'],
+				plugins: [
+					'babel-plugin-transform-decorators-legacy', 
+					'transform-class-properties'
+				]
+			}
+		},
+		{
+			test: /\.css$/, 
+			loader: 'css-loader',
+		},
+		{
+			test: /\.(jpe?g|png|gif|svg)$/i,
+			loader: 'url?limit=10000!img?progressive=true'
+		}
+	]
+}
+
+module.exports = [{
+	entry: 'main',
+    output: {
+        filename: 'main.js',
+        publicPath: '/spawn2/build/',
+        path: path.resolve(__dirname, '../hydra-main/web/spawn2/build')
+    },
+	module: {
+		loaders: getLoaders().concat([
+			/* require.js shims */
+            {
+                test: require.resolve('datatables.net'),
+                loader: 'imports?$=jquery,jQuery=jquery'
+            },
+			{
+                test: /node_modules\/bootstrap/,
+                loader: 'imports?$=jquery,jQuery=jquery'
+            },
+		])
+	},
+	resolve: getResolve(),
+	devtool: '#source-map'
+}, {
+	entry: 'search-results',
+    output: {
+        filename: 'search-results.js',
+        publicPath: '/spawn2/build/',
+        path: path.resolve(__dirname, '../hydra-main/web/spawn2/build')
+    },
+    module: {
+    	loaders: getLoaders()
+    },
+    resolve: getResolve(),
+    devtool: '#source-map'
+}]

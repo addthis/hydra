@@ -15,29 +15,58 @@ package com.addthis.hydra.job.spawn.search;
 
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class SearchResult {
-    private final String id;
-    private final int lineNum;
-    private final int charStart;
-    private final int charEnd;
-    private final SearchContext searchContext;
 
-    protected SearchResult(String id, int lineNum, int charStart, int charEnd, SearchContext searchContext) {
-        this.id = id;
-        this.lineNum = lineNum;
-        this.charStart = charStart;
-        this.charEnd = charEnd;
-        this.searchContext = searchContext;
+
+    @JsonIgnore private final String[] allLines;
+    @JsonIgnore private final int bufferLineCount;
+    @JsonIgnore private int lastMatchedLine;
+
+    @JsonProperty final ArrayList<String> contextLines;
+    @JsonProperty final ArrayList<LineMatch> matches;
+    @JsonProperty int startLine;
+
+    public SearchResult(String[] lines, int bufferLineCount) {
+        this.matches = new ArrayList<>();
+        this.contextLines = new ArrayList<>();
+        this.allLines = lines;
+        this.bufferLineCount = bufferLineCount;
+        this.lastMatchedLine = 0;
+        this.startLine = 0;
     }
 
-    protected byte[] serialize() throws JSONException {
-        JSONObject json = new JSONObject();
-        json.put("id", id);
-        json.put("line", lineNum);
-        json.put("start", charStart);
-        json.put("end", charEnd);
-        json.put("context", searchContext.toJSONArray());
-        return json.toString().getBytes();
+
+    public void addMatch(int lineNum, int charStart, int charEnd) {
+        int endLine = lineNum + bufferLineCount;
+        int startLine;
+
+        if (hasAnyMatches()) {
+            startLine = lastMatchedLine + bufferLineCount;
+        } else {
+            startLine = lineNum - bufferLineCount;
+            this.startLine = startLine;
+        }
+
+
+        for (int i = startLine; i < endLine; i++) {
+            contextLines.add(allLines[i]);
+        }
+
+        matches.add(new LineMatch(lineNum, charStart, charEnd));
+        lastMatchedLine = lineNum;
+    }
+
+    public int lastContextLineNum() {
+        return lastMatchedLine + bufferLineCount;
+    }
+
+    public boolean hasAnyMatches() {
+        return matches.size() > 0;
     }
 }

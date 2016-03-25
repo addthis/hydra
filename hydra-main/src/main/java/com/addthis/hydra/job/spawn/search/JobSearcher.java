@@ -13,9 +13,12 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.maljson.JSONException;
-import org.apache.commons.lang3.StringEscapeUtils;
+import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.spawn.SpawnState;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +27,6 @@ import java.io.PipedOutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,81 +42,88 @@ public class JobSearcher implements Runnable {
     private final static int SEARCH_CONTEXT_BUFFER_LINES = 3;
     private static final Logger log = LoggerFactory.getLogger(JobSearcher.class);
 
-    private final Spawn spawn;
-    private final SearchOptions options;
+    private final SpawnState spawnState;
     private final Pattern pattern;
     private final PipedOutputStream outputStream;
+    private final JsonFactory jsonFactory;
+    private final ObjectMapper objectMapper;
+    private final JobConfigManager jobConfigManager;
 
-    public JobSearcher(Spawn spawn, SearchOptions options, PipedOutputStream outputStream) {
-        this.spawn = spawn;
-        this.options = options;
+    public JobSearcher(SpawnState spawnState, JobConfigManager jobConfigManager, SearchOptions options, PipedOutputStream outputStream) {
+        this.spawnState = spawnState;
+        this.jobConfigManager = jobConfigManager;
         this.pattern = Pattern.compile(options.pattern);
         this.outputStream = outputStream;
+        this.jsonFactory = new JsonFactory();
+        this.objectMapper = new ObjectMapper(jsonFactory);
     }
 
     @Override
     public void run() {
 
-        Iterator<String> it = spawn.getSpawnState().jobIdIterator();
-
-        List<String> jobIdsNotInCache = new ArrayList<>();
+        Iterator<JobIdConfigPair> it = new CacheAwareJobConfigIterator(spawnState, jobConfigManager);
+        List<JobIdConfigPair> jobInfoPairs = Lists.newArrayList(it);
 
         try {
-            outputStream.write("{\"search\": [".getBytes());
-            // Attempt to search through cached configs first
-            while (it.hasNext()) {
-                String jobId = it.next();
-                String expandedConfig = spawn.getCachedExpandedJob(jobId);
+            JsonGenerator generator = jsonFactory.createGenerator(outputStream);
+            generator.setCodec(objectMapper);
+            try {
+                generator.writeStartObject();
+                generator.writeNumberField("totalFiles", jobInfoPairs.size());
+                generator.writeObjectFieldStart("jobs");
 
-                if (expandedConfig == null) {
-                    jobIdsNotInCache.add(jobId);
-                    continue;
-                }
-
-                searchExpandedConfig(jobId, expandedConfig);
-            }
-
-            for (String jobId : jobIdsNotInCache) {
                 try {
-                    searchExpandedConfig(jobId, spawn.getExpandedConfig(jobId));
-                } catch (ExecutionException e) {
-                    log.warn("failed to get expanded config", e);
+                    for (JobIdConfigPair jobInfo : jobInfoPairs) {
+                        writeExpandedConfigResults(generator, jobInfo);
+                    }
+                } catch (IOException e) {
+                    log.warn("i/o exception writing search result", e);
                 }
+
+                generator.writeEndObject();
+                generator.writeEndObject();
+            } catch(IOException e) {
+                log.warn("i/o exception writing search", e);
+            } finally {
+                generator.close();
             }
-            outputStream.write("]}".getBytes());
-            outputStream.flush();
+
         } catch (IOException e) {
             log.warn("i/o exception in search thread", e);
-        } finally {
-            try {
-                outputStream.close();
-            } catch (IOException e) {
-                log.warn("failed to close jobsearcher", e);
-            }
         }
-
     }
 
-    private void searchExpandedConfig(String jobId, String expandedConfig) throws IOException {
+    private void writeExpandedConfigResults(JsonGenerator generator, JobIdConfigPair jobInfo) throws IOException {
+        List<SearchResult> jobSearchResults = searchExpandedConfig(jobInfo.id, jobInfo.config);
+
+        if (jobSearchResults.size() == 0) {
+            return;
+        }
+
+        for (SearchResult sr : jobSearchResults) {
+            generator.writeObjectField(jobInfo.id, sr);
+        }
+    }
+
+    private List<SearchResult> searchExpandedConfig(String jobId, String expandedConfig) {
         String[] lines = expandedConfig.split("\n");
+        List<SearchResult> results = new ArrayList<>();
+        SearchResult result = new SearchResult(lines, SEARCH_CONTEXT_BUFFER_LINES);
+
 
         for (int lineNum = 0; lineNum < lines.length; lineNum++) {
+            if (result.hasAnyMatches() && lineNum > result.lastContextLineNum() + 1) {
+                results.add(result);
+                result = new SearchResult(lines, SEARCH_CONTEXT_BUFFER_LINES);
+            }
+
             String line = lines[lineNum];
             Matcher m = pattern.matcher(line);
             while (m.find()) {
-                SearchContext context = new SearchContext(lineNum, lines, SEARCH_CONTEXT_BUFFER_LINES);
-                SearchResult sr = new SearchResult(jobId, lineNum, m.start(), m.end(), context);
-                try {
-                    outputStream.write(sr.serialize());
-                    outputStream.write("\n".getBytes());
-                    outputStream.flush();
-                } catch (JSONException e) {
-                    String out = "{\"error\": \"" + StringEscapeUtils.escapeEcmaScript(e.getMessage()) + "\"}\n";
-                    outputStream.write(out.getBytes());
-                    outputStream.flush();
-                    log.warn("failed to serialize search result", e);
-                }
+                result.addMatch(lineNum, m.start(), m.end());
             }
         }
+
+        return results;
     }
 }

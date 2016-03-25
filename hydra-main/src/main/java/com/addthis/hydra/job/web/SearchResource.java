@@ -33,9 +33,10 @@ public class SearchResource {
                 @Override
                 public void write(OutputStream output) throws IOException, WebApplicationException {
                     byte[] buf = new byte[256];
+                    int len;
                     try {
-                        while (results.read(buf) != -1) {
-                            output.write(buf);
+                        while ((len = results.read(buf)) != -1) {
+                            output.write(buf, 0, len);
                             output.flush();
                         }
                     } finally {
