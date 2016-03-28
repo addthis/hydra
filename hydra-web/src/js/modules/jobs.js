@@ -1936,6 +1936,7 @@ function(
         initialize:function(options){
             DetailView.prototype.initialize.apply(this,[options]);
             _.bindAll(this,'render','template');
+            this.scrollTo=options.scrollTo;
             this.configModel=options.configModel;
             this.commandCollection=options.commandCollection;
             this.listenTo(this.parameterCollection,"reset",this.handleParamChange);
@@ -1953,6 +1954,7 @@ function(
             this.views = {
                 editor: new Editor.AceView({
                     model:this.configModel,
+                    scrollTo:this.scrollTo,
                     keyName:"config"
                 }).render(),
                 paramBox:new ParameterView({
