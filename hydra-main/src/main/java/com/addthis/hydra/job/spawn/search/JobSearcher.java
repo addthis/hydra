@@ -94,18 +94,16 @@ public class JobSearcher implements Runnable {
     }
 
     private void writeExpandedConfigResults(JsonGenerator generator, JobIdConfigPair jobInfo) throws IOException {
-        List<SearchResult> jobSearchResults = searchExpandedConfig(jobInfo.id, jobInfo.config);
+        List<SearchResult> jobSearchResults = searchExpandedConfig(jobInfo.config);
 
         if (jobSearchResults.size() == 0) {
             return;
         }
 
-        for (SearchResult sr : jobSearchResults) {
-            generator.writeObjectField(jobInfo.id, sr);
-        }
+        generator.writeObjectField(jobInfo.id, jobSearchResults);
     }
 
-    private List<SearchResult> searchExpandedConfig(String jobId, String expandedConfig) {
+    private List<SearchResult> searchExpandedConfig(String expandedConfig) {
         String[] lines = expandedConfig.split("\n");
         List<SearchResult> results = new ArrayList<>();
         SearchResult result = new SearchResult(lines, SEARCH_CONTEXT_BUFFER_LINES);
