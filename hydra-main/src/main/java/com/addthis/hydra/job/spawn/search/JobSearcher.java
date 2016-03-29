@@ -75,6 +75,7 @@ public class JobSearcher implements Runnable {
                 try {
                     for (JobIdConfigPair jobInfo : jobInfoPairs) {
                         writeExpandedConfigResults(generator, jobInfo);
+                        generator.flush();
                     }
                 } catch (IOException e) {
                     log.warn("i/o exception writing search result", e);
