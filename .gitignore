@@ -23,4 +23,5 @@ hydra-auth/
 hydra-main/etc/
 hydra-main/log/
 log/
-hydra-main/web/spawn2/node_modules/
+hydra-main/web/spawn2/
+hydra-web/node_modules/

@@ -16,9 +16,6 @@
 @import 'vendor/glyphicons.bootstrap.css';
 @import 'vendor/alertify.css';
 @import 'vendor/alertify.bootstrap.css';
-@import '../js/vendor/ace/ext/searchbox.css';
-@import '../js/vendor/ace/css/editor.css';
-@import '../js/vendor/ace/theme/textmate.css';
 @import 'hydra.css';
 
 div.task-divider{

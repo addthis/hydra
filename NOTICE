@@ -10,59 +10,14 @@ Aho-Corasick automaton (http://bitbucket.org/jlanchas/aho-corasick/)
 Copyright (c) 2005, 2008 Danny Yoo
 New BSD License
 
-jQuery (http://jquery.org/)
-Copyright 2012 jQuery Foundation and other contributors
-
 date.js (http://www.datejs.com/)
 Copyright 2006-2007, Coolite Inc. 
-
-google-code-prettify (https://code.google.com/p/google-code-prettify/)
-Copyright 2006 Google Inc.
-
-prototypejs (http://www.prototypejs.org/)
-Copyright 2005-2009 Sam Stephenson
-
-codemirror (http://codemirror.net/)
-Copyright (C) 2013 by Marijn Haverbeke <marijnh@gmail.com> and others
-
-Bootstrap (http://getbootstrap.com/)
-Copyright 2013 Twitter, Inc
 
 DataTables (http://datatables.net/)
 Copyright 2008-2012 Allan Jardine
 
-Ace (http://ace.c9.io/)
-Copyright (c) 2010, Ajax.org B.V.
-
 alertify.js (http://fabien-d.github.com/alertify.js/)
 copyright Fabien Doiron 2013
-
-Backbone.js (http://backbonejs.org)
-2010-2013 Jeremy Ashkenas, DocumentCloud Inc
-
-d3 (http://d3js.org/)
-Copyright (c) 2013, Michael Bostock
-
-RequireJS domReady (http://github.com/requirejs/domReady)
-Copyright 2010-2012 The Dojo Foundation
-
-jasmine (http://pivotal.github.io/jasmine/)
-Copyright (c) 2008-2011 Pivotal Labs
-
-jQuery resize event (http://benalman.com/projects/jquery-resize-plugin/)
-Copyright (c) 2010 "Cowboy" Ben Alman
-
-jQuery Cookie Plugin (https://github.com/carhartl/jquery-cookie)
-Copyright 2013 Klaus Hartl
-
-RequireJS (http://github.com/jrburke/requirejs)
-Copyright (c) 2010-2012, The Dojo Foundation
-
-jsSHA (http://caligatio.github.com/jsSHA/)
-Copyright Brian Turek 2008-2013
-
-Underscore.js (http://underscorejs.org)
-(c) 2009-2013 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 
 HoltWinters 
 Copyright 2011 Nishant Chandra <nishant.chandra at gmail dot com>
