@@ -76,19 +76,22 @@ public class JobConfigManager {
     private static final Timer addJobTimer = Metrics.newTimer(JobConfigManager.class, "addJobTimer");
     private static final Timer updateJobTimer = Metrics.newTimer(JobConfigManager.class, "updateJobTimer");
 
-    private static final int loadThreads  = Parameter.intValue("job.config.load.threads", 8);
+    private static final int loadThreads = Parameter.intValue("job.config.load.threads", 8);
     private static final int jobChunkSize = Parameter.intValue("job.config.chunk.size", 30);
 
-    private static final String configChildName      = "/config";
+    private static final String configChildName = "/config";
     private static final String queryConfigChildName = "/queryconfig";
-    private static final String alertChildName       = "/alerts";
-    private static final String tasksChildName       = "/tasks";
-    private static final String brokerInfoChildName  = "/brokerinfo";
-    private static final String taskChildName        = "/task";
+    private static final String alertChildName = "/alerts";
+    private static final String tasksChildName = "/tasks";
+    private static final String brokerInfoChildName = "/brokerinfo";
+    private static final String taskChildName = "/task";
 
-    @Nonnull private final SpawnDataStore spawnDataStore;
-    @Nullable private final LoadingCache<String, String> expandedConfigCache;
-    @Nullable private final JobExpander jobExpander;
+    @Nonnull
+    private final SpawnDataStore spawnDataStore;
+    @Nullable
+    private final LoadingCache<String, String> expandedConfigCache;
+    @Nullable
+    private final JobExpander jobExpander;
 
     public JobConfigManager(SpawnDataStore spawnDataStore) {
         this.jobExpander = null;
@@ -124,6 +127,7 @@ public class JobConfigManager {
 
     /**
      * Returns the cached config associated with jobUUID, if there is one, or null otherwise
+     *
      * @param jobUUID
      * @return expanded job configuration
      */
@@ -134,36 +138,38 @@ public class JobConfigManager {
 
     /**
      * Generate or read an expanded config, keyed on job UID, in the cache.
+     *
      * @param jobUUID
      * @return expanded job configuration
      * @throws ExecutionException
      */
     public String getExpandedConfig(String jobUUID) throws ExecutionException {
-        IJob job = getJob(jobUUID) ;
+        IJob job = getJob(jobUUID);
         checkArgument(job != null, "job with uid " + jobUUID + " does not exist");
         return this.expandedConfigCache.get(jobUUID);
     }
 
     /**
      * Generate or read an expanded config, keyed on job UID, in the cache. Bypasses the cache if either:
-     *  1) the job has been modified since the request was made (using lastModifiedAt)
-     *  2) a null jobUUID is provided
-     *  3) a jobUUID which doesn't belong to a job is provided
+     * 1) the job has been modified since the request was made (using lastModifiedAt)
+     * 2) a null jobUUID is provided
+     * 3) a jobUUID which doesn't belong to a job is provided
+     *
      * @param jobUUID
-     * @param rawConfig - the config to expand. Possibly different from the one owned by Job #jobUUID
-     * @param parameters - the params to expand the config with. Possibly different from the ones owned by Job #jobUUID
+     * @param rawConfig      - the config to expand. Possibly different from the one owned by Job #jobUUID
+     * @param parameters     - the params to expand the config with. Possibly different from the ones owned by Job #jobUUID
      * @param lastModifiedAt - at the time this request is made, the lastModifiedAt timestamp of the job if one exists
      * @return the expanded job config
      * @throws ExecutionException
      * @throws TokenReplacerOverflowException
      */
-    @Nullable public String getExpandedConfig(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters, long lastModifiedAt) throws ExecutionException, FailedJobExpansionException {
+    @Nullable
+    public String getExpandedConfig(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters, long lastModifiedAt) throws ExecutionException, FailedJobExpansionException {
         IJob job = getJob(jobUUID);
 
         if (job == null || job.lastModifiedAt() != lastModifiedAt) {
             return jobExpander.expandJob(rawConfig, parameters);
-        }
-        else {
+        } else {
             return expandedConfigCache.get(jobUUID);
         }
     }
@@ -194,7 +200,7 @@ public class JobConfigManager {
                 writeUpdateIfDataNotNull(jobPath + queryConfigChildName, "");
             } else {
                 writeUpdateIfDataNotNull(jobPath + queryConfigChildName,
-                                         new String(codec.encode(job.getQueryConfig())));
+                        new String(codec.encode(job.getQueryConfig())));
             }
             // this is just a marker so that we know to use the 'new' configuration
             spawnDataStore.put(jobPath + tasksChildName, "");
@@ -234,7 +240,8 @@ public class JobConfigManager {
      * @return The reconstituted job object
      * @throws Exception
      */
-    @Nullable private IJob createJobFromQueryData(String jobId, Map<String, String> queryData) throws Exception {
+    @Nullable
+    private IJob createJobFromQueryData(String jobId, Map<String, String> queryData) throws Exception {
         String jobPath = getJobPath(jobId);
         String rstring = spawnDataStore.getChild(SPAWN_JOB_CONFIG_PATH, jobId);
         if (rstring == null) {
@@ -284,7 +291,7 @@ public class JobConfigManager {
         String jobPath = getJobPath(jobId);
         String[] queryPaths =
                 {jobPath, jobPath + configChildName, jobPath + queryConfigChildName, jobPath + alertChildName,
-                 jobPath + tasksChildName, jobPath + taskChildName};
+                        jobPath + tasksChildName, jobPath + taskChildName};
         return spawnDataStore.get(queryPaths);
     }
 
