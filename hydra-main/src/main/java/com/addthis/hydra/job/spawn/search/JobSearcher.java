@@ -97,32 +97,24 @@ public class JobSearcher implements Runnable {
     private void writeExpandedConfigResults(JsonGenerator generator, JobIdConfigPair jobInfo) throws IOException {
         List<SearchResult> jobSearchResults = searchExpandedConfig(jobInfo.config);
 
-        if (jobSearchResults.size() == 0) {
-            return;
+        if (jobSearchResults.size() > 0) {
+            generator.writeObjectField(jobInfo.id, jobSearchResults);
         }
-
-        generator.writeObjectField(jobInfo.id, jobSearchResults);
     }
 
     private List<SearchResult> searchExpandedConfig(String expandedConfig) {
         String[] lines = expandedConfig.split("\n");
-        List<SearchResult> results = new ArrayList<>();
-        SearchResult result = new SearchResult(lines, SEARCH_CONTEXT_BUFFER_LINES);
+        ArrayList<LineMatch> matches = new ArrayList<>();
 
 
         for (int lineNum = 0; lineNum < lines.length; lineNum++) {
-            if (result.hasAnyMatches() && lineNum > result.lastContextLineNum() + 1) {
-                results.add(result);
-                result = new SearchResult(lines, SEARCH_CONTEXT_BUFFER_LINES);
-            }
-
             String line = lines[lineNum];
             Matcher m = pattern.matcher(line);
             while (m.find()) {
-                result.addMatch(lineNum, m.start(), m.end());
+                matches.add(new LineMatch(lineNum, m.start(), m.end()));
             }
         }
 
-        return results;
+        return SearchResult.mergeMatchList(lines, matches, SEARCH_CONTEXT_BUFFER_LINES);
     }
 }

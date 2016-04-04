@@ -13,13 +13,15 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.addthis.maljson.JSONException;
-import com.addthis.maljson.JSONObject;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sun.istack.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 public class SearchResult {
 
@@ -27,46 +29,87 @@ public class SearchResult {
     @JsonIgnore private final String[] allLines;
     @JsonIgnore private final int bufferLineCount;
     @JsonIgnore private int lastMatchedLine;
+    @JsonIgnore private int firstMatchedLine;
 
-    @JsonProperty final ArrayList<String> contextLines;
-    @JsonProperty final ArrayList<LineMatch> matches;
-    @JsonProperty int startLine;
+    @JsonProperty private final ArrayList<LineMatch> matches;
 
-    public SearchResult(String[] lines, int bufferLineCount) {
+    public SearchResult(String[] allLines, int bufferLineCount) {
         this.matches = new ArrayList<>();
-        this.contextLines = new ArrayList<>();
-        this.allLines = lines;
+        this.allLines = allLines;
+        this.firstMatchedLine = Integer.MAX_VALUE;
+        this.lastMatchedLine = Integer.MIN_VALUE;
         this.bufferLineCount = bufferLineCount;
-        this.lastMatchedLine = 0;
-        this.startLine = 0;
     }
 
+    /**
+     * Creates a list of SearchResults from a list of LineMatches
+     * @param lines the entire content of the file where matches are contained
+     * @param matches the list of matches in the line
+     * @param bufferLineCount how many lines before/after
+     * @return the SearchResults which contain every LineMatch provided
+     */
+    public static List<SearchResult> mergeMatchList(String[] lines, List<LineMatch> matches, int bufferLineCount) {
+        Collections.sort(matches);
+        Iterator<LineMatch> it = matches.iterator();
 
-    public void addMatch(int lineNum, int charStart, int charEnd) {
-        int endLine = lineNum + bufferLineCount;
-        int startLine;
+        List<SearchResult> results = new ArrayList<>();
+        SearchResult result = new SearchResult(lines, bufferLineCount);
 
-        if (hasAnyMatches()) {
-            startLine = lastMatchedLine + bufferLineCount;
-        } else {
-            startLine = lineNum - bufferLineCount;
-            this.startLine = startLine;
+        while (it.hasNext()) {
+            LineMatch match = it.next();
+            if (result.canAddMatchAtLine(match.lineNum)) {
+                result.addMatch(match);
+            } else {
+                results.add(result);
+                result = new SearchResult(lines, bufferLineCount);
+                result.addMatch(match);
+            }
         }
 
-
-        for (int i = startLine; i < endLine; i++) {
-            contextLines.add(allLines[i]);
+        if (result.hasAnyMatches()) {
+            results.add(result);
         }
 
-        matches.add(new LineMatch(lineNum, charStart, charEnd));
-        lastMatchedLine = lineNum;
+        return results;
     }
 
-    public int lastContextLineNum() {
-        return lastMatchedLine + bufferLineCount;
+    @JsonProperty("startLine")
+    public int getStartLine() {
+        return Math.max(firstMatchedLine - bufferLineCount, 0);
+    }
+
+    @Nullable
+    @JsonProperty("contextLines")
+    public String[] getContextLines() {
+        if (matches.size() == 0) {
+            return null;
+        }
+
+        final int start = getStartLine();
+        final int end = Math.min(lastMatchedLine + bufferLineCount, allLines.length);
+
+        return Arrays.copyOfRange(allLines, start, end);
+    }
+
+    public void addMatch(LineMatch match) {
+        if (match.lineNum < firstMatchedLine) {
+            firstMatchedLine = match.lineNum;
+        }
+
+        if (match.lineNum > lastMatchedLine) {
+            lastMatchedLine = match.lineNum;
+        }
+
+        matches.add(match);
     }
 
     public boolean hasAnyMatches() {
         return matches.size() > 0;
+    }
+
+    private boolean canAddMatchAtLine(int lineNum) {
+        final boolean startsAfter = lineNum > firstMatchedLine - bufferLineCount;
+        final boolean endsBefore = lineNum < lastMatchedLine + bufferLineCount;
+        return !hasAnyMatches() || (startsAfter && endsBefore);
     }
 }
