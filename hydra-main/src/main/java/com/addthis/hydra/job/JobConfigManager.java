@@ -156,21 +156,25 @@ public class JobConfigManager {
      * 3) a jobUUID which doesn't belong to a job is provided
      *
      * @param jobUUID
-     * @param rawConfig      - the config to expand. Possibly different from the one owned by Job #jobUUID
-     * @param parameters     - the params to expand the config with. Possibly different from the ones owned by Job #jobUUID
-     * @param lastModifiedAt - at the time this request is made, the lastModifiedAt timestamp of the job if one exists
+     * @param rawConfig the config to expand. Possibly different from the one owned by Job #jobUUID
+     * @param parameters the params to expand the config with. Possibly different from the ones owned by Job #jobUUID
      * @return the expanded job config
      * @throws ExecutionException
      * @throws TokenReplacerOverflowException
      */
     @Nullable
-    public String getExpandedConfig(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters, long lastModifiedAt) throws ExecutionException, FailedJobExpansionException {
+    public String getExpandedConfig(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters) throws ExecutionException, FailedJobExpansionException {
         IJob job = getJob(jobUUID);
 
-        if (job == null || job.lastModifiedAt() != lastModifiedAt) {
-            return jobExpander.expandJob(rawConfig, parameters);
-        } else {
+        boolean jobIsIdentical = job != null &&
+                rawConfig != job.getConfig() &&
+                parameters.containsAll(job.getParameters()) &&
+                parameters.size() == job.getParameters().size();
+
+        if (jobIsIdentical) {
             return expandedConfigCache.get(jobUUID);
+        } else {
+            return jobExpander.expandJob(rawConfig, parameters);
         }
     }
 

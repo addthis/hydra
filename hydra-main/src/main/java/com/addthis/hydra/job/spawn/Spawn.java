@@ -2350,7 +2350,6 @@ public class Spawn implements Codable, AutoCloseable {
         Runnable scheduledKick = new ScheduledTaskKick(this,
                                                        job.getId(),
                                                        jobParameters,
-                                                       job.lastModifiedAt(),
                                                        getJobConfig(job.getId()),
                                                        spawnMQ,
                                                        kick,
