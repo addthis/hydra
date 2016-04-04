@@ -18,9 +18,9 @@ function SearchHeader({
 }) {
     return (
         <div style={headerStyle}>
-            Searching for <span style={searchStringStyle}> {searchString} </span>
+            Search results for <span style={searchStringStyle}> {searchString} </span>
             {totalFiles === 0 ? '... ' : `in ${totalFiles} jobs... `}
-            {totalMatches > 0 ?
+            {totalMatches > 0 || done ?
                 <span style={matchTotalsStyle}>
                     found {totalMatches} occurences in {filesWithMatches} jobs
                     {done ? '' : ' so far...'}
