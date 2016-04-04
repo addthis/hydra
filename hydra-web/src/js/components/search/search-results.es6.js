@@ -4,6 +4,7 @@ import oboe from 'oboe';
 import React from 'react';
 import SearchResult from './search-result';
 import palette from 'style/color-palette';
+import shallowCompare from 'react-addons-shallow-compare';
 
 export default class SearchResults extends React.Component {
     static propTypes = {
@@ -13,7 +14,8 @@ export default class SearchResults extends React.Component {
     state = {
         totalFiles: 0,
         filesWithMatches: 0,
-        results: {}
+        results: {},
+        done: false
     }
 
     componentWillMount() {
@@ -26,9 +28,14 @@ export default class SearchResults extends React.Component {
         }
     }
 
+    shouldComponentUpdate(nextProps, nextState) {
+        return shallowCompare(this, nextProps, nextState);
+    }
+
     componentWillUnmount() {
         this.cancelCurrentSearch();
     }
+
 
     performSearch(searchString) {
         const q = encodeURIComponent(searchString);
@@ -40,21 +47,18 @@ export default class SearchResults extends React.Component {
         this.setState({results: {}, totalFiles: 0, filesWithMatches: 0});
 
         this.pendingSearch = oboe({url: `/search/all?q=${q}`})
-            .node('totalFiles', (totalFiles) => {
+            .node('!.totalFiles', (totalFiles) => {
                 this.setState({totalFiles});
             })
-            .node('jobs[*]', (result, path) => {
-                const jobId = path[path.length - 1];
-
-                // mutate and reset results to prevent a ton of extra array
-                // allocation. We're setting state right after, no big deal
-
-                /*eslint react/no-direct-mutation-state: 0*/
-                this.state.results[jobId] = result;
-
+            .node('!.jobs[*]', () => {
                 this.setState({
-                    filesWithMatches: this.state.filesWithMatches + 1,
-                    results: this.state.results
+                    filesWithMatches: this.state.filesWithMatches + 1
+                });
+            })
+            .done((result) => {
+                this.setState({
+                    results: result.jobs,
+                    done: true
                 });
             });
     }
@@ -68,7 +72,7 @@ export default class SearchResults extends React.Component {
 
     render() {
         let totalMatches = 0;
-        const {filesWithMatches, totalFiles, results} = this.state;
+        const {done, filesWithMatches, totalFiles, results} = this.state;
         const {searchString} = this.props;
 
         const searchResultStyle = {
@@ -152,9 +156,16 @@ export default class SearchResults extends React.Component {
         return (
             <div style={{backgroundColor: palette.background0}}>
                 <div style={headerStyle}>
-                    Search results for
-                    <span style={searchStringStyle}> {searchString}</span>
-                    <span style={matchTotalsStyle}> ({totalMatches} occurences in {filesWithMatches}/{totalFiles} jobs)</span>
+
+                    Searching for <span style={searchStringStyle}> {searchString} </span>
+                    {totalFiles === 0 ?
+                        '... ' :
+                        `in ${totalFiles} files... `}
+                    {done ?
+                        <span style={matchTotalsStyle}>
+                            found {totalMatches} occurences in {filesWithMatches} jobs)
+                        </span> :
+                        ''}
                 </div>
                 <div style={resultsContainerStyle}>
                     {searchResults}
