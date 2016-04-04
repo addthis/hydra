@@ -6,6 +6,30 @@ import SearchResult from './search-result';
 import palette from 'style/color-palette';
 import shallowCompare from 'react-addons-shallow-compare';
 
+function SearchHeader({
+    headerStyle,
+    searchStringStyle,
+    searchString,
+    totalFiles,
+    matchTotalsStyle,
+    totalMatches,
+    filesWithMatches,
+    done
+}) {
+    return (
+        <div style={headerStyle}>
+            Searching for <span style={searchStringStyle}> {searchString} </span>
+            {totalFiles === 0 ? '... ' : `in ${totalFiles} jobs... `}
+            {totalMatches > 0 ?
+                <span style={matchTotalsStyle}>
+                    found {totalMatches} occurences in {filesWithMatches} jobs
+                    {done ? '' : ' so far...'}
+                </span> :
+                null}
+        </div>
+    );
+}
+
 export default class SearchResults extends React.Component {
     static propTypes = {
         searchString: React.PropTypes.string.isRequired
@@ -57,7 +81,7 @@ export default class SearchResults extends React.Component {
             .node('!.totalFiles', (totalFiles) => {
                 this.setState({totalFiles});
             })
-            .node('!.jobs[*]', (result) => {
+            .node('!.jobs[*].groups', (result) => {
                 const matches = result.map(groupMatch => groupMatch.matches.length)
                     .reduce((a, b) => a + b, 0);
 
@@ -166,17 +190,16 @@ export default class SearchResults extends React.Component {
 
         return (
             <div style={{backgroundColor: palette.background0}}>
-                <div style={headerStyle}>
-
-                    Searching for <span style={searchStringStyle}> {searchString} </span>
-                    {totalFiles === 0 ? '... ' : `in ${totalFiles} jobs... `}
-                    {totalMatches > 0 ?
-                        <span style={matchTotalsStyle}>
-                            found {totalMatches} occurences in {filesWithMatches} jobs
-                            {done ? '' : ' so far...'}
-                        </span> :
-                        null}
-                </div>
+                <SearchHeader
+                    headerStyle={headerStyle}
+                    totalMatches={totalMatches}
+                    totalFiles={totalFiles}
+                    searchStringStyle={searchStringStyle}
+                    searchString={searchString}
+                    matchTotalsStyle={matchTotalsStyle}
+                    filesWithMatches={filesWithMatches}
+                    done={done}
+                />
                 <div style={resultsContainerStyle}>
                     {searchResults}
                 </div>

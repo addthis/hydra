@@ -42,7 +42,6 @@ require([
     'git',
     'alerts',
     'settings',
-    'datatable',
     'backbone',
     'underscore',
     'jquery',
@@ -68,7 +67,6 @@ function(
     Git,
     Alerts,
     Settings,
-    DataTable,
     Backbone,
     _,
     $
@@ -801,6 +799,5 @@ function(
         app.quiesce();
     });
 
-    window.app=app;
-    window.DataTable=DataTable;
+    window.app = app;
 });
