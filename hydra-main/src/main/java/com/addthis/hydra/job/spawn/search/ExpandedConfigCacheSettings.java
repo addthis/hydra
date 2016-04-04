@@ -25,8 +25,8 @@ public class ExpandedConfigCacheSettings {
     public final int maxAgeSeconds;
 
     @JsonCreator
-    ExpandedConfigCacheSettings(@Time(TimeUnit.SECONDS) @JsonProperty(value = "maxAgeSeconds", required = true) int maxAgeSeconds,
-                                @Bytes @JsonProperty(value = "maxSize", required = true) int maxSizeBytes) {
+    public ExpandedConfigCacheSettings(@Time(TimeUnit.SECONDS) @JsonProperty(value = "maxAgeSeconds", required = true) int maxAgeSeconds,
+                                       @Bytes @JsonProperty(value = "maxSize", required = true) int maxSizeBytes) {
         this.maxAgeSeconds = maxAgeSeconds;
         this.maxSizeBytes = maxSizeBytes;
     }

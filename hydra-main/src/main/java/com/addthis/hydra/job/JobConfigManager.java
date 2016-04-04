@@ -93,6 +93,7 @@ public class JobConfigManager {
     @Nullable
     private final JobExpander jobExpander;
 
+    @Deprecated
     public JobConfigManager(SpawnDataStore spawnDataStore) {
         this.jobExpander = null;
         this.expandedConfigCache = null;
