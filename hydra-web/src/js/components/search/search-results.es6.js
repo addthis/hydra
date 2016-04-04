@@ -13,6 +13,7 @@ export default class SearchResults extends React.Component {
 
     state = {
         totalFiles: 0,
+        totalMatches: 0,
         filesWithMatches: 0,
         results: {},
         done: false
@@ -44,15 +45,25 @@ export default class SearchResults extends React.Component {
             this.cancelCurrentSearch();
         }
 
-        this.setState({results: {}, totalFiles: 0, filesWithMatches: 0});
+        this.setState({
+            totalFiles: 0,
+            totalMatches: 0,
+            filesWithMatches: 0,
+            results: {},
+            done: false
+        });
 
         this.pendingSearch = oboe({url: `/search/all?q=${q}`})
             .node('!.totalFiles', (totalFiles) => {
                 this.setState({totalFiles});
             })
-            .node('!.jobs[*]', () => {
+            .node('!.jobs[*]', (result) => {
+                const matches = result.map(groupMatch => groupMatch.matches.length)
+                    .reduce((a, b) => a + b, 0);
+
                 this.setState({
-                    filesWithMatches: this.state.filesWithMatches + 1
+                    filesWithMatches: this.state.filesWithMatches + 1,
+                    totalMatches: this.state.totalMatches + matches
                 });
             })
             .done((result) => {
@@ -71,8 +82,7 @@ export default class SearchResults extends React.Component {
     }
 
     render() {
-        let totalMatches = 0;
-        const {done, filesWithMatches, totalFiles, results} = this.state;
+        const {totalMatches, done, filesWithMatches, totalFiles, results} = this.state;
         const {searchString} = this.props;
 
         const searchResultStyle = {
@@ -96,7 +106,6 @@ export default class SearchResults extends React.Component {
                 const {matches, contextLines, startLine} = result;
 
                 jobMatches += matches.length;
-                totalMatches += matches.length;
 
                 return (
                     <div key={startLine} style={searchResultStyle}>
@@ -158,14 +167,13 @@ export default class SearchResults extends React.Component {
                 <div style={headerStyle}>
 
                     Searching for <span style={searchStringStyle}> {searchString} </span>
-                    {totalFiles === 0 ?
-                        '... ' :
-                        `in ${totalFiles} files... `}
-                    {done ?
+                    {totalFiles === 0 ? '... ' : `in ${totalFiles} jobs... `}
+                    {totalMatches > 0 ?
                         <span style={matchTotalsStyle}>
-                            found {totalMatches} occurences in {filesWithMatches} jobs)
+                            found {totalMatches} occurences in {filesWithMatches} jobs
+                            {done ? '' : ' so far...'}
                         </span> :
-                        ''}
+                        null}
                 </div>
                 <div style={resultsContainerStyle}>
                     {searchResults}
