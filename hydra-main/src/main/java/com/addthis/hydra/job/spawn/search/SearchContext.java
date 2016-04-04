@@ -16,31 +16,19 @@ package com.addthis.hydra.job.spawn.search;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
 public class SearchContext {
-    private final int startLine;
-    private final String[] lines;
+    @JsonProperty
+    protected final int startLine;
+    @JsonProperty
+    protected final String[] lines;
 
     public SearchContext(int matchedLine, String[] allLines, int buffer) {
         this.startLine = Math.max(0, matchedLine - buffer);
         int endLine = Math.min(allLines.length, matchedLine + buffer);
         this.lines = Arrays.copyOfRange(allLines, startLine, endLine);
-    }
-
-    public JSONArray toJSONArray() throws JSONException {
-        JSONArray json = new JSONArray();
-        for (int i = 0; i < lines.length; i++) {
-            String text = lines[i];
-            int lineNum = i + startLine + 1; // convert from 0 indexed lines to 1 indexed
-
-            JSONObject jsonLine = new JSONObject();
-            jsonLine.put("line", lineNum);
-            jsonLine.put("text", text);
-            json.put(jsonLine);
-        }
-
-        return json;
     }
 }

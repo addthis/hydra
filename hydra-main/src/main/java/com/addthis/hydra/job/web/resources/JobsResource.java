@@ -407,7 +407,7 @@ public class JobsResource implements Closeable {
                            .build();
         } else {
             try {
-                String expandedJobConfig = spawn.getExpandedConfig(id);
+                String expandedJobConfig = spawn.getJobConfigManager().getExpandedConfig(id);
                 return formatConfig(format, expandedJobConfig);
             } catch (Exception ex) {
                 return buildServerError(ex);
@@ -422,7 +422,7 @@ public class JobsResource implements Closeable {
 
         kv.removePair("id");
         String jobConfig = kv.removePair("config").getValue();
-        String expandedConfig = JobExpand.macroExpand(spawn, jobConfig);
+        String expandedConfig = JobExpand.macroExpand(spawn.getJobMacroManager(), spawn.getAliasManager(), jobConfig);
         Map<String, JobParameter> parameters = JobExpand.macroFindParameters(expandedConfig);
 
         for (KVPair pair : kv) {
@@ -440,7 +440,7 @@ public class JobsResource implements Closeable {
         }
 
         try {
-            String expandedJob = spawn.expandConfig(expandedConfig, parameters.values());
+            String expandedJob = spawn.getJobExpander().expandJob(expandedConfig, parameters.values());
             return formatConfig(null, expandedJob);
         } catch (Exception ex) {
             return buildServerError(ex);
@@ -1199,7 +1199,7 @@ public class JobsResource implements Closeable {
             } else {
                 String expandedConfig;
                 try {
-                    expandedConfig = spawn.getExpandedConfig(id);
+                    expandedConfig = spawn.getJobConfigManager().getExpandedConfig(id);
                 } catch (Exception ex) {
                     JSONArray lineErrors = new JSONArray();
                     JSONArray lineColumns = new JSONArray();
@@ -1237,7 +1237,7 @@ public class JobsResource implements Closeable {
         kv.removePair("id");
         String jobConfig = kv.removePair("config").getValue();
         String expandedConfig;
-        String config = JobExpand.macroExpand(spawn, jobConfig);
+        String config = JobExpand.macroExpand(spawn.getJobMacroManager(), spawn.getAliasManager(), jobConfig);
         Map<String, JobParameter> parameters = JobExpand.macroFindParameters(config);
 
         for (KVPair pair : kv) {
@@ -1255,7 +1255,7 @@ public class JobsResource implements Closeable {
         }
 
         try {
-            expandedConfig = spawn.expandConfig(config, parameters.values());
+            expandedConfig = spawn.getJobExpander().expandJob(config, parameters.values());
         } catch (Exception ex) {
             JSONArray lineErrors = new JSONArray();
             JSONArray lineColumns = new JSONArray();

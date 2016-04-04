@@ -35,6 +35,7 @@ function(
 			this.readOnly=(options.readOnly?options.readOnly:false);
 			this.hasRendered=false;
 			this.hasReset=false;
+			this.scrollTo=options.scrollTo || {line: 0, col: 0},
 			this.listenTo(this.model,"change:"+options.keyName,this.render);
 			//this.listenTo(this.model,"reset",this.handleReset);
 			this.model.bind("reset",this.handleReset);
@@ -72,6 +73,8 @@ function(
 			this.views.editor.session.setValue(this.model.get(this.keyName));
 			this.hasRendered=true;
             this.views.editor.resize();
+			this.views.editor.scrollToLine(this.scrollTo.line, true, false);
+			this.views.editor.gotoLine(this.scrollTo.line, this.scrollTo.col);
 			return this;
 		},
 		handleChange:function(event){

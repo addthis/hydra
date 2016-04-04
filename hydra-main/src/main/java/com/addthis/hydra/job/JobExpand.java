@@ -30,7 +30,10 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 import com.addthis.codec.plugins.PluginMap;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.data.util.CommentTokenizer;
+import com.addthis.hydra.job.alias.AliasManager;
+import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
+import com.addthis.hydra.job.entity.JobMacroManager;
 import com.addthis.hydra.job.spawn.Spawn;
 
 import com.google.common.base.Joiner;
@@ -39,6 +42,9 @@ import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+
 public class JobExpand {
 
     private static final int maxDepth = Parameter.intValue("spawn.macro.expand.depth", 256);
@@ -47,17 +53,18 @@ public class JobExpand {
 
     private static class MacroTokenReplacer extends TokenReplacer {
 
-        private final Spawn spawn;
-
         private static final Logger log = LoggerFactory.getLogger(MacroTokenReplacer.class);
 
         private static final Joiner joiner = Joiner.on(',').skipNulls();
 
         private static final Pattern macroPattern = Pattern.compile("%\\{(.+?)\\}%");
+        private final JobEntityManager<JobMacro> jobMacroManager;
+        private final AliasManager aliasManager;
 
-        MacroTokenReplacer(Spawn spawn) {
+        MacroTokenReplacer(@Nonnull JobEntityManager<JobMacro> jobMacroManager, @Nonnull AliasManager aliasManager) {
             super("%{", "}%");
-            this.spawn = spawn;
+            this.jobMacroManager = jobMacroManager;
+            this.aliasManager = aliasManager;
         }
 
         @Override
@@ -74,12 +81,12 @@ public class JobExpand {
                     throw new RuntimeException(ex);
                 }
             }
-            JobMacro macro = spawn.getJobMacroManager().getEntity(label);
+            JobMacro macro = jobMacroManager.getEntity(label);
             String target = null;
             if (macro != null) {
                 target = macro.getMacro();
             } else {
-                List<String> aliases = spawn.getAliasManager().aliasToJobs(label);
+                List<String> aliases = aliasManager.aliasToJobs(label);
                 if (aliases != null) {
                     target = joiner.join(aliases);
                 }
@@ -263,8 +270,10 @@ public class JobExpand {
      * 
      * @throws IllegalStateException if expanded config exceeds the max length allowed.
      */
-    public static String macroExpand(Spawn spawn, String rawtext) throws TokenReplacerOverflowException, IllegalStateException {
-        MacroTokenReplacer replacer = new MacroTokenReplacer(spawn);
+    public static String macroExpand(@Nonnull JobEntityManager<JobMacro> macroManager,
+                                     @Nonnull AliasManager aliasManager,
+                                     @Nonnull String rawtext) throws TokenReplacerOverflowException, IllegalStateException {
+        MacroTokenReplacer replacer = new MacroTokenReplacer(macroManager, aliasManager);
         List<String> contents = new ArrayList<>();
         List<String> delimiters = new ArrayList<>();
         CommentTokenizer commentTokenizer = new CommentTokenizer(rawtext);

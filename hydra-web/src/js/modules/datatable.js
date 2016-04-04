@@ -21,7 +21,6 @@ define([
 function(_, $, dt){
     // Attach datatables plugin to jquery
     dt.call($);
-
     $.fn.dataTableExt.sErrMode = 'throw';
     $.fn.dataTableExt.oApi.fnStandingRedraw = function(oSettings) {
         if(oSettings.oFeatures.bServerSide === false){

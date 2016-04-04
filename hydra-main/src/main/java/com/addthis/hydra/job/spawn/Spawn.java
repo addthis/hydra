@@ -15,11 +15,8 @@ package com.addthis.hydra.job.spawn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.Size;
 import javax.ws.rs.core.Response;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
@@ -46,7 +43,6 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -65,7 +61,6 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
-import com.addthis.codec.annotations.Bytes;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
@@ -79,6 +74,8 @@ import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobEvent;
 import com.addthis.hydra.job.JobExpand;
+import com.addthis.hydra.job.JobExpander;
+import com.addthis.hydra.job.JobExpanderImpl;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
@@ -137,9 +134,6 @@ import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Uninterruptibles;
 
@@ -201,6 +195,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     @Nonnull public final HostManager hostManager;
+    private final JobExpanderImpl jobExpander;
 
     @Nonnull final Lock jobLock;
     @Nonnull final SpawnState spawnState;
@@ -236,7 +231,6 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final HostFailWorker hostFailWorker;
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
-    @Nonnull private final LoadingCache<String, String> expandedConfigCache;
     @Nullable private final JobStore jobStore;
 
     @JsonCreator private Spawn(@JsonProperty("debug") String debug,
@@ -269,29 +263,6 @@ public class Spawn implements Codable, AutoCloseable {
         this.shuttingDown = new AtomicBoolean(false);
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
         this.listeners = new ConcurrentHashMap<>();
-
-        final Spawn spawn = this;
-        this.expandedConfigCache = CacheBuilder.newBuilder()
-                .maximumWeight(expandedConfigCacheSettings.maxSizeBytes)
-                .weigher((String key, String value) -> {
-                    return key.length() + value.length();
-                })
-                .expireAfterWrite(expandedConfigCacheSettings.maxAgeSeconds, TimeUnit.SECONDS)
-                .build(new CacheLoader<String, String>() {
-
-                    @Override
-                    public String load(String jobId) throws Exception {
-                        Job job = getJob(jobId);
-                        checkArgument(job != null, "no job exists with id " + jobId);
-                        String config = getJobConfig(jobId);
-                        if (config == null) {
-                            return "";
-                        }
-
-                        return Spawn.this.expandConfig(config, job.getParameters());
-                    }
-                });
-
         this.webSocketManager = new WebSocketManager();
 
         LessFiles.initDirectory(dataDir);
@@ -325,13 +296,19 @@ public class Spawn implements Codable, AutoCloseable {
                                                    httpHost + ":" + SpawnServiceConfiguration.SINGLETON.webPort,
                                                    SpawnServiceConfiguration.SINGLETON.authenticationTimeout,
                                                    SpawnServiceConfiguration.SINGLETON.sudoTimeout);
-        this.jobConfigManager = new JobConfigManager(spawnDataStore);
+
+
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
         aliasManager = new AliasManagerImpl(spawnDataStore);
         jobMacroManager = new JobMacroManager(this);
         jobCommandManager = new JobCommandManager(this);
         jobOnFinishStateHandler = new JobOnFinishStateHandlerImpl(this);
+
+
+        jobExpander = new JobExpanderImpl(this, jobMacroManager, aliasManager);
+        jobConfigManager = new JobConfigManager(spawnDataStore, jobExpander, expandedConfigCacheSettings);
+
         // fix up null pointers
         for (Job job : spawnState.jobs.values()) {
             if (job.getSubmitTime() == null) {
@@ -344,6 +321,7 @@ public class Spawn implements Codable, AutoCloseable {
         // so the latter components must be created first.
         hostFailWorker = new HostFailWorker(this, hostManager, scheduledExecutor);
         balancer = new SpawnBalancer(this, hostManager);
+
 
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
@@ -477,10 +455,15 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
+
+    public JobExpander getJobExpander() {
+        return this.jobExpander;
+    }
+
     public PipedInputStream getSearchResultStream(SearchOptions searchOptions) throws IOException {
         PipedOutputStream out = new PipedOutputStream();
         PipedInputStream in = new PipedInputStream(out);
-        JobSearcher js = new JobSearcher(this, searchOptions, out);
+        JobSearcher js = new JobSearcher(spawnState, jobConfigManager, searchOptions, out);
         expandKickExecutor.submit(js);
         return in;
     }
@@ -656,6 +639,10 @@ public class Spawn implements Codable, AutoCloseable {
         jobConfigManager.setConfig(jobUUID, config);
     }
 
+    public JobConfigManager getJobConfigManager() {
+        return jobConfigManager;
+    }
+
     public JSONArray getJobHistory(String jobId) {
         return (jobStore != null) ? jobStore.getHistory(jobId) : new JSONArray();
     }
@@ -746,7 +733,6 @@ public class Spawn implements Codable, AutoCloseable {
         // Calling getJob will fill it back in -- or call jobConfigManager.getConfig(id)
         job.setConfig(null);
 
-        expandedConfigCache.invalidate(job.getId());
         return spawnState.jobs.put(job.getId(), job);
     }
 
@@ -1402,7 +1388,7 @@ public class Spawn implements Codable, AutoCloseable {
                 }
                 if (value != null) {
                     try {
-                        value = JobExpand.macroExpand(this, value);
+                        value = JobExpand.macroExpand(jobMacroManager, aliasManager, value);
                     } catch (TokenReplacerOverflowException ex) {
                         log.error("Token replacement overflow for input '{}'", value, ex);
                     }
@@ -1712,7 +1698,6 @@ public class Spawn implements Codable, AutoCloseable {
             if (job.getDontDeleteMe()) {
                 return DeleteStatus.JOB_DO_NOT_DELETE;
             }
-            expandedConfigCache.invalidate(jobUUID);
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
             log.warn("[job.delete] {}", job.getId());
@@ -1904,72 +1889,6 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[task.queue.update] received exception while sending task queue update event (this is ok unless"
                      + " it happens repeatedly)", e);
         }
-    }
-
-    /**
-     * Returns the cached config associated with jobUUID, if there is one, or null otherwise
-     * @param jobUUID
-     * @return expanded job configuration
-     */
-    @Nullable
-    public String getCachedExpandedJob(String jobUUID) {
-        return this.expandedConfigCache.getIfPresent(jobUUID);
-    }
-
-    /**
-     * Generate or read an expanded config, keyed on job UID, in the cache.
-     * @param jobUUID
-     * @return expanded job configuration
-     * @throws ExecutionException
-     */
-    public String getExpandedConfig(String jobUUID) throws ExecutionException {
-        Job job = getJob(jobUUID);
-        checkArgument(job != null, "job with uid " + jobUUID + " does not exist");
-        return this.expandedConfigCache.get(jobUUID);
-    }
-
-    /**
-     * Generate or read an expanded config, keyed on job UID, in the cache. Bypasses the cache if either:
-     *  1) the job has been modified since the request was made (using lastModifiedAt)
-     *  2) a null jobUUID is provided
-     *  3) a jobUUID which doesn't belong to a job is provided
-     * @param jobUUID
-     * @param rawConfig - the config to expand. Possibly different from the one owned by Job #jobUUID
-     * @param parameters - the params to expand the config with. Possibly different from the ones owned by Job #jobUUID
-     * @param lastModifiedAt - at the time this request is made, the lastModifiedAt timestamp of the job if one exists
-     * @return the expanded job config
-     * @throws ExecutionException
-     * @throws TokenReplacerOverflowException
-     */
-    public String getExpandedConfig(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters, long lastModifiedAt) throws ExecutionException, TokenReplacerOverflowException {
-        Job job = getJob(jobUUID);
-
-        if (job == null || job.lastModifiedAt() != lastModifiedAt) {
-            return expandConfig(rawConfig, parameters);
-        }
-        else {
-            return this.expandedConfigCache.get(jobUUID);
-        }
-    }
-
-    /**
-     * Bypass the expanded config cache and generate a new expanded config, not associated with any particular job id.
-     * Don't use this method if you suspect you can benefit from the expanded config cache.
-     * @param rawConfig - raw configration to expand
-     * @param parameters - job parameters to use in expansion
-     * @return expanded job configuration
-     */
-    public String expandConfig(String rawConfig, Collection<JobParameter> parameters) throws TokenReplacerOverflowException, ExecutionException {
-        // macro recursive expansion
-        String pass0 = JobExpand.macroExpand(this, rawConfig);
-        // template in params that "may" contain other macros
-        String pass1 = JobExpand.macroTemplateParams(pass0, parameters);
-        // macro recursive expansion again
-        String pass2 = JobExpand.macroExpand(this, pass1);
-        // replace remaining params not caught in pass 1
-        String pass3 = JobExpand.macroTemplateParams(pass2, parameters);
-        // inject job metadata from spawn
-        return JobExpand.magicMacroExpand(this, pass3, null);
     }
 
     public void stopJob(String jobUUID) throws Exception {
@@ -2431,7 +2350,6 @@ public class Spawn implements Codable, AutoCloseable {
         Runnable scheduledKick = new ScheduledTaskKick(this,
                                                        job.getId(),
                                                        jobParameters,
-                                                       job.lastModifiedAt(),
                                                        getJobConfig(job.getId()),
                                                        spawnMQ,
                                                        kick,
@@ -3330,5 +3248,4 @@ public class Spawn implements Codable, AutoCloseable {
         }
         return true;
     }
-
 }

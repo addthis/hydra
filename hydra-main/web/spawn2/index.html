@@ -14,7 +14,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="/spawn2/build/main.js"></script>
+        <title>Spawn</title>
         <link rel="stylesheet" type="text/css" href="/spawn2/css/main.css">
         <link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.png">
         <link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.png">
@@ -33,6 +33,10 @@
         <meta name="msapplication-TileColor" content="#00aba9">
         <meta name="msapplication-TileImage" content="/mstile-144x144.png">
         <meta name="theme-color" content="#ffffff">
+        <style>
+            /* Removes the focus border which is created by react-hotkeys */
+            div:focus {outline: none;}
+        </style>
     </head>
     <body>
         <div id="topNavbar" class="navbar" role="navigation">
@@ -89,7 +93,7 @@
                 <div id="infoMetricBox" class="pull-right"></div>
             </div>
         </div>
-        <div id="main"></div>
+        <div id="render-target"></div>
         <div style="display:none">
             <form id="loginForm">
                 <table>
@@ -104,5 +108,6 @@
                 </table>
             </form>
         </div>
+        <script src="/spawn2/build/main.js"></script>
     </body>
 </html>

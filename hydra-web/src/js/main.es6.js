@@ -12,32 +12,42 @@
  * limitations under the License.
  */
 
+'use strict';
+
+import SpawnView from 'components/views/spawn-view';
+import ReactDOM from 'react-dom';
+import React from 'react';
+
+ReactDOM.render(
+    <SpawnView><div id={'main'}/></SpawnView>,
+    document.getElementById('render-target')
+);
+
 require([
-    "oboe",
-    "app",
-    "alertify",
-    "jscookie",
-    "router",
-    "jobs",
-    "macro",
-    "alias",
-    "alerts",
-    "command",
-    "host",
-    "layout.views",
-    "task",
-    "task.log",
-    "graph",
-    "git",
-    "alerts",
-    "settings",
-    "datatable",
-    "domReady",
-    "backbone",
-    "underscore",
-    "jquery",
-    "bootstrap",
-    "date"
+    'oboe',
+    'app',
+    'alertify',
+    'jscookie',
+    'router',
+    'jobs',
+    'macro',
+    'alias',
+    'alerts',
+    'command',
+    'host',
+    'layout.views',
+    'task',
+    'task.log',
+    'graph',
+    'git',
+    'alerts',
+    'settings',
+    'datatable',
+    'backbone',
+    'underscore',
+    'jquery',
+    'bootstrap',
+    'date'
 ],
 function(
     oboe,
@@ -59,7 +69,6 @@ function(
     Alerts,
     Settings,
     DataTable,
-    domReady,
     Backbone,
     _,
     $
@@ -89,31 +98,224 @@ function(
     app.aliasCollection = new Alias.Collection([]);
 
     oboe({url: '/update/setup'})
-        .node('quiesce', function (quiesce) {
+        .node('!.quiesce', function (quiesce) {
             app.isQuiesced = quiesce;
             app.checkQuiesced();
         })
-        .node('queryHost', function (queryHost) {
+        .node('!.queryHost', function (queryHost) {
             app.queryHost = queryHost;
         })
-        .node('jobs[*]', function (job) {
-            app.jobCollection.add(job);
-        })
-        .node('hosts[*]', function (host) {
+        .node('!.hosts[*]', function (host) {
             app.hostCollection.add(host);
         })
-        .node('alerts[*]', function (alert) {
+        .node('!.alerts[*]', function (alert) {
             app.alertCollection.add(alert);
         })
-        .node('commands[*]', function (command) {
+        .node('!.commands[*]', function (command) {
             app.commandCollection.add(command);
         })
-        .node('macros[*]', function (macro) {
+        .node('!.macros[*]', function (macro) {
             app.macroCollection.add(macro);
         })
-        .node('aliases[*]', function (alias) {
+        .node('!.aliases[*]', function (alias) {
             app.aliasCollection.add(alias);
+        })
+        .done((json) => {
+            // Have to batch the adding of jobs because this datatable is
+            // complete garbage and takes 5 hours to render
+            app.jobCollection.reset(json.jobs);
+
+            new Jobs.InfoMetricView({
+                el:"div#infoMetricBox",
+                model:app.jobInfoMetricModel
+            }).render();
+
+            app.initialize();
+            Backbone.history.start();
         });
+
+
+
+
+    app.router.on('route:showJobConf', function(jobId, line = 0, col = 0){
+        app.trigger('loadJob', jobId);
+        if(!_.isUndefined(app.job)){
+            var view = new Jobs.ConfDetailView({
+                scrollTo: {line, col},
+                model: app.job,
+                configModel: app.configModel,
+                parameterCollection: app.parameterCollection,
+                commandCollection: app.commandCollection
+            });
+            app.commandCollection.fetch();
+            app.showView(view, "#jobs");
+        }
+    });
+    app.router.on("route:showJobSettings",function(jobId){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            var view = new Jobs.SettingDetailView({
+                model:app.job,
+                configModel:app.configModel,
+                parameterCollection:app.parameterCollection
+            });
+            app.showView(view,"#jobs");
+        }
+    });
+    app.router.on("route:showJobAlerts",function(jobId){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            var view = new Jobs.AlertDetailView({
+                model:app.job,
+                configModel:app.configModel,
+                parameterCollection:app.parameterCollection
+            });
+            app.showView(view,"#jobs");
+        }
+    });
+    app.router.on("route:showJobDeps",function(jobId){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            var graphModel = new Graph.TreeGraphModel({
+                jobId: jobId
+            });
+            var view = new Jobs.DependenciesDetailView({
+                model:app.job,
+                configModel:app.configModel,
+                parameterCollection:app.parameterCollection,
+                graphModel:graphModel
+            });
+            graphModel.fetch({reset:true});
+            app.showView(view,"#jobs");
+        }
+    });
+    app.router.on("route:showJobExpConf",function(jobId){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            var expandModel = new Jobs.ExpandedConfigModel();
+            if(!app.job.isNew()){
+                                    expandModel.set("id",app.job.id);
+                                    }
+            expandModel.set("config",app.configModel.get("config"));
+            var view = new Jobs.ExpandedConfDetailView({
+                                                           model:app.job,
+                                                           configModel:app.configModel,
+                                                           parameterCollection:app.parameterCollection,
+                                                           expandModel:expandModel
+                                                           });
+            _.each(app.parameterCollection.toJSON(),function(param){
+                                                                       expandModel.set("sp_"+param.name,param.value);
+                                                                       });
+            expandModel.fetch();
+            if(app.parameterCollection.length===0){
+                                                      app.parameterCollection.fetch();
+                                                      }
+            app.showView(view,"#jobs");
+        }
+    });
+    app.router.on("route:showJobHistory",function(jobId){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            var history = new Jobs.HistoryCollection();
+            history.jobUuid=jobId;
+            var view = new Jobs.HistoryDetailView({
+                                                      model:app.job,
+                                                      configModel:app.configModel,
+                                                      parameterCollection:app.parameterCollection,
+                                                      historyCollection:history
+                                                      });
+            app.showView(view,"#jobs");
+            history.fetch();
+        }
+    });
+    app.router.on("route:showJobHistoryView",function(jobId,commit){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            var history = new Jobs.HistoryCollection();
+            history.jobUuid=jobId;
+            var commit = new Jobs.HistoryModel({
+                                                   jobUuid:jobId,
+                                                   commit:commit
+                                                   });
+            var view = new Jobs.HistoryCommitView({
+                                                      model:app.job,
+                                                      configModel:app.configModel,
+                                                      parameterCollection:app.parameterCollection,
+                                                      historyCollection:history,
+                                                      commitModel:commit
+                                                      });
+            app.showView(view,"#jobs");
+            history.fetch();
+            commit.load().done(function(data){
+                commit.set("historyConfig",data);
+            }).fail(function(xhr){
+                alertify.error("Error loading commit: "+xhr.responseText);
+            });
+        }
+    });
+    app.router.on("route:showJobHistoryDiff",function(jobId,commit){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            var history = new Jobs.HistoryCollection();
+            history.jobUuid=jobId;
+            var commit = new Jobs.HistoryModel({
+                                                   jobUuid:jobId,
+                                                   commit:commit
+                                                   });
+            var view = new Jobs.HistoryCommitView({
+                                                      model:app.job,
+                                                      configModel:app.configModel,
+                                                      parameterCollection:app.parameterCollection,
+                                                      historyCollection:history,
+                                                      commitModel:commit,
+                                                      editorAttribute:"diff"
+                                                      });
+            app.showView(view,"#jobs");
+            history.fetch();
+            commit.diff().done(function(data){
+                                                 commit.set("diff",data);
+                                                 }).fail(function(xhr){
+                alertify.error("Error loading diff: "+xhr.responseText);
+            });
+        }
+    });
+    app.router.on("route:showJobTaskDetail",function(jobId,node){
+        app.trigger("loadJob",jobId);
+        if(!_.isUndefined(app.job)){
+            if(_.isUndefined(app.job)){
+                                          app.router.navigate("jobs",{trigger:true});
+                                          }
+            else if(parseInt(node)>=app.job.get("nodes")){
+                                                             app.router.navigate("jobs/"+jobId+"/tasks");
+                                                             }
+            else{
+                var taskCollection = new Task.Collection();
+                taskCollection.jobUuid=jobId;
+                taskCollection.fetch({
+                                         reset:true
+                                         });
+                var task= new Task.Model({node:node,jobUuid:jobId});
+                var logModel = new TaskLog.Model({
+                                                     jobUuid:jobId,
+                                                     node:node
+                                                     });
+                var detail = new Jobs.TaskDetailView({
+                                                         model:app.job,
+                                                         configModel:app.configModel,
+                                                         parameterCollection:app.parameterCollection,
+                                                         taskModel:task,
+                                                         logModel:logModel,
+                                                         taskCollection:taskCollection
+                                                         });
+                task.fetch({
+                               success:function(){
+                               task.trigger("reset");
+                               }
+                               });
+                app.showView(detail,"#jobs");
+            }
+        }
+    });
 
     app.server.connect();
     app.jobInfoMetricModel = new Jobs.InfoMetricModel({});
@@ -249,41 +451,17 @@ function(
         app.showView(table,"#alias");
         app.makeHtmlTitle("Alias");
     });
-    app.router.on("route:showJobConf",function(jobId){
-        app.trigger("loadJob",jobId);
+    app.router.on("route:showJobConfClone",function(jobId){
+        app.trigger("cloneJob",jobId);
         if(!_.isUndefined(app.job)){
             var view = new Jobs.ConfDetailView({
                 model:app.job,
+                isClone:true,
                 configModel:app.configModel,
                 parameterCollection:app.parameterCollection,
                 commandCollection:app.commandCollection
             });
             app.commandCollection.fetch();
-            app.showView(view,"#jobs");
-        }
-    });
-    app.router.on("route:showJobConfClone",function(jobId){
-        app.trigger("cloneJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var view = new Jobs.ConfDetailView({
-                                                   model:app.job,
-                                                   isClone:true,
-                                                   configModel:app.configModel,
-                                                   parameterCollection:app.parameterCollection,
-                                                   commandCollection:app.commandCollection
-                                                   });
-            app.commandCollection.fetch();
-            app.showView(view,"#jobs");
-        }
-    });
-    app.router.on("route:showJobSettings",function(jobId){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var view = new Jobs.SettingDetailView({
-                                                          model:app.job,
-                                                          configModel:app.configModel,
-                                                          parameterCollection:app.parameterCollection
-                                                          });
             app.showView(view,"#jobs");
         }
     });
@@ -299,172 +477,20 @@ function(
             app.showView(view,"#jobs");
         }
     });
-    app.router.on("route:showJobAlerts",function(jobId){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var view = new Jobs.AlertDetailView({
-                                                    model:app.job,
-                                                    configModel:app.configModel,
-                                                    parameterCollection:app.parameterCollection
-                                                    });
-            app.showView(view,"#jobs");
-        }
-    });
+
     app.router.on("route:showJobAlertsClone",function(jobId){
         app.trigger("cloneJob",jobId);
         if(!_.isUndefined(app.job)){
             var view = new Jobs.AlertDetailView({
-                                                    model:app.job,
-                                                    isClone:true,
-                                                    configModel:app.configModel,
-                                                    parameterCollection:app.parameterCollection
-                                                    });
-            app.showView(view,"#jobs");
-        }
-    });
-    app.router.on("route:showJobDeps",function(jobId){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var graphModel = new Graph.TreeGraphModel({
-                                                          jobId: jobId
-                                                          });
-            var view = new Jobs.DependenciesDetailView({
-                                                           model:app.job,
-                                                           configModel:app.configModel,
-                                                           parameterCollection:app.parameterCollection,
-                                                           graphModel:graphModel
-                                                           });
-            graphModel.fetch({reset:true});
-            app.showView(view,"#jobs");
-        }
-    });
-    app.router.on("route:showJobExpConf",function(jobId){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var expandModel = new Jobs.ExpandedConfigModel();
-            if(!app.job.isNew()){
-                                    expandModel.set("id",app.job.id);
-                                    }
-            expandModel.set("config",app.configModel.get("config"));
-            var view = new Jobs.ExpandedConfDetailView({
-                                                           model:app.job,
-                                                           configModel:app.configModel,
-                                                           parameterCollection:app.parameterCollection,
-                                                           expandModel:expandModel
-                                                           });
-            _.each(app.parameterCollection.toJSON(),function(param){
-                                                                       expandModel.set("sp_"+param.name,param.value);
-                                                                       });
-            expandModel.fetch();
-            if(app.parameterCollection.length===0){
-                                                      app.parameterCollection.fetch();
-                                                      }
-            app.showView(view,"#jobs");
-        }
-    });
-    app.router.on("route:showJobHistory",function(jobId){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var history = new Jobs.HistoryCollection();
-            history.jobUuid=jobId;
-            var view = new Jobs.HistoryDetailView({
-                                                      model:app.job,
-                                                      configModel:app.configModel,
-                                                      parameterCollection:app.parameterCollection,
-                                                      historyCollection:history
-                                                      });
-            app.showView(view,"#jobs");
-            history.fetch();
-        }
-    });
-    app.router.on("route:showJobHistoryView",function(jobId,commit){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var history = new Jobs.HistoryCollection();
-            history.jobUuid=jobId;
-            var commit = new Jobs.HistoryModel({
-                                                   jobUuid:jobId,
-                                                   commit:commit
-                                                   });
-            var view = new Jobs.HistoryCommitView({
-                                                      model:app.job,
-                                                      configModel:app.configModel,
-                                                      parameterCollection:app.parameterCollection,
-                                                      historyCollection:history,
-                                                      commitModel:commit
-                                                      });
-            app.showView(view,"#jobs");
-            history.fetch();
-            commit.load().done(function(data){
-                commit.set("historyConfig",data);
-            }).fail(function(xhr){
-                alertify.error("Error loading commit: "+xhr.responseText);
+                model:app.job,
+                isClone:true,
+                configModel:app.configModel,
+                parameterCollection:app.parameterCollection
             });
-        }
-    });
-    app.router.on("route:showJobHistoryDiff",function(jobId,commit){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            var history = new Jobs.HistoryCollection();
-            history.jobUuid=jobId;
-            var commit = new Jobs.HistoryModel({
-                                                   jobUuid:jobId,
-                                                   commit:commit
-                                                   });
-            var view = new Jobs.HistoryCommitView({
-                                                      model:app.job,
-                                                      configModel:app.configModel,
-                                                      parameterCollection:app.parameterCollection,
-                                                      historyCollection:history,
-                                                      commitModel:commit,
-                                                      editorAttribute:"diff"
-                                                      });
             app.showView(view,"#jobs");
-            history.fetch();
-            commit.diff().done(function(data){
-                                                 commit.set("diff",data);
-                                                 }).fail(function(xhr){
-                alertify.error("Error loading diff: "+xhr.responseText);
-            });
         }
     });
-    app.router.on("route:showJobTaskDetail",function(jobId,node){
-        app.trigger("loadJob",jobId);
-        if(!_.isUndefined(app.job)){
-            if(_.isUndefined(app.job)){
-                                          app.router.navigate("jobs",{trigger:true});
-                                          }
-            else if(parseInt(node)>=app.job.get("nodes")){
-                                                             app.router.navigate("jobs/"+jobId+"/tasks");
-                                                             }
-            else{
-                var taskCollection = new Task.Collection();
-                taskCollection.jobUuid=jobId;
-                taskCollection.fetch({
-                                         reset:true
-                                         });
-                var task= new Task.Model({node:node,jobUuid:jobId});
-                var logModel = new TaskLog.Model({
-                                                     jobUuid:jobId,
-                                                     node:node
-                                                     });
-                var detail = new Jobs.TaskDetailView({
-                                                         model:app.job,
-                                                         configModel:app.configModel,
-                                                         parameterCollection:app.parameterCollection,
-                                                         taskModel:task,
-                                                         logModel:logModel,
-                                                         taskCollection:taskCollection
-                                                         });
-                task.fetch({
-                               success:function(){
-                               task.trigger("reset");
-                               }
-                               });
-                app.showView(detail,"#jobs");
-            }
-        }
-    });
+
     app.router.on("route:showMacroDetail",function(name){
         var macro;
         if(_.isEqual(name,"create")){
@@ -601,13 +627,13 @@ function(
         app.makeHtmlTitle("Alerts");
     });
     app.router.on("route:showAlertsTableFiltered",function(jobIdFilter) {
-    	app.router.navigate("#alerts", {trigger: true});    	    	
-		// Modify the table filter and apply it to the alert list.
-		var inp = $("#alertTable_filter").find("input");
-		inp.val(jobIdFilter);
-		var event = $.Event("keypress");
-		event.which = 13;
-		inp.trigger(event);    	
+        app.router.navigate("#alerts", {trigger: true});
+        // Modify the table filter and apply it to the alert list.
+        var inp = $("#alertTable_filter").find("input");
+        inp.val(jobIdFilter);
+        var event = $.Event("keypress");
+        event.which = 13;
+        inp.trigger(event);
     });
     app.router.on("route:showAlertsDetail",function(alertId, jobIds){
         var alert;
@@ -621,7 +647,7 @@ function(
         });
         app.showView(view,"#alerts");
         app.makeHtmlTitle("Alert::"+name);
-    });    
+    });
     app.user.on("change:username",function(){
         $("#usernameBox").html(app.user.get("username"));
     });
@@ -749,26 +775,8 @@ function(
         }
         app.makeHtmlTitle("Clone::"+jobId);
     });
-    app.initialize();
-    domReady(function(){
-        Backbone.history.start();
-        $("#healthCheckLink").click(function(event){
-            event.stopImmediatePropagation();
-            event.preventDefault();
-            app.healthCheck();
-            $(event.target).parents(".open").find("[data-toggle=dropdown]").dropdown("toggle");
-        });
-        $("#quiesceLink").click(function(event){
-            event.stopImmediatePropagation();
-            event.preventDefault();
-            app.quiesce();
-        });
-        
-        new Jobs.InfoMetricView({
-            el:"div#infoMetricBox",
-            model:app.jobInfoMetricModel
-        }).render();
-    });
+
+
     app.server.on("cluster.quiesce",function(message){
         app.isQuiesced = Boolean(message.quiesced);
         if(app.isQuiesced){
@@ -779,6 +787,20 @@ function(
         }
         app.checkQuiesced();
     });
+
+    $("#healthCheckLink").click(function(event){
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        app.healthCheck();
+        $(event.target).parents(".open").find("[data-toggle=dropdown]").dropdown("toggle");
+    });
+
+    $("#quiesceLink").click(function(event){
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        app.quiesce();
+    });
+
     window.app=app;
     window.DataTable=DataTable;
 });
