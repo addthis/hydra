@@ -61,8 +61,8 @@ public class JobSearcher implements Runnable {
     @Override
     public void run() {
 
-        Iterator<JobIdConfigPair> it = new CacheAwareJobConfigIterator(spawnState, jobConfigManager);
-        List<JobIdConfigPair> jobInfoPairs = Lists.newArrayList(it);
+        Iterator<JobInfo> it = new CacheAwareJobConfigIterator(spawnState, jobConfigManager);
+        List<JobInfo> jobInfoPairs = Lists.newArrayList(it);
 
         try {
             JsonGenerator generator = jsonFactory.createGenerator(outputStream);
@@ -70,10 +70,10 @@ public class JobSearcher implements Runnable {
             try {
                 generator.writeStartObject();
                 generator.writeNumberField("totalFiles", jobInfoPairs.size());
-                generator.writeObjectFieldStart("jobs");
+                generator.writeArrayFieldStart("jobs");
 
                 try {
-                    for (JobIdConfigPair jobInfo : jobInfoPairs) {
+                    for (JobInfo jobInfo : jobInfoPairs) {
                         writeExpandedConfigResults(generator, jobInfo);
                         generator.flush();
                     }
@@ -81,7 +81,7 @@ public class JobSearcher implements Runnable {
                     log.warn("i/o exception writing search result", e);
                 }
 
-                generator.writeEndObject();
+                generator.writeEndArray();
                 generator.writeEndObject();
             } catch(IOException e) {
                 log.warn("i/o exception writing search", e);
@@ -94,11 +94,15 @@ public class JobSearcher implements Runnable {
         }
     }
 
-    private void writeExpandedConfigResults(JsonGenerator generator, JobIdConfigPair jobInfo) throws IOException {
+    private void writeExpandedConfigResults(JsonGenerator generator, JobInfo jobInfo) throws IOException {
         List<SearchResult> jobSearchResults = searchExpandedConfig(jobInfo.config);
 
         if (jobSearchResults.size() > 0) {
-            generator.writeObjectField(jobInfo.id, jobSearchResults);
+            generator.writeStartObject();
+            generator.writeStringField("id", jobInfo.id);
+            generator.writeStringField("description", jobInfo.description);
+            generator.writeObjectField("groups", jobSearchResults);
+            generator.writeEndObject();
         }
     }
 

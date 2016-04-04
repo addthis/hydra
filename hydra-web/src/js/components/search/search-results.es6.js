@@ -15,7 +15,7 @@ export default class SearchResults extends React.Component {
         totalFiles: 0,
         totalMatches: 0,
         filesWithMatches: 0,
-        results: {},
+        results: [],
         done: false
     }
 
@@ -49,7 +49,7 @@ export default class SearchResults extends React.Component {
             totalFiles: 0,
             totalMatches: 0,
             filesWithMatches: 0,
-            results: {},
+            results: [],
             done: false
         });
 
@@ -89,10 +89,8 @@ export default class SearchResults extends React.Component {
             paddingBottom: '1.5em'
         };
 
-        const searchResults = Object.keys(results).map(jobId => {
+        const searchResults = results.map(result => {
             let jobMatches = 0;
-
-            const groupedResults = results[jobId];
 
             const jobStyle = {
                 color: palette.detail1
@@ -102,8 +100,10 @@ export default class SearchResults extends React.Component {
                 color: palette.text2
             };
 
-            const blobResults = groupedResults.map((result) => {
-                const {matches, contextLines, startLine} = result;
+            const {id, groups, description} = result;
+
+            const blobResults = groups.map(group => {
+                const {matches, contextLines, startLine} = group;
 
                 jobMatches += matches.length;
 
@@ -111,8 +111,9 @@ export default class SearchResults extends React.Component {
                     <div key={startLine} style={searchResultStyle}>
                         <SearchResult
                             palette={palette}
-                            key={jobId}
-                            job={jobId}
+                            key={id}
+                            job={id}
+                            description={description}
                             matches={matches}
                             contextLines={contextLines}
                             startLine={startLine}
@@ -122,9 +123,10 @@ export default class SearchResults extends React.Component {
             });
 
             return (
-                <div key={jobId}>
+                <div key={id}>
                     <span style={jobStyle}>
-                        {`Job ${jobId}`}
+                        <div>{description}</div>
+                        {`Job ${id}`}
                     </span>
                     <span style={metadataStyle}>
                         {` (${jobMatches} matches)`}

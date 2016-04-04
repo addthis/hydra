@@ -1,5 +1,6 @@
 package com.addthis.hydra.job.spawn.search;
 
+import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.spawn.SpawnState;
 import org.slf4j.Logger;
@@ -9,39 +10,42 @@ import java.util.Iterator;
 import java.util.Stack;
 import java.util.concurrent.ExecutionException;
 
-public class CacheAwareJobConfigIterator implements Iterator<JobIdConfigPair> {
+public class CacheAwareJobConfigIterator implements Iterator<JobInfo> {
     private static final Logger log = LoggerFactory.getLogger(CacheAwareJobConfigIterator.class);
 
-    private final Stack<String> jobIdsNotInCache;
-    private final Iterator<String> jobIdIterator;
+    private final Stack<Job> jobsNotInCache;
+    private final Iterator<Job> jobIterator;
     private final JobConfigManager jobConfigManager;
 
     public CacheAwareJobConfigIterator(SpawnState spawnState, JobConfigManager jobConfigManager) {
-        this.jobIdIterator = spawnState.jobIdIterator();
-        this.jobIdsNotInCache = new Stack<>();
+        this.jobIterator = spawnState.jobsIterator();
+        this.jobsNotInCache = new Stack<>();
         this.jobConfigManager = jobConfigManager;
     }
 
     @Override
     public boolean hasNext() {
-       return jobIdIterator.hasNext() || jobIdsNotInCache.size() > 0;
+       return jobIterator.hasNext() || jobsNotInCache.size() > 0;
     }
 
     @Override
-    public JobIdConfigPair next() {
-        while (jobIdIterator.hasNext()) {
-            String jobId = jobIdIterator.next();
+    public JobInfo next() {
+        while (jobIterator.hasNext()) {
+            Job job = jobIterator.next();
+            String jobId = job.getId();
             String expandedConfig = jobConfigManager.getCachedExpandedJob(jobId);
 
+
             if (expandedConfig == null) {
-                jobIdsNotInCache.add(jobId);
+                jobsNotInCache.add(job);
             } else {
-                return new JobIdConfigPair(jobId, expandedConfig);
+                return new JobInfo(jobId, expandedConfig, job.getDescription());
             }
         }
 
-        if (jobIdsNotInCache.size() > 0) {
-            String jobId = jobIdsNotInCache.pop();
+        if (jobsNotInCache.size() > 0) {
+            Job job = jobsNotInCache.pop();
+            String jobId = job.getId();
             String expandedConfig;
             try {
                 expandedConfig = jobConfigManager.getExpandedConfig(jobId);
@@ -50,7 +54,7 @@ public class CacheAwareJobConfigIterator implements Iterator<JobIdConfigPair> {
                 expandedConfig = "";
             }
 
-            return new JobIdConfigPair(jobId, expandedConfig);
+            return new JobInfo(jobId, expandedConfig, job.getDescription());
         }
 
         return null;
