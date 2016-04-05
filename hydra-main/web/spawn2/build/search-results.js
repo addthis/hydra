@@ -306,9 +306,9 @@
 	}
 	
 	SearchHeader.propTypes = {
-	    headerStyle: _react2.default.PropTypes.objectOf(_react2.default.PropTypes.string).isRequired,
-	    searchStringStyle: _react2.default.PropTypes.objectOf(_react2.default.PropTypes.string).isRequired,
-	    matchTotalsStyle: _react2.default.PropTypes.objectOf(_react2.default.PropTypes.string).isRequired,
+	    headerStyle: _react2.default.PropTypes.object.isRequired,
+	    searchStringStyle: _react2.default.PropTypes.object.isRequired,
+	    matchTotalsStyle: _react2.default.PropTypes.object.isRequired,
 	    searchString: _react2.default.PropTypes.string.isRequired,
 	    totalFiles: _react2.default.PropTypes.number.isRequired,
 	    totalMatches: _react2.default.PropTypes.number.isRequired,
