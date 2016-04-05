@@ -23,4 +23,3 @@ hydra-main/etc/
 hydra-main/log/
 hydra-main/web/spawn2/
 hydra-web/node_modules/
-hydra-main/web/spawn2/build/
