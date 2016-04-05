@@ -14,7 +14,7 @@
 define([
 	"underscore",
 	"ace",
-	"brace/theme/textmate",
+	"brace/theme/monokai",
 	"brace/mode/javascript",
 	"brace/ext/searchbox",
 	"backbone"
@@ -68,7 +68,7 @@ function(
             this.views.editor.getSession().setUseWorker(false);
             this.views.editor.getSession().setOption('useSoftTabs',true);
 			this.views.editor.getSession().setMode("ace/mode/javascript");
-			this.views.editor.setTheme("ace/theme/textmate");
+			this.views.editor.setTheme("ace/theme/monokai");
 			this.views.editor.getSession().on("change",this.handleEditorChange);
 			this.views.editor.session.setValue(this.model.get(this.keyName));
 			this.hasRendered=true;
