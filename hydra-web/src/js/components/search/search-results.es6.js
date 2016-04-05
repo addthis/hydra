@@ -30,6 +30,17 @@ function SearchHeader({
     );
 }
 
+SearchHeader.propTypes = {
+    headerStyle: React.PropTypes.objectOf(React.PropTypes.string).isRequired,
+    searchStringStyle: React.PropTypes.objectOf(React.PropTypes.string).isRequired,
+    matchTotalsStyle: React.PropTypes.objectOf(React.PropTypes.string).isRequired,
+    searchString: React.PropTypes.string.isRequired,
+    totalFiles: React.PropTypes.number.isRequired,
+    totalMatches: React.PropTypes.number.isRequired,
+    filesWithMatches: React.PropTypes.number.isRequired,
+    done: React.PropTypes.bool.isRequired
+};
+
 export default class SearchResults extends React.Component {
     static propTypes = {
         searchString: React.PropTypes.string.isRequired
