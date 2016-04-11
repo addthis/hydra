@@ -33,6 +33,7 @@ function getResolve() {
             'text': 'vendor/text',
             'localstorage': 'backbone.localstorage',
             'alertify': 'vendor/alertify',
+            'datatables.net': 'vendor/datatable-1.9.4-modified',
             'js-mode': 'brace/mode/javascript',
             'js-worker': 'brace/worker/worker',
             'ace': 'brace',
@@ -79,7 +80,7 @@ module.exports = [{
         loaders: getLoaders().concat([
             /* require.js shims */
             {
-                test: require.resolve('datatables.net'),
+                test: require.resolve('./src/js/vendor/datatable-1.9.4-modified'),
                 loader: 'imports?$=jquery,jQuery=jquery'
             },
             {

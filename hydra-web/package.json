@@ -38,8 +38,6 @@
     "backbone.localstorage": "^1.1.16",
     "bootstrap": "^3.3.6",
     "d3": "^3.5.16",
-    "datatables.net": "^1.10.11",
-    "datatables.net-dt": "^1.10.11",
     "jquery": "^2.2.2",
     "js-cookie": "^2.1.0",
     "nvd3": "^1.8.2",

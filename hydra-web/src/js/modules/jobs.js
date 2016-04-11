@@ -1038,7 +1038,10 @@ function(
                 {
                     "mData": "state",
                     "bVisible":false,
-                    "bSearchable":true
+                    "bSearchable":true,
+                    "mRender":function(val){
+                        return "<div class='label "+StateLabels[val]+"'>"+States[val]+"</div>";
+                    },
                 },
                 {
                     "sTitle":"State",
