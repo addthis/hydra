@@ -22605,9 +22605,9 @@ webpackJsonp([1],Array(215).concat([
 	    __webpack_require__(/*! underscore */ 219),
 	    __webpack_require__(/*! jquery */ 220),
 	    __webpack_require__(/*! datatables.net */ 227),
-	    __webpack_require__(/*! datatables.net-dt/css/jquery.dataTables.css */ 228),
-	    __webpack_require__(/*! backbone */ 218)
-	], __WEBPACK_AMD_DEFINE_RESULT__ = function(_, $, dt){
+	    __webpack_require__(/*! backbone */ 218),
+	    __webpack_require__(/*! datatables.net-dt/css/jquery.dataTables.css */ 228)
+	], __WEBPACK_AMD_DEFINE_RESULT__ = function(_, $, dt, Backbone){
 	    // Attach datatables plugin to jquery
 	    dt.call($);
 	    $.fn.dataTableExt.sErrMode = 'throw';
@@ -59696,6 +59696,7 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
+	    __webpack_require__(/*! jquery */ 220),
 	    __webpack_require__(/*! underscore */ 219),
 	    __webpack_require__(/*! app */ 216),
 	    __webpack_require__(/*! alertify */ 221),
@@ -59707,6 +59708,7 @@ webpackJsonp([1],Array(215).concat([
 	    __webpack_require__(/*! text!../../templates/task.breadcrumbs.html */ 247),
 	    __webpack_require__(/*! text!../../templates/task.detail.html */ 248)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
+	    $,
 	    _,
 	    app,
 	    alertify,
@@ -60589,9 +60591,14 @@ webpackJsonp([1],Array(215).concat([
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
 	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
 	    __webpack_require__(/*! backbone */ 218),
 	    __webpack_require__(/*! d3 */ 250)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
+	    $,
+	    _,
+	    Backbone,
+	    d3
 	){
 	    var TreeForceDirectedGraphView = Backbone.View.extend({
 	        initialize:function(){
@@ -71122,6 +71129,7 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
+	    __webpack_require__(/*! jquery */ 220),
 	    __webpack_require__(/*! underscore */ 219),
 	    __webpack_require__(/*! app */ 216),
 	    __webpack_require__(/*! alertify */ 221),
@@ -71132,6 +71140,7 @@ webpackJsonp([1],Array(215).concat([
 	    __webpack_require__(/*! text!../../templates/alias.detail.html */ 278),
 	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
+	    $,
 	    _,
 	    app,
 	    alertify,
@@ -71394,6 +71403,7 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
+	    __webpack_require__(/*! jquery */ 220),
 	    __webpack_require__(/*! underscore */ 219),
 		__webpack_require__(/*! app */ 216),
 		__webpack_require__(/*! alertify */ 221),
@@ -71404,6 +71414,7 @@ webpackJsonp([1],Array(215).concat([
 	   	__webpack_require__(/*! text!../../templates/alerts.detail.html */ 282),       	
 	   	__webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
+	    $,
 	    _,
 	    app,
 	    alertify,
@@ -71767,6 +71778,7 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
+	    __webpack_require__(/*! jquery */ 220),
 	    __webpack_require__(/*! underscore */ 219),
 	    __webpack_require__(/*! app */ 216),
 	    __webpack_require__(/*! alertify */ 221),
@@ -71777,6 +71789,7 @@ webpackJsonp([1],Array(215).concat([
 	    __webpack_require__(/*! text!../../templates/command.detail.html */ 286),
 	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
+	    $,
 	    _,
 	    app,
 	    alertify,
@@ -72041,6 +72054,7 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
+	    __webpack_require__(/*! jquery */ 220),
 	    __webpack_require__(/*! underscore */ 219),
 	    __webpack_require__(/*! app */ 216),
 	    __webpack_require__(/*! alertify */ 221),
@@ -72052,6 +72066,7 @@ webpackJsonp([1],Array(215).concat([
 	    __webpack_require__(/*! text!../../templates/host.detail.html */ 290),
 	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
+	    $,
 	    _,
 	    app,
 	    alertify,
@@ -72557,8 +72572,11 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
+	    __webpack_require__(/*! underscore */ 219),
 	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
+	    _,
+	    Backbone
 	){
 	    var Model = Backbone.Model.extend({
 	        initialize:function(options){
@@ -72717,13 +72735,16 @@ webpackJsonp([1],Array(215).concat([
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
 	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! jquery */ 220),
 	    __webpack_require__(/*! alertify */ 221),
 	    __webpack_require__(/*! text!../../templates/settings.rebalance.html */ 295),
 	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    _,
+	    $,
 	    alertify,
-	    settingsRebalanceTemplate
+	    settingsRebalanceTemplate,
+	    Backbone
 	){
 	    var RebalanceModel = Backbone.Model.extend({
 	        url:"/system/balance.params.get",

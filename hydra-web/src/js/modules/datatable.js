@@ -15,10 +15,10 @@ define([
     "underscore",
     "jquery",
     "datatables.net",
-    "datatables.net-dt/css/jquery.dataTables.css",
-    "backbone"
+    "backbone",
+    "datatables.net-dt/css/jquery.dataTables.css"
 ],
-function(_, $, dt){
+function(_, $, dt, Backbone){
     // Attach datatables plugin to jquery
     dt.call($);
     $.fn.dataTableExt.sErrMode = 'throw';

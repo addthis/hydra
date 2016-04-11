@@ -12,6 +12,7 @@
  * limitations under the License.
  */
 define([
+    "jquery",
     "underscore",
     "app",
     "alertify",
@@ -24,6 +25,7 @@ define([
     "text!../../templates/task.detail.html"
 ],
 function(
+    $,
     _,
     app,
     alertify,

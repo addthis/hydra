@@ -13,14 +13,17 @@
  */
 define([
     "underscore",
+    "jquery",
     "alertify",
     "text!../../templates/settings.rebalance.html",
     "backbone"
 ],
 function(
     _,
+    $,
     alertify,
-    settingsRebalanceTemplate
+    settingsRebalanceTemplate,
+    Backbone
 ){
     var RebalanceModel = Backbone.Model.extend({
         url:"/system/balance.params.get",

@@ -13,10 +13,15 @@
  */
 define([
     "jquery",
+    "underscore",
     "backbone",
     "d3"
 ],
 function(
+    $,
+    _,
+    Backbone,
+    d3
 ){
     var TreeForceDirectedGraphView = Backbone.View.extend({
         initialize:function(){
