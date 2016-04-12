@@ -18,7 +18,6 @@ import java.util.concurrent.ThreadFactory;
 import com.addthis.basis.jvm.Shutdown;
 
 import com.addthis.codec.config.Configs;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.loadbalance.NextQueryTask;
 import com.addthis.hydra.query.loadbalance.QueryQueue;
@@ -69,7 +68,7 @@ public class QueryServer implements AutoCloseable {
             } catch (Exception e) {
                 throw Throwables.propagate(e);
             }
-        }, CloseTask::new);
+        }, QueryServer::close);
     }
 
     @JsonCreator
@@ -109,11 +108,11 @@ public class QueryServer implements AutoCloseable {
         serverBootstrap.bind().sync();
     }
 
-    @Override public void close() throws InterruptedException {
+    @Override public void close() {
         log.info("shutting down boss group");
-        bossGroup.shutdownGracefully().sync();
+        bossGroup.shutdownGracefully().syncUninterruptibly();
         log.info("shutting down worker group");
-        workerGroup.shutdownGracefully().sync();
+        workerGroup.shutdownGracefully().syncUninterruptibly();
         // no sync because there is apparently no easy way to interrupt the take() calls?
         log.info("shutting down query group");
         executorGroup.shutdownGracefully();
