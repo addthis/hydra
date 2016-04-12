@@ -45,7 +45,7 @@ public class ValueFilterMod extends AbstractValueFilter {
 
     @Override
     public ValueObject filterValue(ValueObject value) {
-        Numeric lv = ValueUtil.asNumber(value);
+        Numeric lv = ValueUtil.asNumberOrParse(value);
         if (lv != null) {
             long v = lv.asLong().getLong();
             if (abs) {
