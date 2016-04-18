@@ -118,6 +118,10 @@
 	
 	var _spawnView2 = _interopRequireDefault(_spawnView);
 	
+	var _comfyTableBackboneView = __webpack_require__(!(function webpackMissingModule() { var e = new Error("Cannot find module \"backbone-views/comfy-table-backbone-view\""); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+	
+	var _comfyTableBackboneView2 = _interopRequireDefault(_comfyTableBackboneView);
+	
 	var _reactDom = __webpack_require__(/*! react-dom */ 161);
 	
 	var _reactDom2 = _interopRequireDefault(_reactDom);
@@ -134,7 +138,7 @@
 	    _react2.default.createElement('div', { id: 'main' })
 	), document.getElementById('render-target'));
 	
-	__webpack_require__.e/* require */(1, function(__webpack_require__) { var __WEBPACK_AMD_REQUIRE_ARRAY__ = [__webpack_require__(/*! oboe */ 215), __webpack_require__(/*! app */ 216), __webpack_require__(/*! alertify */ 221), __webpack_require__(/*! jscookie */ 223), __webpack_require__(/*! router */ 217), __webpack_require__(/*! jobs */ 224), __webpack_require__(/*! macro */ 270), __webpack_require__(/*! alias */ 275), __webpack_require__(/*! alerts */ 279), __webpack_require__(/*! command */ 283), __webpack_require__(/*! host */ 287), __webpack_require__(/*! layout.views */ 251), __webpack_require__(/*! task */ 244), __webpack_require__(/*! task.log */ 291), __webpack_require__(/*! graph */ 249), __webpack_require__(/*! git */ 292), __webpack_require__(/*! alerts */ 279), __webpack_require__(/*! settings */ 294), __webpack_require__(/*! backbone */ 218), __webpack_require__(/*! underscore */ 219), __webpack_require__(/*! jquery */ 220), __webpack_require__(/*! bootstrap */ 296), __webpack_require__(/*! date */ 309)]; (function (oboe, app, alertify, Cookies, Router, Jobs, Macro, Alias, Alert, Command, Host, Layout, Task, TaskLog, Graph, Git, Alerts, Settings, Backbone, _, $) {
+	__webpack_require__.e/* require */(1, function(__webpack_require__) { var __WEBPACK_AMD_REQUIRE_ARRAY__ = [__webpack_require__(/*! oboe */ 754), __webpack_require__(/*! app */ 704), __webpack_require__(/*! alertify */ 701), __webpack_require__(/*! jscookie */ 709), __webpack_require__(/*! router */ 705), __webpack_require__(/*! jobs */ 702), __webpack_require__(/*! macro */ 755), __webpack_require__(/*! alias */ 760), __webpack_require__(/*! alerts */ 764), __webpack_require__(/*! command */ 768), __webpack_require__(/*! host */ 772), __webpack_require__(/*! layout.views */ 735), __webpack_require__(/*! task */ 728), __webpack_require__(/*! task.log */ 776), __webpack_require__(/*! graph */ 733), __webpack_require__(/*! git */ 777), __webpack_require__(/*! alerts */ 764), __webpack_require__(/*! settings */ 779), __webpack_require__(/*! backbone */ 706), __webpack_require__(/*! underscore */ 707), __webpack_require__(/*! jquery */ 529), __webpack_require__(/*! bootstrap */ 781), __webpack_require__(/*! date */ 794)]; (function (oboe, app, alertify, Cookies, Router, Jobs, Macro, Alias, Alert, Command, Host, Layout, Task, TaskLog, Graph, Git, Alerts, Settings, Backbone, _, $) {
 	    alertify.defaults.glossary.title = "";
 	    alertify.defaults.transition = "slide";
 	    alertify.defaults.theme.ok = "btn btn-primary";
@@ -186,6 +190,12 @@
 	
 	        app.initialize();
 	        Backbone.history.start();
+	    }).fail(function (_ref) {
+	        var thrown = _ref.thrown;
+	
+	        if (thrown) {
+	            throw thrown;
+	        }
 	    });
 	
 	    app.router.on('route:showJobConf', function (jobId) {
@@ -719,7 +729,7 @@
 	            var state = Cookies.getJSON("spawn") || {};
 	            state.jobCompact = false;
 	            Cookies.set("spawn", state);
-	            app.jobTable = new Jobs.ComfyTableView({
+	            app.jobTable = new _comfyTableBackboneView2.default({
 	                id: "comfyJobTable",
 	                collection: app.jobCollection
 	            });

@@ -12,6 +12,7 @@
  * limitations under the License.
  */
 define([
+    "$",
     "underscore",
     "app",
     "alertify",
@@ -25,6 +26,7 @@ define([
     "backbone"
 ],
 function(
+    $,
     _,
     app,
     alertify,
