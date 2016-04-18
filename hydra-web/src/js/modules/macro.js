@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 define([
-    "$",
+    "jquery",
     "underscore",
     "app",
     "alertify",
