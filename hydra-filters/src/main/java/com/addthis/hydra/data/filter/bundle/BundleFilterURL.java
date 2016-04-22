@@ -237,7 +237,7 @@ public final class BundleFilterURL implements BundleFilter {
     public boolean filter(Bundle bundle) {
         String pv = ValueUtil.asNativeString(field.getValue(bundle));
         if (!asFile) {
-            if (pv == null || pv.length() < 7) {
+            if (pv == null) {
                 return invalidExit;
             }
             String lpv = pv.trim().toLowerCase();
