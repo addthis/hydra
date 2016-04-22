@@ -17,10 +17,10 @@ define([
 	"app",
 	"alertify",
 	"modules/datatable",
-    "modules/util",		
+    "modules/util",
    	"text!../../templates/alerts.filter.html",
    	"text!../../templates/alerts.selectable.html",
-   	"text!../../templates/alerts.detail.html",       	
+   	"text!../../templates/alerts.detail.html",
    	"backbone"
 ],
 function(
@@ -29,12 +29,26 @@ function(
     app,
     alertify,
     DataTable,
-    util,		 
-    alertFilterTemplate, 
+    util,
+    alertFilterTemplate,
     alertSelectableTemplate,
     alertDetailTemplate,
     Backbone
 ){
+
+
+    function safelyGetJobIDs(jobIDs) {
+        if (typeof jobIDs === 'string') {
+            return jobIDs.split(',');
+        }
+        else if (jobIDs instanceof Array) {
+            return jobIDs;
+        }
+        else {
+            return [];
+        }
+    }
+
 	var Model = Backbone.Model.extend({
 		idAttribute:"alertId",
     	url:function(){return "/alert/get?alertId=" + this.get("alertId");},
@@ -54,7 +68,14 @@ function(
     			delay:this.get("delay"),
     			email:this.get("email"),
     			description:this.get("description"),
-    			jobIds:this.get("jobIds").split(","),
+
+                /**
+                 * JobIDs looks to be an array already, but just in case there is a code path
+                 * where it is still a string, I'm going to do this super nasty defensive check,
+                 * and ensure the result is an array. New spawn code doesn't have this problem.
+                 */
+                jobIds: safelyGetJobIDs(this.get('jobIds')),
+
     			suppressChanges:this.get("suppressChanges"),
     			canaryPath:this.get("canaryPath"),
     			canaryConfigThreshold:this.get("canaryConfigThreshold"),
@@ -137,13 +158,13 @@ function(
         		        return "<a href='#alerts/"+encodeURIComponent(val)+"'>"+val+"</a>";
         		    }
         		}
-    		},        
+    		},
     		{
     			"sTitle":"Job IDs",
         		"mData": "jobIds",
         		"sWidth": "22%",
         		"bVisible":true,
-        		"bSearchable":true,            
+        		"bSearchable":true,
     		},
     		{
     			"sTitle":"Type",
@@ -152,7 +173,7 @@ function(
         		"bVisible":true,
         		"bSearchable":true,
         		"mRender": function(val,type,data) {
-        			return util.alertTypes[val] ? util.alertTypes[val] : "Unknown Alert Type";            			
+        			return util.alertTypes[val] ? util.alertTypes[val] : "Unknown Alert Type";
         		}
     		},
     		{
@@ -181,17 +202,17 @@ function(
         		"mRender": function(val, type, data) {
         			return isNaN(val) || val <= 0 ? "Clear" : "Triggered at " + util.convertToDateTimeText(val);
         		}
-    		},         		
+    		},
 			];
 			DataTable.View.prototype.initialize.apply(this,[{
 				columns:columns,
     			filterTemplate:alertFilterTemplate,
     			selectableTemplate:alertSelectableTemplate,
-    			heightBuffer:80,        	
+    			heightBuffer:80,
     			id:this.id,
     			emptyMessage:" ",
     			idAttribute:"alertId"
-			}]);				
+			}]);
 		},
 		render:function(){
         	DataTable.View.prototype.render.apply(this,[]);
@@ -330,7 +351,7 @@ function(
     		}
     		return true;
     	}
-	});    
+	});
 	return {
 		Model:Model,
 		Collection: Collection,
