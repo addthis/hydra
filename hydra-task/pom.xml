@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.5.40</version>
+    <version>5.5.41-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-task</artifactId>
