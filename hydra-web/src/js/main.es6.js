@@ -121,11 +121,25 @@ function(
         .done((json) => {
             // Have to batch the adding of jobs because this datatable is
             // complete garbage and takes 5 hours to render
+
+            // Status is computed based on other fields, legacy crap
+            json.jobs.forEach(job => {
+                if(job.disabled){
+                    job.status = 'disabled';
+                }
+                else if(job.stopped){
+                    job.status = 'stopped';
+                }
+                else {
+                    job.status = 'enabled';
+                }
+            });
+
             app.jobCollection.reset(json.jobs);
 
             new Jobs.InfoMetricView({
-                el:"div#infoMetricBox",
-                model:app.jobInfoMetricModel
+                el: 'div#infoMetricBox',
+                model: app.jobInfoMetricModel
             }).render();
 
             app.initialize();
