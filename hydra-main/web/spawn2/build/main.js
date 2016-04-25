@@ -190,6 +190,7 @@
 	        });
 	
 	        app.jobCollection.reset(json.jobs);
+	        app.hostCollection.reset(json.hosts);
 	
 	        new Jobs.InfoMetricView({
 	            el: 'div#infoMetricBox',

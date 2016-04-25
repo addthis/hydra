@@ -20789,6 +20789,7 @@ webpackJsonp([1],Array(215).concat([
 	            this.listenTo(app.jobCollection,"change:done",this.handleDoneChange);
 	            this.listenTo(app.jobCollection,"remove",this.handleJobRemove);
 	            this.listenTo(app.hostCollection,"reset",this.handleHostReset);
+	            this.listenTo(app.hostCollection,"add",this.handleHostAdd);
 	            this.handleJobReset();
 	            this.handleHostReset();
 	        },
@@ -20816,7 +20817,7 @@ webpackJsonp([1],Array(215).concat([
 	                }
 	            });
 	            if(diskMax>0){
-	                var disk = Math.floor((diskUsed/diskMax)*100)/100;
+	                var disk = (diskUsed / diskMax).toFixed(2);
 	                this.set("disk",disk);
 	            }
 	            this.set("diskUsed",diskUsed);
@@ -20824,10 +20825,27 @@ webpackJsonp([1],Array(215).concat([
 	            this.set("availTaskSlots",avail);
 	            this.set("hostCount",app.hostCollection.length);
 	        },
+	        handleHostAdd: function(newHost) {
+	            var used = newHost.get('used');
+	            var max = newHost.get('max');
+	            var diskUsed = Number(this.get('diskUsed')) + Number(used.disk);
+	            var diskMax = Number(this.get('diskMax')) + Number(max.disk);
+	            var avail = Number(this.get('availTaskSlots')) + Number(newHost.get('availableTaskSlots'));
+	
+	            if (diskMax > 0){
+	                var disk = (diskUsed / diskMax).toFixed(2);
+	                this.set('disk', disk);
+	            }
+	
+	            this.set('diskUsed', diskUsed);
+	            this.set('diskMax', diskMax);
+	            this.set('availTaskSlots', avail);
+	            this.set('hostCount', app.hostCollection.length);
+	        },
 	        handleDiskChange:function(){
 	            if(this.get("diskMax")>0){
 	                var diskUsed=this.get("diskUsed"), diskMax=this.get("diskMax");
-	                var disk = Math.floor((diskUsed*100)/diskMax)/100.0;
+	                var disk = (diskUsed / diskMax).toFixed(2);
 	                this.get("disk",disk);
 	            }
 	        },
