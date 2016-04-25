@@ -70,7 +70,7 @@ function(
 			this.views.editor.getSession().setMode("ace/mode/javascript");
 			this.views.editor.setTheme("ace/theme/monokai");
 			this.views.editor.getSession().on("change",this.handleEditorChange);
-			this.views.editor.session.setValue(this.model.get(this.keyName));
+			this.views.editor.session.setValue(this.model.get(this.keyName) || '');
 			this.hasRendered=true;
             this.views.editor.resize();
 			this.views.editor.scrollToLine(this.scrollTo.line, true, false);

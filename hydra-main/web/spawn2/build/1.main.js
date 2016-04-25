@@ -22435,6 +22435,7 @@ webpackJsonp([1],Array(215).concat([
 	                detail.append(this.views.table.$el);
 	                this.views.table.render();
 	            }
+	
 	            this.$el.find("ul.nav.nav-tabs li#historyTab").addClass("active");
 	            return this;
 	        },
@@ -22478,6 +22479,9 @@ webpackJsonp([1],Array(215).concat([
 	            var detail = this.$el.find("div#detailContainer");
 	            detail.append(this.views.layout.$el);
 	            this.views.editor.$el.height("100%");
+	
+	            // sad hack to ensure the table's columns expand properly after rendering
+	            $(window).trigger('resize');
 	            return this;
 	        }
 	    });
@@ -35784,7 +35788,7 @@ webpackJsonp([1],Array(215).concat([
 				this.views.editor.getSession().setMode("ace/mode/javascript");
 				this.views.editor.setTheme("ace/theme/monokai");
 				this.views.editor.getSession().on("change",this.handleEditorChange);
-				this.views.editor.session.setValue(this.model.get(this.keyName));
+				this.views.editor.session.setValue(this.model.get(this.keyName) || '');
 				this.hasRendered=true;
 	            this.views.editor.resize();
 				this.views.editor.scrollToLine(this.scrollTo.line, true, false);

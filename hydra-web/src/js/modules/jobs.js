@@ -2404,6 +2404,7 @@ function(
                 detail.append(this.views.table.$el);
                 this.views.table.render();
             }
+
             this.$el.find("ul.nav.nav-tabs li#historyTab").addClass("active");
             return this;
         },
@@ -2447,6 +2448,9 @@ function(
             var detail = this.$el.find("div#detailContainer");
             detail.append(this.views.layout.$el);
             this.views.editor.$el.height("100%");
+
+            // sad hack to ensure the table's columns expand properly after rendering
+            $(window).trigger('resize');
             return this;
         }
     });
