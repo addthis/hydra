@@ -277,7 +277,7 @@
 	    var totalFiles = _ref.totalFiles;
 	    var matchTotalsStyle = _ref.matchTotalsStyle;
 	    var totalMatches = _ref.totalMatches;
-	    var filesWithMatches = _ref.filesWithMatches;
+	    var jobsWithMatches = _ref.jobsWithMatches;
 	    var done = _ref.done;
 	
 	    return _react2.default.createElement(
@@ -298,7 +298,7 @@
 	            'found ',
 	            totalMatches,
 	            ' occurences in ',
-	            filesWithMatches,
+	            jobsWithMatches,
 	            ' jobs',
 	            done ? '' : ' so far...'
 	        ) : null
@@ -312,9 +312,75 @@
 	    searchString: _react2.default.PropTypes.string.isRequired,
 	    totalFiles: _react2.default.PropTypes.number.isRequired,
 	    totalMatches: _react2.default.PropTypes.number.isRequired,
-	    filesWithMatches: _react2.default.PropTypes.number.isRequired,
+	    jobsWithMatches: _react2.default.PropTypes.number.isRequired,
 	    done: _react2.default.PropTypes.bool.isRequired
 	};
+	
+	function wrapSearchResult(type, searchResult) {
+	    var jobMatches = 0;
+	
+	    var searchResultStyle = {
+	        paddingBottom: '1.5em'
+	    };
+	
+	    var jobStyle = {
+	        color: _colorPalette2.default.detail1
+	    };
+	
+	    var metadataStyle = {
+	        color: _colorPalette2.default.text2
+	    };
+	
+	    var id = searchResult.id;
+	    var results = searchResult.results;
+	    var description = searchResult.description;
+	
+	
+	    var blobResults = results.map(function (result) {
+	        var matches = result.matches;
+	        var contextLines = result.contextLines;
+	        var startLine = result.startLine;
+	
+	
+	        jobMatches += matches.length;
+	
+	        return _react2.default.createElement(
+	            'div',
+	            { key: startLine, style: searchResultStyle },
+	            _react2.default.createElement(_searchResult2.default, {
+	                palette: _colorPalette2.default,
+	                key: id,
+	                type: type,
+	                id: id,
+	                description: description,
+	                matches: matches,
+	                contextLines: contextLines,
+	                startLine: startLine
+	            })
+	        );
+	    });
+	
+	    return _react2.default.createElement(
+	        'div',
+	        { key: id },
+	        _react2.default.createElement(
+	            'span',
+	            { style: jobStyle },
+	            _react2.default.createElement(
+	                'div',
+	                null,
+	                description
+	            ),
+	            type.slice(0, 1).toUpperCase() + type.slice(1).toLowerCase() + ' ' + id
+	        ),
+	        _react2.default.createElement(
+	            'span',
+	            { style: metadataStyle },
+	            ' (' + jobMatches + ' matches)'
+	        ),
+	        blobResults
+	    );
+	}
 	
 	var SearchResults = (_temp2 = _class = function (_React$Component) {
 	    _inherits(SearchResults, _React$Component);
@@ -333,7 +399,7 @@
 	        return _ret = (_temp = (_this = _possibleConstructorReturn(this, (_Object$getPrototypeO = Object.getPrototypeOf(SearchResults)).call.apply(_Object$getPrototypeO, [this].concat(args))), _this), _this.state = {
 	            totalFiles: 0,
 	            totalMatches: 0,
-	            filesWithMatches: 0,
+	            jobsWithMatches: 0,
 	            results: [],
 	            done: false
 	        }, _temp), _possibleConstructorReturn(_this, _ret);
@@ -375,14 +441,15 @@
 	            this.setState({
 	                totalFiles: 0,
 	                totalMatches: 0,
-	                filesWithMatches: 0,
-	                results: [],
+	                jobsWithMatches: 0,
+	                jobs: [],
+	                macros: [],
 	                done: false
 	            });
 	
 	            this.pendingSearch = (0, _oboe2.default)({ url: '/search/all?q=' + q }).node('!.totalFiles', function (totalFiles) {
 	                _this2.setState({ totalFiles: totalFiles });
-	            }).node('!.jobs[*].groups', function (result) {
+	            }).node('!.jobs[*].results', function (result) {
 	                var matches = result.map(function (groupMatch) {
 	                    return groupMatch.matches.length;
 	                }).reduce(function (a, b) {
@@ -390,12 +457,13 @@
 	                }, 0);
 	
 	                _this2.setState({
-	                    filesWithMatches: _this2.state.filesWithMatches + 1,
+	                    jobsWithMatches: _this2.state.jobsWithMatches + 1,
 	                    totalMatches: _this2.state.totalMatches + matches
 	                });
 	            }).done(function (result) {
 	                _this2.setState({
-	                    results: result.jobs,
+	                    jobs: result.jobs,
+	                    macros: result.macros,
 	                    done: true
 	                });
 	            });
@@ -414,75 +482,18 @@
 	            var _state = this.state;
 	            var totalMatches = _state.totalMatches;
 	            var done = _state.done;
-	            var filesWithMatches = _state.filesWithMatches;
+	            var jobsWithMatches = _state.jobsWithMatches;
 	            var totalFiles = _state.totalFiles;
-	            var results = _state.results;
+	            var jobs = _state.jobs;
+	            var macros = _state.macros;
 	            var searchString = this.props.searchString;
 	
 	
-	            var searchResultStyle = {
-	                paddingBottom: '1.5em'
-	            };
-	
-	            var searchResults = results.map(function (result) {
-	                var jobMatches = 0;
-	
-	                var jobStyle = {
-	                    color: _colorPalette2.default.detail1
-	                };
-	
-	                var metadataStyle = {
-	                    color: _colorPalette2.default.text2
-	                };
-	
-	                var id = result.id;
-	                var groups = result.groups;
-	                var description = result.description;
-	
-	
-	                var blobResults = groups.map(function (group) {
-	                    var matches = group.matches;
-	                    var contextLines = group.contextLines;
-	                    var startLine = group.startLine;
-	
-	
-	                    jobMatches += matches.length;
-	
-	                    return _react2.default.createElement(
-	                        'div',
-	                        { key: startLine, style: searchResultStyle },
-	                        _react2.default.createElement(_searchResult2.default, {
-	                            palette: _colorPalette2.default,
-	                            key: id,
-	                            job: id,
-	                            description: description,
-	                            matches: matches,
-	                            contextLines: contextLines,
-	                            startLine: startLine
-	                        })
-	                    );
-	                });
-	
-	                return _react2.default.createElement(
-	                    'div',
-	                    { key: id },
-	                    _react2.default.createElement(
-	                        'span',
-	                        { style: jobStyle },
-	                        _react2.default.createElement(
-	                            'div',
-	                            null,
-	                            description
-	                        ),
-	                        'Job ' + id
-	                    ),
-	                    _react2.default.createElement(
-	                        'span',
-	                        { style: metadataStyle },
-	                        ' (' + jobMatches + ' matches)'
-	                    ),
-	                    blobResults
-	                );
+	            var jobSearchResults = jobs.map(function (job) {
+	                return wrapSearchResult('job', job);
+	            });
+	            var macroSearchResults = macros.map(function (macro) {
+	                return wrapSearchResult('macro', macro);
 	            });
 	
 	            var headerStyle = {
@@ -513,6 +524,10 @@
 	                fontStyle: 'italic'
 	            };
 	
+	            var dividerStyle = {
+	                color: _colorPalette2.default.detail3
+	            };
+	
 	            return _react2.default.createElement(
 	                'div',
 	                { style: { backgroundColor: _colorPalette2.default.background0 } },
@@ -523,13 +538,24 @@
 	                    searchStringStyle: searchStringStyle,
 	                    searchString: searchString,
 	                    matchTotalsStyle: matchTotalsStyle,
-	                    filesWithMatches: filesWithMatches,
+	                    jobsWithMatches: jobsWithMatches,
 	                    done: done
 	                }),
 	                _react2.default.createElement(
 	                    'div',
 	                    { style: resultsContainerStyle },
-	                    searchResults
+	                    macroSearchResults.length ? _react2.default.createElement(
+	                        'div',
+	                        { style: dividerStyle },
+	                        'Matches found in macros:'
+	                    ) : null,
+	                    macroSearchResults,
+	                    jobSearchResults.length ? _react2.default.createElement(
+	                        'div',
+	                        { style: dividerStyle },
+	                        'Matches found in jobs:'
+	                    ) : null,
+	                    jobSearchResults
 	                )
 	            );
 	        }
@@ -23370,7 +23396,8 @@
 	        value: function render() {
 	            var _props = this.props;
 	            var matches = _props.matches;
-	            var job = _props.job;
+	            var id = _props.id;
+	            var type = _props.type;
 	            var contextLines = _props.contextLines;
 	            var startLine = _props.startLine;
 	            var palette = _props.palette;
@@ -23395,7 +23422,8 @@
 	                return _react2.default.createElement(_searchContextLine2.default, {
 	                    key: startLine + i + 1,
 	                    palette: palette,
-	                    job: job,
+	                    type: type,
+	                    id: id,
 	                    lineNum: startLine + i + 1,
 	                    lineNumPadding: digits,
 	                    text: line,
@@ -23418,7 +23446,8 @@
 	
 	    return SearchResult;
 	}(_react2.default.Component), _class.propTypes = {
-	    job: _react2.default.PropTypes.string.isRequired,
+	    id: _react2.default.PropTypes.string.isRequired,
+	    type: _react2.default.PropTypes.oneOf(['job', 'macro']),
 	    description: _react2.default.PropTypes.node,
 	    contextLines: _react2.default.PropTypes.arrayOf(_react2.default.PropTypes.string).isRequired,
 	    startLine: _react2.default.PropTypes.number.isRequired,
@@ -23432,7 +23461,7 @@
 	    description: _react2.default.createElement(
 	        'i',
 	        null,
-	        'No job description'
+	        'no description'
 	    )
 	}, _temp);
 	exports.default = SearchResult;
@@ -23456,6 +23485,10 @@
 	var _react2 = _interopRequireDefault(_react);
 	
 	var _colorPalette = __webpack_require__(/*! style/color-palette */ 163);
+	
+	var _invariant = __webpack_require__(/*! invariant */ 221);
+	
+	var _invariant2 = _interopRequireDefault(_invariant);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -23483,8 +23516,25 @@
 	    lineNum: _react2.default.PropTypes.number.isRequired
 	};
 	
+	function buildHref(_ref2) {
+	    var type = _ref2.type;
+	    var id = _ref2.id;
+	    var lineNum = _ref2.lineNum;
+	    var match = _ref2.match;
+	
+	    switch (type) {
+	        case 'job':
+	            return '/spawn2/#jobs/' + id + '/line/' + lineNum + '/col/' + match.startChar + '/conf';
+	        case 'macro':
+	            return '/spawn2/#macros/' + id + '/line/' + lineNum + '/col/' + match.startChar + '/conf';
+	        default:
+	            return (0, _invariant2.default)(false, 'unrecognized link type: %s', type);
+	    }
+	}
+	
 	function SearchContextLine(props) {
-	    var job = props.job;
+	    var id = props.id;
+	    var type = props.type;
 	    var text = props.text;
 	    var lineNum = props.lineNum;
 	    var lineNumPadding = props.lineNumPadding;
@@ -23509,7 +23559,7 @@
 	        var match = matches.shift();
 	        var first = text.slice(lastIndex, match.startChar);
 	        var middle = text.slice(match.startChar, match.endChar);
-	        var href = '/spawn2/#jobs/' + job + '/line/' + lineNum + '/col/' + match.startChar + '/conf';
+	        var href = buildHref({ type: type, id: id, lineNum: lineNum, match: match });
 	        lastIndex = match.endChar;
 	        content.push(first, _react2.default.createElement(
 	            'a',
@@ -23541,7 +23591,8 @@
 	}
 	
 	SearchContextLine.propTypes = {
-	    job: _react2.default.PropTypes.string.isRequired,
+	    id: _react2.default.PropTypes.string.isRequired,
+	    type: _react2.default.PropTypes.oneOf(['macro', 'job']),
 	    text: _react2.default.PropTypes.string.isRequired,
 	    lineNum: _react2.default.PropTypes.number.isRequired,
 	    lineNumPadding: _react2.default.PropTypes.number.isRequired,
@@ -27277,6 +27328,67 @@
 	var _reactDom2 = _interopRequireDefault(_reactDom);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/***/ },
+/* 221 */
+/*!********************************!*\
+  !*** ./~/invariant/browser.js ***!
+  \********************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(process) {/**
+	 * Copyright 2013-2015, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 */
+	
+	'use strict';
+	
+	/**
+	 * Use invariant() to assert state which your program assumes to be true.
+	 *
+	 * Provide sprintf-style format (only %s is supported) and arguments
+	 * to provide information about what broke and what you were
+	 * expecting.
+	 *
+	 * The invariant message will be stripped in production, but the invariant
+	 * will remain to ensure logic does not differ in production.
+	 */
+	
+	var invariant = function(condition, format, a, b, c, d, e, f) {
+	  if (process.env.NODE_ENV !== 'production') {
+	    if (format === undefined) {
+	      throw new Error('invariant requires an error message argument');
+	    }
+	  }
+	
+	  if (!condition) {
+	    var error;
+	    if (format === undefined) {
+	      error = new Error(
+	        'Minified exception occurred; use the non-minified dev environment ' +
+	        'for the full error message and additional helpful warnings.'
+	      );
+	    } else {
+	      var args = [a, b, c, d, e, f];
+	      var argIndex = 0;
+	      error = new Error(
+	        format.replace(/%s/g, function() { return args[argIndex++]; })
+	      );
+	      error.name = 'Invariant Violation';
+	    }
+	
+	    error.framesToPop = 1; // we don't care about invariant's own frame
+	    throw error;
+	  }
+	};
+	
+	module.exports = invariant;
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(/*! (webpack)/~/node-libs-browser/~/process/browser.js */ 7)))
 
 /***/ }
 /******/ ]);

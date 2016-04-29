@@ -35,7 +35,6 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 import com.addthis.codec.Codec;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.spawn.search.ExpandedConfigCacheSettings;
 import com.addthis.hydra.job.store.SpawnDataStore;
 
 import com.google.common.cache.CacheBuilder;
@@ -89,94 +88,28 @@ public class JobConfigManager {
     @Nonnull
     private final SpawnDataStore spawnDataStore;
     @Nullable
-    private final LoadingCache<String, String> expandedConfigCache;
-    @Nullable
     private final JobExpander jobExpander;
 
     @Deprecated
     public JobConfigManager(SpawnDataStore spawnDataStore) {
         this.jobExpander = null;
-        this.expandedConfigCache = null;
         this.spawnDataStore = spawnDataStore;
     }
 
-    public JobConfigManager(SpawnDataStore spawnDataStore, JobExpander jobExpander, ExpandedConfigCacheSettings cacheSettings) {
+    public JobConfigManager(SpawnDataStore spawnDataStore, JobExpander jobExpander) {
         this.spawnDataStore = spawnDataStore;
         this.jobExpander = jobExpander;
-        this.expandedConfigCache = CacheBuilder.newBuilder()
-                .maximumWeight(cacheSettings.maxSizeBytes)
-                .weigher((String key, String value) -> {
-                    return key.length() + value.length();
-                })
-                .expireAfterWrite(cacheSettings.maxAgeSeconds, TimeUnit.SECONDS)
-                .build(new CacheLoader<String, String>() {
-
-                    @Override
-                    public String load(String jobId) throws Exception {
-                        IJob job = getJob(jobId);
-                        checkArgument(job != null, "no job exists with id " + jobId);
-                        String config = getConfig(jobId);
-                        if (config == null) {
-                            return "";
-                        }
-
-                        return jobExpander.expandJob(config, job.getParameters());
-                    }
-                });
     }
 
-
-    /**
-     * Returns the cached config associated with jobUUID, if there is one, or null otherwise
-     *
-     * @param jobUUID
-     * @return expanded job configuration
-     */
-    @Nullable
-    public String getCachedExpandedJob(String jobUUID) {
-        return expandedConfigCache.getIfPresent(jobUUID);
-    }
-
-    /**
-     * Generate or read an expanded config, keyed on job UID, in the cache.
-     *
-     * @param jobUUID
-     * @return expanded job configuration
-     * @throws ExecutionException
-     */
-    public String getExpandedConfig(String jobUUID) throws ExecutionException {
+    public String getExpandedConfig(String jobUUID) throws FailedJobExpansionException {
         IJob job = getJob(jobUUID);
         checkArgument(job != null, "job with uid " + jobUUID + " does not exist");
-        return this.expandedConfigCache.get(jobUUID);
+        String config = getConfig(jobUUID);
+        return getExpandedConfig(config, job.getParameters());
     }
 
-    /**
-     * Generate or read an expanded config, keyed on job UID, in the cache. Bypasses the cache if either:
-     * 1) the job has been modified since the request was made (using lastModifiedAt)
-     * 2) a null jobUUID is provided
-     * 3) a jobUUID which doesn't belong to a job is provided
-     *
-     * @param jobUUID
-     * @param rawConfig the config to expand. Possibly different from the one owned by Job #jobUUID
-     * @param parameters the params to expand the config with. Possibly different from the ones owned by Job #jobUUID
-     * @return the expanded job config
-     * @throws ExecutionException
-     * @throws TokenReplacerOverflowException
-     */
-    @Nullable
-    public String getExpandedConfig(@Nullable String jobUUID, String rawConfig, Collection<JobParameter> parameters) throws ExecutionException, FailedJobExpansionException {
-        IJob job = getJob(jobUUID);
-
-        boolean jobIsIdentical = job != null &&
-                rawConfig != job.getConfig() &&
-                parameters.containsAll(job.getParameters()) &&
-                parameters.size() == job.getParameters().size();
-
-        if (jobIsIdentical) {
-            return expandedConfigCache.get(jobUUID);
-        } else {
-            return jobExpander.expandJob(rawConfig, parameters);
-        }
+    public String getExpandedConfig(String rawConfig, Collection<JobParameter> parameters) throws FailedJobExpansionException {
+        return jobExpander.expandJob(rawConfig, parameters);
     }
 
     public void writeUpdateIfDataNotNull(String path, String data) throws Exception {
@@ -225,7 +158,6 @@ public class JobConfigManager {
             final String jobCodec = new String(codec.encode(job.getRootData()));
             jobSizePersistHisto.update(jobCodec.length());
             spawnDataStore.putAsChild(SPAWN_JOB_CONFIG_PATH, job.getId(), jobCodec);
-            expandedConfigCache.invalidate(job.getId());
             writeUpdateIfDataNotNull(jobPath + queryConfigChildName, new String(codec.encode(job.getQueryConfig())));
             // this is just a marker so that we know to use the 'new' configuration
             spawnDataStore.put(jobPath + tasksChildName, "");
@@ -322,7 +254,6 @@ public class JobConfigManager {
     public void setConfig(String jobId, String config) throws Exception {
         if (jobId != null && config != null) {
             spawnDataStore.put(getJobPath(jobId) + configChildName, config);
-            expandedConfigCache.invalidate(jobId);
         }
     }
 
@@ -401,7 +332,6 @@ public class JobConfigManager {
             }
             spawnDataStore.delete(jobPath);
             spawnDataStore.deleteChild(SPAWN_JOB_CONFIG_PATH, jobUUID);
-            expandedConfigCache.invalidate(jobUUID);
         } catch (Exception e) {
             logger.warn("Failing to delete job, bailing", e);
             throw new RuntimeException(e);

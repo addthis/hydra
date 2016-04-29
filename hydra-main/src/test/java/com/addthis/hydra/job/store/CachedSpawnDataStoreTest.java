@@ -108,7 +108,7 @@ public class CachedSpawnDataStoreTest {
 
         //create our class under test
         final Properties properties = new Properties();
-        cachedDataStore = new CachedSpawnDataStore(new MysqlDataStore(DB_URL, "dbName", "tableName", properties));
+        cachedDataStore = new CachedSpawnDataStore(new MysqlDataStore(DB_URL, "dbName", "tableName", properties), 10000000L);
 
         //verify construction
         Mockito.verify(driver, Mockito.atLeastOnce()).connect(Mockito.startsWith(DB_URL), Mockito.any(Properties.class));

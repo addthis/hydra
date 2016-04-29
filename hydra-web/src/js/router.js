@@ -48,7 +48,13 @@ define([
                 'hosts/:uuid': 'showHostTaskDetail',
                 'hosts/:uuid/tasks': 'showHostTaskDetail',
                 'macros': 'showMacroTable',
+
                 'macros/:name': 'showMacroDetail',
+                'macros/:name/conf': 'showMacroDetail',
+                'macros/:name/line/:line/conf': 'showMacroDetail',
+                'macros/:name/line/:line/col/:col/conf': 'showMacroDetail',
+
+
                 'alias': 'showAliasTable',
                 'alias/:name': 'showAliasDetail',
                 'commands': 'showCommandTable',

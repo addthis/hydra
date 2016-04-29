@@ -2,6 +2,7 @@
 
 import React from 'react';
 import {requiredPaletteProp} from 'style/color-palette';
+import invariant from 'invariant';
 
 function FormattedLineNum({lineNumPadding, style, lineNum}) {
     let strLineNum = String(lineNum);
@@ -23,9 +24,21 @@ FormattedLineNum.propTypes = {
     lineNum: React.PropTypes.number.isRequired
 };
 
+function buildHref({type, id, lineNum, match}) {
+    switch (type) {
+        case 'job':
+            return `/spawn2/#jobs/${id}/line/${lineNum}/col/${match.startChar}/conf`;
+        case 'macro':
+            return `/spawn2/#macros/${id}/line/${lineNum}/col/${match.startChar}/conf`;
+        default:
+            return invariant(false, 'unrecognized link type: %s', type);
+    }
+}
+
 export default function SearchContextLine(props) {
     const {
-        job,
+        id,
+        type,
         text,
         lineNum,
         lineNumPadding,
@@ -50,7 +63,7 @@ export default function SearchContextLine(props) {
         const match = matches.shift();
         const first = text.slice(lastIndex, match.startChar);
         const middle = text.slice(match.startChar, match.endChar);
-        const href = `/spawn2/#jobs/${job}/line/${lineNum}/col/${match.startChar}/conf`;
+        const href = buildHref({type, id, lineNum, match});
         lastIndex = match.endChar;
         content.push(
             first,
@@ -83,7 +96,8 @@ export default function SearchContextLine(props) {
 }
 
 SearchContextLine.propTypes = {
-    job: React.PropTypes.string.isRequired,
+    id: React.PropTypes.string.isRequired,
+    type: React.PropTypes.oneOf(['macro', 'job']),
     text: React.PropTypes.string.isRequired,
     lineNum: React.PropTypes.number.isRequired,
     lineNumPadding: React.PropTypes.number.isRequired,

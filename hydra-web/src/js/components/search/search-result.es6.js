@@ -6,7 +6,8 @@ import {requiredPaletteProp} from 'style/color-palette';
 
 export default class SearchResult extends React.Component {
     static propTypes = {
-        job: React.PropTypes.string.isRequired,
+        id: React.PropTypes.string.isRequired,
+        type: React.PropTypes.oneOf(['job', 'macro']),
         description: React.PropTypes.node,
         contextLines: React.PropTypes.arrayOf(React.PropTypes.string).isRequired,
         startLine: React.PropTypes.number.isRequired,
@@ -21,13 +22,14 @@ export default class SearchResult extends React.Component {
     }
 
     static defaultProps = {
-        description: <i>No job description</i>
+        description: <i>no description</i>
     }
 
     render() {
         const {
             matches,
-            job,
+            id,
+            type,
             contextLines,
             startLine,
             palette
@@ -52,7 +54,8 @@ export default class SearchResult extends React.Component {
                 <SearchContextLine
                     key={startLine + i + 1}
                     palette={palette}
-                    job={job}
+                    type={type}
+                    id={id}
                     lineNum={startLine + i + 1}
                     lineNumPadding={digits}
                     text={line}

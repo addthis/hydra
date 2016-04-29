@@ -1,5 +1,3 @@
-'use strict';
-
 import oboe from 'oboe';
 import React from 'react';
 import SearchResult from './search-result';
@@ -13,7 +11,7 @@ function SearchHeader({
     totalFiles,
     matchTotalsStyle,
     totalMatches,
-    filesWithMatches,
+    jobsWithMatches,
     done
 }) {
     return (
@@ -22,7 +20,7 @@ function SearchHeader({
             {totalFiles === 0 ? '... ' : `in ${totalFiles} jobs... `}
             {totalMatches > 0 || done ?
                 <span style={matchTotalsStyle}>
-                    found {totalMatches} occurences in {filesWithMatches} jobs
+                    found {totalMatches} occurences in {jobsWithMatches} jobs
                     {done ? '' : ' so far...'}
                 </span> :
                 null}
@@ -37,9 +35,61 @@ SearchHeader.propTypes = {
     searchString: React.PropTypes.string.isRequired,
     totalFiles: React.PropTypes.number.isRequired,
     totalMatches: React.PropTypes.number.isRequired,
-    filesWithMatches: React.PropTypes.number.isRequired,
+    jobsWithMatches: React.PropTypes.number.isRequired,
     done: React.PropTypes.bool.isRequired
 };
+
+function wrapSearchResult(type, searchResult) {
+    let jobMatches = 0;
+
+    const searchResultStyle = {
+        paddingBottom: '1.5em'
+    };
+
+    const jobStyle = {
+        color: palette.detail1
+    };
+
+    const metadataStyle = {
+        color: palette.text2
+    };
+
+    const {id, results, description} = searchResult;
+
+    const blobResults = results.map(result => {
+        const {matches, contextLines, startLine} = result;
+
+        jobMatches += matches.length;
+
+        return (
+            <div key={startLine} style={searchResultStyle}>
+                <SearchResult
+                    palette={palette}
+                    key={id}
+                    type={type}
+                    id={id}
+                    description={description}
+                    matches={matches}
+                    contextLines={contextLines}
+                    startLine={startLine}
+                />
+            </div>
+        );
+    });
+
+    return (
+        <div key={id}>
+            <span style={jobStyle}>
+                <div>{description}</div>
+                {`${type.slice(0, 1).toUpperCase() + type.slice(1).toLowerCase()} ${id}`}
+            </span>
+            <span style={metadataStyle}>
+                {` (${jobMatches} matches)`}
+            </span>
+            {blobResults}
+        </div>
+    );
+}
 
 export default class SearchResults extends React.Component {
     static propTypes = {
@@ -49,7 +99,7 @@ export default class SearchResults extends React.Component {
     state = {
         totalFiles: 0,
         totalMatches: 0,
-        filesWithMatches: 0,
+        jobsWithMatches: 0,
         results: [],
         done: false
     }
@@ -83,8 +133,9 @@ export default class SearchResults extends React.Component {
         this.setState({
             totalFiles: 0,
             totalMatches: 0,
-            filesWithMatches: 0,
-            results: [],
+            jobsWithMatches: 0,
+            jobs: [],
+            macros: [],
             done: false
         });
 
@@ -92,18 +143,19 @@ export default class SearchResults extends React.Component {
             .node('!.totalFiles', (totalFiles) => {
                 this.setState({totalFiles});
             })
-            .node('!.jobs[*].groups', (result) => {
+            .node('!.jobs[*].results', (result) => {
                 const matches = result.map(groupMatch => groupMatch.matches.length)
                     .reduce((a, b) => a + b, 0);
 
                 this.setState({
-                    filesWithMatches: this.state.filesWithMatches + 1,
+                    jobsWithMatches: this.state.jobsWithMatches + 1,
                     totalMatches: this.state.totalMatches + matches
                 });
             })
             .done((result) => {
                 this.setState({
-                    results: result.jobs,
+                    jobs: result.jobs,
+                    macros: result.macros,
                     done: true
                 });
             });
@@ -117,58 +169,14 @@ export default class SearchResults extends React.Component {
     }
 
     render() {
-        const {totalMatches, done, filesWithMatches, totalFiles, results} = this.state;
+        const {totalMatches, done, jobsWithMatches, totalFiles, jobs, macros} = this.state;
         const {searchString} = this.props;
 
-        const searchResultStyle = {
-            paddingBottom: '1.5em'
-        };
-
-        const searchResults = results.map(result => {
-            let jobMatches = 0;
-
-            const jobStyle = {
-                color: palette.detail1
-            };
-
-            const metadataStyle = {
-                color: palette.text2
-            };
-
-            const {id, groups, description} = result;
-
-            const blobResults = groups.map(group => {
-                const {matches, contextLines, startLine} = group;
-
-                jobMatches += matches.length;
-
-                return (
-                    <div key={startLine} style={searchResultStyle}>
-                        <SearchResult
-                            palette={palette}
-                            key={id}
-                            job={id}
-                            description={description}
-                            matches={matches}
-                            contextLines={contextLines}
-                            startLine={startLine}
-                        />
-                    </div>
-                );
-            });
-
-            return (
-                <div key={id}>
-                    <span style={jobStyle}>
-                        <div>{description}</div>
-                        {`Job ${id}`}
-                    </span>
-                    <span style={metadataStyle}>
-                        {` (${jobMatches} matches)`}
-                    </span>
-                    {blobResults}
-                </div>
-            );
+        const jobSearchResults = jobs.map(job => {
+            return wrapSearchResult('job', job);
+        });
+        const macroSearchResults = macros.map(macro => {
+            return wrapSearchResult('macro', macro);
         });
 
         const headerStyle = {
@@ -199,6 +207,10 @@ export default class SearchResults extends React.Component {
             fontStyle: 'italic'
         };
 
+        const dividerStyle = {
+            color: palette.detail3
+        };
+
         return (
             <div style={{backgroundColor: palette.background0}}>
                 <SearchHeader
@@ -208,11 +220,18 @@ export default class SearchResults extends React.Component {
                     searchStringStyle={searchStringStyle}
                     searchString={searchString}
                     matchTotalsStyle={matchTotalsStyle}
-                    filesWithMatches={filesWithMatches}
+                    jobsWithMatches={jobsWithMatches}
                     done={done}
                 />
                 <div style={resultsContainerStyle}>
-                    {searchResults}
+                    {macroSearchResults.length ?
+                        <div style={dividerStyle}>Matches found in macros:</div> :
+                        null}
+                    {macroSearchResults}
+                    {jobSearchResults.length ?
+                        <div style={dividerStyle}>Matches found in jobs:</div> :
+                        null}
+                    {jobSearchResults}
                 </div>
             </div>
         );

@@ -29,7 +29,6 @@ import com.addthis.hydra.job.alert.SuppressChanges;
 import com.addthis.hydra.job.alert.types.OnErrorJobAlert;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.job.spawn.search.ExpandedConfigCacheSettings;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.ZkCodecStartUtil;
@@ -41,7 +40,6 @@ import org.junit.Test;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -72,8 +70,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
     public void testJobConfigs() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             JobExpander jobExpander = new JobExpanderImpl(spawn, spawn.getJobMacroManager(), spawn.getAliasManager());
-            ExpandedConfigCacheSettings cacheSettings = new ExpandedConfigCacheSettings(1000, 1000);
-            JobConfigManager jobConfigManager = new JobConfigManager(spawn.getSpawnDataStore(), jobExpander, cacheSettings);
+            JobConfigManager jobConfigManager = new JobConfigManager(spawn.getSpawnDataStore(), jobExpander);
             String conf1 = "{myjob:[1,2,3]}";
             jobConfigManager.setConfig("id", conf1);
             assertEquals("JobConfigManager should correctly put/fetch configs", conf1,

@@ -3,6 +3,7 @@ package com.addthis.hydra.job.store;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.cache.Weigher;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -13,6 +14,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 
 public class CachedSpawnDataStore implements SpawnDataStore {
+
     private static Pair<String, String> defaultKey(String path) {
         return ImmutablePair.of(path, null);
     }
@@ -20,21 +22,39 @@ public class CachedSpawnDataStore implements SpawnDataStore {
     private final SpawnDataStore dataStore;
     private final LoadingCache<Pair<String, String>, String> cache;
 
-    public CachedSpawnDataStore(SpawnDataStore dataStore) {
-        this.dataStore = dataStore;
-        this.cache = CacheBuilder.newBuilder().build(new CacheLoader<Pair<String, String>, String>() {
-            @Override
-            public String load(Pair<String, String> key) throws Exception {
-                String path = key.getLeft();
-                String childId = key.getRight();
 
-                if (childId == null) {
-                    return CachedSpawnDataStore.this.dataStore.get(path);
-                } else {
-                    return CachedSpawnDataStore.this.dataStore.getChild(path, childId);
-                }
-            }
-        });
+    public CachedSpawnDataStore(SpawnDataStore dataStore, long dataStoreCacheSize) {
+        this.dataStore = dataStore;
+        this.cache = CacheBuilder.newBuilder()
+                .weigher(new Weigher<Pair<String, String>, String>() {
+                    @Override
+                    public int weigh(Pair<String, String> key, String value) {
+                        int leftWeight = key.getLeft() != null ?
+                                    key.getLeft().length() :
+                                    0;
+
+                        int rightWeight = key.getRight() != null ?
+                                    key.getRight().length() :
+                                    0;
+
+                        // Multiply strlen by 2 (full width characters in java
+                        return 2 * (value.length() + leftWeight + rightWeight);
+                    }
+                })
+                .maximumWeight(dataStoreCacheSize)
+                .build(new CacheLoader<Pair<String, String>, String>() {
+                    @Override
+                    public String load(Pair<String, String> key) throws Exception {
+                        String path = key.getLeft();
+                        String childId = key.getRight();
+
+                        if (childId == null) {
+                            return CachedSpawnDataStore.this.dataStore.get(path);
+                        } else {
+                            return CachedSpawnDataStore.this.dataStore.getChild(path, childId);
+                        }
+                    }
+                });
     }
 
     @Override

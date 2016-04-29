@@ -13,9 +13,6 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.addthis.maljson.JSONArray;
-import com.addthis.maljson.JSONException;
-import com.addthis.maljson.JSONObject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
