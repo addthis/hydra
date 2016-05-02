@@ -101,6 +101,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void saveLoadConfig() {
         SpawnBalancerConfig config = new SpawnBalancerConfig();
         config.setBytesMovedFullRebalance(123456);
+        bal.setConfig(config);
         bal.saveConfigToDataStore();
         SpawnBalancerConfig loadedConfig = bal.loadConfigFromDataStore(null);
         assertNotNull("not null", loadedConfig);

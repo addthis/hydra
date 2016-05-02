@@ -15,67 +15,41 @@ package com.addthis.hydra.task.output;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.lang.reflect.Method;
 
 import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.LessFiles;
 
+import com.addthis.codec.config.Configs;
+
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TemporaryFolder;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 @Category(SlowTest.class)
 public class DefaultOutputWrapperFactoryTest {
 
+    private File tmpDir;
     private DefaultOutputWrapperFactory localWriteStream;
 
-    @Test
-    public void testGetReplacement() throws Exception {
-        localWriteStream = new DefaultOutputWrapperFactory();
+    @Rule
+    public TemporaryFolder testFolder = new TemporaryFolder();
 
-        Class[] parameterTypes = new Class[1];
-        parameterTypes[0] = String.class;
-
-        Method m = localWriteStream.getClass().getDeclaredMethod("getPartitionData", parameterTypes);
-        m.setAccessible(true);
-
-        Object[] parameters = new Object[1];
-        parameters[0] = "foo";
-
-        PartitionData result = (PartitionData) m.invoke(localWriteStream, parameters);
-        assertNotNull(result);
-        assertNull(result.getReplacementString());
-        assertEquals(3, result.getPadTo());
-    }
-
-    @Test
-    public void testGetReplacement_withPart() throws Exception {
-        localWriteStream = new DefaultOutputWrapperFactory();
-
-        Class[] parameterTypes = new Class[1];
-        parameterTypes[0] = String.class;
-
-        Method m = localWriteStream.getClass().getDeclaredMethod("getPartitionData", parameterTypes);
-        m.setAccessible(true);
-
-        Object[] parameters = new Object[1];
-        parameters[0] = "foo{{PART:10}}";
-
-        PartitionData result = (PartitionData) m.invoke(localWriteStream, parameters);
-        assertNotNull(result);
-        assertEquals("{{PART:10}}", result.getReplacementString());
-        assertEquals(10, result.getPadTo());
+    @Before
+    public void setup() throws IOException {
+        tmpDir = testFolder.newFolder();
+        localWriteStream = new DefaultOutputWrapperFactory(tmpDir.getCanonicalPath());
     }
 
     @Test
     public void testGetFileName() throws Exception {
-        localWriteStream = new DefaultOutputWrapperFactory();
-
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
         parameterTypes[1] = PartitionData.class;
@@ -88,7 +62,7 @@ public class DefaultOutputWrapperFactoryTest {
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
         parameters[1] = new PartitionData(null, 3);
-        parameters[2] = new OutputStreamFlags(1);
+        parameters[2] = Configs.decodeObject(OutputStreamFlags.class, "compressType:GZIP, compress:true");
         parameters[3] = 0;
 
         String result = (String) m.invoke(localWriteStream, parameters);
@@ -99,8 +73,6 @@ public class DefaultOutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName_noCompress() throws Exception {
-        localWriteStream = new DefaultOutputWrapperFactory();
-
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
         parameterTypes[1] = PartitionData.class;
@@ -124,8 +96,6 @@ public class DefaultOutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName_noAppend() throws Exception {
-        localWriteStream = new DefaultOutputWrapperFactory();
-
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
         parameterTypes[1] = PartitionData.class;
@@ -149,7 +119,38 @@ public class DefaultOutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName_noAppend_withCompress() throws Exception {
-        localWriteStream = new DefaultOutputWrapperFactory();
+        Class[] parameterTypes = new Class[4];
+        parameterTypes[0] = String.class;
+        parameterTypes[1] = PartitionData.class;
+        parameterTypes[2] = OutputStreamFlags.class;
+        parameterTypes[3] = int.class;
+
+        Method m = localWriteStream.getClass().getDeclaredMethod("getFileName", parameterTypes);
+        m.setAccessible(true);
+
+        Object[] parameters = new Object[4];
+        parameters[0] = "foo";
+        parameters[1] = new PartitionData(null, 3);
+        parameters[2] =
+                Configs.decodeObject(OutputStreamFlags.class, "compressType:GZIP, compress:true, noAppend:true");
+        parameters[3] = 0;
+
+        String result = (String) m.invoke(localWriteStream, parameters);
+        assertNotNull(result);
+        assertEquals("foo-000.gz", result);
+
+    }
+
+    @Test
+    public void testGetFileName_noAppend_withCompress_withExistingFile() throws Exception {
+        // create dummy file
+        File tmpFile = new File(tmpDir, "foo-000.gz");
+        PrintWriter pw = new PrintWriter(tmpFile);
+        for (int i = 0; i < 100; i++) {
+            pw.append("a few dummy lines of data: row").append(String.valueOf(i));
+        }
+        pw.flush();
+        pw.close();
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
@@ -163,133 +164,77 @@ public class DefaultOutputWrapperFactoryTest {
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
         parameters[1] = new PartitionData(null, 3);
-        parameters[2] = new OutputStreamFlags(5);
-        parameters[3] = 0;
+        parameters[2] =
+                Configs.decodeObject(OutputStreamFlags.class, "compressType:GZIP, compress:true, noAppend:true");
+        parameters[3] = 1;
 
         String result = (String) m.invoke(localWriteStream, parameters);
         assertNotNull(result);
-        assertEquals("foo-000.gz", result);
-
-    }
-
-    @Test
-    public void testGetFileName_noAppend_withCompress_withExistingFile() throws Exception {
-        String tmpDir = LessFiles.createTempDir().toString();
-        localWriteStream = new DefaultOutputWrapperFactory();
-        localWriteStream.setDir(tmpDir);
-
-        // create dummy file
-        File tmpFile = null;
-        try {
-            tmpFile = new File(tmpDir + "/foo-000.gz");
-            PrintWriter pw = new PrintWriter(tmpFile);
-            for (int i = 0; i < 100; i++) {
-                pw.append("a few dummy lines of data: row").append(String.valueOf(i));
-            }
-            pw.flush();
-            pw.close();
-
-            Class[] parameterTypes = new Class[4];
-            parameterTypes[0] = String.class;
-            parameterTypes[1] = PartitionData.class;
-            parameterTypes[2] = OutputStreamFlags.class;
-            parameterTypes[3] = int.class;
-
-            Method m = localWriteStream.getClass().getDeclaredMethod("getFileName", parameterTypes);
-            m.setAccessible(true);
-
-            Object[] parameters = new Object[4];
-            parameters[0] = "foo";
-            parameters[1] = new PartitionData(null, 3);
-            parameters[2] = new OutputStreamFlags(5);
-            parameters[3] = 1;
-
-            String result = (String) m.invoke(localWriteStream, parameters);
-            assertNotNull(result);
-            assertEquals("foo-001.gz", result);
-        } finally {
-            LessFiles.deleteDir(new File(tmpDir));
-        }
+        assertEquals("foo-001.gz", result);
 
     }
 
     @Test
     public void testGetFileName_withExistingFile() throws Exception {
-        String tmpDir = LessFiles.createTempDir().toString();
-        localWriteStream = new DefaultOutputWrapperFactory();
-        localWriteStream.setDir(tmpDir);
-
         // create dummy file
         File tmpFile = null;
-        try {
-            tmpFile = new File(tmpDir + "/foo-000");
-            PrintWriter pw = new PrintWriter(tmpFile);
-            for (int i = 0; i < 100; i++) {
-                pw.append("a few dummy lines of data: row").append(String.valueOf(i));
-            }
-            pw.flush();
-            pw.close();
-
-            Class[] parameterTypes = new Class[4];
-            parameterTypes[0] = String.class;
-            parameterTypes[1] = PartitionData.class;
-            parameterTypes[2] = OutputStreamFlags.class;
-            parameterTypes[3] = int.class;
-
-            Method m = localWriteStream.getClass().getDeclaredMethod("getFileName", parameterTypes);
-            m.setAccessible(true);
-
-            Object[] parameters = new Object[4];
-            parameters[0] = "foo";
-            parameters[1] = new PartitionData(null, 3);
-            parameters[2] = new OutputStreamFlags(0x0F0FFF00);
-            parameters[3] = 0;
-
-            String result = (String) m.invoke(localWriteStream, parameters);
-            assertNotNull(result);
-            assertEquals("foo-000", result);
-        } finally {
-            LessFiles.deleteDir(new File(tmpDir));
+        tmpFile = new File(tmpDir + "/foo-000");
+        PrintWriter pw = new PrintWriter(tmpFile);
+        for (int i = 0; i < 100; i++) {
+            pw.append("a few dummy lines of data: row").append(String.valueOf(i));
         }
+        pw.flush();
+        pw.close();
+
+        Class[] parameterTypes = new Class[4];
+        parameterTypes[0] = String.class;
+        parameterTypes[1] = PartitionData.class;
+        parameterTypes[2] = OutputStreamFlags.class;
+        parameterTypes[3] = int.class;
+
+        Method m = localWriteStream.getClass().getDeclaredMethod("getFileName", parameterTypes);
+        m.setAccessible(true);
+
+        Object[] parameters = new Object[4];
+        parameters[0] = "foo";
+        parameters[1] = new PartitionData(null, 3);
+        parameters[2] = new OutputStreamFlags(0x0F0FFF00);
+        parameters[3] = 0;
+
+        String result = (String) m.invoke(localWriteStream, parameters);
+        assertNotNull(result);
+        assertEquals("foo-000", result);
     }
 
     @Test
     public void testGetFileName_withExistingFile_exceedsMax() throws Exception {
-        String tmpDir = LessFiles.createTempDir().toString();
-        localWriteStream = new DefaultOutputWrapperFactory();
-        localWriteStream.setDir(tmpDir);
-
         // create dummy file
         File tmpFile = null;
-        try {
-            tmpFile = new File(tmpDir + "/foo-000");
-            PrintWriter pw = new PrintWriter(tmpFile);
-            for (int i = 0; i < (1024l * 1024l); i++) {
-                pw.append("a few dummy lines of data: row").append(String.valueOf(i));
-            }
-            pw.flush();
-            pw.close();
-
-            Class[] parameterTypes = new Class[4];
-            parameterTypes[0] = String.class;
-            parameterTypes[1] = PartitionData.class;
-            parameterTypes[2] = OutputStreamFlags.class;
-            parameterTypes[3] = int.class;
-
-            Method m = localWriteStream.getClass().getDeclaredMethod("getFileName", parameterTypes);
-            m.setAccessible(true);
-
-            Object[] parameters = new Object[4];
-            parameters[0] = "foo";
-            parameters[1] = new PartitionData(null, 3);
-            parameters[2] = new OutputStreamFlags(0x0F01FF00);
-            parameters[3] = 1;
-
-            String result = (String) m.invoke(localWriteStream, parameters);
-            assertNotNull(result);
-            assertEquals("foo-001", result);
-        } finally {
-            LessFiles.deleteDir(new File(tmpDir));
+        tmpFile = new File(tmpDir + "/foo-000");
+        PrintWriter pw = new PrintWriter(tmpFile);
+        for (int i = 0; i < (1024l * 1024l); i++) {
+            pw.append("a few dummy lines of data: row").append(String.valueOf(i));
         }
+        pw.flush();
+        pw.close();
+
+        Class[] parameterTypes = new Class[4];
+        parameterTypes[0] = String.class;
+        parameterTypes[1] = PartitionData.class;
+        parameterTypes[2] = OutputStreamFlags.class;
+        parameterTypes[3] = int.class;
+
+        Method m = localWriteStream.getClass().getDeclaredMethod("getFileName", parameterTypes);
+        m.setAccessible(true);
+
+        Object[] parameters = new Object[4];
+        parameters[0] = "foo";
+        parameters[1] = new PartitionData(null, 3);
+        parameters[2] = new OutputStreamFlags(0x0F01FF00);
+        parameters[3] = 1;
+
+        String result = (String) m.invoke(localWriteStream, parameters);
+        assertNotNull(result);
+        assertEquals("foo-001", result);
     }
 }

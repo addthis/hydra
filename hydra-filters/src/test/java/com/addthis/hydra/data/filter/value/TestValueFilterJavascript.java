@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.codec.json.CodecJSON;
+import com.addthis.codec.config.Configs;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -27,9 +27,7 @@ public class TestValueFilterJavascript {
 
     @Test
     public void mainPort() throws Exception {
-        String json = "{" + "   source: 'value.length'" + "}";
-
-        ValueFilterJavascript f = CodecJSON.INSTANCE.decode(ValueFilterJavascript.class, json.getBytes());
+        ValueFilterJavascript f = Configs.decodeObject(ValueFilterJavascript.class, "source: \"value.length\"");
 
         String[] str = {"now is the time", "for all good men", "to come to", "the aid of the party"};
 
