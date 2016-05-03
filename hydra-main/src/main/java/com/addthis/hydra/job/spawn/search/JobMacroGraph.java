@@ -32,17 +32,15 @@ public class JobMacroGraph {
         includeLocations = new HashMap<>();
 
         for (String macroName : macros.keySet()) {
-            addDependenciesOf(macroName, macros.get(macroName));
-        }
-    }
+            JobMacro jobMacro = macros.get(macroName);
 
-    private void addDependenciesOf(String macroName, JobMacro jobMacro) {
-        graph.addNode(macroName);
-        MacroIncludeLocations locations = new MacroIncludeLocations(jobMacro.getMacro());
-        includeLocations.put(macroName, locations);
+            graph.addNode(macroName);
+            MacroIncludeLocations locations = new MacroIncludeLocations(jobMacro.getMacro());
+            includeLocations.put(macroName, locations);
 
-        for (String depName : locations.dependencies()) {
-            graph.addEdge(macroName, depName);
+            for (String depName : locations.dependencies()) {
+                graph.addEdge(macroName, depName);
+            }
         }
     }
 
