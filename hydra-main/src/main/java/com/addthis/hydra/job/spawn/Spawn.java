@@ -466,6 +466,7 @@ public class Spawn implements Codable, AutoCloseable {
         PipedInputStream in = new PipedInputStream(out);
         JobSearcher js = new JobSearcher(SpawnUtils.getJobsMapFromSpawnState(spawnState),
                 SpawnUtils.getMacroMapFromMacroManager(jobMacroManager),
+                getAliasManager().getAliases(),
                 jobConfigManager,
                 searchOptions,
                 out);

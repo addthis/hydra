@@ -25,13 +25,45 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Describes if/where various macro includes live inside a blob of text
+ * Describes if/where various dependency includes live inside a blob of text
  */
-public class MacroIncludeLocations {
-    private static final Pattern pattern = Pattern.compile("%\\{(.*?)\\}%");
+public class IncludeLocations {
     private final Map<String, Set<TextLocation>> locations;
 
-    public MacroIncludeLocations(String text) {
+    // Example: %{macro-name}%
+    private static final Pattern macroPattern = Pattern.compile("%\\{(.+?)\\}%");
+    private static final int macroPatternGroup = 1;
+
+    // Example: %[parameter-name:default-value]%
+    private static final Pattern jobParamPattern = Pattern.compile("%\\[(.+?)(:.+?)?\\]%");
+    private static final int jobParamPatternGroup = 1;
+
+    public static IncludeLocations forMacros(String text) {
+        return new IncludeLocations(text, macroPattern, macroPatternGroup);
+    }
+
+    public static IncludeLocations forJobParams(String text) {
+        return new IncludeLocations(text, jobParamPattern, jobParamPatternGroup);
+    }
+
+    /**
+     * @param text
+     * @param pattern should match a section of a line for including a dependency
+     */
+    private IncludeLocations(String text, Pattern pattern) {
+        this(text, pattern, 0);
+    }
+
+    /**
+     * @param text
+     * @param pattern should match a section of a line for including a dependency
+     * @param patternGroup the group of the matched pattern which contains the name of the dependency being included
+     */
+    private IncludeLocations(String text, Pattern pattern, int patternGroup) {
+        if (patternGroup < 0) {
+            throw new IllegalArgumentException("The patternGroup cannot be negative");
+        }
+
         Map<String, Set<TextLocation>> locs = new TreeMap<>();
         Scanner s = new Scanner(text);
 
@@ -39,7 +71,7 @@ public class MacroIncludeLocations {
         while (s.hasNextLine()) {
             Matcher m = pattern.matcher(s.nextLine());
             while (m.find()) {
-                String depName = m.group(1);
+                String depName = m.group(patternGroup);
                 TextLocation match = new TextLocation(lineNum, m.start(), m.end());
 
                 Set<TextLocation> matches = locs.get(depName);
@@ -58,13 +90,13 @@ public class MacroIncludeLocations {
     }
 
     /**
-     * Gives a list of all locations where the macro by the name of `macroName` is included in this text
+     * Gives a list of all locations where the dependency by the name of `name` is included in this text
      *
-     * @param macroName the macro which may included
+     * @param name the macro which may included
      * @return the set of all locations (possibly empty) where the including happened
      */
-    public Set<TextLocation> locationsFor(String macroName) {
-        return locations.getOrDefault(macroName, ImmutableSet.of());
+    public Set<TextLocation> locationsFor(String name) {
+        return locations.getOrDefault(name, ImmutableSet.of());
     }
 
     /**

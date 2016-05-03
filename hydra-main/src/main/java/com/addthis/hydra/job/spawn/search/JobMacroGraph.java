@@ -19,13 +19,15 @@ import com.addthis.hydra.util.DirectedGraph;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Represents the dependencies between a set of {@link JobMacro}s
  */
 public class JobMacroGraph {
     private final DirectedGraph<String> graph;
-    private final Map<String, MacroIncludeLocations> includeLocations;
+    private final Map<String, IncludeLocations> includeLocations;
+
 
     public JobMacroGraph(Map<String, JobMacro> macros) {
         graph = new DirectedGraph<>();
@@ -35,7 +37,7 @@ public class JobMacroGraph {
             JobMacro jobMacro = macros.get(macroName);
 
             graph.addNode(macroName);
-            MacroIncludeLocations locations = new MacroIncludeLocations(jobMacro.getMacro());
+            IncludeLocations locations = IncludeLocations.forMacros(jobMacro.getMacro());
             includeLocations.put(macroName, locations);
 
             for (String depName : locations.dependencies()) {
@@ -57,7 +59,7 @@ public class JobMacroGraph {
      * @param macroName the name of a macro which possibly depends on another macro
      * @return all locations where the dependency was included, or an empty set if it wasn't  included at all
      */
-    public MacroIncludeLocations getIncludeLocations(String macroName) {
+    public IncludeLocations getIncludeLocations(String macroName) {
         return includeLocations.get(macroName);
     }
 }

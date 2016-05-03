@@ -13,10 +13,13 @@
  */
 package com.addthis.hydra.job;
 
+import com.addthis.basis.util.LessStrings;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
+import javax.annotation.Nonnull;
 
 
 /**
@@ -53,6 +56,19 @@ public final class JobParameter implements Codable, Cloneable {
 
     public String getValue() {
         return value;
+    }
+
+    @Nonnull
+    public String getValueOrDefault() {
+        if (LessStrings.isEmpty(value)) {
+            if (LessStrings.isEmpty(defaultValue)) {
+                return "";
+            } else {
+                return defaultValue;
+            }
+        } else {
+            return value;
+        }
     }
 
     public void setValue(String value) {
