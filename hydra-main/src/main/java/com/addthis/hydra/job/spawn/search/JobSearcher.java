@@ -80,7 +80,7 @@ public class JobSearcher implements Runnable {
 
             generator.writeArrayFieldStart("jobs");
             for (Job job : jobs.values()) {
-                SearchResult jobSearchResult = getJobSearchResult(job, macroSearches);
+                SearchResult jobSearchResult = searchJob(job, dependencyGraph, macroSearches);
                 if (jobSearchResult != null) {
                     generator.writeObject(jobSearchResult);
                 }
@@ -101,14 +101,14 @@ public class JobSearcher implements Runnable {
     }
 
     @Nullable
-    private SearchResult getJobSearchResult(Job job, Map<String, Set<TextLocation>> macroSearches) {
+    private SearchResult searchJob(Job job, JobMacroGraph dependencyGraph, Map<String, Set<TextLocation>> macroSearches) {
         String config = jobConfigManager.getConfig(job.getId());
         MacroIncludeLocations macroIncludeLocations = new MacroIncludeLocations(config);
 
         Set<TextLocation> searchLocs = LineSearch.search(config, pattern);
 
         // For each macro dependency of the job, see if that macro (or any of its dependencies) contains a search result
-        searchLocs.addAll(getDependencySearchMatches(macroIncludeLocations, macroSearches));
+        searchLocs.addAll(getDependencySearchMatches(macroIncludeLocations, dependencyGraph, macroSearches));
 
         List<AdjacentMatchesBlock> groups = AdjacentMatchesBlock.mergeMatchList(config.split("\n"), searchLocs);
 
@@ -167,19 +167,37 @@ public class JobSearcher implements Runnable {
 
             // See if any of the (recursive) dependencies of this macro had search results. If they do, we add a new
             // LineMatch to this macro's search results, which indicates where the macro w/ a search result was included
-            macroSearchResults.addAll(getDependencySearchMatches(macroIncludeLocations, results));
+            macroSearchResults.addAll(getDependencySearchMatches(macroIncludeLocations, dependencyGraph, results));
         }
 
         return results;
     }
 
+
+    /**
+     * Returns a set of TextLocations which represent that an included dependency (or one of the included dependency's
+     * dependencies, etc.) contains a search match
+     *
+     * @param macroIncludeLocations
+     * @param dependencyGraph
+     * @param macroSearchResults
+     * @return
+     */
     private ImmutableSet<TextLocation> getDependencySearchMatches(MacroIncludeLocations macroIncludeLocations,
+                                                                  JobMacroGraph dependencyGraph,
                                                                   Map<String, Set<TextLocation>> macroSearchResults) {
+
         ImmutableSet.Builder<TextLocation> builder = ImmutableSet.builder();
         for (String depMacroName : macroIncludeLocations.dependencies()) {
-            Set<TextLocation> depMacroResults = macroSearchResults.getOrDefault(depMacroName, ImmutableSet.of());
-            if (!depMacroResults.isEmpty()) {
-                builder.addAll(macroIncludeLocations.locationsFor(depMacroName));
+
+            // For each dependency that depMacroName brings in, see if any of THEM have search results.  If they do, we
+            // want to link back to the include to depMacroName in the search result.
+            for (String deeperDepName : dependencyGraph.getDependencies(depMacroName)) {
+                Set<TextLocation> depMacroResults = macroSearchResults.getOrDefault(deeperDepName, ImmutableSet.of());
+                if (!depMacroResults.isEmpty()) {
+                    builder.addAll(macroIncludeLocations.locationsFor(depMacroName));
+                    break;
+                }
             }
         }
 
