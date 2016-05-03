@@ -98,14 +98,8 @@ public class AdjacentMatchesBlock {
     }
 
     private void addMatch(TextLocation match) {
-        if (match.lineNum < firstMatchedLine) {
-            firstMatchedLine = match.lineNum;
-        }
-
-        if (match.lineNum > lastMatchedLine) {
-            lastMatchedLine = match.lineNum;
-        }
-
+        firstMatchedLine = Math.min(match.lineNum, firstMatchedLine);
+        lastMatchedLine = Math.max(match.lineNum, lastMatchedLine);
         matches.add(match);
     }
 
