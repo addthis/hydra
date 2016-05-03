@@ -24,7 +24,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-public class GroupedSearchMatch {
+/**
+ * Represents a single group of contiguous lines from one section of one 'file', which in itself may contain many
+ * matches.
+ */
+public class AdjacentMatchesBlock {
     private static int BUFFER_LINE_COUNT = 3;
 
     @JsonIgnore
@@ -36,7 +40,7 @@ public class GroupedSearchMatch {
     @JsonIgnore
     private int firstMatchedLine;
 
-    private GroupedSearchMatch(String[] allLines) {
+    private AdjacentMatchesBlock(String[] allLines) {
         this.matches = new ArrayList<>();
         this.allLines = allLines;
         this.firstMatchedLine = Integer.MAX_VALUE;
@@ -44,18 +48,18 @@ public class GroupedSearchMatch {
     }
 
     /**
-     * Creates a list of SearchResults from a list of LineMatches
+     * Creates a list of {@link AdjacentMatchesBlock} from a list of {@link TextLocation}
      *
      * @param lines   the entire content of the file where matches are contained
      * @param matches the list of matches in the line
-     * @return the SearchResults which contain every LineMatch provided
+     * @return the {@link AdjacentMatchesBlock} which contain every {@link TextLocation} provided
      */
-    public static List<GroupedSearchMatch> mergeMatchList(String[] lines, Collection<TextLocation> matches) {
-        Collections.sort(new ArrayList<TextLocation>(matches));
+    public static List<AdjacentMatchesBlock> mergeMatchList(String[] lines, Collection<TextLocation> matches) {
+        Collections.sort(new ArrayList<>(matches));
         Iterator<TextLocation> it = matches.iterator();
 
-        List<GroupedSearchMatch> results = new ArrayList<>();
-        GroupedSearchMatch result = new GroupedSearchMatch(lines);
+        List<AdjacentMatchesBlock> results = new ArrayList<>();
+        AdjacentMatchesBlock result = new AdjacentMatchesBlock(lines);
 
         while (it.hasNext()) {
             TextLocation match = it.next();
@@ -63,7 +67,7 @@ public class GroupedSearchMatch {
                 result.addMatch(match);
             } else {
                 results.add(result);
-                result = new GroupedSearchMatch(lines);
+                result = new AdjacentMatchesBlock(lines);
                 result.addMatch(match);
             }
         }

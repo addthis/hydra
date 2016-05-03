@@ -29,9 +29,9 @@ public class SearchResult {
     private final String id;
 
     @JsonProperty
-    private final List<GroupedSearchMatch> results;
+    private final List<AdjacentMatchesBlock> results;
 
-    public SearchResult(String id, String description, List<GroupedSearchMatch> results) {
+    public SearchResult(String id, String description, List<AdjacentMatchesBlock> results) {
         this.id = id;
         this.description = description;
         this.results = results;

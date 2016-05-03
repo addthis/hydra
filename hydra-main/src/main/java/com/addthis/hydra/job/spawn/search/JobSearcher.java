@@ -110,7 +110,7 @@ public class JobSearcher implements Runnable {
         // For each macro dependency of the job, see if that macro (or any of its dependencies) contains a search result
         searchLocs.addAll(getDependencySearchMatches(macroIncludeLocations, macroSearches));
 
-        List<GroupedSearchMatch> groups = GroupedSearchMatch.mergeMatchList(config.split("\n"), searchLocs);
+        List<AdjacentMatchesBlock> groups = AdjacentMatchesBlock.mergeMatchList(config.split("\n"), searchLocs);
 
         if (groups.size() > 0) {
             return new SearchResult(job.getId(), job.getDescription(), groups);
@@ -128,10 +128,10 @@ public class JobSearcher implements Runnable {
         }
 
         String[] macroLines = macro.getMacro().split("\n");
-        List<GroupedSearchMatch> groupedSearchMatches = GroupedSearchMatch.mergeMatchList(macroLines, macroSearch);
+        List<AdjacentMatchesBlock> adjacentMatchesBlocks = AdjacentMatchesBlock.mergeMatchList(macroLines, macroSearch);
 
-        if (groupedSearchMatches.size() > 0) {
-            return new SearchResult(macroName, "", groupedSearchMatches);
+        if (adjacentMatchesBlocks.size() > 0) {
+            return new SearchResult(macroName, "", adjacentMatchesBlocks);
         } else {
             return null;
         }
