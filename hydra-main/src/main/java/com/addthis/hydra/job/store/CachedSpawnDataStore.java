@@ -80,6 +80,8 @@ public class CachedSpawnDataStore implements SpawnDataStore {
         List<String> notCached = new ArrayList<>();
         Map<String, String> results = new TreeMap<>();
 
+        // Load every path from the cache that we can. For all the paths that do not exist in the cache, continue to
+        // do the batched query logic which should be implemented in the underlying DataStore's `get(String[])`
         for (String path : paths) {
             String result = cache.getIfPresent(defaultKey(path));
             if (result == null) {
