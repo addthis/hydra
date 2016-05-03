@@ -18,17 +18,11 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SearchableItem {
-    private final String[] lines;
-    private final String id;
+public class LineSearch {
 
-    public SearchableItem(String text, String id) {
-        this.lines = text.split("\n");
-        this.id = id;
-    }
-
-    public Set<TextLocation> search(Pattern pattern) {
+    public static Set<TextLocation> search(String text, Pattern pattern) {
         Set<TextLocation> matchSet = new HashSet<>();
+        String[] lines = text.split("\n");
 
         for (int lineNum = 0; lineNum < lines.length; lineNum++) {
             String line = lines[lineNum];

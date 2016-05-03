@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.PipedOutputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,10 +103,9 @@ public class JobSearcher implements Runnable {
     @Nullable
     private SearchResult getJobSearchResult(Job job, Map<String, Set<TextLocation>> macroSearches) {
         String config = jobConfigManager.getConfig(job.getId());
-        SearchableItem si = new SearchableItem(config, job.getId());
         MacroIncludeLocations macroIncludeLocations = new MacroIncludeLocations(config);
 
-        Set<TextLocation> searchLocs = si.search(pattern);
+        Set<TextLocation> searchLocs = LineSearch.search(config, pattern);
 
         // For each macro dependency of the job, see if that macro (or any of its dependencies) contains a search result
         searchLocs.addAll(getDependencySearchMatches(macroIncludeLocations, macroSearches));
@@ -158,8 +156,7 @@ public class JobSearcher implements Runnable {
         // Search the text of the macros themselves for any results
         for (String macroName : macros.keySet()) {
             JobMacro macro = macros.get(macroName);
-            SearchableItem macroSearch = new SearchableItem(macro.getMacro(), macroName);
-            results.put(macroName, macroSearch.search(pattern));
+            results.put(macroName, LineSearch.search(macro.getMacro(), pattern));
         }
 
         // Macros can include other macros, so we need to add dependent macros (which contain search results) to the
