@@ -6,6 +6,8 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.Weigher;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +20,7 @@ public class CachedSpawnDataStore implements SpawnDataStore {
     private static Pair<String, String> defaultKey(String path) {
         return ImmutablePair.of(path, null);
     }
+    private static final Logger log = LoggerFactory.getLogger(CachedSpawnDataStore.class);
 
     private final SpawnDataStore dataStore;
     private final LoadingCache<Pair<String, String>, String> cache;
@@ -66,10 +69,8 @@ public class CachedSpawnDataStore implements SpawnDataStore {
     public String get(String path) {
         try {
             return cache.get(defaultKey(path));
-        } catch (CacheLoader.InvalidCacheLoadException e) {
-            return null;
-        } catch (ExecutionException e) {
-            // TODO
+        } catch (ExecutionException | CacheLoader.InvalidCacheLoadException e) {
+            log.error("failed to execute get from cache", e);
             return null;
         }
     }
