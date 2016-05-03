@@ -44,7 +44,6 @@ import java.util.regex.Pattern;
  */
 public class JobSearcher implements Runnable {
     // The number of lines to put above and below a matching line to provide some context
-    private final static int SEARCH_CONTEXT_BUFFER_LINES = 3;
     private static final Logger log = LoggerFactory.getLogger(JobSearcher.class);
 
     private final Pattern pattern;
@@ -86,7 +85,7 @@ public class JobSearcher implements Runnable {
                ]
              }
              */
-            generator.writeObjectField("macros", getMacroSearchResults(macroSearches, macros));
+            generator.writeObjectField("macros", getMacroSearchResults(macroSearches));
 
             generator.writeArrayFieldStart("jobs");
             for (Job job : jobs.values()) {
@@ -184,7 +183,7 @@ public class JobSearcher implements Runnable {
     }
 
 
-    private List<SearchResult> getMacroSearchResults(Map<String, Set<TextLocation>> macroSearches, Map<String, JobMacro> macros) {
+    private List<SearchResult> getMacroSearchResults(Map<String, Set<TextLocation>> macroSearches) {
         List<SearchResult> results = new ArrayList<>();
         for (String macroName : macroSearches.keySet()) {
             SearchResult result = getMacroSearchResult(macroName, macroSearches.get(macroName));
