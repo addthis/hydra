@@ -42,8 +42,6 @@ public final class JobMacro implements Codable, Cloneable {
     private String owner;
     @FieldConfig
     private String group;
-    @JsonIgnore
-    private String name;
 
     public JobMacro() {
     }
