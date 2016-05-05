@@ -191,6 +191,10 @@
 	
 	        app.initialize();
 	        Backbone.history.start();
+	    }).fail(function (_ref) {
+	        var thrown = _ref.thrown;
+	
+	        throw thrown;
 	    });
 	
 	    app.router.on('route:showJobConf', function (jobId) {
@@ -549,6 +553,9 @@
 	    });
 	
 	    app.router.on("route:showMacroDetail", function (name) {
+	        var line = arguments.length <= 1 || arguments[1] === undefined ? 0 : arguments[1];
+	        var col = arguments.length <= 2 || arguments[2] === undefined ? 0 : arguments[2];
+	
 	        var macro;
 	        if (_.isEqual(name, "create")) {
 	            macro = new Macro.Model({});
@@ -559,7 +566,8 @@
 	            app.makeHtmlTitle("Macro::" + name);
 	        }
 	        var view = new Macro.DetailView({
-	            model: macro
+	            model: macro,
+	            scrollTo: { line: line, col: col }
 	        });
 	        app.showView(view, "#macros");
 	    });

@@ -133,6 +133,9 @@ function(
 
             app.initialize();
             Backbone.history.start();
+        })
+        .fail(({thrown}) => {
+            throw thrown;
         });
 
 
@@ -492,7 +495,7 @@ function(
         }
     });
 
-    app.router.on("route:showMacroDetail",function(name){
+    app.router.on("route:showMacroDetail", function(name, line = 0, col = 0){
         var macro;
         if(_.isEqual(name,"create")){
             macro = new Macro.Model({});
@@ -504,7 +507,8 @@ function(
             app.makeHtmlTitle("Macro::"+name);
         }
         var view = new Macro.DetailView({
-            model:macro
+            model: macro,
+            scrollTo: {line, col}
         });
         app.showView(view,"#macros");
     });

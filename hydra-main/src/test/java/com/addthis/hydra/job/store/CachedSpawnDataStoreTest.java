@@ -52,10 +52,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 @Category(SlowTest.class)
-public class MysqlDataStoreTest {
-    
+public class CachedSpawnDataStoreTest {
+
     private static final String DB_URL = "mock:driver/";
-    
+
     //mocks
     private static String originalDriver;
     private static Driver driver;
@@ -64,20 +64,20 @@ public class MysqlDataStoreTest {
     private Connection connection;
 
     //class under test
-    private MysqlDataStore mysqlDataStore;
-   
-    
-    public MysqlDataStoreTest() {
+    private CachedSpawnDataStore cachedDataStore;
+
+
+    public CachedSpawnDataStoreTest() {
     }
-    
-    
+
+
     @BeforeClass
     public static void setUpClass() {
         //capture the original setting to revert it after the test is complete
         originalDriver = System.getProperty("sql.datastore.driverclass");
         System.setProperty("sql.datastore.driverclass", MockDriver.class.getName());
     }
-    
+
     @AfterClass
     public static void tearDownClass() {
         //revert our overridden property
@@ -87,12 +87,12 @@ public class MysqlDataStoreTest {
             System.setProperty("sql.datastore.driverclass", originalDriver);
         }
     }
-    
+
     @Before
     public void setUp() throws Exception {
         //register the driver
         DriverManager.registerDriver(mockDriver);
-        
+
         //set up the mocked driver
         driver = Mockito.mock(Driver.class);
         connection = Mockito.mock(Connection.class);
@@ -105,31 +105,31 @@ public class MysqlDataStoreTest {
         Mockito.when(createDatabasePreparedStatement.execute()).thenReturn(Boolean.TRUE);
         final PreparedStatement createTablePreparedStatement = Mockito.mock(PreparedStatement.class); //temporary mock for creating the table
         Mockito.when(connection.prepareStatement(Mockito.startsWith("CREATE TABLE IF NOT EXISTS"))).thenReturn(createTablePreparedStatement);
-        
+
         //create our class under test
         final Properties properties = new Properties();
-        mysqlDataStore = new MysqlDataStore(DB_URL, "dbName", "tableName", properties);
-        
+        cachedDataStore = new CachedSpawnDataStore(new MysqlDataStore(DB_URL, "dbName", "tableName", properties), 10000000L);
+
         //verify construction
         Mockito.verify(driver, Mockito.atLeastOnce()).connect(Mockito.startsWith(DB_URL), Mockito.any(Properties.class));
         Mockito.verify(createDatabasePreparedStatement).execute(); //make sure we called execute.  This also verifies that the prepared statement was correctly constructed.
         Mockito.verify(createTablePreparedStatement).execute(); //make sure we called execute.  This also verifies that the prepared statement was correctly constructed.
     }
-    
+
     @After
     public void tearDown() throws SQLException {
         //run some verifications
         Mockito.verify(driver).acceptsURL(Mockito.startsWith(DB_URL));
-        
+
         //shut down the connection pooling
-        if (mysqlDataStore != null) {
-            mysqlDataStore.close();
+        if (cachedDataStore != null) {
+            cachedDataStore.close();
             Mockito.verify(connection, Mockito.atLeastOnce()).close(); //this tests the close method as well
         }
-        
+
         //clear the mocks
         Mockito.reset(driver, connection);
-        
+
         //deregister the driver we started out with
         DriverManager.deregisterDriver(mockDriver);
     }
@@ -139,14 +139,10 @@ public class MysqlDataStoreTest {
      */
     @Test
     public void testGetDescription() {
-        assertEquals("mysql", mysqlDataStore.getDescription());
+        assertEquals("mysql", cachedDataStore.getDescription());
     }
 
-    @Test
-    public void testGet_String() throws SQLException {
-        //set up data
-        final String value = "value";
-        
+    private PreparedStatement doGet(String key, String value) throws SQLException {
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
@@ -157,14 +153,21 @@ public class MysqlDataStoreTest {
         final Blob blob = Mockito.mock(Blob.class);
         Mockito.when(resultSet.getObject(1, Blob.class)).thenReturn(blob);
         Mockito.when(blob.getBytes(Mockito.anyLong(), Mockito.anyInt())).thenReturn(LZFEncoder.encode(value.getBytes()));
-        
+
         //run method under test
-        final String result = mysqlDataStore.get("key");
-        
+        final String result = cachedDataStore.get(key);
+
         //assertions
         assertNotNull(result);
         assertEquals(value, result);
-        
+
+        return selectPreparedStatement;
+    }
+
+    @Test
+    public void testGet_String() throws SQLException {
+        PreparedStatement selectPreparedStatement = doGet("key", "value");
+
         //verifications
         Mockito.verify(selectPreparedStatement, Mockito.atLeastOnce()).executeQuery();
     }
@@ -176,7 +179,7 @@ public class MysqlDataStoreTest {
         expected.put("key1", "value1");
         expected.put("key2", "value2");
         expected.put("key3", "value3");
-        
+
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
@@ -192,37 +195,44 @@ public class MysqlDataStoreTest {
                 LZFEncoder.encode(expected.get(keyList.get(0)).getBytes()),
                 LZFEncoder.encode(expected.get(keyList.get(1)).getBytes()),
                 LZFEncoder.encode(expected.get(keyList.get(2)).getBytes()));
-        
+
         //run method under test
-        final Map<String, String> result = mysqlDataStore.get(keyList.toArray(new String[] {}));
-        
+        final Map<String, String> result = cachedDataStore.get(keyList.toArray(new String[] {}));
+
         //assertions
         assertNotNull(result);
         expected.keySet().stream().forEach((key) -> {
             //iterate over the expected keys, which also makes sure they are all there
             assertEquals(expected.get(key), result.get(key));
         });
-        
+
         //verifications
         Mockito.verify(selectPreparedStatement, Mockito.atLeastOnce()).executeQuery();
     }
 
-    @Test
-    public void testPut() throws Exception {
+    private PreparedStatement doPut(String key, String value) throws Exception {
         //set up mocks
         final PreparedStatement insertPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.doReturn(insertPreparedStatement).when(connection).prepareStatement(Mockito.startsWith("REPLACE INTO "));
         Mockito.doAnswer((Answer) (InvocationOnMock invocation) -> {
             final Blob blob = (Blob)invocation.getArguments()[1];
-            assertEquals(new String(blob.getBytes(1l, (int) blob.length())), "value");
+            assertEquals(new String(blob.getBytes(1l, (int) blob.length())), value);
             return null;
         }).when(insertPreparedStatement).setBlob(Mockito.eq(2), Mockito.any(Blob.class));
-        
+
         //run method under test
-        mysqlDataStore.put("key", "value");
-        
+        cachedDataStore.put(key, value);
+
+        return insertPreparedStatement;
+    }
+
+    @Test
+    public void testPut() throws Exception {
+        final String key = "key";
+        PreparedStatement insertPreparedStatement = doPut(key, "value");
+
         //verifications
-        Mockito.verify(insertPreparedStatement).setString(Mockito.eq(1), Mockito.eq("key"));
+        Mockito.verify(insertPreparedStatement).setString(Mockito.eq(1), Mockito.eq(key));
         Mockito.verify(insertPreparedStatement).setBlob(Mockito.eq(2), Mockito.any(Blob.class));
         Mockito.verify(insertPreparedStatement).setString(Mockito.eq(3), Mockito.eq("_root"));
         Mockito.verify(insertPreparedStatement, Mockito.atLeastOnce()).execute();
@@ -238,10 +248,10 @@ public class MysqlDataStoreTest {
             assertEquals(new String(blob.getBytes(1l, (int) blob.length())), "value");
             return null;
         }).when(insertPreparedStatement).setBlob(Mockito.eq(2), Mockito.any(Blob.class));
-        
+
         //run method under test
-        mysqlDataStore.putAsChild("key", "childId", "value");
-        
+        cachedDataStore.putAsChild("key", "childId", "value");
+
         //verifications
         Mockito.verify(insertPreparedStatement).setString(Mockito.eq(1), Mockito.eq("key"));
         Mockito.verify(insertPreparedStatement).setBlob(Mockito.eq(2), Mockito.any(Blob.class));
@@ -256,8 +266,8 @@ public class MysqlDataStoreTest {
     public void testGetChild() throws Exception {
         //set up data
         final String value = "value";
-        
-        //set up mocks
+
+        //set up mocksx
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
@@ -266,14 +276,14 @@ public class MysqlDataStoreTest {
         final Blob blob = Mockito.mock(Blob.class);
         Mockito.when(resultSet.getObject(1, Blob.class)).thenReturn(blob);
         Mockito.when(blob.getBytes(Mockito.anyLong(), Mockito.anyInt())).thenReturn(LZFEncoder.encode(value.getBytes()));
-        
+
         //run method under test
-        final String result = mysqlDataStore.getChild("key", "childId");
-        
+        final String result = cachedDataStore.getChild("key", "childId");
+
         //assertions
         assertNotNull(result);
         assertEquals(value, result);
-        
+
         //verifications
         Mockito.verify(selectPreparedStatement, Mockito.atLeastOnce()).executeQuery();
         Mockito.verify(selectPreparedStatement).setString(Mockito.eq(1), Mockito.eq("key"));
@@ -285,10 +295,10 @@ public class MysqlDataStoreTest {
         //set up mocks
         final PreparedStatement deletePreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.doReturn(deletePreparedStatement).when(connection).prepareStatement(Mockito.startsWith("DELETE FROM "));
-        
+
         //run method under test
-        mysqlDataStore.deleteChild("key", "childId");
-        
+        cachedDataStore.deleteChild("key", "childId");
+
         //verifications
         Mockito.verify(deletePreparedStatement, Mockito.atLeastOnce()).execute();
         Mockito.verify(deletePreparedStatement).setString(Mockito.eq(1), Mockito.eq("key"));
@@ -296,14 +306,75 @@ public class MysqlDataStoreTest {
     }
 
     @Test
-    public void testDelete() throws SQLException {
+    public void testGetGet() throws Exception {
+        final String key = "keyyy";
+        final String value0 = "value 0";
+
+        // Fills the cache
+        PreparedStatement select0 = doGet(key, value0);
+        Mockito.verify(select0, Mockito.atLeastOnce()).executeQuery();
+
+        // Should use the cache instead of SQL
+        PreparedStatement select1 = doGet(key, value0);
+        Mockito.verify(select1, Mockito.never()).executeQuery();
+    }
+
+
+    @Test
+    public void testGetPutGet() throws Exception {
+        final String key = "keyyy";
+        final String value0 = "value 0";
+        final String value1 = "value 1";
+
+        // Fills the cache
+        PreparedStatement select0 = doGet(key, value0);
+        Mockito.verify(select0, Mockito.atLeastOnce()).executeQuery();
+
+        // Overwrites value in cache and in DB
+        PreparedStatement insert0 = doPut(key, value1);
+        Mockito.verify(insert0).setString(Mockito.eq(1), Mockito.eq(key));
+        Mockito.verify(insert0).setBlob(Mockito.eq(2), Mockito.any(Blob.class));
+        Mockito.verify(insert0).setString(Mockito.eq(3), Mockito.eq("_root"));
+        Mockito.verify(insert0, Mockito.atLeastOnce()).execute();
+
+        // Should use the cache instead of SQL
+        PreparedStatement select1 = doGet(key, value1);
+        Mockito.verify(select1, Mockito.never()).executeQuery();
+    }
+
+    @Test
+    public void testGetDeleteGet() throws Exception {
+        final String key = "keyyy";
+        final String value0 = "value 0";
+
+        // Fills the cache
+        PreparedStatement select0 = doGet(key, value0);
+        Mockito.verify(select0, Mockito.atLeastOnce()).executeQuery();
+
+        // Overwrites value in cache and in DB
+        PreparedStatement delete0 = doDelete(key);
+        Mockito.verify(delete0, Mockito.atLeastOnce()).execute();
+
+        // Should use the SQL instead of cache
+        PreparedStatement select1 = doGet(key, value0);
+        Mockito.verify(select1, Mockito.atLeastOnce()).executeQuery();
+    }
+
+
+    private PreparedStatement doDelete(String key) throws SQLException {
         //set up mocks
         final PreparedStatement deletePreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.doReturn(deletePreparedStatement).when(connection).prepareStatement(Mockito.startsWith("DELETE FROM "));
 
         //run method under test
-        mysqlDataStore.delete("key");
-        
+        cachedDataStore.delete(key);
+        return deletePreparedStatement;
+    }
+
+    @Test
+    public void testDelete() throws SQLException {
+        PreparedStatement deletePreparedStatement = doDelete("key");
+
         //verifications
         Mockito.verify(deletePreparedStatement, Mockito.atLeastOnce()).execute();
         Mockito.verify(deletePreparedStatement).setString(Mockito.eq(1), Mockito.eq("key"));
@@ -321,16 +392,16 @@ public class MysqlDataStoreTest {
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.TRUE, Boolean.FALSE); //two results
         Mockito.when(resultSet.getString(1)).thenReturn("value1", "value2");
-        
+
         //run method under test
-        final List<String> result = mysqlDataStore.getChildrenNames("key");
-        
+        final List<String> result = cachedDataStore.getChildrenNames("key");
+
         //assertions
         assertNotNull(result);
         assertEquals(2, result.size());
         assertEquals("value1", result.get(0));
         assertEquals("value2", result.get(1));
-        
+
         //verifications
         Mockito.verify(selectPreparedStatement, Mockito.atLeastOnce()).executeQuery();
         Mockito.verify(selectPreparedStatement).setString(Mockito.eq(1), Mockito.eq("key"));
@@ -344,7 +415,7 @@ public class MysqlDataStoreTest {
         expected.put("key1", "value1");
         expected.put("key2", "value2");
         expected.put("key3", "value3");
-        
+
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
         Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
@@ -360,29 +431,29 @@ public class MysqlDataStoreTest {
                 LZFEncoder.encode(expected.get(keyList.get(0)).getBytes()),
                 LZFEncoder.encode(expected.get(keyList.get(1)).getBytes()),
                 LZFEncoder.encode(expected.get(keyList.get(2)).getBytes()));
-        
+
         //run method under test
-        final Map<String, String> result = mysqlDataStore.getAllChildren("key");
-        
+        final Map<String, String> result = cachedDataStore.getAllChildren("key");
+
         //assertions
         assertNotNull(result);
         expected.keySet().stream().forEach((key) -> {
             //iterate over the expected keys, which also makes sure they are all there
             assertEquals(expected.get(key), result.get(key));
         });
-        
+
         //verifications
         Mockito.verify(selectPreparedStatement, Mockito.atLeastOnce()).executeQuery();
         Mockito.verify(selectPreparedStatement).setString(Mockito.eq(1), Mockito.eq("key"));
         Mockito.verify(selectPreparedStatement).setString(Mockito.eq(2), Mockito.eq("_root"));
     }
-    
+
     /**
      * We need the qualified string representation of a concrete class that is a jdbc driver.  This will just 
      * defer to the actual mocked version managed by Mockito that the unit test has access to.
      */
     public static class MockDriver implements Driver {
-        
+
         @Override
         public Connection connect(String url, Properties info) throws SQLException {
             return driver.connect(url, info);
@@ -417,7 +488,7 @@ public class MysqlDataStoreTest {
         public Logger getParentLogger() throws SQLFeatureNotSupportedException {
             return driver.getParentLogger();
         }
-        
+
     }
-    
+
 }

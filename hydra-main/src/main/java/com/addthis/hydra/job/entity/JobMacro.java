@@ -21,6 +21,7 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 
 /**

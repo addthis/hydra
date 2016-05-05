@@ -166,9 +166,7 @@ public class JobExpand {
             final HashMap<String, String> map = new HashMap<>();
             for (JobParameter param : params) {
                 String name = param.getName();
-                String value = param.getValue();
-                String defaultValue = param.getDefaultValue();
-                map.put(name, LessStrings.isEmpty(value) ? defaultValue : value);
+                map.put(name, param.getValueOrDefault());
             }
             StringBuilder builder = new StringBuilder();
             List<String> contents = new ArrayList<>();

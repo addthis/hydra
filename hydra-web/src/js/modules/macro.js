@@ -182,38 +182,40 @@ function(
         }
     });
     var DetailView = Backbone.View.extend({
-        className:"detail-view",
-        initialize:function(){
-            _.bindAll(this,'render','template','handleDeleteButtonClick','handleSaveButtonClick');
+        className: 'detail-view',
+        initialize: function(options){
+            _.bindAll(this, 'render', 'template', 'handleDeleteButtonClick', 'handleSaveButtonClick');
+            this.scrollTo = options.scrollTo;
 
         },
         template: _.template(macroDetailTemplate),
         events: {
-            "click #deleteMacroButton":"handleDeleteButtonClick",
-            "click #saveMacroButton":"handleSaveButtonClick",
-            "keyup input":"handleInputKeyUp"
+            'click #deleteMacroButton': 'handleDeleteButtonClick',
+            'click #saveMacroButton': 'handleSaveButtonClick',
+            'keyup input': 'handleInputKeyUp'
         },
-        render:function(){
+        render: function(){
             var html = this.template({
-                macro:this.model.toJSON(),
-                util:util
+                macro: this.model.toJSON(),
+                util: util
             });
             this.$el.html(html);
             this.views = {
                 editor: new Editor.AceView({
-                    model:this.model,
-                    keyName:"macro"
+                    model: this.model,
+                    keyName: 'macro',
+                    scrollTo: this.scrollTo
                 }).render()
             };
             //adjust height
             this.views.editor.$el.css({
-                position:"absolute",
-                top:'59px',
-                bottom:0,
-                right:0,
-                left:0
-            })
-            this.$el.find("div#detailContainer").append(this.views.editor.$el);
+                position: 'absolute',
+                top: '59px',
+                bottom: 0,
+                right: 0,
+                left: 0
+            });
+            this.$el.find('div#detailContainer').append(this.views.editor.$el);
             return this;
         },
         handleDeleteButtonClick:function(event){

@@ -13,21 +13,26 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
+import com.addthis.codec.jackson.Jackson;
+import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
-import com.addthis.hydra.job.spawn.SpawnState;
-import com.fasterxml.jackson.core.JsonFactory;
+import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.entity.JobMacro;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.PipedOutputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Matcher;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 
@@ -39,86 +44,208 @@ import java.util.regex.Pattern;
  */
 public class JobSearcher implements Runnable {
     // The number of lines to put above and below a matching line to provide some context
-    private final static int SEARCH_CONTEXT_BUFFER_LINES = 3;
     private static final Logger log = LoggerFactory.getLogger(JobSearcher.class);
 
-    private final SpawnState spawnState;
     private final Pattern pattern;
-    private final PipedOutputStream outputStream;
-    private final JsonFactory jsonFactory;
-    private final ObjectMapper objectMapper;
+    private final Map<String, JobMacro> macros;
+    private final Map<String, Job> jobs;
     private final JobConfigManager jobConfigManager;
+    private final JsonGenerator generator;
+    private final Map<String, List<String>> aliases;
 
-    public JobSearcher(SpawnState spawnState, JobConfigManager jobConfigManager, SearchOptions options, PipedOutputStream outputStream) {
-        this.spawnState = spawnState;
+    public JobSearcher(Map<String, Job> jobs,
+                       Map<String, JobMacro> macros,
+                       Map<String, List<String>> aliases,
+                       JobConfigManager jobConfigManager,
+                       SearchOptions options,
+                       PipedOutputStream outputStream) throws IOException {
+        this.jobs = jobs;
+        this.macros = macros;
+        this.aliases = aliases;
         this.jobConfigManager = jobConfigManager;
         this.pattern = Pattern.compile(options.pattern);
-        this.outputStream = outputStream;
-        this.jsonFactory = new JsonFactory();
-        this.objectMapper = new ObjectMapper(jsonFactory);
+        this.generator = Jackson.defaultMapper().getFactory().createGenerator(outputStream);
     }
 
     @Override
     public void run() {
-
-        Iterator<JobInfo> it = new CacheAwareJobConfigIterator(spawnState, jobConfigManager);
-        List<JobInfo> jobInfoPairs = Lists.newArrayList(it);
-
         try {
-            JsonGenerator generator = jsonFactory.createGenerator(outputStream);
-            generator.setCodec(objectMapper);
-            try {
-                generator.writeStartObject();
-                generator.writeNumberField("totalFiles", jobInfoPairs.size());
-                generator.writeArrayFieldStart("jobs");
-
-                try {
-                    for (JobInfo jobInfo : jobInfoPairs) {
-                        writeExpandedConfigResults(generator, jobInfo);
-                        generator.flush();
-                    }
-                } catch (IOException e) {
-                    log.warn("i/o exception writing search result", e);
-                }
-
-                generator.writeEndArray();
-                generator.writeEndObject();
-            } catch(IOException e) {
-                log.warn("i/o exception writing search", e);
-            } finally {
-                generator.close();
-            }
-
-        } catch (IOException e) {
-            log.warn("i/o exception in search thread", e);
-        }
-    }
-
-    private void writeExpandedConfigResults(JsonGenerator generator, JobInfo jobInfo) throws IOException {
-        List<SearchResult> jobSearchResults = searchExpandedConfig(jobInfo.config);
-
-        if (jobSearchResults.size() > 0) {
             generator.writeStartObject();
-            generator.writeStringField("id", jobInfo.id);
-            generator.writeStringField("description", jobInfo.description);
-            generator.writeObjectField("groups", jobSearchResults);
+
+            JobMacroGraph dependencyGraph = new JobMacroGraph(macros);
+            Map<String, Set<TextLocation>> macroSearches = searchMacros(macros, dependencyGraph);
+
+            /*
+             {
+               jobs: [
+                 {id, description, matches: []}
+               ]
+               macros: [
+                 {id, description, matches: []}
+               ]
+             }
+             */
+            generator.writeObjectField("macros", getMacroSearchResults(macroSearches));
+
+            generator.writeArrayFieldStart("jobs");
+            for (Job job : jobs.values()) {
+                SearchResult jobSearchResult = searchJob(job, dependencyGraph, macroSearches);
+                if (jobSearchResult != null) {
+                    generator.writeObject(jobSearchResult);
+                }
+            }
+            generator.writeEndArray();
+
             generator.writeEndObject();
-        }
-    }
-
-    private List<SearchResult> searchExpandedConfig(String expandedConfig) {
-        String[] lines = expandedConfig.split("\n");
-        ArrayList<LineMatch> matches = new ArrayList<>();
-
-
-        for (int lineNum = 0; lineNum < lines.length; lineNum++) {
-            String line = lines[lineNum];
-            Matcher m = pattern.matcher(line);
-            while (m.find()) {
-                matches.add(new LineMatch(lineNum, m.start(), m.end()));
+        } catch (Exception e) {
+            log.error("JobSearcher failed:", e);
+        } finally {
+            try {
+                generator.close();
+            } catch (IOException e) {
+                log.error("JobSearcher generator failed to close", e);
             }
         }
 
-        return SearchResult.mergeMatchList(lines, matches, SEARCH_CONTEXT_BUFFER_LINES);
+    }
+
+    @Nullable
+    private SearchResult searchJob(Job job, JobMacroGraph dependencyGraph, Map<String, Set<TextLocation>> macroSearches) {
+        String config = jobConfigManager.getConfig(job.getId());
+        IncludeLocations macroIncludeLocations = IncludeLocations.forMacros(config);
+
+        Predicate<String> predicate = pattern.asPredicate();
+        Set<TextLocation> searchLocs = LineSearch.search(config, pattern);
+
+        // For each macro dependency of the job, see if that macro (or any of its dependencies) contains a search result
+        searchLocs.addAll(getDependencySearchMatches(macroIncludeLocations, dependencyGraph, macroSearches));
+
+        // For each alias in the job, see if any of the job IDs which that alias point to contain a search result
+        // Macros and aliases have identical syntax -- the same locations map can be used for either one
+        searchLocs.addAll(getMatchedAliasLocations(macroIncludeLocations));
+
+        // For each parameter of the job, see if that parameter contains a search result
+        IncludeLocations paramIncludeLocations = IncludeLocations.forJobParams(config);
+        for (JobParameter param : job.getParameters()) {
+            String paramValue = param.getValueOrDefault();
+            if (predicate.test(paramValue)) {
+                searchLocs.addAll(paramIncludeLocations.locationsFor(param.getName()));
+            }
+
+            // Sadly, these parameters might ALSO contain macros, aliases, etc. So test that, too
+            IncludeLocations nestedIncludeLocations = IncludeLocations.forMacros(paramValue);
+            searchLocs.addAll(getMatchedAliasLocations(nestedIncludeLocations));
+            searchLocs.addAll(getDependencySearchMatches(nestedIncludeLocations, dependencyGraph, macroSearches));
+        }
+
+        // Merge the matches together into groups which can be easily displayed on the client
+        List<AdjacentMatchesBlock> groups = AdjacentMatchesBlock.mergeMatchList(config.split("\n"), searchLocs);
+
+        if (groups.size() > 0) {
+            return new SearchResult(job.getId(), job.getDescription(), groups);
+        } else {
+            return null;
+        }
+    }
+
+    private Collection<TextLocation> getMatchedAliasLocations(IncludeLocations macroIncludeLocations) {
+        Predicate<String> predicate = pattern.asPredicate();
+        ImmutableSet.Builder<TextLocation> results = ImmutableSet.builder();
+
+        for (String alias : aliases.keySet()) {
+            for (String jobID : aliases.get(alias)) {
+                if (predicate.test(jobID)) {
+                    results.addAll(macroIncludeLocations.locationsFor(alias));
+                }
+            }
+        }
+
+        return results.build();
+    }
+
+
+    @Nullable
+    private SearchResult getMacroSearchResult(String macroName, Set<TextLocation> macroSearch) {
+        JobMacro macro = macros.get(macroName);
+
+        if (macro == null) {
+            throw new NullPointerException();
+        }
+
+        String[] macroLines = macro.getMacro().split("\n");
+        List<AdjacentMatchesBlock> adjacentMatchesBlocks = AdjacentMatchesBlock.mergeMatchList(macroLines, macroSearch);
+
+        if (adjacentMatchesBlocks.size() > 0) {
+            return new SearchResult(macroName, "", adjacentMatchesBlocks);
+        } else {
+            return null;
+        }
+    }
+
+
+    private List<SearchResult> getMacroSearchResults(Map<String, Set<TextLocation>> macroSearches) {
+        List<SearchResult> results = new ArrayList<>();
+        for (String macroName : macroSearches.keySet()) {
+            SearchResult result = getMacroSearchResult(macroName, macroSearches.get(macroName));
+            if (result != null) {
+                results.add(result);
+            }
+        }
+
+        return results;
+    }
+
+    private Map<String, Set<TextLocation>> searchMacros(Map<String, JobMacro> macros, JobMacroGraph dependencyGraph) {
+        Map<String, Set<TextLocation>> results = new HashMap<>();
+
+        // Search the text of the macros themselves for any results
+        for (String macroName : macros.keySet()) {
+            JobMacro macro = macros.get(macroName);
+            results.put(macroName, LineSearch.search(macro.getMacro(), pattern));
+        }
+
+        // Macros can include other macros, so we need to add dependent macros (which contain search results) to the
+        // parent macro's search results.
+        for (String macroName : results.keySet()) {
+            Set<TextLocation> macroSearchResults = results.get(macroName);
+            IncludeLocations macroIncludeLocations = dependencyGraph.getIncludeLocations(macroName);
+
+            // See if any of the (recursive) dependencies of this macro had search results. If they do, we add a new
+            // LineMatch to this macro's search results, which indicates where the macro w/ a search result was included
+            macroSearchResults.addAll(getDependencySearchMatches(macroIncludeLocations, dependencyGraph, results));
+        }
+
+        return results;
+    }
+
+
+    /**
+     * Returns a set of TextLocations which represent that an included dependency (or one of the included dependency's
+     * dependencies, etc.) contains a search match
+     *
+     * @param macroIncludeLocations
+     * @param dependencyGraph
+     * @param macroSearchResults
+     * @return
+     */
+    private ImmutableSet<TextLocation> getDependencySearchMatches(IncludeLocations macroIncludeLocations,
+                                                                  JobMacroGraph dependencyGraph,
+                                                                  Map<String, Set<TextLocation>> macroSearchResults) {
+
+        ImmutableSet.Builder<TextLocation> builder = ImmutableSet.builder();
+        for (String depMacroName : macroIncludeLocations.dependencies()) {
+
+            // For each dependency that depMacroName brings in, see if any of THEM have search results.  If they do, we
+            // want to link back to the include to depMacroName in the search result.
+            for (String deeperDepName : dependencyGraph.getDependencies(depMacroName)) {
+                Set<TextLocation> depMacroResults = macroSearchResults.getOrDefault(deeperDepName, ImmutableSet.of());
+                if (!depMacroResults.isEmpty()) {
+                    builder.addAll(macroIncludeLocations.locationsFor(depMacroName));
+                    break;
+                }
+            }
+        }
+
+        return builder.build();
     }
 }

@@ -19,7 +19,6 @@ import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.ZnodeJob;
-import com.addthis.hydra.job.spawn.search.ExpandedConfigCacheSettings;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.ZookeeperDataStore;
 import com.addthis.hydra.query.spawndatastore.QueryConfigWatcher;
@@ -47,7 +46,7 @@ public class QueryConfigWatcherTest extends ZkCodecStartUtil {
     }
 
     public JobConfigManager setUpSampleState() throws Exception {
-        JobConfigManager jcm = new JobConfigManager(spawnDataStore, null, new ExpandedConfigCacheSettings(1000, 100_000));
+        JobConfigManager jcm = new JobConfigManager(spawnDataStore, null);
         IJob job = new ZnodeJob("j1");
         job.setQueryConfig(new JobQueryConfig(true));
         jcm.addJob(job);

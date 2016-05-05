@@ -20,7 +20,6 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.bark.StringSerializer;
 import com.addthis.codec.Codec;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.spawn.search.ExpandedConfigCacheSettings;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.ZkCodecStartUtil;
@@ -55,7 +54,7 @@ public class JobConfigManagerTest extends ZkCodecStartUtil {
             spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         }
         if (jobConfigManager == null) {
-            jobConfigManager = new JobConfigManager(spawnDataStore, null, new ExpandedConfigCacheSettings(1000, 100_000));
+            jobConfigManager = new JobConfigManager(spawnDataStore, null);
         }
         return jobConfigManager;
     }

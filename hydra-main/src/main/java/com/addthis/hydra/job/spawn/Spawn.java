@@ -44,6 +44,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -61,6 +62,7 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
+import com.addthis.codec.annotations.Bytes;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
@@ -115,9 +117,9 @@ import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
 import com.addthis.hydra.job.spawn.balancer.SpawnBalancer;
-import com.addthis.hydra.job.spawn.search.ExpandedConfigCacheSettings;
 import com.addthis.hydra.job.spawn.search.JobSearcher;
 import com.addthis.hydra.job.spawn.search.SearchOptions;
+import com.addthis.hydra.job.store.CachedSpawnDataStore;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
@@ -257,8 +259,7 @@ public class Spawn implements Codable, AutoCloseable {
                                                       required = true) PermissionsManager permissionsManager,
                                @Nonnull @JsonProperty(value = "jobDefaults",
                                                       required = true) JobDefaults jobDefaults,
-                               @Nonnull @JsonProperty(value = "expandedConfigCache",
-                                                      required = true) ExpandedConfigCacheSettings expandedConfigCacheSettings) throws Exception {
+                               @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize) throws Exception {
         this.jobLock = new ReentrantLock();
         this.shuttingDown = new AtomicBoolean(false);
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
@@ -307,7 +308,7 @@ public class Spawn implements Codable, AutoCloseable {
 
 
         jobExpander = new JobExpanderImpl(this, jobMacroManager, aliasManager);
-        jobConfigManager = new JobConfigManager(spawnDataStore, jobExpander, expandedConfigCacheSettings);
+        jobConfigManager = new JobConfigManager(new CachedSpawnDataStore(spawnDataStore, datastoreCacheSize), jobExpander);
 
         // fix up null pointers
         for (Job job : spawnState.jobs.values()) {
@@ -463,7 +464,12 @@ public class Spawn implements Codable, AutoCloseable {
     public PipedInputStream getSearchResultStream(SearchOptions searchOptions) throws IOException {
         PipedOutputStream out = new PipedOutputStream();
         PipedInputStream in = new PipedInputStream(out);
-        JobSearcher js = new JobSearcher(spawnState, jobConfigManager, searchOptions, out);
+        JobSearcher js = new JobSearcher(SpawnUtils.getJobsMapFromSpawnState(spawnState),
+                SpawnUtils.getMacroMapFromMacroManager(jobMacroManager),
+                getAliasManager().getAliases(),
+                jobConfigManager,
+                searchOptions,
+                out);
         expandKickExecutor.submit(js);
         return in;
     }
