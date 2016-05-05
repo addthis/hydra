@@ -124,14 +124,14 @@ public class CachedSpawnDataStore implements SpawnDataStore {
 
     @Override
     public void deleteChild(String parent, String childId) {
-        cache.invalidate(ImmutablePair.of(parent, childId));
         dataStore.deleteChild(parent, childId);
+        cache.invalidate(ImmutablePair.of(parent, childId));
     }
 
     @Override
     public void delete(String path) {
-        cache.invalidate(defaultKey(path));
         dataStore.delete(path);
+        cache.invalidate(defaultKey(path));
     }
 
     @Override
