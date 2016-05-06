@@ -1226,6 +1226,7 @@ public class JobTask implements Codable {
                     }
                     if (kill) {
                         log.warn("[minion.kill] killing pid:{} hard", pid);
+                        ProcessUtils.shell("kill -3 " + pid, minion.rootDir) >= 0;
                         result &= ProcessUtils.shell("kill -9 " + pid, minion.rootDir) >= 0;
                     } else {
                         log.warn("[minion.kill] killing pid:{} nice", pid);
