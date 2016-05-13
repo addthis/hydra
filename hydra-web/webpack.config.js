@@ -48,7 +48,6 @@ function getLoaders() {
     return [
         {
             test: /\.es6.js$/,
-            exclude: /node_modules/,
             loader: 'babel-loader',
             query: {
                 presets: ['stage-0', 'es2015', 'react'],

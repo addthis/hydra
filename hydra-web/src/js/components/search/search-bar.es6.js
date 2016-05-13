@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom';
 import linkState from 'react-link-state';
 import {requiredPaletteProp} from 'style/color-palette';
 import FloatingBottomFooter from 'components/containers/floating-bottom-footer';
+import autobind from 'autobind-decorator';
 
 export default class SearchBar extends React.Component {
     static propTypes = {
@@ -12,16 +13,16 @@ export default class SearchBar extends React.Component {
         visible: React.PropTypes.bool.isRequired,
         formTarget: React.PropTypes.oneOf(['_blank', '_self', '_parent', '_top']),
         onSubmit: React.PropTypes.func
-    }
+    };
 
     defaultProps = {
         formTarget: '_blank',
         onSubmit: null
-    }
+    };
 
     state = {
         searchString: ''
-    }
+    };
 
     componentWillReceiveProps(nextProps) {
         if (nextProps.visible && !this.props.visible) {
@@ -32,6 +33,7 @@ export default class SearchBar extends React.Component {
         }
     }
 
+    @autobind
     handleSubmit(evt) {
         // React doesn't forward the 'target' prop to the actual form element
         evt.target.target = this.props.formTarget;
@@ -115,7 +117,7 @@ export default class SearchBar extends React.Component {
                     <form style={inputGroupStyle}
                         action={action}
                         method={'get'}
-                        onSubmit={this.handleSubmit.bind(this)}>
+                        onSubmit={this.handleSubmit}>
                         <input type={'text'}
                             ref={'searchInput'}
                             style={inputStyle}

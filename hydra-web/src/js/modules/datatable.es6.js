@@ -11,6 +11,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+'use strict';
+
+import React from 'react';
+import ReactDOM from 'react-dom';
+
 define([
     "underscore",
     "jquery",
@@ -545,7 +550,7 @@ function(_, $, dt, Backbone){
         return $.trim(value);
     };
     DataTable.View = Backbone.View.extend({
-        tagName:"table",
+        tagName:"div",
         className:"table table-bordered table-collapsed table-condensed",
         attributes:{
             cellPadding:0,
@@ -598,7 +603,7 @@ function(_, $, dt, Backbone){
             this.loadSelectedState();
             this.cacheColumnIndices();
         },
-        cacheColumnIndices:function(){
+        cacheColumnIndices: function(){
             var map={};
             _.each(this.columns,function(column,index){
                 if(!_.isNumber(column.mData) && !_.isEmpty(column.mData)){
@@ -607,7 +612,7 @@ function(_, $, dt, Backbone){
             });
             this.columnIndexMap = map;
         },
-        checkDirty:function(){
+        checkDirty: function(){
             var oSettings=(!_.isUndefined(this.views.table)?this.views.table.fnSettings():{});
             if(this.dirty && !_.isEmpty(oSettings) && !oSettings.bDrawing){
                 oSettings.iInitDisplayStart=this.scrollTop;
@@ -615,140 +620,46 @@ function(_, $, dt, Backbone){
                 this.dirty=false;
             }
         },
-        handleScroll:function(event){
+        handleScroll: function(event){
             var body = this.views.body;
             this.scrollTop=body.scrollTop();
         },
-        render:function(){
-            var height = this.$el.parent().height()-this.heightBuffer;
-            var self=this;
-            this.views.parent=this.$el.parent();
+        render: function(){
+            const height = this.$el.parent().height() - this.heightBuffer;
+            const width = this.$el.width();
+
             if(!this.initialized){
-                var prefix = "";
-                var id = this.id;
-                this.views.table =this.$el.dataTable({
-                    "aaData":this.collection.toJSON(),
-                    "aoColumns": this.columns,
-                    "aaSorting":[],
-                    //"bScrollInfinite":false,
-                    //"bAutoWidth": true,
-                    //"sScrollX": "100%",
-                    //"sScrollXInner": "100%",
-                    "oSearch": {"bRegex":false,"bSmart": false},
-                    "bPaginate":false,
-                    "sScrollY":height+"px",
-                    "bProcessing":false,
-                    "bStateSave": true,
-                    "bServerSide":false,
-                    "bCaseInsensitive":true,
-                    "bDeferRender": true,
-                    //"bScrollCollapse":self.collapsible,
-                    "sInfoEmpty":this.emptyMessage,
-                    //"bScrollAutoCss": true,
-                    "oLanguage":{
-                        "sEmptyTable":self.emptyMessage,
-                        "sSearch":""
-                    },
-                    "sCookiePrefix":prefix,
-                    "iCookieDuration":7*60*60*24,//1 week
-                    "fnStateSave": function (oSettings, oData) {
-                        var state=JSON.stringify(oData);
-                        state.columnFilterIndex=self.columnFilterIndex;
-                        localStorage[id]=state;
-                        self.sortCols=oData.aaSorting;
-                        localStorage[id+"_filterIndex"]=self.columnFilterIndex;
-                        return true;
-                    },
-                    "fnStateLoad":function(oSettings){
-                        var state = localStorage[id];
-                        state=(_.isUndefined(state)?null:state);
-                        state=JSON.parse(state);
-                        if(!_.isNull(oSettings.oLoadedState)){
-                            state= _.extend(oSettings.oLoadedState,state);
-                            self.sortCols=state.aaSorting;
-                        }
-                        var filterIndex = localStorage[id+"_filterIndex"];
-                        if(!_.isUndefined(filterIndex)){
-                            self.columnFilterIndex=parseInt(filterIndex,10);
-                        }
-                        return state;
-                    },
-                    "fnStateLoadParams":function (oSettings, oData) {
-                        return true;
-                    },
-                    "fnCookieCallback":function(sName, oData, sExpires, sPath){
-                        return sName + "="+JSON.stringify(oData)+"; expires=" + sExpires +"; path=" + sPath+id;
-                    },
-                    "fnDrawCallback" : function(oSettings) {
-                        if(!_.isUndefined(self.drawCallback)){
-                            self.drawCallback(oSettings);
-                        }
-                        self.dirty=false;
-                    },
-                    "fnPreDrawCallback":function(){
-                        return true;
-                    },
-                    "fnInitComplete": function(oSettings, json){
-                        var anControl = $("div#"+id+"_filter label input[type='text']");
-                        var clearButton = $("<span class='icon_clear'>X</span>");
-                        clearButton.bind('click',function(){
-                            $(this).hide();
-                            self.resetAllFilters();
-                            self.views.table.fnFilter("");
-                        });
-                        if(_.isEmpty(anControl.val())){
-                            clearButton.hide();
-                        }
-                        else{
-                            clearButton.show();
-                        }
-                        clearButton.insertAfter(anControl);
+                ReactDOM.render(
+                    React.createElement(this.component, {
+                        columns: this.columns,
+                        height: height,
+                        width: width,
+                        rows: this.collection.toJSON()
+                    }),
+                    this.$el.get(0)
+                );
 
-                        var search = oSettings.oPreviousSearch.sSearch;
-                        var columns = self.columns;
-                        _.each(columns,function(column,idx){
-                            var colSearch = oSettings.aoPreSearchCols[idx];
-                            if(!_.isNumber(colSearch.sSearch) && !_.isEmpty(colSearch.sSearch)){
-                                search+=" "+column.mData+":"+colSearch.sSearch;
-                            }
-                        });
-                        anControl.val($.trim(search));
-
-                    },
-                    "fnCreatedRow":function(nRow, aData, iDataIndex){
-                        self.rowCount++;
-                        var $row=$(nRow),rowId=aData[self.idAttribute];
-                        self.rowById[rowId]=nRow;
-                        if(!_.isUndefined(self.selectedIds[rowId])){
-                            $row.addClass("row_selected");
-                            $row.find("td input.row_selectable").prop("checked",true);
-                        }
-                        $row.attr("id",rowId);
-                    },
-                    bFilter:this.enableSearch,
-                    "sDom": '<"dataTables_header"<"selectable_action">'+(this.enableSearch?'f':'')+'<"filter_links">>lrt<"dataTables_footer"i<"summary_info">>'
-                });
-                //filter template
-                this.views.selectable = $(this.selectableTemplate);
-                this.views.filter = $(this.filterTemplate);
-                this.views.parent.find("div.selectable_action").append(this.views.selectable);
-                this.views.parent.find("div.filter_links").append(this.views.filter);
-                this.views.parent.find("div.dataTables_filter input").attr("placeholder","Search");
-                this.initialized=true;
-                $(window).resize(this.resize);
-                this.views.selectable.bind('click button.checkbox-button',this.handleCheckboxButtonClick);
-                this.views.filter.bind('click li a',this.handleFilter);
-                $(this.views.table.fnSettings().oInstance).on('filter',this.handleFiltered);
-                this.views.body = this.$el.closest('div.dataTables_scrollBody');
-                this.$el=$(this.views.table.fnSettings().nTableWrapper);
-                this.adjustWidth();
-                this.saveSelectedState();
-                this.views.table.fnFilterOnReturn();
+                // //filter template
+                // this.views.selectable = $(this.selectableTemplate);
+                // this.views.filter = $(this.filterTemplate);
+                // this.views.parent.find("div.selectable_action").append(this.views.selectable);
+                // this.views.parent.find("div.filter_links").append(this.views.filter);
+                // this.views.parent.find("div.dataTables_filter input").attr("placeholder","Search");
+                // this.initialized=true;
+                // $(window).resize(this.resize);
+                // this.views.selectable.bind('click button.checkbox-button',this.handleCheckboxButtonClick);
+                // this.views.filter.bind('click li a',this.handleFilter);
+                // $(this.views.table.fnSettings().oInstance).on('filter',this.handleFiltered);
+                // this.views.body = this.$el.closest('div.dataTables_scrollBody');
+                // this.$el=$(this.views.table.fnSettings().nTableWrapper);
+                // this.adjustWidth();
+                // this.saveSelectedState();
+                // this.views.table.fnFilterOnReturn();
             }
             else{
-                this.resize();
-                this.adjustWidth();
-                this.redrawTable();
+                // this.resize();
+                // this.adjustWidth();
+                // this.redrawTable();
             }
             return this;
         },

@@ -12,8 +12,6 @@
  * limitations under the License.
  */
 
-'use strict';
-
 import SpawnView from 'components/views/spawn-view';
 import ReactDOM from 'react-dom';
 import React from 'react';
@@ -133,6 +131,11 @@ function(
 
             app.initialize();
             Backbone.history.start();
+        })
+        .fail(({thrown}) => {
+            if (thrown) {
+                throw thrown;
+            }
         });
 
 

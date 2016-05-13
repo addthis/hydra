@@ -11,6 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+'use strict';
+
+import JobsViewReactComponent from 'components/views/jobs-view';
+
 define([
     "jquery",
     "underscore",
@@ -41,7 +45,7 @@ define([
     "text!../../templates/job.revert.modal.html",
     "text!../../templates/job.permissions.modal.html",
     "text!../../templates/job.table.info.html",
-    "text!../../templates/job.checkdirs.html"
+    "text!../../templates/job.checkdirs.html",
 ],
 function(
     $,
@@ -917,6 +921,7 @@ function(
                 'handleChangePermissionsButtonClick',
                 'handleFindDeletedJobButtonClick'
             );
+            this.component = JobsViewReactComponent;
             this.hasRendered=false;
             this.listenTo(app.user,"change:username",this.handleUsernameChange);
             DataTable.View.prototype.initialize.apply(this,[options]);
@@ -997,8 +1002,8 @@ function(
             this.$el.detach();
         },
         handleUsernameChange:function(event){
-            this.views.filter.find("#myJobs").data("value",app.user.get("username"));
-            this.checkFilterState();
+            // this.views.filter.find("#myJobs").data("value",app.user.get("username"));
+            // this.checkFilterState();
         }
     });
     var ComfyJobTable = JobTable.extend({
@@ -1205,6 +1210,7 @@ function(
             }]);
         },
         render:function(){
+            console.log('comfy job table')
             JobTable.prototype.render.apply(this,[]);
             this.views.parent.find("a#comfortableTable").parent().addClass("active");
             return this;
@@ -1430,6 +1436,7 @@ function(
         },
         render:function(){
             JobTable.prototype.render.apply(this,[]);
+            console.log('compact job table')
             this.views.parent.find("a#compactTable").parent().addClass("active");
             return this;
         }
