@@ -1547,7 +1547,8 @@ function(
             "click button#goldButton":"handleGoldButtonClick",
             "click button#hourlyButton":"handleHourlyButtonClick",
             "click button#dailyButton":"handleDailyButtonClick",
-            "click button#weeklyButton":"handleWeeklyButtonClick"
+            "click button#weeklyButton":"handleWeeklyButtonClick",
+            "click button#MonthlyButton":"handleMonthlyButtonClick"
         },
         initialize:function(options){
             _.bindAll(this,
@@ -1557,7 +1558,8 @@ function(
                 'handleGoldButtonClick',
                 'handleDailyButtonClick',
                 'handleHourlyButtonClick',
-                'handleWeeklyButtonClick');
+                'handleWeeklyButtonClick',
+                'handleMonthlyButtonClick');
             this.backupModel = options.backupModel;
             this.listenTo(this.backupModel,"change",this.handleBackupChange);
         },
@@ -1655,6 +1657,9 @@ function(
         },
         handleWeeklyButtonClick:function(event){
             this.handleButtonClickForTimestampRevert("#weeklySelect", "weekly");
+        },
+        handleMonthlyButtonClick:function(event){
+            this.handleButtonClickForTimestampRevert("#monthlySelect", "monthly");
         }
     });
     var DetailView = Backbone.View.extend({
