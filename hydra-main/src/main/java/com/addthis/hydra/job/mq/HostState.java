@@ -17,12 +17,15 @@ import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import com.addthis.hydra.minion.Minion;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Sets;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -177,14 +180,24 @@ public class HostState implements HostMessage {
         return up && !dead && !diskReadOnly && !disabled;
     }
 
+    // share at least one type; imperfect host pruning
     public boolean hasType(String type) {
         if (minionTypes == null) {
             minionTypes = Minion.defaultMinionType;
         }
-        if (minionTypes.contains(",")) {
-            return Arrays.asList(minionTypes.split(",")).contains(type);
+        Set<String> theirTypes;
+        if (type.contains(",")) {
+            theirTypes = Sets.newHashSet(type.split(","));
+        } else {
+            theirTypes = Collections.singleton(type);
         }
-        return type.equals(minionTypes);
+        Set<String> myTypes;
+        if (minionTypes.contains(",")) {
+            myTypes = Sets.newHashSet(minionTypes.split(","));
+        } else {
+            myTypes = Collections.singleton(type);
+        }
+        return !Sets.intersection(theirTypes, myTypes).isEmpty();
     }
 
     public int countTotalLive() {
