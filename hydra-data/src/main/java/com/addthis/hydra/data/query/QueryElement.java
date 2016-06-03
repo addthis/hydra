@@ -40,8 +40,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class QueryElement implements SuperCodable {
 
-    private static final boolean debug = System.getProperty("query.path.debug", "0").equals("1");
-
     /**
      *
      */
@@ -172,13 +170,6 @@ public class QueryElement implements SuperCodable {
                         field.add(new QueryElementField().parse(tok, nextColumn));
                     }
                 }
-            }
-        }
-        if (debug) {
-            try {
-                System.out.println("new QE " + CodecJSON.encodeString(this));
-            } catch (Exception ex) {
-                ex.printStackTrace();
             }
         }
         postDecode();

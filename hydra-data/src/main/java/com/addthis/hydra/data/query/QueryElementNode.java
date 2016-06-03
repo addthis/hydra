@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessStrings;
 
@@ -60,8 +59,6 @@ public class QueryElementNode implements Codable {
     @FieldConfig(codable = true)
     public String[] match;
     @FieldConfig(codable = true)
-    public String[] trap;
-    @FieldConfig(codable = true)
     public String data;
     @FieldConfig(codable = true)
     public String dataKey;
@@ -90,10 +87,6 @@ public class QueryElementNode implements Codable {
     private BundleField field;
     private Pattern[] regexPatterns;
 
-    private enum MODE {
-        MATCH, TRAP
-    }
-
     public QueryElementNode parse(String tok, MutableInt nextColumn) {
         if (tok.equals("+..")) {
             up = true;
@@ -106,7 +99,6 @@ public class QueryElementNode implements Codable {
             return this;
         }
         List<String> matchList = new ArrayList<>(3);
-        List<String> trapList = new ArrayList<>(3);
         if (tok.indexOf(';') > 0) {
             tok = tok.replace(';', ',');
             flat = true;
@@ -123,13 +115,10 @@ public class QueryElementNode implements Codable {
         tok = extractDefaultValue(tok);
 
 
-        QueryElementNode.MODE mode = MODE.MATCH;
-
         String[] list = LessStrings.splitArray(tok, ",");
         for (String component : list) {
             if (component.startsWith("*")) {
                 component = component.substring(1);
-                mode = MODE.MATCH;
             } else if (component.startsWith("+")) {
                 component = component.substring(1);
                 if (component.startsWith("+")) {
@@ -140,7 +129,6 @@ public class QueryElementNode implements Codable {
                     component = component.substring(1);
                     rangeStrict = true;
                 }
-                mode = MODE.MATCH;
                 int close;
                 if (component.startsWith("{") && (close = component.indexOf("}")) > 0) {
                     column = component.substring(1, close);
@@ -149,9 +137,6 @@ public class QueryElementNode implements Codable {
                     column = Integer.toString(nextColumn.intValue());
                     nextColumn.increment();
                 }
-            } else if (component.startsWith("-")) {
-                component = component.substring(1);
-                mode = MODE.TRAP;
             }
             if (component.startsWith("%?")) {
                 data = memKey;
@@ -173,16 +158,11 @@ public class QueryElementNode implements Codable {
                 continue;
             } else if (component.startsWith("@")) {
                 component = component.substring(1);
-                mode = MODE.MATCH;
                 rangeStrict = true;
             }
             component = LessBytes.urldecode(component);
             if (component.length() > 0) {
-                if (mode != MODE.TRAP) {
-                    matchList.add(component);
-                } else {
-                    trapList.add(component);
-                }
+                matchList.add(component);
             }
         }
         if (matchList.size() > 0) {
@@ -193,9 +173,6 @@ public class QueryElementNode implements Codable {
                 sorted.addAll(matchList);
                 match = sorted.toArray(out);
             }
-        }
-        if (trapList.size() > 0) {
-            trap = trapList.toArray(new String[trapList.size()]);
         }
         return this;
     }
@@ -382,24 +359,6 @@ public class QueryElementNode implements Codable {
             if (path != null) {
                 DataTreeNode refnode = followPath(parent.getTreeRoot(), path);
                 return refnode != null ? new ReferencePathIterator(refnode, parent) : null;
-            }
-            if (trap != null) {
-                for (String name : trap) {
-                    for (ClosableIterator<DataTreeNode> iter = parent.getIterator(); iter.hasNext();) {
-                        tmp = iter.next();
-                        if (regex()) {
-                            if (tmp.getName().matches(name)) {
-                                iter.close();
-                                return null;
-                            }
-                        } else {
-                            if (tmp.getName().equals(name)) {
-                                iter.close();
-                                return null;
-                            }
-                        }
-                    }
-                }
             }
             if ((match == null) && (regex == null) && (data == null)) {
                 Iterator<DataTreeNode> result = parent.getIterator();
