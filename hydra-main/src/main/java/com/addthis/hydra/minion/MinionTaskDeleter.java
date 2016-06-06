@@ -211,8 +211,9 @@ public class MinionTaskDeleter implements Codable {
             deleteFile(backupFile);
             return true;
         }
-        if (diskIsFull(backupFile) || shouldDeleteBackup(backupName, type)) {
-            if(diskIsFull(backupFile)) {
+        boolean isFullDisk = diskIsFull(backupFile);
+        if (isFullDisk || shouldDeleteBackup(backupName, type)) {
+            if(isFullDisk) {
                 log.info("Deleting backup due to full disk: {}", backupFile);
             }
             File taskDir = backupFile.getParentFile();
