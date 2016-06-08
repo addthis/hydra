@@ -185,19 +185,17 @@ public class HostState implements HostMessage {
         if (minionTypes == null) {
             minionTypes = Minion.defaultMinionType;
         }
-        Set<String> externalTypes;
-        if (externalType.contains(",")) {
-            externalTypes = Sets.newHashSet(externalType.split(","));
-        } else {
-            externalTypes = Collections.singleton(externalType);
-        }
-        Set<String> myTypes;
-        if (minionTypes.contains(",")) {
-            myTypes = Sets.newHashSet(minionTypes.split(","));
-        } else {
-            myTypes = Collections.singleton(minionTypes);
-        }
+        Set<String> externalTypes = HostState.typeStringToSet(externalType);
+        Set<String> myTypes = HostState.typeStringToSet(minionTypes);
         return !Sets.intersection(externalTypes, myTypes).isEmpty();
+    }
+
+    private static Set<String> typeStringToSet(String typeString) {
+        if (typeString.contains(",")) {
+            return Sets.newHashSet(typeString.split(","));
+        } else {
+            return Collections.singleton(typeString);
+        }
     }
 
     public int countTotalLive() {
