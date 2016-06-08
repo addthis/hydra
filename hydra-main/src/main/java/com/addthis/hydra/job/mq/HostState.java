@@ -181,23 +181,23 @@ public class HostState implements HostMessage {
     }
 
     // share at least one type; imperfect host pruning
-    public boolean hasType(String type) {
+    public boolean hasType(String externalType) {
         if (minionTypes == null) {
             minionTypes = Minion.defaultMinionType;
         }
-        Set<String> theirTypes;
-        if (type.contains(",")) {
-            theirTypes = Sets.newHashSet(type.split(","));
+        Set<String> externalTypes;
+        if (externalType.contains(",")) {
+            externalTypes = Sets.newHashSet(externalType.split(","));
         } else {
-            theirTypes = Collections.singleton(type);
+            externalTypes = Collections.singleton(externalType);
         }
         Set<String> myTypes;
         if (minionTypes.contains(",")) {
             myTypes = Sets.newHashSet(minionTypes.split(","));
         } else {
-            myTypes = Collections.singleton(type);
+            myTypes = Collections.singleton(minionTypes);
         }
-        return !Sets.intersection(theirTypes, myTypes).isEmpty();
+        return !Sets.intersection(externalTypes, myTypes).isEmpty();
     }
 
     public int countTotalLive() {
