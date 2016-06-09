@@ -425,7 +425,11 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     continue;
                 }
                 JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
-                if (assignment != null) {
+                // we don't want to take up one of the limited rebalance slots
+                // with an assignment that we know has no chance of happening
+                // because either the assignment is null or the target host
+                // for the assignment is null
+                if (assignment != null && assignment.getTargetUUID() != null) {
                     markRecentlyReplicatedTo(assignment.getTargetUUID());
                     rv.add(assignment);
                     byteLimit -= taskTrueSize;
