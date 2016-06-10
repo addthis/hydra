@@ -40,14 +40,6 @@ class CommandTaskStopRunner implements Runnable {
         CommandTaskStop stop = (CommandTaskStop) core;
         log.warn("[task.stop] request " + stop.getJobKey() + " count @ " + stop.getRunCount());
         minion.removeJobFromQueue(stop.getJobKey(), false);
-        if (stop.getJobKey().getNodeNumber() == null) {
-            minion.minionStateLock.lock();
-            try {
-                minion.stopped.put(stop.getJobUuid(), stop.getRunCount());
-            } finally {
-                minion.minionStateLock.unlock();
-            }
-        }
         List<JobTask> match = minion.getMatchingJobs(stop);
         if (match.size() == 0 && stop.getNodeID() != null && stop.getNodeID() >= 0) {
             log.warn("[task.stop] unmatched stop for " + stop.getJobUuid() + " / " + stop.getNodeID());

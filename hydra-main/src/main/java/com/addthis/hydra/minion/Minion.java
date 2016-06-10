@@ -83,6 +83,7 @@ import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -120,6 +121,7 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonIgnoreProperties(value="stopped")
 public class Minion implements MessageListener<CoreMessage>, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
@@ -158,7 +160,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
 
     @FieldConfig String uuid;
     @FieldConfig MinionTaskDeleter minionTaskDeleter;
-    @FieldConfig ConcurrentMap<String, Integer> stopped = new ConcurrentHashMap<>();
     @FieldConfig List<CommandTaskKick> jobQueue = new ArrayList<>(10);
     @FieldConfig String minionTypes;
 

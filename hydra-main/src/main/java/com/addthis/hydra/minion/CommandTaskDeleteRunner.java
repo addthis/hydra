@@ -39,7 +39,6 @@ class CommandTaskDeleteRunner implements Runnable {
         minion.minionStateLock.lock();
         try {
             for (JobTask task : minion.getMatchingJobs(delete)) {
-                minion.stopped.put(delete.getJobUuid(), delete.getRunCount());
                 boolean terminated = task.isRunning() && task.stopWait(true);
                 task.setDeleted(true);
                 minion.tasks.remove(task.getJobKey().toString());
