@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import java.net.URI;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ import java.util.regex.Pattern;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
+
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
@@ -71,16 +73,18 @@ import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
-import com.fasterxml.jackson.core.JsonLocation;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -97,28 +101,9 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.FormParam;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.regex.Pattern;
 
 @Path("/job")
 public class JobsResource implements Closeable {
@@ -1079,8 +1064,10 @@ public class JobsResource implements Closeable {
     @GET
     @Path("/fixJobDirs")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response fixJobDirs(@QueryParam("id") String id, @QueryParam("node") @DefaultValue("-1") int node,
-                               @QueryParam("user") String user,  @QueryParam("token") String token,
+    public Response fixJobDirs(@QueryParam("id") String id,
+                               @QueryParam("node") @DefaultValue("-1") int node,
+                               @QueryParam("user") String user,
+                               @QueryParam("token") String token,
                                @QueryParam("sudo") String sudo) {
         try {
             IJob job = spawn.getJob(id);

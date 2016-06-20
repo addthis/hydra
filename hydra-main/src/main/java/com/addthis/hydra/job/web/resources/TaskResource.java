@@ -28,8 +28,6 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONObject;
 
-import com.google.common.base.Optional;
-
 @Path("/task")
 public class TaskResource {
 
@@ -42,14 +40,21 @@ public class TaskResource {
     @GET
     @Path("/start")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response startTask(@QueryParam("job") Optional<String> jobId,
-                              @QueryParam("task") Optional<Integer> task,
-                              @QueryParam("priority") Optional<Integer> priority) {
+    public Response startTask(@QueryParam("job") String jobId,
+                              @QueryParam("task") int task,
+                              @QueryParam("priority") int priority,
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         try {
-            int bonusPriority = priority.or(0);
-            // if there is any bonus priority, go ahead and let this task jump to the head of its queue (break ties)
-            spawn.startTask(jobId.or(""), task.or(-1), bonusPriority, bonusPriority > 0);
-            return Response.ok().build();
+            if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, spawn.getJob(jobId))) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity(
+                        "Insufficient privileges to fix directories for job " + jobId).build();
+            } else {
+                // if there is any bonus priority, go ahead and let this task jump to the head of its queue (break ties)
+                spawn.startTask(jobId, task, priority, priority > 0);
+                return Response.ok().build();
+            }
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();
         }
@@ -85,11 +90,19 @@ public class TaskResource {
     @GET
     @Path("/stop")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response stopTask(@QueryParam("job") Optional<String> jobId,
-            @QueryParam("task") Optional<Integer> task) {
+    public Response stopTask(@QueryParam("job") String jobId,
+                             @QueryParam("task") int task,
+                             @QueryParam("user") String user,
+                             @QueryParam("token") String token,
+                             @QueryParam("sudo") String sudo) {
         try {
-            spawn.stopTask(jobId.or(""), task.or(-1));
-            return Response.ok().build();
+            if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, spawn.getJob(jobId))) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity(
+                        "Insufficient privileges to fix directories for job " + jobId).build();
+            } else {
+                spawn.stopTask(jobId, task);
+                return Response.ok().build();
+            }
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();
         }
@@ -98,11 +111,19 @@ public class TaskResource {
     @GET
     @Path("/kill")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response killTask(@QueryParam("job") Optional<String> jobId,
-            @QueryParam("task") Optional<Integer> task) {
+    public Response killTask(@QueryParam("job") String jobId,
+                             @QueryParam("task") int task,
+                             @QueryParam("user") String user,
+                             @QueryParam("token") String token,
+                             @QueryParam("sudo") String sudo) {
         try {
-            spawn.killTask(jobId.or(""), task.or(-1));
-            return Response.ok().build();
+            if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, spawn.getJob(jobId))) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity(
+                        "Insufficient privileges to fix directories for job " + jobId).build();
+            } else {
+                spawn.killTask(jobId, task);
+                return Response.ok().build();
+            }
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();
         }
@@ -111,18 +132,18 @@ public class TaskResource {
     @GET
     @Path("/get")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getTask(@QueryParam("job") Optional<String> jobId,
-            @QueryParam("task") Optional<Integer> taskId) {
+    public Response getTask(@QueryParam("job") String jobId,
+                            @QueryParam("task") int taskId) {
         try {
-            Job job = spawn.getJob(jobId.get());
+            Job job = spawn.getJob(jobId);
             List<JobTask> tasks = job.getCopyOfTasks();
             for (JobTask task : tasks) {
-                if (task.getTaskID() == taskId.get()) {
+                if (task.getTaskID() == taskId) {
                     JSONObject json = CodecJSON.encodeJSON(task);
                     return Response.ok(json.toString()).build();
                 }
             }
-            return Response.status(Response.Status.NOT_FOUND).entity("Task with id " + taskId.get() + " was not found for job " + jobId.get()).build();
+            return Response.status(Response.Status.NOT_FOUND).entity("Task with id " + taskId + " was not found for job " + jobId).build();
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();
         }

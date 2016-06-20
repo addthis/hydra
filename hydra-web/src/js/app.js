@@ -235,6 +235,7 @@ function(
             if (sudo) {
                 parameters["sudo"] = sudo;
             }
+            return parameters;
         },
         makeHtmlTitle:function(title){
             var hostname = location.hostname;

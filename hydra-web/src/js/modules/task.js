@@ -135,10 +135,10 @@ function(
             var self = this;
             $.ajax({
                 url: "/task/stop",
-                data:{
+                data: app.authQueryParameters({
                     job:this.get("jobUuid"),
                     task:this.get("node")
-                },
+                }),
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
@@ -155,11 +155,11 @@ function(
             var self = this;
             $.ajax({
                 url: "/task/start",
-                data:{
-                    job: this.get("jobUuid"),
-                    task: this.get("node"),
+                data: app.authQueryParameters({
+                    job:this.get("jobUuid"),
+                    task:this.get("node"),
                     priority: priority
-                },
+                }),
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
@@ -175,10 +175,10 @@ function(
             var self = this;
             $.ajax({
                 url: "/task/kill",
-                data:{
+                data: app.authQueryParameters({
                     job:this.get("jobUuid"),
                     task:this.get("node")
-                },
+                }),
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
