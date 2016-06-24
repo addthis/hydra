@@ -13,8 +13,11 @@
  */
 package com.addthis.hydra.job.web;
 
+import javax.servlet.DispatcherType;
+
 import java.io.File;
 import java.io.IOException;
+
 import java.util.EnumSet;
 
 import com.addthis.basis.util.Parameter;
@@ -32,6 +35,7 @@ import com.addthis.hydra.job.web.resources.HostResource;
 import com.addthis.hydra.job.web.resources.JobsResource;
 import com.addthis.hydra.job.web.resources.ListenResource;
 import com.addthis.hydra.job.web.resources.MacroResource;
+import com.addthis.hydra.job.web.resources.SearchResource;
 import com.addthis.hydra.job.web.resources.SpawnConfig;
 import com.addthis.hydra.job.web.resources.SystemResource;
 import com.addthis.hydra.job.web.resources.TaskResource;
@@ -57,15 +61,12 @@ import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-
 import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.DispatcherType;
 
 public class SpawnService {
 
