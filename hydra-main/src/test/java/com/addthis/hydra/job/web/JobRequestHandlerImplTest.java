@@ -13,20 +13,6 @@
  */
 package com.addthis.hydra.job.web;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyCollectionOf;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.Collections;
 
 import com.addthis.basis.kv.KVPairs;
@@ -43,6 +29,21 @@ import com.google.common.collect.Lists;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyCollectionOf;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class JobRequestHandlerImplTest {
 
@@ -227,6 +228,40 @@ public class JobRequestHandlerImplTest {
         assertEquals("parameter 'start-date' value", "140908", startDate.getValue());
         assertNotNull("parameter 'foo' found", foo);
         assertEquals("parameter 'foo' value", "foo", foo.getValue());
+    }
+
+    /**
+     * "rp_" prefixed fields are parameters to clear
+     */
+    @Test
+    public void updateJobParameters_RemoveParameter() throws Exception {
+        // stub spawn call. pretend job had two parameters
+        Job job = new Job("existing_job_id", "megatron");
+        job.setParameters(Lists.newArrayList(
+                new JobParameter("start-date", "140908", null),
+                new JobParameter("end-date", "140908", null)));
+        when(spawn.getJob("existing_job_id")).thenReturn(job);
+
+        kv.add("id", "existing_job_id");
+        kv.add("command", "default-task");
+        // remove parameter end-date
+        kv.add("config", "%[start-date]% %[end-date]%");
+        kv.add("rp_end-date", "");
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
+        assertEquals("# of parameters", 2, job.getParameters().size());
+        JobParameter startDate = null;
+        JobParameter endDate = null;
+        for (JobParameter jp : job.getParameters()) {
+            if ("start-date".equals(jp.getName())) {
+                startDate = jp;
+            } else if ("end-date".equals(jp.getName())) {
+                endDate = jp;
+            }
+        }
+        assertNotNull("parameter 'start-date' found", startDate);
+        assertEquals("parameter 'start-date' value", "140908", startDate.getValue());
+        assertNotNull("parameter 'end-date' found", endDate);
+        assertNull("parameter 'end-date' cleared", endDate.getValue());
     }
 
     private void verifyNoSpawnCreateJobCall() throws Exception {

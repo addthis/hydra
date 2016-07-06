@@ -14,10 +14,11 @@
 package com.addthis.hydra.job.web;
 
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
@@ -29,8 +30,8 @@ import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
-import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.minion.Minion;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -45,13 +46,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     private static final Logger log = LoggerFactory.getLogger(JobRequestHandlerImpl.class);
 
     private final Spawn spawn;
-    
+
     public JobRequestHandlerImpl(Spawn spawn) {
         this.spawn = spawn;
     }
 
     @Override
-    public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo, boolean defaults) throws Exception {
+    public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo, boolean defaults)
+            throws Exception {
         User user = spawn.getPermissionsManager().authenticate(username, token);
         if (user == null) {
             throw new InsufficientPrivilegesException(username, "invalid credentials provided");
@@ -173,23 +175,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     private void updateJobParameters(KVPairs kv, IJob job, String expandedConfig) {
-        // collect/merge parameters
+        // copy existing job parameters except those marked with the rp_ prefix in the input
         Map<String, String> setParams = new LinkedHashMap<>();
-        // copy values existing in job parameters
-        if (job.getParameters() != null) {
-            // remove specified parameters
-            for (Iterator<JobParameter> jp = job.getParameters().iterator(); jp.hasNext();) {
-                JobParameter param = jp.next();
-                if (kv.hasKey("rp_" + param.getName())) {
-                    jp.remove();
-                }
-            }
-            // pull in previous values
-            for (JobParameter param : job.getParameters()) {
-                setParams.put(param.getName(), param.getValue());
-            }
+        Collection<JobParameter> oldParams = job.getParameters();
+        if (oldParams != null) {
+            setParams = oldParams.stream().filter(p -> !kv.hasKey("rp_" + p.getName())).collect(
+                    Collectors.toMap(JobParameter::getName, JobParameter::getValue, (p1, p2) -> p1));
         }
-        /** set specified parameters */
+        // set specified parameters
         for (KVPair kvp : kv) {
             if (kvp.getKey().startsWith("sp_")) {
                 setParams.put(kvp.getKey().substring(3), kvp.getValue());
@@ -206,7 +199,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         }
         job.setParameters(newparams);
     }
-    
+
     @Override
     public boolean maybeKickJobOrTask(KVPairs kv, Job job) throws Exception {
         boolean kick = KVUtils.getBooleanValue(kv, false, "spawn");
