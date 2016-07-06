@@ -19,10 +19,9 @@ import javax.ws.rs.core.Response;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.text.ParseException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,7 +43,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import java.text.ParseException;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.LessFiles;
@@ -1776,6 +1775,23 @@ public class Spawn implements Codable, AutoCloseable {
         ojob.put("files", files);
         ojob.put("bytes", bytes);
         return ojob;
+    }
+
+    /**
+     * Returns json of all jobs and ignores bad jobs.
+     */
+    public JSONArray getJobUpdateEventsSafely() {
+        JSONArray jobs = new JSONArray();
+        for (IJob job : listJobsConcurrentImmutable()) {
+            JSONObject jobUpdateEvent = null;
+            try {
+                jobUpdateEvent = Spawn.getJobUpdateEvent(job);
+                jobs.put(jobUpdateEvent);
+            } catch (Exception e) {
+                log.error("Error getting json for job {}", job.getId(), e);
+            }
+        }
+        return jobs;
     }
 
     public void sendControlMessage(CoreMessage hostMessage) {

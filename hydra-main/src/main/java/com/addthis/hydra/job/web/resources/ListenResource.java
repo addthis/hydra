@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
@@ -142,11 +141,7 @@ public class ListenResource {
     public Response getSetup() {
         try {
             JSONObject setup = CodecJSON.encodeJSON(spawn.getSystemManager().getSettings());
-            JSONArray jobs = new JSONArray();
-            for (IJob job : spawn.listJobsConcurrentImmutable()) {
-                JSONObject jobUpdateEvent = Spawn.getJobUpdateEvent(job);
-                jobs.put(jobUpdateEvent);
-            }
+            JSONArray jobs = spawn.getJobUpdateEventsSafely();
             setup.put("jobs", jobs);
             JSONObject macrolist = new JSONObject();
             JSONObject commandlist = new JSONObject();

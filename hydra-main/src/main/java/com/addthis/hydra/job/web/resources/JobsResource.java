@@ -544,16 +544,8 @@ public class JobsResource implements Closeable {
     @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response listJobs() {
-        JSONArray jobs = new JSONArray();
-        try {
-            for (IJob job : spawn.listJobsConcurrentImmutable()) {
-                JSONObject jobUpdateEvent = Spawn.getJobUpdateEvent(job);
-                jobs.put(jobUpdateEvent);
-            }
-            return Response.ok(jobs.toString()).build();
-        } catch (Exception ex) {
-            return buildServerError(ex);
-        }
+        JSONArray jobs = spawn.getJobUpdateEventsSafely();
+        return Response.ok(jobs.toString()).build();
     }
 
     private static JSONObject dependencyGraphNode(@Nonnull IJob job) throws Exception {
