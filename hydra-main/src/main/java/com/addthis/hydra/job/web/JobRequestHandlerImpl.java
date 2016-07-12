@@ -179,8 +179,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         Map<String, String> setParams = new LinkedHashMap<>();
         Collection<JobParameter> oldParams = job.getParameters();
         if (oldParams != null) {
-            setParams = oldParams.stream().filter(p -> !kv.hasKey("rp_" + p.getName())).collect(
-                    Collectors.toMap(JobParameter::getName, JobParameter::getValue, (p1, p2) -> p1));
+            List<JobParameter> paramList = oldParams.stream().filter(p -> !kv.hasKey("rp_" + p.getName())).collect(
+                    Collectors.toList());
+            for (JobParameter jp: paramList) {
+                // in case of key collisions stick with the first value
+                if (!setParams.containsKey(jp.getName())) {
+                    setParams.put(jp.getName(), jp.getValue());
+                }
+            }
         }
         // set specified parameters
         for (KVPair kvp : kv) {

@@ -230,6 +230,37 @@ public class JobRequestHandlerImplTest {
         assertEquals("parameter 'foo' value", "foo", foo.getValue());
     }
 
+    @Test
+    public void updateJobParameters_OriginalWithDefaultValues() throws Exception {
+        // stub spawn calls
+        Job job = new Job("existing_job_id", "megatron");
+        job.setParameters(Lists.newArrayList(
+                new JobParameter("start-date", null, "160712"),
+                new JobParameter("end-date", null, "160712")));
+        when(spawn.getJob("existing_job_id")).thenReturn(job);
+
+        kv.add("id", "existing_job_id");
+        kv.add("config", "%[start-date]% %[end-date]%");
+        // update end date, original had defaut value
+        kv.add("sp_start-date", "160712");
+        kv.add("sp_end-date", "160714");
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));
+        JobParameter endDate = null;
+        JobParameter startDate = null;
+        for (JobParameter jp : job.getParameters()) {
+            if ("start-date".equals(jp.getName())) {
+                startDate = jp;
+            } else if ("end-date".equals(jp.getName())) {
+                endDate = jp;
+            }
+        }
+
+        assertNotNull("parameter 'start-date' found", startDate);
+        assertEquals("parameter 'start-date' value", "160712", startDate.getValue());
+        assertNotNull("parameter 'end-date' found", endDate);
+        assertEquals("parameter 'end-date' value", "160714", endDate.getValue());
+    }
+
     /**
      * "rp_" prefixed fields are parameters to clear
      */
