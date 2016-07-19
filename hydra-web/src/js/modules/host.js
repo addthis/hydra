@@ -366,6 +366,7 @@ function(
                 heightBuffer:80,
                 columnFilterIndex:5,
                 id:this.id,
+                idAttribute:"uuid",
                 changeAttrs:[
                     "runCount",
                     "queuedCount",
