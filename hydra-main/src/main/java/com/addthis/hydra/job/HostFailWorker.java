@@ -255,7 +255,7 @@ public class HostFailWorker {
                 List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksToMove);
                 // Use available task slots to push tasks off the host in question. Not all of these assignments will necessarily be moved.
                 spawn.executeReallocationAssignments(assignments, !diskFull && obeyTaskSlots.get());
-                if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty()) {
+                if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
                     spawn.getSpawnBalancer().fixTasksForFailedHost(
