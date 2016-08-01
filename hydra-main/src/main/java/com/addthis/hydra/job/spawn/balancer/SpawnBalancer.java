@@ -612,9 +612,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @return True if it is okay to autobalance
      */
     public boolean okayToAutobalance() {
-        // Don't autobalance if it is disabled, spawn is quiesced, or the number of queued tasks is high
+        // Don't autobalance if it is disabled, spawn is quiesced, the failure queue is non-empty, or the number of queued tasks is high
         if ((config.getAutoBalanceLevel() == 0) ||
             spawn.getSystemManager().isQuiesced() ||
+            spawn.getHostFailWorker().queuedHosts().size() > 0 ||
             (spawn.getLastQueueSize() > hostManager.listHostStatus(null).size())) {
             return false;
         }

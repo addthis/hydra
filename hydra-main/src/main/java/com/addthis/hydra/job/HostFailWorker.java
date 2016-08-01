@@ -106,6 +106,13 @@ public class HostFailWorker {
     }
 
     /**
+     * @return The set of all minion ids across all failure queues.
+     */
+    public Set<String> queuedHosts() {
+        return hostFailState.queuedHosts();
+    }
+
+    /**
      * Retrieve an enum describing whether/how a host has been failed (for programmatic purposes)
      *
      * @param hostId A host uuid to check

@@ -28,6 +28,7 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.gs.collections.impl.factory.Sets;
 import org.apache.commons.lang3.tuple.Pair;
 
 import org.slf4j.Logger;
@@ -59,6 +60,15 @@ public class HostFailState {
         fsFull = new LinkedHashSet<>();
         hostsToFailByType = ImmutableMap.of(FailState.FAILING_FS_DEAD, failFsDead,
                 FailState.DISK_FULL, fsFull, FailState.FAILING_FS_OKAY, failFsOkay);
+    }
+
+    /**
+     * @return The set of all minion ids across all failure queues.
+     */
+    public Set<String> queuedHosts() {
+        synchronized (hostsToFailByType) {
+            return Sets.unionAll(failFsDead, failFsOkay, fsFull);
+        }
     }
 
     /**
