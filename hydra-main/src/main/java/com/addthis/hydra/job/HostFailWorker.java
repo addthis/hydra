@@ -247,14 +247,15 @@ public class HostFailWorker {
                     return;
                 }
                 int taskMovingMax = diskFull ? maxMovingTasksDiskFull : maxMovingTasks;
-                int tasksToMove = taskMovingMax - countRebalancingTasks();
+                int tasksRebalancing = countRebalancingTasks();
+                int tasksToMove = taskMovingMax - tasksRebalancing;
                 if (tasksToMove <= 0) {
                     // Spawn is already moving enough tasks; hold off until later
                     return;
                 }
                 List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksToMove);
                 // no re-assignments available for this host, move it to the end of the fs-ok queue
-                if(assignments.isEmpty() && failState == FailState.FAILING_FS_OKAY) {
+                if(assignments.isEmpty() && tasksRebalancing == 0 && failState == FailState.FAILING_FS_OKAY) {
                     hostFailState.removeHost(failedHostUuid);
                     hostFailState.putHost(failedHostUuid, FailState.FAILING_FS_OKAY);
                 }
