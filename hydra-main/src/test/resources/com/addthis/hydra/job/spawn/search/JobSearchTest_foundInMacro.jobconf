@@ -1,0 +1,4 @@
+job searcher unit test job
+
+this job does not have the search string directly in its job config but it references a macro
+%{JobSearchTest_foundInMacro.macro}% that does, so it should be a match

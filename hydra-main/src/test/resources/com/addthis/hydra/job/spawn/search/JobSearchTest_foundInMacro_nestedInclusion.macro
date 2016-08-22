@@ -1,0 +1,5 @@
+job search unit test macro
+
+this macro does not have the search string directly but it references another macro
+%{JobSearchTest_foundInMacro.macro}% that does, so any job that references this macro
+should be a match

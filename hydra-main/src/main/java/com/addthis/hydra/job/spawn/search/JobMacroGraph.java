@@ -13,19 +13,26 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.addthis.hydra.job.entity.JobMacro;
-import com.addthis.hydra.util.DirectedGraph;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
+
+import com.addthis.hydra.job.entity.JobMacro;
+import com.addthis.hydra.util.DirectedGraph;
 
 /**
  * Represents the dependencies between a set of {@link JobMacro}s
  */
 public class JobMacroGraph {
+
+    /**
+     * Directed graph from a macro to other macros that it includes
+     */
     private final DirectedGraph<String> graph;
+
+    /**
+     * Key is macro name; value is the locations of all macros included in the macro
+     */
     private final Map<String, IncludeLocations> includeLocations;
 
 
@@ -47,17 +54,21 @@ public class JobMacroGraph {
     }
 
     /**
-     * Returns every (recursive) dependency of `macroName`
+     * Returns the given macro and all macros that it includes (recursively).
+     * <p/>
+     * For example, if A includes B, and B includes C, calling this method on A will return A, B and C.
+     *
+     * @param macroName     the name of the marco for which to get the dependencies
      */
     public Set<String> getDependencies(String macroName) {
         return graph.sinksClosure(macroName);
     }
 
     /**
-     * Returns the MacroIncludeLocations object associated w/ `macroName`
+     * Returns the locations of all macros included in the given macro.
      *
-     * @param macroName the name of a macro which possibly depends on another macro
-     * @return all locations where the dependency was included, or an empty set if it wasn't  included at all
+     * @param macroName     the name of a macro which possibly includes other macros
+     * @return              all locations where other macros are included, or an empty set if nothing is included
      */
     public IncludeLocations getIncludeLocations(String macroName) {
         return includeLocations.get(macroName);

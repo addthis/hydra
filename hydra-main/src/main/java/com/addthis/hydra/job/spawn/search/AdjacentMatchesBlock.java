@@ -13,10 +13,6 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sun.istack.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,12 +20,16 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sun.istack.Nullable;
+
 /**
  * Represents a single group of contiguous lines from one section of one 'file', which in itself may contain many
  * matches.
  */
 public class AdjacentMatchesBlock {
-    private static int BUFFER_LINE_COUNT = 3;
+    private static final int BUFFER_LINE_COUNT = 3;
 
     @JsonIgnore
     private final String[] allLines;
@@ -55,6 +55,7 @@ public class AdjacentMatchesBlock {
      * @return the {@link AdjacentMatchesBlock} which contain every {@link TextLocation} provided
      */
     public static List<AdjacentMatchesBlock> mergeMatchList(String[] lines, Collection<TextLocation> matches) {
+        // FIXME sort matches for real
         Collections.sort(new ArrayList<>(matches));
         Iterator<TextLocation> it = matches.iterator();
 

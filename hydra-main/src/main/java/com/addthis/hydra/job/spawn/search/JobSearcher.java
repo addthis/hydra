@@ -13,27 +13,32 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.addthis.codec.jackson.Jackson;
-import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobConfigManager;
-import com.addthis.hydra.job.JobParameter;
-import com.addthis.hydra.job.entity.JobMacro;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.google.common.collect.ImmutableSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.annotation.Nullable;
+
 import java.io.IOException;
-import java.io.PipedOutputStream;
+import java.io.OutputStream;
+
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+
+import com.addthis.codec.jackson.Jackson;
+import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.entity.JobMacro;
+
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -58,7 +63,7 @@ public class JobSearcher implements Runnable {
                        Map<String, List<String>> aliases,
                        JobConfigManager jobConfigManager,
                        SearchOptions options,
-                       PipedOutputStream outputStream) throws IOException {
+                       OutputStream outputStream) throws IOException {
         this.jobs = jobs;
         this.macros = macros;
         this.aliases = aliases;
@@ -127,15 +132,21 @@ public class JobSearcher implements Runnable {
         // For each parameter of the job, see if that parameter contains a search result
         IncludeLocations paramIncludeLocations = IncludeLocations.forJobParams(config);
         for (JobParameter param : job.getParameters()) {
-            String paramValue = param.getValueOrDefault();
-            if (predicate.test(paramValue)) {
-                searchLocs.addAll(paramIncludeLocations.locationsFor(param.getName()));
+            Set<TextLocation> paramLocations = paramIncludeLocations.locationsFor(param.getName());
+            // Do not test default parameter value because it is already done when checking job config/macro
+            String paramValue = param.getValue();
+            if (!Strings.isNullOrEmpty(paramValue) && predicate.test(paramValue)) {
+                searchLocs.addAll(paramLocations);
             }
-
-            // Sadly, these parameters might ALSO contain macros, aliases, etc. So test that, too
-            IncludeLocations nestedIncludeLocations = IncludeLocations.forMacros(paramValue);
-            searchLocs.addAll(getMatchedAliasLocations(nestedIncludeLocations));
-            searchLocs.addAll(getDependencySearchMatches(nestedIncludeLocations, dependencyGraph, macroSearches));
+            // Sadly, these parameters might ALSO contain macros, aliases etc. so test that too (note we use the
+            // effectual parameter value here)
+            IncludeLocations nestedIncludeLocations = IncludeLocations.forMacros(param.getValueOrDefault());
+            if (!getMatchedAliasLocations(nestedIncludeLocations).isEmpty()) {
+                searchLocs.addAll(paramLocations);
+            }
+            if (!getDependencySearchMatches(nestedIncludeLocations, dependencyGraph, macroSearches).isEmpty()) {
+                searchLocs.addAll(paramLocations);
+            }
         }
 
         // Merge the matches together into groups which can be easily displayed on the client
@@ -148,14 +159,19 @@ public class JobSearcher implements Runnable {
         }
     }
 
-    private Collection<TextLocation> getMatchedAliasLocations(IncludeLocations macroIncludeLocations) {
+    private Set<TextLocation> getMatchedAliasLocations(IncludeLocations macroIncludeLocations) {
         Predicate<String> predicate = pattern.asPredicate();
         ImmutableSet.Builder<TextLocation> results = ImmutableSet.builder();
-
-        for (String alias : aliases.keySet()) {
-            for (String jobID : aliases.get(alias)) {
-                if (predicate.test(jobID)) {
-                    results.addAll(macroIncludeLocations.locationsFor(alias));
+        for (String dep : macroIncludeLocations.dependencies()) {
+            // dep may be an alias or a macro - macroIncludeLocations may contain both because both are denoted using
+            // %{...}%. For an alias, check if any of its values match the search pattern.
+            List<String> jobIds = aliases.get(dep);
+            if (jobIds != null) {
+                for (String jobId : jobIds) {
+                    if (predicate.test(jobId)) {
+                        results.addAll(macroIncludeLocations.locationsFor(dep));
+                        break;
+                    }
                 }
             }
         }
@@ -195,6 +211,17 @@ public class JobSearcher implements Runnable {
         return results;
     }
 
+    /**
+     * Finds all macros and their search match locations, if any.
+     * <p/>
+     * A macro may have 0 or more match locations. A match may be direct or indirect. A direct match location is where
+     * the search pattern is located in the macro. An indirect match location is where another macro is included that
+     * contains a direct or indirect match.
+     *
+     * @param macros            all macros
+     * @param dependencyGraph   provides macro dependencies
+     * @return A map of macro names to their match locations. If a macro has no match, its value will be an empty set.
+     */
     private Map<String, Set<TextLocation>> searchMacros(Map<String, JobMacro> macros, JobMacroGraph dependencyGraph) {
         Map<String, Set<TextLocation>> results = new HashMap<>();
 
@@ -220,21 +247,25 @@ public class JobSearcher implements Runnable {
 
 
     /**
-     * Returns a set of TextLocations which represent that an included dependency (or one of the included dependency's
-     * dependencies, etc.) contains a search match
+     * Finds among a list of macros those that contain (recursively) a search match and returns their locations.
+     * <p/>
+     * A list of macros and the locations where they are included (in a job config or a macro) are provided to this
+     * method, along with the full macro dependency graph and the complete macro search match results. For each macro
+     * in the list, this method looks at the macro itself and all its direct and indirect dependencies; if any has a
+     * search match, the included macro's locations are added to the result set that will be returned.
      *
-     * @param macroIncludeLocations
-     * @param dependencyGraph
-     * @param macroSearchResults
-     * @return
+     * @param macroIncludeLocations the macros and their inclusion locations (in a job config or a macro)
+     * @param dependencyGraph       the full macro dependency graph
+     * @param macroSearchResults    all macros and their search match locations (if any)
+     * @return  the inclusion locations from <code>macroIncludeLocations</code> for the macros that have a search match
+     *          in itself or one of its dependencies (direct or indirect)
      */
-    private ImmutableSet<TextLocation> getDependencySearchMatches(IncludeLocations macroIncludeLocations,
-                                                                  JobMacroGraph dependencyGraph,
-                                                                  Map<String, Set<TextLocation>> macroSearchResults) {
+    private Set<TextLocation> getDependencySearchMatches(IncludeLocations macroIncludeLocations,
+                                                         JobMacroGraph dependencyGraph,
+                                                         Map<String, Set<TextLocation>> macroSearchResults) {
 
         ImmutableSet.Builder<TextLocation> builder = ImmutableSet.builder();
         for (String depMacroName : macroIncludeLocations.dependencies()) {
-
             // For each dependency that depMacroName brings in, see if any of THEM have search results.  If they do, we
             // want to link back to the include to depMacroName in the search result.
             for (String deeperDepName : dependencyGraph.getDependencies(depMacroName)) {

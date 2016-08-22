@@ -13,9 +13,6 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
@@ -24,40 +21,44 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+
 /**
- * Describes if/where various dependency includes live inside a blob of text
+ * Describes if/where various dependency includes live (e.g. marco/parameters inside a job config or macro).
+ * <p/>
+ * This calss is a wrapper of an internal map of marco/param names to their locations (in a body of text). Note that
+ * the location represents that of the full pattern, which includes the <code>%{...}%/%[...]%</code> enclosure.
+ * <p/>
+ * Static methods are provided for processing given text, such as job config or macro, to find included marcos or job
+ * parameters.
  */
 public class IncludeLocations {
+
     private final Map<String, Set<TextLocation>> locations;
 
     // Example: %{macro-name}%
-    private static final Pattern macroPattern = Pattern.compile("%\\{(.+?)\\}%");
-    private static final int macroPatternGroup = 1;
+    private static final Pattern MACRO_PATTERN = Pattern.compile("%\\{(.+?)\\}%");
+    private static final int MACRO_PATTERN_GROUP = 1;
 
     // Example: %[parameter-name:default-value]%
-    private static final Pattern jobParamPattern = Pattern.compile("%\\[(.+?)(:.+?)?\\]%");
-    private static final int jobParamPatternGroup = 1;
+    private static final Pattern JOB_PARAM_PATTERN = Pattern.compile("%\\[(.+?)(:.+?)?\\]%");
+    private static final int JOB_PARAM_PATTERN_GROUP = 1;
 
+    /** Finds all macro locations in the given text. */
     public static IncludeLocations forMacros(String text) {
-        return new IncludeLocations(text, macroPattern, macroPatternGroup);
+        return new IncludeLocations(text, MACRO_PATTERN, MACRO_PATTERN_GROUP);
     }
 
+    /** Finds all job parameter locations in the given text. */
     public static IncludeLocations forJobParams(String text) {
-        return new IncludeLocations(text, jobParamPattern, jobParamPatternGroup);
+        return new IncludeLocations(text, JOB_PARAM_PATTERN, JOB_PARAM_PATTERN_GROUP);
     }
 
     /**
-     * @param text
-     * @param pattern should match a section of a line for including a dependency
-     */
-    private IncludeLocations(String text, Pattern pattern) {
-        this(text, pattern, 0);
-    }
-
-    /**
-     * @param text
-     * @param pattern should match a section of a line for including a dependency
-     * @param patternGroup the group of the matched pattern which contains the name of the dependency being included
+     * @param text          the text to search
+     * @param pattern       should match a section of a line for including a dependency
+     * @param patternGroup  the group of the matched pattern which contains the name of the dependency being included
      */
     private IncludeLocations(String text, Pattern pattern, int patternGroup) {
         if (patternGroup < 0) {
@@ -90,17 +91,17 @@ public class IncludeLocations {
     }
 
     /**
-     * Gives a list of all locations where the dependency by the name of `name` is included in this text
+     * Returns the locations of the included <code>name</code>
      *
-     * @param name the macro which may included
-     * @return the set of all locations (possibly empty) where the including happened
+     * @param name  the macro/param name which may included
+     * @return empty set if "name" is not included
      */
     public Set<TextLocation> locationsFor(String name) {
         return locations.getOrDefault(name, ImmutableSet.of());
     }
 
     /**
-     * @return a list of every macro dependency of this text
+     * Returns all the included macro/parameter names.
      */
     public Set<String> dependencies() {
         return locations.keySet();

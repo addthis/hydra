@@ -1,0 +1,4 @@
+job search unit test macro
+
+this macro has the search string in the default value of a job parameter %[param:something]%.
+any job that references this macro should be a match

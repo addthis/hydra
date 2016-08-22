@@ -1,0 +1,3 @@
+job search unit test macro
+
+this macro has the search string "something" any job that references this macro should be a match
