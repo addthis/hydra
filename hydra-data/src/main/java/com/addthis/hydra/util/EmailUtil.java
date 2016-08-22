@@ -14,6 +14,7 @@
 package com.addthis.hydra.util;
 
 import com.addthis.basis.util.LessStrings;
+import com.addthis.basis.util.Parameter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,10 +25,16 @@ import org.slf4j.LoggerFactory;
 public class EmailUtil {
 
     private static final Logger log = LoggerFactory.getLogger(EmailUtil.class);
+    private static final String FROM_ADDRESS = Parameter.value("email.fromAddress");
 
     public static boolean email(String to, String subject, String body) {
         try {
-            String[] cmd = {"mailx", "-s " + subject, to};
+            final String[] cmd;
+            if (FROM_ADDRESS == null) {
+                cmd = new String[]{"mailx", "-s " + subject, to};
+            } else {
+                cmd = new String[]{"mailx", "-r " + FROM_ADDRESS, "-s " + subject, to};
+            }
             ProcessExecutor executor = new ProcessExecutor.Builder(cmd).setStdin(body).build();
             boolean success = executor.execute();
             int exitValue = executor.exitValue();
