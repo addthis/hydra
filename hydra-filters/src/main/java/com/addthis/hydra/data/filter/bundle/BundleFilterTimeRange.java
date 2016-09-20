@@ -17,10 +17,13 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueLong;
 
+import com.addthis.codec.annotations.FieldConfig;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -63,6 +66,13 @@ public class BundleFilterTimeRange implements BundleFilter {
      */
     private final String after;
 
+
+    /**
+     * Optionally specify the timezone. Default is null.
+     */
+    @FieldConfig
+    private final String timeZone;
+
     /**
      * The value to return when a date/time value is within the filter(s). Default is true.
      */
@@ -77,21 +87,22 @@ public class BundleFilterTimeRange implements BundleFilter {
 
     private final long              tbefore;
     private final long              tafter;
-    private final DateTimeFormatter format;
+    private DateTimeFormatter format;
 
     @JsonCreator
     public BundleFilterTimeRange(@JsonProperty(value = "time", required = true) AutoField time,
                                  @JsonProperty("before") String before,
                                  @JsonProperty("after") String after,
                                  @JsonProperty("defaultExit") boolean defaultExit,
-                                 @JsonProperty("timeFormat") String timeFormat) {
+                                 @JsonProperty("timeFormat") String timeFormat,
+                                 @JsonProperty("timeZone") String timeZone) {
         this.time = time;
         this.before = before;
         this.after = after;
         this.defaultExit = defaultExit;
         this.timeFormat = timeFormat;
+        this.timeZone = timeZone;
 
-        format = (timeFormat != null) ? DateTimeFormat.forPattern(timeFormat) : null;
         if (before != null) {
             tbefore = convertDate(before);
         } else {
@@ -101,6 +112,14 @@ public class BundleFilterTimeRange implements BundleFilter {
             tafter = convertDate(after);
         } else {
             tafter = 0;
+        }
+
+        if ( timeZone != null ) {           // regardless of timeFormat
+            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
+        } else if( timeZone == null && timeFormat != null ) {
+            this.format = DateTimeFormat.forPattern(timeFormat);
+        } else {
+            this.format = null;
         }
     }
 
@@ -141,4 +160,13 @@ public class BundleFilterTimeRange implements BundleFilter {
         }
     }
 
+    @VisibleForTesting
+    DateTimeFormatter getTimeZoneFormat() {
+        return format;
+    }
+
+    @VisibleForTesting
+    String getTimeZone() {
+        return this.timeZone;
+    }
 }
