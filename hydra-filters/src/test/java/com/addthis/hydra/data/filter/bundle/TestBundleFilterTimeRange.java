@@ -99,6 +99,18 @@ public class TestBundleFilterTimeRange {
     }
 
     @Test
+    public void testBundleFilterTimeRangeNoTimeFormat() {
+        DateTimeZone tz = DateTimeZone.forID("EST");
+        DateTime ntzntfDateTime = utc.toDateTime(tz);
+        String input = ntzntfDateTime.toString("yyMMddHHmm");
+
+        BundleFilterTimeRange bftr = new BundleFilterTimeRange( timeIn, "121201", "130101", true, null, "EST");
+        DateTimeFormatter format = bftr.getTimeZoneFormat();
+        assertNull(format);
+        assertEquals("EST", bftr.getTimeZone());
+    }
+
+    @Test
     public void testBundleFilterTimeRangeNoTimeZoneNoTimeFormat() {
         DateTimeZone tz = DateTimeZone.forID("EST");
         DateTime ntzntfDateTime = utc.toDateTime(tz);

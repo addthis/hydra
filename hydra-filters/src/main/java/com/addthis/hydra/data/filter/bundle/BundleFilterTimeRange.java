@@ -87,7 +87,7 @@ public class BundleFilterTimeRange implements BundleFilter {
 
     private final long              tbefore;
     private final long              tafter;
-    private DateTimeFormatter format;
+    private final DateTimeFormatter format;
 
     @JsonCreator
     public BundleFilterTimeRange(@JsonProperty(value = "time", required = true) AutoField time,
@@ -114,10 +114,12 @@ public class BundleFilterTimeRange implements BundleFilter {
             tafter = 0;
         }
 
-        if ( timeZone != null ) {           // regardless of timeFormat
-            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
-        } else if( timeZone == null && timeFormat != null ) {
+        if( timeFormat != null && timeZone == null ) {
             this.format = DateTimeFormat.forPattern(timeFormat);
+        } else if ( timeFormat != null && timeZone != null ) {
+            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
+        } else if ( timeFormat == null ) {
+            this.format = null;
         } else {
             this.format = null;
         }
