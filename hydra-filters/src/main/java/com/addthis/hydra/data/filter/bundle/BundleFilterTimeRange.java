@@ -114,14 +114,12 @@ public class BundleFilterTimeRange implements BundleFilter {
             tafter = 0;
         }
 
-        if( timeFormat != null && timeZone == null ) {
+        if( timeFormat == null ) {
+            this.format = null;
+        } else if ( timeZone == null ) {
             this.format = DateTimeFormat.forPattern(timeFormat);
-        } else if ( timeFormat != null && timeZone != null ) {
-            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
-        } else if ( timeFormat == null ) {
-            this.format = null;
         } else {
-            this.format = null;
+            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
         }
     }
 
