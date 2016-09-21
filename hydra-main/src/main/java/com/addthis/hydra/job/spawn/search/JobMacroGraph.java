@@ -31,7 +31,7 @@ public class JobMacroGraph {
     private final DirectedGraph<String> graph;
 
     /**
-     * Key is macro name; value is the locations of all macros included in the macro
+     * Key is macro name; value is the locations of all other macros included in the named macro
      */
     private final Map<String, IncludeLocations> includeLocations;
 

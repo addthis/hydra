@@ -1,0 +1,5 @@
+job search unit test macro
+
+this macro does not have the search string directly but it has a parameter %[param]%
+that references another macro that contains a match, so any job that references this
+macro should be a match

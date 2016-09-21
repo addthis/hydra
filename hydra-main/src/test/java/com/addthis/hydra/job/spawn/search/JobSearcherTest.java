@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -63,6 +64,11 @@ public class JobSearcherTest {
         assertEquals("one job match", 1, result.get("jobs").size());
     }
 
+    /**
+     * Job -> Alias -> Search Pattern.
+     * <p/>
+     * Job config includes an alias whose value matches the search pattern
+     */
     @Test
     public void foundInAlias() throws IOException {
         addJob("JobSearchTest_foundInAlias.jobconf");
@@ -73,7 +79,9 @@ public class JobSearcherTest {
     }
 
     /**
-     * Search pattern is in the alias value, and the alias is referenced as a job parameter value
+     * Job -(param)-> Alias -> Search Pattern.
+     * <p/>
+     * Job parameter values is an alais; Alias value contains the search pattern
      */
     @Test
     public void foundInAlias_paramValueIsAlias() throws IOException {
@@ -91,6 +99,9 @@ public class JobSearcherTest {
         assertEquals("match end char #", 19, matchLocation.get("endChar").asInt());
     }
 
+    /**
+     * Job -> Macro -> Search Pattern.
+     */
     @Test
     public void foundInMacro() throws IOException {
         addJob("JobSearchTest_foundInMacro.jobconf");
@@ -101,7 +112,7 @@ public class JobSearcherTest {
     }
 
     /**
-     * Search pattern is in a macro included in another macro.
+     * Job -> MacroA -> MacroB -> Search Pattern.
      */
     @Test
     public void foundInMacro_nestedInclusion() throws IOException {
@@ -114,7 +125,9 @@ public class JobSearcherTest {
     }
 
     /**
-     * Search pattern is in a macro, and the macro is referenced as a job parameter value
+     * Job -(param)-> Macro -> Search Pattern.
+     *
+     * Job references Macro via job parameter; Macro contains search pattern.
      */
     @Test
     public void foundInMacro_paramValueIsMacro() throws IOException {
@@ -133,6 +146,25 @@ public class JobSearcherTest {
     }
 
     /**
+     * Job -> MacroA -(param)-> MacroB -> Search Pattern.
+     * <p>
+     * Job references MacorA; MacroA references MacroB via job parameter; MacroB contains search pattern.
+     */
+    @Test
+    @Ignore("Test will fail because the code does not support this user case")
+    public void foundInMacro_paramValueIsMacro_nested() throws IOException {
+        Job job = addJob("JobSearchTest_foundInMacro_paramValueIsMacro_nested.jobconf");
+        job.setParameters(Lists.newArrayList(new JobParameter("param", "%{JobSearchTest_foundInMacro.macro}%", "")));
+        addMacro("JobSearchTest_foundInMacro_paramValueIsMacro_nested.macro");
+        addMacro("JobSearchTest_foundInMacro.macro");
+        JsonNode result = doSearch();
+        assertEquals("two macro matches", 2, result.path("macros").size());
+        assertEquals("one job match", 1, result.get("jobs").size());
+    }
+
+    /**
+     * Job -> default param value -> Search Pattern
+     * <p/>
      * Search pattern is in the default value of a job parameter
      */
     @Test
@@ -146,6 +178,8 @@ public class JobSearcherTest {
     }
 
     /**
+     * Job -> assigned param value -> Search Pattern
+     * <p/>
      * Search pattern is in the assigned value of a job parameter
      */
     @Test
@@ -158,6 +192,8 @@ public class JobSearcherTest {
     }
 
     /**
+     * Job -> Macro -> default param value -> Search Pattern
+     * <p/>
      * Search pattern is in the default value of a job parameter defined in a macro
      */
     @Test
@@ -171,6 +207,8 @@ public class JobSearcherTest {
     }
 
     /**
+     * Job -> Macro -> default param value -> Search Pattern
+     * <p/>
      * Search pattern is in the assigned value of a job parameter defined in a macro
      */
     @Test
@@ -180,6 +218,22 @@ public class JobSearcherTest {
         job.setParameters(Lists.newArrayList(new JobParameter("param", "something", "")));
         JsonNode result = doSearch();
         assertEquals("one macro match", 1, result.get("macros").size());
+        assertEquals("one job match", 1, result.get("jobs").size());
+    }
+
+    /**
+     * Job -> MacroA -> MacroB -> assigned param value -> Search Pattern
+     * <p/>
+     * MacroB contains a job parameter whose assigned value matches the search pattern.
+     */
+    @Test
+    public void foundInParamInMacro_nestedInclusion() throws IOException {
+        Job job = addJob("JobSearchTest_foundInParamInMacro_nestedInclusion.jobconf");
+        addMacro("JobSearchTest_foundInParamInMacro_nestedInclusion.macro");
+        addMacro("JobSearchTest_foundInParamInMacro_assignedParamValue.macro");
+        job.setParameters(Lists.newArrayList(new JobParameter("param", "something", "")));
+        JsonNode result = doSearch();
+        assertEquals("one macro match", 2, result.get("macros").size());
         assertEquals("one job match", 1, result.get("jobs").size());
     }
 

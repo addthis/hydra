@@ -19,12 +19,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.Job;
@@ -40,15 +43,13 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.hydra.job.spawn.search.IncludeLocations.forMacros;
+
 
 /**
  * Searches job configurations based on the search options passed to the constructor.
- *
- * @return
- * @throws Exception
  */
 public class JobSearcher implements Runnable {
-    // The number of lines to put above and below a matching line to provide some context
     private static final Logger log = LoggerFactory.getLogger(JobSearcher.class);
 
     private final Pattern pattern;
@@ -57,6 +58,8 @@ public class JobSearcher implements Runnable {
     private final JobConfigManager jobConfigManager;
     private final JsonGenerator generator;
     private final Map<String, List<String>> aliases;
+    // job id -> macros included directly or indirectly in the job
+    private final Map<String, Set<String>> jobMacrosMap;
 
     public JobSearcher(Map<String, Job> jobs,
                        Map<String, JobMacro> macros,
@@ -70,6 +73,7 @@ public class JobSearcher implements Runnable {
         this.jobConfigManager = jobConfigManager;
         this.pattern = Pattern.compile(options.pattern);
         this.generator = Jackson.defaultMapper().getFactory().createGenerator(outputStream);
+        this.jobMacrosMap = new HashMap<>();
     }
 
     @Override
@@ -90,8 +94,6 @@ public class JobSearcher implements Runnable {
                ]
              }
              */
-            generator.writeObjectField("macros", getMacroSearchResults(macroSearches));
-
             generator.writeArrayFieldStart("jobs");
             for (Job job : jobs.values()) {
                 SearchResult jobSearchResult = searchJob(job, dependencyGraph, macroSearches);
@@ -100,6 +102,8 @@ public class JobSearcher implements Runnable {
                 }
             }
             generator.writeEndArray();
+
+            generator.writeObjectField("macros", getMacroSearchResults(macroSearches));
 
             generator.writeEndObject();
         } catch (Exception e) {
@@ -117,7 +121,7 @@ public class JobSearcher implements Runnable {
     @Nullable
     private SearchResult searchJob(Job job, JobMacroGraph dependencyGraph, Map<String, Set<TextLocation>> macroSearches) {
         String config = jobConfigManager.getConfig(job.getId());
-        IncludeLocations macroIncludeLocations = IncludeLocations.forMacros(config);
+        IncludeLocations macroIncludeLocations = forMacros(config);
 
         Predicate<String> predicate = pattern.asPredicate();
         Set<TextLocation> searchLocs = LineSearch.search(config, pattern);
@@ -140,7 +144,7 @@ public class JobSearcher implements Runnable {
             }
             // Sadly, these parameters might ALSO contain macros, aliases etc. so test that too (note we use the
             // effectual parameter value here)
-            IncludeLocations nestedIncludeLocations = IncludeLocations.forMacros(param.getValueOrDefault());
+            IncludeLocations nestedIncludeLocations = forMacros(param.getValueOrDefault());
             if (!getMatchedAliasLocations(nestedIncludeLocations).isEmpty()) {
                 searchLocs.addAll(paramLocations);
             }
@@ -225,10 +229,33 @@ public class JobSearcher implements Runnable {
     private Map<String, Set<TextLocation>> searchMacros(Map<String, JobMacro> macros, JobMacroGraph dependencyGraph) {
         Map<String, Set<TextLocation>> results = new HashMap<>();
 
-        // Search the text of the macros themselves for any results
+        // Search the macro texts for direct match of the search pattern
         for (String macroName : macros.keySet()) {
             JobMacro macro = macros.get(macroName);
             results.put(macroName, LineSearch.search(macro.getMacro(), pattern));
+        }
+
+        // Search the marco texts for job parameters whose assigned value on any job matches the search pattern
+        Map<String, Map<String, Set<TextLocation>>> paramMacroLocations = buildJobParameterMacroMap(macros);
+        Predicate<String> predicate = pattern.asPredicate();
+        for (Job job : jobs.values()) {
+            for (JobParameter param : job.getParameters()) {
+                // Test every job parameter value for match. For a matching parameter, add all macros that references it
+                // Do not test default parameter value because it will be included when checking job config/macro body
+                String paramValue = param.getValue();
+                if (!Strings.isNullOrEmpty(paramValue) && predicate.test(paramValue)) {
+                    // all macros containing this parameter are potential matches
+                    Map<String, Set<TextLocation>> potentialMacros = paramMacroLocations.get(param.getName());
+                    if ((potentialMacros != null) && !potentialMacros.isEmpty()) {
+                        Set<String> jobIncludedMacros = getJobIncludedMacros(job.getId(), dependencyGraph);
+                        // filter potential macros down to this job's macros only
+                        Map<String, Set<TextLocation>> matchingMacros = potentialMacros.entrySet().stream()
+                           .filter(p -> jobIncludedMacros.contains(p.getKey()))
+                           .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
+                        mergeToLocationsMap(matchingMacros, results);
+                    }
+                }
+            }
         }
 
         // Macros can include other macros, so we need to add dependent macros (which contain search results) to the
@@ -245,6 +272,75 @@ public class JobSearcher implements Runnable {
         return results;
     }
 
+    /**
+     * Returns all macros included directly or indirectly in a job.
+     *
+     * @param jobId           the job id
+     * @param dependencyGraph used to find indirectly included macros (i.e. macros included in another macro)
+     */
+    private Set<String> getJobIncludedMacros(String jobId, JobMacroGraph dependencyGraph) {
+        Set<String> macros = jobMacrosMap.get(jobId);
+        if (macros == null) {
+            // get macros directly included in the job config
+            String jobConfig = jobConfigManager.getConfig(jobId);
+            Set<String> directMacros = IncludeLocations.forMacros(jobConfig).dependencies();
+            if (directMacros.isEmpty()) {
+                macros = Collections.emptySet();
+            } else {
+                // get all the indirectly included macros too
+                macros = directMacros.stream()
+                                     .flatMap(m -> dependencyGraph.getDependencies(m).stream())
+                                     .collect(Collectors.toSet());
+            }
+            jobMacrosMap.put(jobId, macros);
+        }
+        return macros;
+    }
+
+    private void mergeToLocationsMap(@Nullable Map<String, Set<TextLocation>> from, Map<String, Set<TextLocation>> to) {
+        if ((from == null) || from.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Set<TextLocation>> entry : from.entrySet()) {
+            String key = entry.getKey();
+            Set<TextLocation> toLocations = to.get(key);
+            if (toLocations == null) {
+                toLocations = new HashSet<>();
+                to.put(key, toLocations);
+            }
+            toLocations.addAll(entry.getValue());
+        }
+    }
+
+    /**
+     * Returns a map of parameter names to all the macros that include the parameter in its text.
+     *
+     * @param macros
+     * @return  the key is parameter name, the value is a map of all macros containing the parameter and the
+     *          locations where the parameter is included in each macro. Parameter to macro is one-to-many
+     *          because muliple macros may include the same parameter; macro to location is one-to-many
+     *          because a macro may include the same parameter in multiple places.
+     */
+    private Map<String, Map<String, Set<TextLocation>>> buildJobParameterMacroMap(Map<String, JobMacro> macros) {
+        Map<String, Map<String, Set<TextLocation>>> result = new HashMap<>();
+        for (Map.Entry<String, JobMacro> entry : macros.entrySet()) {
+            String macroName = entry.getKey();
+            String macroBody = entry.getValue().getMacro();
+            IncludeLocations allParamLocations = IncludeLocations.forJobParams(macroBody);
+            for (String paramName : allParamLocations.dependencies()) {
+                Map<String, Set<TextLocation>> paramMacros = result.get(paramName);
+                if (paramMacros == null) {
+                    paramMacros = new HashMap<>();
+                    result.put(paramName, paramMacros);
+                }
+                Set<TextLocation> paramLocations = allParamLocations.locationsFor(paramName);
+                if (!paramLocations.isEmpty()) {
+                    paramMacros.put(macroName, paramLocations);
+                }
+            }
+        }
+        return result;
+    }
 
     /**
      * Finds among a list of macros those that contain (recursively) a search match and returns their locations.
@@ -279,4 +375,5 @@ public class JobSearcher implements Runnable {
 
         return builder.build();
     }
+
 }
