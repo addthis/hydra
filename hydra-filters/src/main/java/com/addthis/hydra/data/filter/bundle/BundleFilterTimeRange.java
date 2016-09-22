@@ -14,9 +14,12 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleException;
+import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueLong;
 
+import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,6 +29,8 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import javax.annotation.Nullable;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">provides a time range inclusion or exclusion filter</span>.
@@ -103,6 +108,14 @@ public class BundleFilterTimeRange implements BundleFilter {
         this.timeFormat = timeFormat;
         this.timeZone = timeZone;
 
+        if( timeFormat == null ) {
+            this.format = null;
+        } else if ( timeZone == null ) {
+            this.format = DateTimeFormat.forPattern(timeFormat);
+        } else {
+            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
+        }
+
         if (before != null) {
             tbefore = convertDate(before);
         } else {
@@ -112,14 +125,6 @@ public class BundleFilterTimeRange implements BundleFilter {
             tafter = convertDate(after);
         } else {
             tafter = 0;
-        }
-
-        if( timeFormat == null ) {
-            this.format = null;
-        } else if ( timeZone == null ) {
-            this.format = DateTimeFormat.forPattern(timeFormat);
-        } else {
-            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
         }
     }
 
@@ -140,7 +145,7 @@ public class BundleFilterTimeRange implements BundleFilter {
     }
 
     private long convertDate(String date) {
-        // return days offset into the past
+            // return days offset into the past
         if (date.startsWith("-")) {
             return new DateTime().minusDays(Integer.parseInt(date.substring(1))).toDate().getTime();
         }
@@ -163,10 +168,5 @@ public class BundleFilterTimeRange implements BundleFilter {
     @VisibleForTesting
     DateTimeFormatter getTimeZoneFormat() {
         return format;
-    }
-
-    @VisibleForTesting
-    String getTimeZone() {
-        return this.timeZone;
     }
 }
