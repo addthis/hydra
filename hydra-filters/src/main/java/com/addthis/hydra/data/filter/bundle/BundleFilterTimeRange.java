@@ -27,8 +27,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-import javax.annotation.Nullable;
-
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">provides a time range inclusion or exclusion filter</span>.
  * <p/>
