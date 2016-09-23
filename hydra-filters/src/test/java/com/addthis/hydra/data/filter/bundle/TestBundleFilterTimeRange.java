@@ -57,11 +57,6 @@ public class TestBundleFilterTimeRange {
         assertFalse(filter.filter(bundle));
     }
 
-    @Test(expected=JsonMappingException.class)
-    public void testMinusBeforeBadTimeformat() throws IOException {
-        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, "time:TIME, before:-2016/09/23, timeFormat:YYYY/MM/dd");
-    }
-
     @Test
     public void testBeforeAfterInRange() throws IOException {
         String str = "time:TIME, before:20170101, after:20120101, timeFormat:YYYYMMDD";
@@ -86,6 +81,17 @@ public class TestBundleFilterTimeRange {
             fail("Expected exception: time field is required");
         } catch(JsonMappingException jme) {
             assertThat(jme.getMessage(), containsString("marked as required"));
+        }
+    }
+
+    @Test
+    public void testMinusBeforeBadTimeformat() throws IOException {
+        String str = "time:TIME, before:-2016/09/23, timeFormat:YYYY/MM/dd";
+        try {
+            BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
+            fail("Expected exception: wrong fomate for date input");
+        } catch(JsonMappingException jme) {
+            assertThat(jme.getMessage(), containsString("value failed: For input string"));
         }
     }
 
