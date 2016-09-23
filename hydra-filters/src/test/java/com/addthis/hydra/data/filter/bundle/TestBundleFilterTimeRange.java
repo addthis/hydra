@@ -89,7 +89,7 @@ public class TestBundleFilterTimeRange {
         String str = "time:TIME, before:-2016/09/23, timeFormat:YYYY/MM/dd";
         try {
             BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
-            fail("Expected exception: wrong fomate for date input");
+            fail("Expected exception: wrong format for date input");
         } catch(JsonMappingException jme) {
             assertThat(jme.getMessage(), containsString("value failed: For input string"));
         }
