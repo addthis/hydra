@@ -35,9 +35,6 @@ public class TestBundleFilterTimeRange {
         bundle = Configs.decodeObject(Bundle.class, "TIME:1474545600000");   // 09/22/2016
     }
 
-//"filtered out later than 160923" meant given time is not filtered out due to "filtered out later than 160923" reason. I agree that this expression can be misread. Will change it.
-
-
     @Test
     public void testBeforeNoTimezone() throws IOException {
         BundleFilterTimeRange filter1 = Configs.decodeObject(BundleFilterTimeRange.class, BEFORE_160923);
