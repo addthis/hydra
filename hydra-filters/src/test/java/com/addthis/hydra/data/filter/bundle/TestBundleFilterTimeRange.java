@@ -13,121 +13,81 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import com.addthis.bundle.util.AutoField;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormatter;
+import com.addthis.bundle.core.Bundle;
+import com.addthis.codec.config.Configs;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import org.junit.Before;
 import org.junit.Test;
+import java.io.IOException;
 
-import java.text.DecimalFormat;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.*;
 
 public class TestBundleFilterTimeRange {
-    AutoField timeIn ;
-    DateTime utc;
-    DecimalFormat df;
+    static final private String BEFORE_160923 = "time:TIME, before:2016-09-23, timeFormat:YYYY-MM-dd";
+    static final private String BEFORE_150925 = "time:TIME, before:2015-09-25, timeFormat:YYYY-MM-dd";
+    static final private String AFTER_160921  = "time:TIME,  after:2016-09-21, timeFormat:YYYY-MM-dd";
+    static final private String AFTER_170921  = "time:TIME,  after:2017-09-21, timeFormat:YYYY-MM-dd";
+    static private Bundle bundle;
 
     @Before
-    public void before () {
-        this.timeIn = mock(AutoField.class);
-        utc = new DateTime(DateTimeZone.UTC);
-        df = new DecimalFormat("00");
+    public void before() throws IOException {
+        bundle = Configs.decodeObject(Bundle.class, "TIME:1474545600000");   // 09/22/2016
     }
 
     @Test
-    public void testBundleFilterTimeRangeAB() {
-        DateTimeZone tz = DateTimeZone.forID("Australia/Brisbane");
-        DateTime abDateTime = utc.toDateTime(tz);
-        String input = abDateTime.toString("yyMMddHHmm");
-
-        BundleFilterTimeRange bftr = new BundleFilterTimeRange(timeIn, "121201", "130101", true, "yyMMddHHmm", "Australia/Brisbane");
-        DateTimeFormatter format = bftr.getTimeZoneFormat();
-
-        String time = format.parseDateTime(input).getYear() + "" +
-                df.format(format.parseDateTime(input).getMonthOfYear()) + "" +
-                df.format(format.parseDateTime(input).getDayOfMonth()) + "" +
-                df.format(format.parseDateTime(input).getHourOfDay()) + "" +
-                df.format(format.parseDateTime(input).getMinuteOfHour());
-        assertEquals(input, time.substring(2));
+    public void testBeforeNoTimezone() throws IOException {
+        BundleFilterTimeRange filter1 = Configs.decodeObject(BundleFilterTimeRange.class, BEFORE_160923);
+        BundleFilterTimeRange filter2 = Configs.decodeObject(BundleFilterTimeRange.class, BEFORE_150925);
+        assertTrue("Expected true since 160922 is earlier than 160923", filter1.filter(bundle));
+        assertFalse("Expected false since 160922 is later than 150925", filter2.filter(bundle));
     }
 
     @Test
-    public void testBundleFilterTimeRangeEST() {
-        DateTimeZone tz = DateTimeZone.forID("America/New_York");
-        DateTime abDateTime = utc.toDateTime(tz);
-        String input = abDateTime.toString("yyMMddHHmm");
-
-        BundleFilterTimeRange bftr = new BundleFilterTimeRange(timeIn, "121201", "130101", true, "yyMMddHHmm", "America/New_York");
-
-        DateTimeFormatter format = bftr.getTimeZoneFormat();
-
-        String time = format.parseDateTime(input).getYear() + "" +
-                df.format(format.parseDateTime(input).getMonthOfYear()) + "" +
-                df.format(format.parseDateTime(input).getDayOfMonth()) + "" +
-                df.format(format.parseDateTime(input).getHourOfDay()) + "" +
-                df.format(format.parseDateTime(input).getMinuteOfHour());
-        assertEquals(input, time.substring(2));
+    public void testAfterNoTimezone() throws IOException {
+        BundleFilterTimeRange filter1 = Configs.decodeObject(BundleFilterTimeRange.class, AFTER_160921);
+        BundleFilterTimeRange filter2 = Configs.decodeObject(BundleFilterTimeRange.class, AFTER_170921);
+        assertTrue("Expected true since 160922 is later than 160921", filter1.filter(bundle));
+        assertFalse("Expected false since 160922 is earlier than 170921", filter2.filter(bundle));
     }
 
     @Test
-    public void testBundleFilterTimeRangePST() {
-        DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
-        DateTime abDateTime = utc.toDateTime(tz);
-        String input = abDateTime.toString("yyMMddHHmm");
-
-        BundleFilterTimeRange bftr = new BundleFilterTimeRange(timeIn, "121201", "130101", true, "yyMMddHHmm", "America/Los_Angeles");
-
-        DateTimeFormatter format = bftr.getTimeZoneFormat();
-
-        String time = format.parseDateTime(input).getYear() + "" +
-                df.format(format.parseDateTime(input).getMonthOfYear()) + "" +
-                df.format(format.parseDateTime(input).getDayOfMonth()) + "" +
-                df.format(format.parseDateTime(input).getHourOfDay()) + "" +
-                df.format(format.parseDateTime(input).getMinuteOfHour());
-        assertEquals(input, time.substring(2));
+    public void testMinusBefore() throws IOException {
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, "time:TIME, before:-100000");
+        assertFalse(filter.filter(bundle));
     }
 
     @Test
-    public void testBundleFilterTimeRangeNoTimeZone() {
-        DateTimeZone tz = DateTimeZone.forID("EST");
-        DateTime ntzDateTime = utc.toDateTime(tz);
-        String input = ntzDateTime.toString("yyMMddHHmm");
-
-        BundleFilterTimeRange bftr = new BundleFilterTimeRange( timeIn, "121201", "130101", true, "yyMMddHHmm", null);
-        DateTimeFormatter format = bftr.getTimeZoneFormat();
-
-        String time = format.parseDateTime(input).getYear() + "" +
-                df.format(format.parseDateTime(input).getMonthOfYear()) + "" +
-                df.format(format.parseDateTime(input).getDayOfMonth()) + "" +
-                df.format(format.parseDateTime(input).getHourOfDay()) + "" +
-                df.format(format.parseDateTime(input).getMinuteOfHour());
-        assertEquals(input, time.substring(2));
+    public void testBeforeAfterInRange() throws IOException {
+        String str = "time:TIME, before:20170101, after:20120101, timeFormat:YYYYMMDD";
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
+        filter.filter(bundle);
+        assertTrue( filter.filter(bundle));
     }
 
     @Test
-    public void testBundleFilterTimeRangeNoTimeFormat() {
-        DateTimeZone tz = DateTimeZone.forID("EST");
-        DateTime ntzntfDateTime = utc.toDateTime(tz);
-        String input = ntzntfDateTime.toString("yyMMddHHmm");
-
-        BundleFilterTimeRange bftr = new BundleFilterTimeRange( timeIn, "121201", "130101", true, null, "EST");
-        DateTimeFormatter format = bftr.getTimeZoneFormat();
-        assertNull(format);
-        assertEquals("EST", bftr.getTimeZone());
+    public void testBeforeAfterOutRange() throws IOException {
+        String str = "time:TIME, before:1212011213, after:1301011415, defaultExit:true, " +
+                "timeFormat:yyMMddHHmm, timeZone=Australia/Brisbane";
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
+        assertFalse(filter.filter(bundle));
     }
 
-    @Test
-    public void testBundleFilterTimeRangeNoTimeZoneNoTimeFormat() {
-        DateTimeZone tz = DateTimeZone.forID("EST");
-        DateTime ntzntfDateTime = utc.toDateTime(tz);
-        String input = ntzntfDateTime.toString("yyMMddHHmm");
+    @Test(expected=JsonMappingException.class)
+    public void testNoTime() throws IOException {
+        String str = "before:20170101, after:20120101,timeFormat:YYYYMMDD";
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
+    }
 
-        BundleFilterTimeRange bftr = new BundleFilterTimeRange( timeIn, "121201", "130101", true, null, null);
-        DateTimeFormatter format = bftr.getTimeZoneFormat();
-        assertNull(format);
+    @Test(expected=JsonMappingException.class)
+    public void testMinusBeforeBadTimeformat() throws IOException {
+        String str = "time:TIME, before:-1000/00";
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
+    }
+
+    @Test(expected=JsonMappingException.class)
+    public void testNoTimeformat() throws IOException {
+        String str = "time:TIME, before:20170101, after:20120101, defaultExit:true, timeZone:EST";
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
     }
 }

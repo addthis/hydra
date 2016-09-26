@@ -103,6 +103,14 @@ public class BundleFilterTimeRange implements BundleFilter {
         this.timeFormat = timeFormat;
         this.timeZone = timeZone;
 
+        if( timeFormat == null ) {
+            this.format = null;
+        } else if ( timeZone == null ) {
+            this.format = DateTimeFormat.forPattern(timeFormat);
+        } else {
+            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
+        }
+
         if (before != null) {
             tbefore = convertDate(before);
         } else {
@@ -112,14 +120,6 @@ public class BundleFilterTimeRange implements BundleFilter {
             tafter = convertDate(after);
         } else {
             tafter = 0;
-        }
-
-        if( timeFormat == null ) {
-            this.format = null;
-        } else if ( timeZone == null ) {
-            this.format = DateTimeFormat.forPattern(timeFormat);
-        } else {
-            this.format = DateTimeFormat.forPattern(timeFormat).withZone(DateTimeZone.forID(timeZone));
         }
     }
 
@@ -163,10 +163,5 @@ public class BundleFilterTimeRange implements BundleFilter {
     @VisibleForTesting
     DateTimeFormatter getTimeZoneFormat() {
         return format;
-    }
-
-    @VisibleForTesting
-    String getTimeZone() {
-        return this.timeZone;
     }
 }
