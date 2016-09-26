@@ -35,25 +35,28 @@ public class TestBundleFilterTimeRange {
         bundle = Configs.decodeObject(Bundle.class, "TIME:1474545600000");   // 09/22/2016
     }
 
+//"filtered out later than 160923" meant given time is not filtered out due to "filtered out later than 160923" reason. I agree that this expression can be misread. Will change it.
+
+
     @Test
     public void testBeforeNoTimezone() throws IOException {
         BundleFilterTimeRange filter1 = Configs.decodeObject(BundleFilterTimeRange.class, BEFORE_160923);
         BundleFilterTimeRange filter2 = Configs.decodeObject(BundleFilterTimeRange.class, BEFORE_150925);
-        assertTrue("Expected true since filtered out later than 160923", filter1.filter(bundle));
-        assertFalse("Expected false since filtered out later than 150925", filter2.filter(bundle));
+        assertTrue("Expected true since 160922 is earlier than 160923", filter1.filter(bundle));
+        assertFalse("Expected false since 160922 is later than 150925", filter2.filter(bundle));
     }
 
     @Test
     public void testAfterNoTimezone() throws IOException {
         BundleFilterTimeRange filter1 = Configs.decodeObject(BundleFilterTimeRange.class, AFTER_160921);
         BundleFilterTimeRange filter2 = Configs.decodeObject(BundleFilterTimeRange.class, AFTER_170921);
-        assertTrue("Expected true since filtered out earlier than 160921", filter1.filter(bundle));
-        assertFalse("Expected false since filtered out earlier than 170921", filter2.filter(bundle));
+        assertTrue("Expected true since 160922 is later than 160921", filter1.filter(bundle));
+        assertFalse("Expected false since 160922 is earlier than 170921", filter2.filter(bundle));
     }
 
     @Test
     public void testMinusBefore() throws IOException {
-        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, "time:TIME, before:-20160923, timeFormat:YYYYMMdd");
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, "time:TIME, before:-100000");
         assertFalse(filter.filter(bundle));
     }
 
@@ -73,47 +76,27 @@ public class TestBundleFilterTimeRange {
         assertFalse(filter.filter(bundle));
     }
 
-    @Test
+    @Test(expected=JsonMappingException.class)
     public void testNoTime() throws IOException {
-        String str = "time:null, before:20170101, after:20120101,timeFormat:YYYYMMDD";
-        try {
-            BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
-            fail("Expected exception: time field is required");
-        } catch(JsonMappingException jme) {
-            assertThat(jme.getMessage(), containsString("marked as required"));
-        }
+        String str = "before:20170101, after:20120101,timeFormat:YYYYMMDD";
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
     }
 
-    @Test
+    @Test(expected=JsonMappingException.class)
     public void testMinusBeforeBadTimeformat() throws IOException {
-        String str = "time:TIME, before:-2016/09/23, timeFormat:YYYY/MM/dd";
-        try {
-            BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
-            fail("Expected exception: wrong format for date input");
-        } catch(JsonMappingException jme) {
-            assertThat(jme.getMessage(), containsString("value failed: For input string"));
-        }
+        String str = "time:TIME, before:-1000/00";
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
     }
 
-    @Test
+    @Test(expected=JsonMappingException.class)
     public void testNoTimeformat() throws IOException {
         String str = "time:TIME, before:20170101, after:20120101, defaultExit:true, timeFormat:null, timeZone:EST";
-        try {
-            BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
-            fail("Expected exception: no timeformat");
-        } catch(JsonMappingException jme) {
-            assertThat(jme.getMessage(), containsString("Cannot parse"));
-        }
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
     }
 
-    @Test
+    @Test(expected=JsonMappingException.class)
     public void testNoTimeformatNoTimezone() throws IOException {
         String str = "time:TIME, before:20170101, after:20120101, defaultExit:true, timeFormat:null, timeZone:null";
-        try {
-            BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
-            fail("Expected exception: no timeformat");
-        } catch(JsonMappingException jme) {
-            assertThat(jme.getMessage(), containsString("Cannot parse"));
-        }
+        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
     }
 }
