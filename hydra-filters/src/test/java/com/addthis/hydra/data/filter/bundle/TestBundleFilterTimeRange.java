@@ -87,13 +87,7 @@ public class TestBundleFilterTimeRange {
 
     @Test(expected=JsonMappingException.class)
     public void testNoTimeformat() throws IOException {
-        String str = "time:TIME, before:20170101, after:20120101, defaultExit:true, timeFormat:null, timeZone:EST";
-        BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
-    }
-
-    @Test(expected=JsonMappingException.class)
-    public void testNoTimeformatNoTimezone() throws IOException {
-        String str = "time:TIME, before:20170101, after:20120101, defaultExit:true, timeFormat:null, timeZone:null";
+        String str = "time:TIME, before:20170101, after:20120101, defaultExit:true, timeZone:EST";
         BundleFilterTimeRange filter = Configs.decodeObject(BundleFilterTimeRange.class, str);
     }
 }
