@@ -59,6 +59,7 @@ function(
     		canaryCheckDates: "",
     		canaryConfigThreshold: "",
     		email:"",
+            webhookURL: "",
     		description:""},
     	save:function(){
     		var postData = {
@@ -67,6 +68,7 @@ function(
     			timeout:this.get("timeout"),
     			delay:this.get("delay"),
     			email:this.get("email"),
+                webhookURL:this.get("webhookURL"),
     			description:this.get("description"),
 
                 /**
@@ -189,6 +191,13 @@ function(
     		{
     			"sTitle":"Emails",
         		"mData": "email",
+        		"sWidth": "20%",
+        		"bVisible":true,
+        		"bSearchable":true,
+    		},
+            {
+    			"sTitle":"Webhook URL",
+        		"mData": "webhookURL",
         		"sWidth": "20%",
         		"bVisible":true,
         		"bSearchable":true,
@@ -320,17 +329,30 @@ function(
     		}
     	},
     	verifyConfig: function() {
-    		var type = parseInt($("#alertType").val());
-    		var email = this.model.get("email");
-    		var jobIds = this.model.get("jobIds");
-    		if (!email || !jobIds) {
-    			alertify.error("Please enter an email and at least one jobId for this alert.");
-    			return false;
-    		}
-    		if (email.indexOf("@") == -1) {
-    			alertify.error("Alert email field appears invalid -- please include an '@' character.");
-    			return false;
-    		}
+            var type = parseInt($("#alertType").val());
+            var email = this.model.get("email");
+            var webhookURL = this.model.get("webhookURL");
+            var jobIds = this.model.get("jobIds");
+            if ((!email && !webhookURL) || !jobIds) {
+                alertify.error("Please enter an email or webhook url and at least one jobId for this alert.");
+                return false;
+            }
+            if (email) {
+                if (email.indexOf("@") == -1) {
+                    alertify.error("Alert email field appears invalid -- please include an '@' character.");
+                    return false;
+                }
+            }
+
+            if (webhookURL) {
+                try {
+                    new URL(webhookURL);
+                } catch (e) {
+					alertify.error(e.message);
+					return false;
+                }
+            }
+
     		if (type == 4 || type == 5 || type == 8) {
     			var canaryPath = this.model.get("canaryPath");
     			if (!canaryPath) {

@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.addthis.codec.annotations.Time;
-import com.addthis.hydra.data.filter.value.AbstractValueFilter;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.alert.AbstractJobAlert;
@@ -44,12 +43,13 @@ public class OnErrorJobAlert extends AbstractJobAlert {
                            @JsonProperty("description") String description,
                            @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                            @JsonProperty("email") String email,
+                           @JsonProperty("webhookURL") String webhookURL,
                            @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                            @JsonProperty("suppressChanges") SuppressChanges suppressChanges,
                            @JsonProperty("lastAlertTime") long lastAlertTime,
                            @JsonProperty("activeJobs") Map<String, String> activeJobs,
                            @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, webhookURL, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
     }
 

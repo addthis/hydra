@@ -298,4 +298,3 @@ case $1 in
         echo "commands: start [# minions, default 3] | stop [# minions, default 3] | seed"
         ;;
 esac
-
