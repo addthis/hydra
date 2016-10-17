@@ -55,9 +55,9 @@ public class AdjacentMatchesBlock {
      * @return the {@link AdjacentMatchesBlock} which contain every {@link TextLocation} provided
      */
     public static List<AdjacentMatchesBlock> mergeMatchList(String[] lines, Collection<TextLocation> matches) {
-        // FIXME sort matches for real
-        Collections.sort(new ArrayList<>(matches));
-        Iterator<TextLocation> it = matches.iterator();
+        List<TextLocation> sortedMatches = new ArrayList<>(matches);
+        Collections.sort(sortedMatches);
+        Iterator<TextLocation> it = sortedMatches.iterator();
 
         List<AdjacentMatchesBlock> results = new ArrayList<>();
         AdjacentMatchesBlock result = new AdjacentMatchesBlock(lines);
