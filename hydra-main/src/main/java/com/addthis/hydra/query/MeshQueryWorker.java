@@ -64,9 +64,6 @@ public class MeshQueryWorker implements AutoCloseable {
     /** server listens for query requests using HTML protoc */
     private final transient Server htmlQueryServer;
 
-    /** thread pool for jetty */
-    private final transient ThreadPool queuedThreadPool = new QueuedThreadPool(20);
-
     public static void main(String[] args) throws Exception {
         Shutdown.createWithShutdownHook(() -> {
             try {
@@ -134,7 +131,6 @@ public class MeshQueryWorker implements AutoCloseable {
         Connector connector0 = newHtmlServer.getConnectors()[0];
         connector0.setMaxIdleTime(600000);
 
-        newHtmlServer.setThreadPool(queuedThreadPool);
         newHtmlServer.start();
         return newHtmlServer;
     }
