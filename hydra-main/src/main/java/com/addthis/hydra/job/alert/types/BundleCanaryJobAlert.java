@@ -66,6 +66,7 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
                                 @JsonProperty("description") String description,
                                 @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                                 @JsonProperty("email") String email,
+                                @JsonProperty("webhookURL") String webhookURL,
                                 @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                                 @JsonProperty("suppressChanges") SuppressChanges suppressChanges,
                                 @JsonProperty("canaryPath") String canaryPath,
@@ -75,7 +76,7 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
                                 @JsonProperty("lastAlertTime") long lastAlertTime,
                                 @JsonProperty("activeJobs") Map<String, String> activeJobs,
                                 @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, webhookURL, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
         this.canaryPath = canaryPath;
         this.canaryOps = canaryOps;
@@ -85,7 +86,7 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
 
     @JsonIgnore
     @Override protected String getTypeStringInternal() {
-        return  "Bundle canary";
+        return "Bundle canary";
     }
 
     @Nullable @Override

@@ -16,10 +16,17 @@ package com.addthis.hydra.job.alert;
 
 import java.net.SocketTimeoutException;
 
+import java.util.List;
+
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
+import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.JobTaskState;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
+
+import com.google.common.collect.ImmutableMap;
 
 import org.junit.Test;
 
@@ -27,6 +34,8 @@ import static com.addthis.codec.config.Configs.decodeObject;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class JobAlertTest {
 
@@ -53,7 +62,7 @@ public class JobAlertTest {
         runningJob.setState(JobState.RUNNING);
 
         AbstractJobAlert runtimeAlert = decodeObject(AbstractJobAlert.class,
-                                             "alertId = runtimeAlert, type = 2, timeout = 1 hour, jobIds = []");
+                                                     "alertId = runtimeAlert, type = 2, timeout = 1 hour, jobIds = []");
         assertNull("Runtime alert should not trigger with idle job",
                    runtimeAlert.alertActiveForJob(null, idleJob, null));
         runningJob.setStartTime(now - 1000);
@@ -64,7 +73,7 @@ public class JobAlertTest {
                       runtimeAlert.alertActiveForJob(null, runningJob, null));
 
         AbstractJobAlert rekickAlert = decodeObject(AbstractJobAlert.class,
-                                            "alertId = rekickAlert, type = 3, timeout = 1 hour, jobIds = []");
+                                                    "alertId = rekickAlert, type = 3, timeout = 1 hour, jobIds = []");
         idleJob.setEndTime(now - 10 * 60 * 1000);
         assertNull("Rekick alert should not fire after short time period",
                    rekickAlert.alertActiveForJob(null, idleJob, null));
@@ -76,12 +85,14 @@ public class JobAlertTest {
     @Test
     public void jsonTest() throws Exception {
         AbstractJobAlert initialAlert = decodeObject(AbstractJobAlert.class,
-                                             "alertId = sampleid, type = 0, email = \"someone@domain.com\", " +
-                                             "description = this is a new alert, jobIds = [j1, j2]");
+                                                     "alertId = sampleid, type = 0, email = \"someone@domain.com\", " +
+                                                     "description = this is a new alert, jobIds = [j1, j2], " +
+                                                     "webhookURL = \"http://example.com\"");
         JSONObject json = initialAlert.toJSON();
         assertEquals(initialAlert.alertId, json.getString("alertId"));
         assertEquals(0, json.getInt("type"));
         assertEquals(initialAlert.email, json.getString("email"));
+        assertEquals(initialAlert.webhookURL, json.getString("webhookURL"));
         assertEquals(initialAlert.description, json.getString("description"));
         assertEquals(new JSONArray(initialAlert.jobIds), json.getJSONArray("jobIds"));
     }
@@ -92,15 +103,67 @@ public class JobAlertTest {
         return job;
     }
 
+    @Test
+    public void constructingWebhookObject() throws Exception {
+        Spawn mockSpawn = mock(Spawn.class);
+
+        Job j1 = new Job("test_id");
+        j1.setState(JobState.ERROR);
+        j1.setDescription("job desc");
+        j1.setStartTime(0L);
+        j1.setEndTime(1L);
+
+        JobTask task1 = new JobTask();
+        task1.setByteCount(5);
+        task1.setFileCount(4);
+        task1.setState(JobTaskState.ERROR, true);
+
+        JobTask task2 = new JobTask();
+        task2.setByteCount(4);
+        task2.setFileCount(6);
+        task2.setState(JobTaskState.IDLE, true);
+
+        j1.addTask(task1);
+        j1.addTask(task2);
+
+        when(mockSpawn.getJob("test_id")).thenReturn(j1);
+
+        AbstractJobAlert runtimeAlert = decodeObject(AbstractJobAlert.class,
+                                                     "alertId = a, type = 2, email = \"someone@domain.com\", " +
+                                                     "description = runtime alert, jobIds = [j1], timeout = 1000");
+
+        JobAlertRunner.AlertWebhookRequest obj =
+                JobAlertRunner.getWebhookObject(mockSpawn, runtimeAlert, "http://localhost", "bad reason",
+                                                ImmutableMap.of("test_id", "something horrible happened"));
+
+        assertEquals("http://localhost", obj.getAlertLink());
+        assertEquals("Task runtime exceeded", obj.getAlertType());
+        assertEquals("bad reason", obj.getAlertReason());
+        assertEquals("runtime alert", obj.getAlertDescription());
+        List<JobAlertRunner.JobError> jobsInError = obj.getJobsInError();
+        assertEquals(1, jobsInError.size());
+
+        JobAlertRunner.JobError jobInfo = jobsInError.get(0);
+        assertEquals("ERROR", jobInfo.getJobState().name());
+        assertEquals("job desc", jobInfo.getDescription());
+        assertEquals(0L, jobInfo.getStartTime());
+        assertEquals(1L, jobInfo.getEndTime());
+        assertEquals("test_id", jobInfo.getId());
+        assertEquals("something horrible happened", jobInfo.getError());
+        assertEquals("localhost", jobInfo.getClusterHead());
+        assertEquals(2, jobInfo.getNodeCount());
+        assertEquals(1, jobInfo.getErrorCount());
+    }
+
     /** Error message should stay unchanged on repeated scan of triggered runtime or rekick exceeded alert */
     @Test
     public void noErrorChangeOnTriggeredTimeoutAlertRescan() throws Exception {
         AbstractJobAlert runtimeAlert = decodeObject(AbstractJobAlert.class,
-                                             "alertId = a, type = 2, email = \"someone@domain.com\", " +
-                                             "description = runtime alert, jobIds = [j1], timeout = 1000");
+                                                     "alertId = a, type = 2, email = \"someone@domain.com\", " +
+                                                     "description = runtime alert, jobIds = [j1], timeout = 1000");
         AbstractJobAlert rekickAlert = decodeObject(AbstractJobAlert.class,
-                                             "alertId = b, type = 3, email = \"someone@domain.com\", " +
-                                             "description = rekick alert, jobIds = [j1], timeout = 1000");
+                                                    "alertId = b, type = 3, email = \"someone@domain.com\", " +
+                                                    "description = rekick alert, jobIds = [j1], timeout = 1000");
         Job j1 = createJobWithState(JobState.RUNNING);
         j1.setStartTime(0L);
         j1.setEndTime(1L);

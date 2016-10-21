@@ -51,12 +51,13 @@ public class RuntimeExceededJobAlert extends AbstractJobAlert {
                                    @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
                                    @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                                    @JsonProperty("email") String email,
+                                   @JsonProperty("webhookURL") String webhookURL,
                                    @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                                    @JsonProperty("suppressChanges") SuppressChanges suppressChanges,
                                    @JsonProperty("lastAlertTime") long lastAlertTime,
                                    @JsonProperty("activeJobs") Map<String, String> activeJobs,
                                    @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, webhookURL, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
         this.timeout = timeout;
     }

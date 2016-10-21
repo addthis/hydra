@@ -56,6 +56,13 @@
     </div>
     <div class="form" role="form">
         <div class="form-group">
+            <label class="sr-only" for="webhookURL" style="margin-bottom:0px;">Webhook URL</label>
+            <input value="<%-alert.webhookURL%>" type="text" class="form-control" id="email" name="webhookURL"
+                   placeholder="">
+        </div>
+    </div>
+    <div class="form" role="form">
+        <div class="form-group">
             <label class="sr-only" for="jobIds" style="margin-bottom:0px;">Job Ids or Aliases (comma-separated)</label>
             <input value="<%-alert.jobIds%>" type="text" class="form-control" id="jobIds" name="jobIds" placeholder="">
         </div>

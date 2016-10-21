@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A job alert monitors for specific conditions in the state
  * of one or more hydra jobs. When the condition is met the
- * job alert sends an email to the specified recipients.
+ * job alert sends an email to the specified recipients and/or to a webhook.
  * Example conditions are: a job has errored, a job has kicked,
  * the output of a job consists at least X files or bytes,
  * the output of a job follows a specified format, etc.
@@ -79,7 +79,7 @@ public abstract class AbstractJobAlert implements Codable {
     /**
      * How many jobs should be scanned in one iteration of a wildcard job string.
      */
-    private static final int WILCARD_BATCH_SIZE = Parameter.intValue("spawn.alert.batchSize", 50);
+    private static final int WILDCARD_BATCH_SIZE = Parameter.intValue("spawn.alert.batchSize", 50);
 
     /** Trigger alert if number of consecutive canary check exception is >= this limit */
     private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;
@@ -93,7 +93,7 @@ public abstract class AbstractJobAlert implements Codable {
 
     /**
      * Optionally specify the number of minutes for the alert
-     * to be continuously firing before sending an email. Can
+     * to be continuously firing before sending an email or webhook. Can
      * be used to suppress intermittent alerts.
      */
     @JsonProperty public final long delay;
@@ -102,6 +102,12 @@ public abstract class AbstractJobAlert implements Codable {
      * List of email recipients.
      */
     @JsonProperty public final String email;
+
+    /**
+     * Webhook URL to receive alert event
+     */
+    @JsonProperty
+    public final String webhookURL;
 
     /**
      * List of job identifiers.
@@ -129,7 +135,7 @@ public abstract class AbstractJobAlert implements Codable {
     private transient Iterator<Job> streamingIterator;
 
 
-    private static <K,V> ImmutableMap<K,V> immutableOrEmpty(Map<K,V> input) {
+    private static <K, V> ImmutableMap<K, V> immutableOrEmpty(Map<K, V> input) {
         if (input == null) {
             return ImmutableMap.of();
         } else {
@@ -141,6 +147,7 @@ public abstract class AbstractJobAlert implements Codable {
                                String description,
                                @Time(TimeUnit.MINUTES) long delay,
                                String email,
+                               String webhookURL,
                                List<String> jobIds,
                                SuppressChanges suppressChanges,
                                long lastAlertTime,
@@ -156,6 +163,7 @@ public abstract class AbstractJobAlert implements Codable {
         this.description = description;
         this.delay = delay;
         this.email = email;
+        this.webhookURL = webhookURL;
         this.jobIds = ImmutableList.copyOf(jobIds);
         this.suppressChanges = suppressChanges;
         this.activeJobs = immutableOrEmpty(activeJobs);
@@ -294,7 +302,7 @@ public abstract class AbstractJobAlert implements Codable {
         if (streamingIterator == null) {
             streamingIterator = spawn.getSpawnState().jobsIterator();
         }
-        while (rv.size() < WILCARD_BATCH_SIZE) {
+        while (rv.size() < WILDCARD_BATCH_SIZE) {
             if (streamingIterator.hasNext()) {
                 rv.add(streamingIterator.next());
             } else {

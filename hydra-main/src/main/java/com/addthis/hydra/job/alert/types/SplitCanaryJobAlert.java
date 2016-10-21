@@ -55,6 +55,7 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
                                @JsonProperty("description") String description,
                                @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                                @JsonProperty("email") String email,
+                               @JsonProperty("webhookURL") String webhookURL,
                                @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                                @JsonProperty("suppressChanges") SuppressChanges suppressChanges,
                                @JsonProperty("canaryPath") String canaryPath,
@@ -62,10 +63,10 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
                                @JsonProperty("lastAlertTime") long lastAlertTime,
                                @JsonProperty("activeJobs") Map<String, String> activeJobs,
                                @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, webhookURL, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
         this.canaryPath = canaryPath;
-        this.canaryConfigThreshold  = canaryConfigThreshold;
+        this.canaryConfigThreshold = canaryConfigThreshold;
     }
 
     @JsonIgnore
@@ -78,11 +79,11 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
         // Strip off preceding slash, if it exists.
         StringBuilder message = new StringBuilder();
         String finalPath = canaryPath.startsWith("/") ? canaryPath.substring(1) : canaryPath;
-        Map<String,Long> bytesPerHost = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
+        Map<String, Long> bytesPerHost = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
         if (bytesPerHost.size() == 0) {
             return "No matching hosts found for path " + JobAlertUtil.meshLookupString(job.getId(), finalPath);
         }
-        for (Map.Entry<String,Long> entry : bytesPerHost.entrySet()) {
+        for (Map.Entry<String, Long> entry : bytesPerHost.entrySet()) {
             String host = entry.getKey();
             Long bytes = entry.getValue();
             if (bytes < canaryConfigThreshold) {

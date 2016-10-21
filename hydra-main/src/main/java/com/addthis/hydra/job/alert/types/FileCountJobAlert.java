@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This {@link AbstractJobAlert JobAlert} <span class="hydra-summary">alerts on number of files generated</span>.
- *
+ * <p>
  * If a value for a single host is above or below the threshold from the
  * mean value then raise an alert. The treshold is calculated as the
  * maximum of {@code tolerance} and ({@code sigma} multiplied by the
@@ -70,6 +70,7 @@ public class FileCountJobAlert extends AbstractJobAlert {
                              @JsonProperty("description") String description,
                              @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                              @JsonProperty("email") String email,
+                             @JsonProperty("webhookURL") String webhookURL,
                              @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                              @JsonProperty("suppressChanges") SuppressChanges suppressChanges,
                              @JsonProperty("lastAlertTime") long lastAlertTime,
@@ -78,7 +79,7 @@ public class FileCountJobAlert extends AbstractJobAlert {
                              @JsonProperty("sigma") double sigma,
                              @JsonProperty("tolerance") int tolerance,
                              @JsonProperty("canaryPath") String canaryPath) {
-        super(alertId, description, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, webhookURL, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
         this.sigma = sigma;
         this.tolerance = tolerance;
@@ -106,7 +107,7 @@ public class FileCountJobAlert extends AbstractJobAlert {
         double mean = 0.0;
         double m2 = 0.0;
         int index = 0;
-        for(Integer logCount : logCounts.values()) {
+        for (Integer logCount : logCounts.values()) {
             index++;
             double delta = logCount - mean;
             mean += delta / index;
@@ -114,7 +115,7 @@ public class FileCountJobAlert extends AbstractJobAlert {
         }
         double stddev = Math.sqrt(m2 / logCounts.size());
         log.debug("Mean is {} stddev is {}", mean, stddev);
-        for(Map.Entry<String, Integer> entry : logCounts.entrySet()) {
+        for (Map.Entry<String, Integer> entry : logCounts.entrySet()) {
             String hostUUID = entry.getKey();
             Integer logCount = entry.getValue();
             /**
