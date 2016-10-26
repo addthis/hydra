@@ -13,8 +13,13 @@
  */
 package com.addthis.hydra.util;
 
+import java.util.List;
+
 import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.Parameter;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,24 +27,30 @@ import org.slf4j.LoggerFactory;
 /**
  * simple util to send emails
  */
-public class EmailUtil {
-
+public final class EmailUtil {
     private static final Logger log = LoggerFactory.getLogger(EmailUtil.class);
     private static final String FROM_ADDRESS = Parameter.value("email.fromAddress");
+    private static final String MAILX_ACCOUNT = Parameter.value("email.mailxAccount");
+
+    private EmailUtil() {}
 
     public static boolean email(String to, String subject, String body) {
         try {
-            final String[] cmd;
-            if (FROM_ADDRESS == null) {
-                cmd = new String[]{"mailx", "-s " + subject, to};
-            } else {
-                cmd = new String[]{"mailx", "-r " + FROM_ADDRESS, "-s " + subject, to};
+            List<String> cmd = Lists.newArrayList("mailx", "-s " + subject);
+            if (FROM_ADDRESS != null) {
+                cmd.add("-S");
+                cmd.add("from=" + FROM_ADDRESS);
             }
-            ProcessExecutor executor = new ProcessExecutor.Builder(cmd).setStdin(body).build();
+            if (MAILX_ACCOUNT != null) {
+                cmd.add("-A " + MAILX_ACCOUNT);
+            }
+            cmd.add(to);
+            String[] cmdArray = Iterables.toArray(cmd, String.class);
+            ProcessExecutor executor = new ProcessExecutor.Builder(cmdArray).setStdin(body).build();
             boolean success = executor.execute();
             int exitValue = executor.exitValue();
             String standardError = executor.stderr();
-            /**
+            /*
              * If the process completed successfully but the standard error
              * log is non-empty then emit the standard error.
              */
