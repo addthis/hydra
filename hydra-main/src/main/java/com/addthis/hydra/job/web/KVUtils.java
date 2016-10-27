@@ -24,7 +24,7 @@ import com.google.common.collect.Sets;
 public class KVUtils {
 
     /** String values that are mapped to boolean {@code true}. */
-    private static final Set<String> TRUE_STR_VALUES = Sets.newHashSet("true", "1", "on", "yes", "why not?");
+    private static final Set<String> TRUE_STR_VALUES = Sets.newHashSet("true", "1", "on", "yes");
 
     private static String findFirstNonNullValue(KVPairs kv, String[] keys) {
         for (String key : keys) {
