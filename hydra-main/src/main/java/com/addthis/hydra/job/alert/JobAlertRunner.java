@@ -299,8 +299,14 @@ public class JobAlertRunner {
             if (job != null) {
                 jobError.setJobState(job.getState());
                 jobError.setDescription(job.getDescription());
-                jobError.setStartTime(job.getStartTime());
-                jobError.setEndTime(job.getEndTime());
+
+                if (job.getStartTime() != null) {
+                    jobError.setStartTime(job.getStartTime());
+                }
+
+                if (job.getEndTime() != null) {
+                    jobError.setEndTime(job.getEndTime());
+                }
 
                 List<JobTask> jobTasks = job.getCopyOfTasks();
                 jobError.setNodeCount(jobTasks.size());
