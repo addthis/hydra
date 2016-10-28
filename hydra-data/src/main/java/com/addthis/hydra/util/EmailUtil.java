@@ -42,7 +42,8 @@ public final class EmailUtil {
                 cmd.add("from=" + FROM_ADDRESS);
             }
             if (MAILX_ACCOUNT != null) {
-                cmd.add("-A " + MAILX_ACCOUNT);
+                cmd.add("-A");
+                cmd.add(MAILX_ACCOUNT);
             }
             cmd.add(to);
             String[] cmdArray = Iterables.toArray(cmd, String.class);
