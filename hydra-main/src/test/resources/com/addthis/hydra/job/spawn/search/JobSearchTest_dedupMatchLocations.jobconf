@@ -1,0 +1,4 @@
+Job searcher unit test job
+
+This job includes a macro %{JobSearchTest_dedupMatchLocations.macro}%, which contains the macro name in its body
+text.

@@ -62,8 +62,16 @@ public class AdjacentMatchesBlock {
         List<AdjacentMatchesBlock> results = new ArrayList<>();
         AdjacentMatchesBlock result = new AdjacentMatchesBlock(lines);
 
+        TextLocation match = null;
+        TextLocation prev = null;
         while (it.hasNext()) {
-            TextLocation match = it.next();
+            prev = match;
+            match = it.next();
+            // ignore current match if it's duplicate of the previous one. Note that the matches are sorted by
+            // starting poisition, so for any duplicate, previous match sholud fully contain the current one.
+            if (prev != null && prev.fullyContains(match)) {
+                continue;
+            }
             if (result.canAddMatchAtLine(match.lineNum)) {
                 result.addMatch(match);
             } else {

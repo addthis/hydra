@@ -1,0 +1,4 @@
+Job search unit test macro
+
+This macro contains its own name JobSearchTest_dedupMatchLocations.macro. This used to cause duplicate locations
+in search match result. Issue details at: https://phabricator.clearspring.local/T66439

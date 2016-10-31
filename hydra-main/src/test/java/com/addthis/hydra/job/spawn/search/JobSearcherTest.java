@@ -45,7 +45,6 @@ public class JobSearcherTest {
         aliases = new HashMap<>();
         macros = new HashMap<>();
         jobs = new HashMap<>();
-        jobSearcher = new JobSearcher(jobs, macros, aliases, jobConfigManager, new SearchOptions("something"), outputStream);
     }
 
     @Test
@@ -237,6 +236,22 @@ public class JobSearcherTest {
         assertEquals("one job match", 1, result.get("jobs").size());
     }
 
+
+    /**
+     * When macro content contains the macro name, job search should not produce duplicate match locations.
+     * <p/>
+     * https://phabricator.clearspring.local/T66439
+     */
+    @Test
+    public void dedupMatchLocations() throws IOException {
+        addJob("JobSearchTest_dedupMatchLocations.jobconf");
+        addMacro("JobSearchTest_dedupMatchLocations.macro");
+        JsonNode result = doSearch("JobSearchTest_dedupMatchLocations.macro");
+        assertEquals("one macro match", 1, result.path("macros").size());
+        assertEquals("one job match", 1, result.get("jobs").size());
+        assertEquals("one text location match", 1, result.get("jobs").get(0).get("results").get(0).get("matches").size());
+    }
+
     private Job addJob(String testJobFilename) throws IOException {
         Job job = new Job(testJobFilename);
         job.setParameters(Lists.newArrayList());
@@ -261,6 +276,11 @@ public class JobSearcherTest {
     }
 
     private JsonNode doSearch() throws IOException {
+        return doSearch("something");
+    }
+
+    private JsonNode doSearch(String search) throws IOException {
+        JobSearcher jobSearcher = new JobSearcher(jobs, macros, aliases, jobConfigManager, new SearchOptions(search), outputStream);
         jobSearcher.run();
         return objectMapper.readTree(outputStream.toString());
     }

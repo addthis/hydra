@@ -13,9 +13,9 @@
  */
 package com.addthis.hydra.job.spawn.search;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.Arrays;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * JSON representation of a region of characters on a single line of text (used to highlight search results, etc.)
@@ -44,6 +44,17 @@ public class TextLocation implements Comparable<TextLocation> {
         }
 
         return startChar - o.startChar;
+    }
+
+    /**
+     * Returns <code>true</code> if this TextLocation fully contains another.
+     *
+     * @param that the other TextLocation to compare wtih
+     * @return <code>true</code> if this and that location have the same line number, this starting char is
+     *         >= that and this ending char is <= that; <code>false</code> otherwise
+     */
+    public boolean fullyContains(TextLocation that) {
+        return (this.lineNum == that.lineNum) && (this.startChar <= that.startChar) && (this.endChar >= that.endChar);
     }
 
     @Override
