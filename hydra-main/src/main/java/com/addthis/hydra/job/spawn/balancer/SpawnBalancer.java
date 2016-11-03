@@ -622,6 +622,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         // Don't autobalance if there are still jobs in rebalance state
         for (Job job : spawn.listJobs()) {
             if (JobState.REBALANCE.equals(job.getState())) {
+                log.warn("Auto rebalance blocked by job (enabled = {}) in rebalance: {}", job.isEnabled(), job.getId());
                 return false;
             }
         }
