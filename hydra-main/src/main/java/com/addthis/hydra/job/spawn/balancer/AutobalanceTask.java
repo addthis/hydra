@@ -13,6 +13,14 @@
  */
 package com.addthis.hydra.job.spawn.balancer;
 
+import java.util.List;
+
+import com.addthis.hydra.job.JobTaskMoveAssignment;
+
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Gauge;
+
+import org.joda.time.DateTimeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,13 +31,16 @@ class AutobalanceTask implements Runnable {
     private static final Logger log = LoggerFactory.getLogger(AutobalanceTask.class);
 
     private final SpawnBalancer spawnBalancer;
+    private final MinuteSinceLastBalanceGauge minutesSinceLastBalanceGauge;
 
     private long lastJobAutobalanceTime = 0L;
     private long lastHostAutobalanceTime = 0L;
-    private int numHostRebalances = 0;
+    private boolean rebalanceWeightToggle = false;
 
     public AutobalanceTask(SpawnBalancer spawnBalancer) {
         this.spawnBalancer = spawnBalancer;
+        this.minutesSinceLastBalanceGauge = new MinuteSinceLastBalanceGauge();
+        Metrics.newGauge(AutobalanceTask.class, "minutesSinceLastBalance", minutesSinceLastBalanceGauge);
     }
 
     @Override
@@ -38,20 +49,37 @@ class AutobalanceTask implements Runnable {
         // Don't autobalance if spawn is quiesced, busy, etc.
         if (spawnBalancer.okayToAutobalance()) {
             if ((now - lastHostAutobalanceTime) > spawnBalancer.config.getHostAutobalanceIntervalMillis()) {
-                numHostRebalances++;
                 log.warn("Performing host autobalance.");
-                RebalanceWeight weight =
-                        ((numHostRebalances % 2) == 0) ? RebalanceWeight.HEAVY : RebalanceWeight.LIGHT;
-                spawnBalancer.spawn.executeReallocationAssignments(
-                        spawnBalancer.getAssignmentsForAutoBalance(RebalanceType.HOST, weight),
-                        false);
+                RebalanceWeight weight = rebalanceWeightToggle ? RebalanceWeight.HEAVY : RebalanceWeight.LIGHT;
+                rebalance(RebalanceType.HOST, weight);
+                rebalanceWeightToggle = !rebalanceWeightToggle;
                 lastHostAutobalanceTime = now;
+                minutesSinceLastBalanceGauge.setLastBalanceTime(now);
             } else if ((now - lastJobAutobalanceTime) > spawnBalancer.config.getJobAutobalanceIntervalMillis()) {
                 log.warn("Performing job autobalance.");
-                spawnBalancer.spawn.executeReallocationAssignments(
-                        spawnBalancer.getAssignmentsForAutoBalance(RebalanceType.JOB, RebalanceWeight.HEAVY), false);
+                rebalance(RebalanceType.JOB, RebalanceWeight.HEAVY);
                 lastJobAutobalanceTime = now;
+                minutesSinceLastBalanceGauge.setLastBalanceTime(now);
             }
+        }
+    }
+
+    private void rebalance(RebalanceType rbType, RebalanceWeight rbWeight) {
+        List<JobTaskMoveAssignment> assignments = spawnBalancer.getAssignmentsForAutoBalance(rbType, rbWeight);
+        spawnBalancer.spawn.executeReallocationAssignments(assignments, false);
+    }
+
+    /** Conveninece Guage implementation for tracking how long since last autobalance */
+    private static class MinuteSinceLastBalanceGauge extends Gauge<Long> {
+
+        private volatile long lastBalanceTime = System.currentTimeMillis();
+
+        private void setLastBalanceTime(long millis) {
+            lastBalanceTime = millis;
+        }
+
+        @Override public Long value() {
+            return (System.currentTimeMillis() - lastBalanceTime) / DateTimeConstants.MILLIS_PER_MINUTE;
         }
     }
 }
