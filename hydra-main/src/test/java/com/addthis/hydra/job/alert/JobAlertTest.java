@@ -123,8 +123,14 @@ public class JobAlertTest {
         task2.setFileCount(6);
         task2.setState(JobTaskState.IDLE, true);
 
+        JobTask task3 = new JobTask();
+        task2.setByteCount(4);
+        task2.setFileCount(6);
+        task2.setState(JobTaskState.BUSY, true);
+
         j1.addTask(task1);
         j1.addTask(task2);
+        j1.addTask(task3);
 
         when(mockSpawn.getJob("test_id")).thenReturn(j1);
 
@@ -151,7 +157,7 @@ public class JobAlertTest {
         assertEquals("test_id", jobInfo.getId());
         assertEquals("something horrible happened", jobInfo.getError());
         assertEquals("localhost", jobInfo.getClusterHead());
-        assertEquals(2, jobInfo.getNodeCount());
+        assertEquals(3, jobInfo.getNodeCount());
         assertEquals(1, jobInfo.getErrorCount());
     }
 
