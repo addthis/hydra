@@ -310,7 +310,7 @@ public class JobAlertRunner {
 
                 List<JobTask> jobTasks = job.getCopyOfTasks();
                 jobError.setNodeCount(jobTasks.size());
-                jobError.setErrorCount((int) jobTasks.stream().filter(t -> t.getState() != JobTaskState.ERROR).count());
+                jobError.setErrorCount((int) jobTasks.stream().filter(t -> t.getState() == JobTaskState.ERROR).count());
             }
 
             webhookRequest.getJobsInError().add(jobError);
