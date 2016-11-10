@@ -50,9 +50,7 @@ public class OutputStreamJson extends OutputStreamFormatter implements Codable {
 
         @Override
         public void write(OutputStream out, Bundle row) throws IOException {
-            if (include != null || exclude != null) {
-                row = new FilteredBundle(row, include, exclude);
-            }
+            row = new FilteredBundle(row, include, exclude);
             JSONObject jsonRow = Bundles.toJSONObject(row);
             out.write(jsonRow.toString().getBytes(StandardCharsets.UTF_8));
             out.write(newlineBytes);
