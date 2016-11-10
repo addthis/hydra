@@ -16,10 +16,13 @@ package com.addthis.hydra.task.output;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import java.util.HashSet;
+
 import java.nio.charset.StandardCharsets;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.maljson.JSONObject;
 
@@ -27,6 +30,11 @@ import com.addthis.maljson.JSONObject;
  * @user-reference
  */
 public class OutputStreamJson extends OutputStreamFormatter implements Codable {
+
+    @FieldConfig(codable = true)
+    private HashSet<String> include;
+    @FieldConfig(codable = true)
+    private HashSet<String> exclude;
 
     @Override
     public void open() { }
@@ -38,10 +46,11 @@ public class OutputStreamJson extends OutputStreamFormatter implements Codable {
         return new JsonOut();
     }
 
-    private static class JsonOut extends OutputStreamEmitter {
+    private class JsonOut extends OutputStreamEmitter {
 
         @Override
         public void write(OutputStream out, Bundle row) throws IOException {
+            row = new FilteredBundle(row, include, exclude);
             JSONObject jsonRow = Bundles.toJSONObject(row);
             out.write(jsonRow.toString().getBytes(StandardCharsets.UTF_8));
             out.write(newlineBytes);

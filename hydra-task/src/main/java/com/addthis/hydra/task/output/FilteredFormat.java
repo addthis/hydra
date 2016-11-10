@@ -52,10 +52,12 @@ public class FilteredFormat implements BundleFormat {
                         if (include.contains(peek.getName())) {
                             next = peek;
                         }
-                    } else {
+                    } else if (exclude != null) {
                         if (!exclude.contains(peek.getName())) {
                             next = peek;
                         }
+                    } else {
+                        next = peek;
                     }
                 }
                 return next != null;
