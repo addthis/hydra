@@ -1,5 +1,8 @@
 webpackJsonp([1],Array(215).concat([
 /* 215 */
+/*!*************************************!*\
+  !*** ./~/oboe/dist/oboe-browser.js ***!
+  \*************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;// This file is the concatenation of many js files.
@@ -2709,6 +2712,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 216 */
+/*!***********************!*\
+  !*** ./src/js/app.js ***!
+  \***********************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -2727,14 +2733,14 @@ webpackJsonp([1],Array(215).concat([
 	
 	//app.js is your application-level namespace where you instantiate all your top-level application level function, etc.. no router logic should go here
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(217),
-	    __webpack_require__(221),
-	    __webpack_require__(222),
-	    __webpack_require__(223),
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(218),
-	    __webpack_require__(221)
+	    __webpack_require__(/*! router */ 217),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! modules/server */ 222),
+	    __webpack_require__(/*! jscookie */ 223),
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! backbone */ 218),
+	    __webpack_require__(/*! alertify */ 221)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    Router,
 	    alertify,
@@ -3012,6 +3018,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 217 */
+/*!**************************!*\
+  !*** ./src/js/router.js ***!
+  \**************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -3029,7 +3038,7 @@ webpackJsonp([1],Array(215).concat([
 	 */
 	
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(218)
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(Backbone){
 	        var Router = Backbone.Router.extend({
 	            initialize: function(){
@@ -3088,6 +3097,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 218 */
+/*!********************************!*\
+  !*** ./~/backbone/backbone.js ***!
+  \********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(global) {//     Backbone.js 1.3.3
@@ -3106,7 +3118,7 @@ webpackJsonp([1],Array(215).concat([
 	
 	  // Set up Backbone appropriately for the environment. Start with AMD.
 	  if (true) {
-	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(219), __webpack_require__(220), exports], __WEBPACK_AMD_DEFINE_RESULT__ = function(_, $, exports) {
+	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(/*! underscore */ 219), __webpack_require__(/*! jquery */ 220), exports], __WEBPACK_AMD_DEFINE_RESULT__ = function(_, $, exports) {
 	      // Export global even in AMD case in case this script is loaded with
 	      // others that may still expect a global Backbone.
 	      root.Backbone = factory(root, exports, _, $);
@@ -5015,6 +5027,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 219 */
+/*!************************************!*\
+  !*** ./~/underscore/underscore.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3
@@ -6569,6 +6584,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 220 */
+/*!*********************************!*\
+  !*** ./~/jquery/dist/jquery.js ***!
+  \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -16389,6 +16407,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 221 */
+/*!***********************************!*\
+  !*** ./src/js/vendor/alertify.js ***!
+  \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/**
@@ -19744,6 +19765,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 222 */
+/*!**********************************!*\
+  !*** ./src/js/modules/server.js ***!
+  \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -19759,7 +19783,7 @@ webpackJsonp([1],Array(215).concat([
 	 * See the License for the specific language governing permissions and
 	 * limitations under the License.
 	 */
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(219),__webpack_require__(218)], __WEBPACK_AMD_DEFINE_RESULT__ = function(_,Backbone){
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(/*! underscore */ 219),__webpack_require__(/*! backbone */ 218)], __WEBPACK_AMD_DEFINE_RESULT__ = function(_,Backbone){
 	    var server= _.extend({
 	        connect:function(){
 	            var webSocketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -19826,6 +19850,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 223 */
+/*!**************************************!*\
+  !*** ./~/js-cookie/src/js.cookie.js ***!
+  \**************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -19988,6 +20015,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 224 */
+/*!********************************!*\
+  !*** ./src/js/modules/jobs.js ***!
+  \********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -20004,36 +20034,36 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(216),
-	    __webpack_require__(221),
-	    __webpack_require__(223),
-	    __webpack_require__(226),
-	    __webpack_require__(235),
-	    __webpack_require__(236),
-	    __webpack_require__(244),
-	    __webpack_require__(249),
-	    __webpack_require__(251),
-	    __webpack_require__(252),
-	    __webpack_require__(253),
-	    __webpack_require__(254),
-	    __webpack_require__(255),
-	    __webpack_require__(225),
-	    __webpack_require__(256),
-	    __webpack_require__(257),
-	    __webpack_require__(258),
-	    __webpack_require__(259),
-	    __webpack_require__(260),
-	    __webpack_require__(261),
-	    __webpack_require__(262),
-	    __webpack_require__(263),
-	    __webpack_require__(264),
-	    __webpack_require__(265),
-	    __webpack_require__(266),
-	    __webpack_require__(267),
-	    __webpack_require__(268),
-	    __webpack_require__(269)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! app */ 216),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! jscookie */ 223),
+	    __webpack_require__(/*! modules/datatable */ 226),
+	    __webpack_require__(/*! modules/util */ 235),
+	    __webpack_require__(/*! modules/editor */ 236),
+	    __webpack_require__(/*! modules/task */ 244),
+	    __webpack_require__(/*! modules/graph */ 249),
+	    __webpack_require__(/*! modules/layout.views */ 251),
+	    __webpack_require__(/*! text!../../templates/job.filter.html */ 252),
+	    __webpack_require__(/*! text!../../templates/job.selectable.html */ 253),
+	    __webpack_require__(/*! text!../../templates/task.divider.html */ 254),
+	    __webpack_require__(/*! text!../../templates/task.detail.divider.html */ 255),
+	    __webpack_require__(/*! text!../../templates/job.configuration.html */ 225),
+	    __webpack_require__(/*! text!../../templates/job.setting.html */ 256),
+	    __webpack_require__(/*! text!../../templates/job.detail.html */ 257),
+	    __webpack_require__(/*! text!../../templates/job.alerts.html */ 258),
+	    __webpack_require__(/*! text!../../templates/job.dependencies.html */ 259),
+	    __webpack_require__(/*! text!../../templates/job.expandedconf.html */ 260),
+	    __webpack_require__(/*! text!../../templates/job.history.html */ 261),
+	    __webpack_require__(/*! text!../../templates/job.task.html */ 262),
+	    __webpack_require__(/*! text!../../templates/job.parameter.html */ 263),
+	    __webpack_require__(/*! text!../../templates/job.taskdetail.html */ 264),
+	    __webpack_require__(/*! text!../../templates/job.task.breadcrumbs.html */ 265),
+	    __webpack_require__(/*! text!../../templates/job.revert.modal.html */ 266),
+	    __webpack_require__(/*! text!../../templates/job.permissions.modal.html */ 267),
+	    __webpack_require__(/*! text!../../templates/job.table.info.html */ 268),
+	    __webpack_require__(/*! text!../../templates/job.checkdirs.html */ 269)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -22564,12 +22594,18 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 225 */
+/*!**************************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.configuration.html ***!
+  \**************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"form form-inline\" role=\"form\">\n    <%if(!_.isUndefined(job.id)){%>\n        <div class=\"form-group\" style=\"width:79%;display:inline-block;\">\n            <label class=\"sr-only\" for=\"description\" style=\"margin-bottom:0px;\">Description</label>\n            <input value=\"<%-job.description%>\" type=\"text\" class=\"form-control\" id=\"description\" name='description' placeholder=\"Enter description\">\n        </div>\n        <div class=\"form-group\" style=\"width:20%;display:inline-block;\">\n            <label class=\"sr-only\" for=\"command\" style=\"margin-bottom:0px;\">Command</label>\n            <select id=\"command\" class=\"form-control\">\n                <%_.each(commands,function(command){%>\n                    <option value=\"<%-command.name%>\"><%-command.name%></option>\n                <%})%>\n            </select>\n        </div>\n    <%}else{%>\n        <div class=\"form-group\" style=\"width:64%;display:inline-block;\">\n            <label class=\"sr-only\" for=\"description\" style=\"margin-bottom:0px;\">Description</label>\n            <input value=\"<%-job.description%>\" type=\"text\" class=\"form-control\" id=\"description\"  name='description'  placeholder=\"Enter description\">\n        </div>\n        <div class=\"form-group\" style=\"width:15%;display:inline-block;\">\n            <label class=\"sr-only\" for=\"nodes\" style=\"margin-bottom:0px;\">Nodes</label>\n            <input value=\"<%-job.nodes%>\" type=\"text\" class=\"form-control\" id=\"nodes\" name=\"nodes\" placeholder=\"Enter node count..\">\n        </div>\n        <div class=\"form-group\" style=\"width:20%;display:inline-block;\">\n            <label class=\"sr-only\" for=\"command\" style=\"margin-bottom:0px;\">Command</label>\n            <select id=\"command\" class=\"form-control\">\n                <%_.each(commands,function(command){%>\n                <option value=\"<%-command.name%>\"><%-command.name%></option>\n                <%})%>\n            </select>\n        </div>\n    <%}%>\n</div>\n"
 
 /***/ },
 /* 226 */
+/*!*************************************!*\
+  !*** ./src/js/modules/datatable.js ***!
+  \*************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -22586,11 +22622,11 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(219),
-	    __webpack_require__(220),
-	    __webpack_require__(227),
-	    __webpack_require__(218),
-	    __webpack_require__(228)
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! datatables.net */ 227),
+	    __webpack_require__(/*! backbone */ 218),
+	    __webpack_require__(/*! datatables.net-dt/css/jquery.dataTables.css */ 228)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(_, $, dt, Backbone){
 	    // Attach datatables plugin to jquery
 	    dt.call($);
@@ -23565,11 +23601,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 227 */
+/*!***************************************************!*\
+  !*** ./src/js/vendor/datatable-1.9.4-modified.js ***!
+  \***************************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/**
 	 * @summary     DataTables
@@ -35380,20 +35419,26 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 228 */
+/*!*******************************************************!*\
+  !*** ./~/datatables.net-dt/css/jquery.dataTables.css ***!
+  \*******************************************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(229)();
+	exports = module.exports = __webpack_require__(/*! ./../../css-loader/lib/css-base.js */ 229)();
 	// imports
 	
 	
 	// module
-	exports.push([module.id, "/*\n * Table styles\n */\ntable.dataTable {\n  width: 100%;\n  margin: 0 auto;\n  clear: both;\n  border-collapse: separate;\n  border-spacing: 0;\n  /*\n   * Header and footer styles\n   */\n  /*\n   * Body styles\n   */\n}\ntable.dataTable thead th,\ntable.dataTable tfoot th {\n  font-weight: bold;\n}\ntable.dataTable thead th,\ntable.dataTable thead td {\n  padding: 10px 18px;\n  border-bottom: 1px solid #111111;\n}\ntable.dataTable thead th:active,\ntable.dataTable thead td:active {\n  outline: none;\n}\ntable.dataTable tfoot th,\ntable.dataTable tfoot td {\n  padding: 10px 18px 6px 18px;\n  border-top: 1px solid #111111;\n}\ntable.dataTable thead .sorting,\ntable.dataTable thead .sorting_asc,\ntable.dataTable thead .sorting_desc {\n  cursor: pointer;\n  *cursor: hand;\n}\ntable.dataTable thead .sorting,\ntable.dataTable thead .sorting_asc,\ntable.dataTable thead .sorting_desc,\ntable.dataTable thead .sorting_asc_disabled,\ntable.dataTable thead .sorting_desc_disabled {\n  background-repeat: no-repeat;\n  background-position: center right;\n}\ntable.dataTable thead .sorting {\n  background-image: url(" + __webpack_require__(230) + ");\n}\ntable.dataTable thead .sorting_asc {\n  background-image: url(" + __webpack_require__(231) + ");\n}\ntable.dataTable thead .sorting_desc {\n  background-image: url(" + __webpack_require__(232) + ");\n}\ntable.dataTable thead .sorting_asc_disabled {\n  background-image: url(" + __webpack_require__(233) + ");\n}\ntable.dataTable thead .sorting_desc_disabled {\n  background-image: url(" + __webpack_require__(234) + ");\n}\ntable.dataTable tbody tr {\n  background-color: white;\n}\ntable.dataTable tbody tr.selected {\n  background-color: #b0bed9;\n}\ntable.dataTable tbody th,\ntable.dataTable tbody td {\n  padding: 8px 10px;\n}\ntable.dataTable.row-border tbody th, table.dataTable.row-border tbody td, table.dataTable.display tbody th, table.dataTable.display tbody td {\n  border-top: 1px solid #dddddd;\n}\ntable.dataTable.row-border tbody tr:first-child th,\ntable.dataTable.row-border tbody tr:first-child td, table.dataTable.display tbody tr:first-child th,\ntable.dataTable.display tbody tr:first-child td {\n  border-top: none;\n}\ntable.dataTable.cell-border tbody th, table.dataTable.cell-border tbody td {\n  border-top: 1px solid #dddddd;\n  border-right: 1px solid #dddddd;\n}\ntable.dataTable.cell-border tbody tr th:first-child,\ntable.dataTable.cell-border tbody tr td:first-child {\n  border-left: 1px solid #dddddd;\n}\ntable.dataTable.cell-border tbody tr:first-child th,\ntable.dataTable.cell-border tbody tr:first-child td {\n  border-top: none;\n}\ntable.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd {\n  background-color: #f9f9f9;\n}\ntable.dataTable.stripe tbody tr.odd.selected, table.dataTable.display tbody tr.odd.selected {\n  background-color: #abb9d3;\n}\ntable.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {\n  background-color: whitesmoke;\n}\ntable.dataTable.hover tbody tr:hover.selected, table.dataTable.display tbody tr:hover.selected {\n  background-color: #a9b7d1;\n}\ntable.dataTable.order-column tbody tr > .sorting_1,\ntable.dataTable.order-column tbody tr > .sorting_2,\ntable.dataTable.order-column tbody tr > .sorting_3, table.dataTable.display tbody tr > .sorting_1,\ntable.dataTable.display tbody tr > .sorting_2,\ntable.dataTable.display tbody tr > .sorting_3 {\n  background-color: #f9f9f9;\n}\ntable.dataTable.order-column tbody tr.selected > .sorting_1,\ntable.dataTable.order-column tbody tr.selected > .sorting_2,\ntable.dataTable.order-column tbody tr.selected > .sorting_3, table.dataTable.display tbody tr.selected > .sorting_1,\ntable.dataTable.display tbody tr.selected > .sorting_2,\ntable.dataTable.display tbody tr.selected > .sorting_3 {\n  background-color: #acbad4;\n}\ntable.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.stripe tbody tr.odd > .sorting_1 {\n  background-color: #f1f1f1;\n}\ntable.dataTable.display tbody tr.odd > .sorting_2, table.dataTable.order-column.stripe tbody tr.odd > .sorting_2 {\n  background-color: #f3f3f3;\n}\ntable.dataTable.display tbody tr.odd > .sorting_3, table.dataTable.order-column.stripe tbody tr.odd > .sorting_3 {\n  background-color: whitesmoke;\n}\ntable.dataTable.display tbody tr.odd.selected > .sorting_1, table.dataTable.order-column.stripe tbody tr.odd.selected > .sorting_1 {\n  background-color: #a6b3cd;\n}\ntable.dataTable.display tbody tr.odd.selected > .sorting_2, table.dataTable.order-column.stripe tbody tr.odd.selected > .sorting_2 {\n  background-color: #a7b5ce;\n}\ntable.dataTable.display tbody tr.odd.selected > .sorting_3, table.dataTable.order-column.stripe tbody tr.odd.selected > .sorting_3 {\n  background-color: #a9b6d0;\n}\ntable.dataTable.display tbody tr.even > .sorting_1, table.dataTable.order-column.stripe tbody tr.even > .sorting_1 {\n  background-color: #f9f9f9;\n}\ntable.dataTable.display tbody tr.even > .sorting_2, table.dataTable.order-column.stripe tbody tr.even > .sorting_2 {\n  background-color: #fbfbfb;\n}\ntable.dataTable.display tbody tr.even > .sorting_3, table.dataTable.order-column.stripe tbody tr.even > .sorting_3 {\n  background-color: #fdfdfd;\n}\ntable.dataTable.display tbody tr.even.selected > .sorting_1, table.dataTable.order-column.stripe tbody tr.even.selected > .sorting_1 {\n  background-color: #acbad4;\n}\ntable.dataTable.display tbody tr.even.selected > .sorting_2, table.dataTable.order-column.stripe tbody tr.even.selected > .sorting_2 {\n  background-color: #adbbd6;\n}\ntable.dataTable.display tbody tr.even.selected > .sorting_3, table.dataTable.order-column.stripe tbody tr.even.selected > .sorting_3 {\n  background-color: #afbdd8;\n}\ntable.dataTable.display tbody tr:hover > .sorting_1, table.dataTable.order-column.hover tbody tr:hover > .sorting_1 {\n  background-color: #eaeaea;\n}\ntable.dataTable.display tbody tr:hover > .sorting_2, table.dataTable.order-column.hover tbody tr:hover > .sorting_2 {\n  background-color: #ebebeb;\n}\ntable.dataTable.display tbody tr:hover > .sorting_3, table.dataTable.order-column.hover tbody tr:hover > .sorting_3 {\n  background-color: #eeeeee;\n}\ntable.dataTable.display tbody tr:hover.selected > .sorting_1, table.dataTable.order-column.hover tbody tr:hover.selected > .sorting_1 {\n  background-color: #a1aec7;\n}\ntable.dataTable.display tbody tr:hover.selected > .sorting_2, table.dataTable.order-column.hover tbody tr:hover.selected > .sorting_2 {\n  background-color: #a2afc8;\n}\ntable.dataTable.display tbody tr:hover.selected > .sorting_3, table.dataTable.order-column.hover tbody tr:hover.selected > .sorting_3 {\n  background-color: #a4b2cb;\n}\ntable.dataTable.no-footer {\n  border-bottom: 1px solid #111111;\n}\ntable.dataTable.nowrap th, table.dataTable.nowrap td {\n  white-space: nowrap;\n}\ntable.dataTable.compact thead th,\ntable.dataTable.compact thead td {\n  padding: 4px 17px 4px 4px;\n}\ntable.dataTable.compact tfoot th,\ntable.dataTable.compact tfoot td {\n  padding: 4px;\n}\ntable.dataTable.compact tbody th,\ntable.dataTable.compact tbody td {\n  padding: 4px;\n}\ntable.dataTable th.dt-left,\ntable.dataTable td.dt-left {\n  text-align: left;\n}\ntable.dataTable th.dt-center,\ntable.dataTable td.dt-center,\ntable.dataTable td.dataTables_empty {\n  text-align: center;\n}\ntable.dataTable th.dt-right,\ntable.dataTable td.dt-right {\n  text-align: right;\n}\ntable.dataTable th.dt-justify,\ntable.dataTable td.dt-justify {\n  text-align: justify;\n}\ntable.dataTable th.dt-nowrap,\ntable.dataTable td.dt-nowrap {\n  white-space: nowrap;\n}\ntable.dataTable thead th.dt-head-left,\ntable.dataTable thead td.dt-head-left,\ntable.dataTable tfoot th.dt-head-left,\ntable.dataTable tfoot td.dt-head-left {\n  text-align: left;\n}\ntable.dataTable thead th.dt-head-center,\ntable.dataTable thead td.dt-head-center,\ntable.dataTable tfoot th.dt-head-center,\ntable.dataTable tfoot td.dt-head-center {\n  text-align: center;\n}\ntable.dataTable thead th.dt-head-right,\ntable.dataTable thead td.dt-head-right,\ntable.dataTable tfoot th.dt-head-right,\ntable.dataTable tfoot td.dt-head-right {\n  text-align: right;\n}\ntable.dataTable thead th.dt-head-justify,\ntable.dataTable thead td.dt-head-justify,\ntable.dataTable tfoot th.dt-head-justify,\ntable.dataTable tfoot td.dt-head-justify {\n  text-align: justify;\n}\ntable.dataTable thead th.dt-head-nowrap,\ntable.dataTable thead td.dt-head-nowrap,\ntable.dataTable tfoot th.dt-head-nowrap,\ntable.dataTable tfoot td.dt-head-nowrap {\n  white-space: nowrap;\n}\ntable.dataTable tbody th.dt-body-left,\ntable.dataTable tbody td.dt-body-left {\n  text-align: left;\n}\ntable.dataTable tbody th.dt-body-center,\ntable.dataTable tbody td.dt-body-center {\n  text-align: center;\n}\ntable.dataTable tbody th.dt-body-right,\ntable.dataTable tbody td.dt-body-right {\n  text-align: right;\n}\ntable.dataTable tbody th.dt-body-justify,\ntable.dataTable tbody td.dt-body-justify {\n  text-align: justify;\n}\ntable.dataTable tbody th.dt-body-nowrap,\ntable.dataTable tbody td.dt-body-nowrap {\n  white-space: nowrap;\n}\n\ntable.dataTable,\ntable.dataTable th,\ntable.dataTable td {\n  -webkit-box-sizing: content-box;\n  box-sizing: content-box;\n}\n\n/*\n * Control feature layout\n */\n.dataTables_wrapper {\n  position: relative;\n  clear: both;\n  *zoom: 1;\n  zoom: 1;\n}\n.dataTables_wrapper .dataTables_length {\n  float: left;\n}\n.dataTables_wrapper .dataTables_filter {\n  float: right;\n  text-align: right;\n}\n.dataTables_wrapper .dataTables_filter input {\n  margin-left: 0.5em;\n}\n.dataTables_wrapper .dataTables_info {\n  clear: both;\n  float: left;\n  padding-top: 0.755em;\n}\n.dataTables_wrapper .dataTables_paginate {\n  float: right;\n  text-align: right;\n  padding-top: 0.25em;\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button {\n  box-sizing: border-box;\n  display: inline-block;\n  min-width: 1.5em;\n  padding: 0.5em 1em;\n  margin-left: 2px;\n  text-align: center;\n  text-decoration: none !important;\n  cursor: pointer;\n  *cursor: hand;\n  color: #333333 !important;\n  border: 1px solid transparent;\n  border-radius: 2px;\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {\n  color: #333333 !important;\n  border: 1px solid #979797;\n  background-color: white;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, white), color-stop(100%, gainsboro));\n  /* Chrome,Safari4+ */\n  background: -webkit-linear-gradient(top, white 0%, gainsboro 100%);\n  /* Chrome10+,Safari5.1+ */\n  background: -moz-linear-gradient(top, white 0%, gainsboro 100%);\n  /* FF3.6+ */\n  background: -ms-linear-gradient(top, white 0%, gainsboro 100%);\n  /* IE10+ */\n  background: -o-linear-gradient(top, white 0%, gainsboro 100%);\n  /* Opera 11.10+ */\n  background: linear-gradient(to bottom, white 0%, gainsboro 100%);\n  /* W3C */\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button.disabled, .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover, .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {\n  cursor: default;\n  color: #666 !important;\n  border: 1px solid transparent;\n  background: transparent;\n  box-shadow: none;\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button:hover {\n  color: white !important;\n  border: 1px solid #111111;\n  background-color: #585858;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #585858), color-stop(100%, #111111));\n  /* Chrome,Safari4+ */\n  background: -webkit-linear-gradient(top, #585858 0%, #111111 100%);\n  /* Chrome10+,Safari5.1+ */\n  background: -moz-linear-gradient(top, #585858 0%, #111111 100%);\n  /* FF3.6+ */\n  background: -ms-linear-gradient(top, #585858 0%, #111111 100%);\n  /* IE10+ */\n  background: -o-linear-gradient(top, #585858 0%, #111111 100%);\n  /* Opera 11.10+ */\n  background: linear-gradient(to bottom, #585858 0%, #111111 100%);\n  /* W3C */\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button:active {\n  outline: none;\n  background-color: #2b2b2b;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #2b2b2b), color-stop(100%, #0c0c0c));\n  /* Chrome,Safari4+ */\n  background: -webkit-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* Chrome10+,Safari5.1+ */\n  background: -moz-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* FF3.6+ */\n  background: -ms-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* IE10+ */\n  background: -o-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* Opera 11.10+ */\n  background: linear-gradient(to bottom, #2b2b2b 0%, #0c0c0c 100%);\n  /* W3C */\n  box-shadow: inset 0 0 3px #111;\n}\n.dataTables_wrapper .dataTables_paginate .ellipsis {\n  padding: 0 1em;\n}\n.dataTables_wrapper .dataTables_processing {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  width: 100%;\n  height: 40px;\n  margin-left: -50%;\n  margin-top: -25px;\n  padding-top: 20px;\n  text-align: center;\n  font-size: 1.2em;\n  background-color: white;\n  background: -webkit-gradient(linear, left top, right top, color-stop(0%, rgba(255, 255, 255, 0)), color-stop(25%, rgba(255, 255, 255, 0.9)), color-stop(75%, rgba(255, 255, 255, 0.9)), color-stop(100%, rgba(255, 255, 255, 0)));\n  background: -webkit-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: -moz-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: -ms-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: -o-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n}\n.dataTables_wrapper .dataTables_length,\n.dataTables_wrapper .dataTables_filter,\n.dataTables_wrapper .dataTables_info,\n.dataTables_wrapper .dataTables_processing,\n.dataTables_wrapper .dataTables_paginate {\n  color: #333333;\n}\n.dataTables_wrapper .dataTables_scroll {\n  clear: both;\n}\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody {\n  *margin-top: -1px;\n  -webkit-overflow-scrolling: touch;\n}\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody th, .dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody td {\n  vertical-align: middle;\n}\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody th > div.dataTables_sizing,\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody td > div.dataTables_sizing {\n  height: 0;\n  overflow: hidden;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n.dataTables_wrapper.no-footer .dataTables_scrollBody {\n  border-bottom: 1px solid #111111;\n}\n.dataTables_wrapper.no-footer div.dataTables_scrollHead table,\n.dataTables_wrapper.no-footer div.dataTables_scrollBody table {\n  border-bottom: none;\n}\n.dataTables_wrapper:after {\n  visibility: hidden;\n  display: block;\n  content: \"\";\n  clear: both;\n  height: 0;\n}\n\n@media screen and (max-width: 767px) {\n  .dataTables_wrapper .dataTables_info,\n  .dataTables_wrapper .dataTables_paginate {\n    float: none;\n    text-align: center;\n  }\n  .dataTables_wrapper .dataTables_paginate {\n    margin-top: 0.5em;\n  }\n}\n@media screen and (max-width: 640px) {\n  .dataTables_wrapper .dataTables_length,\n  .dataTables_wrapper .dataTables_filter {\n    float: none;\n    text-align: center;\n  }\n  .dataTables_wrapper .dataTables_filter {\n    margin-top: 0.5em;\n  }\n}\n", ""]);
+	exports.push([module.id, "/*\n * Table styles\n */\ntable.dataTable {\n  width: 100%;\n  margin: 0 auto;\n  clear: both;\n  border-collapse: separate;\n  border-spacing: 0;\n  /*\n   * Header and footer styles\n   */\n  /*\n   * Body styles\n   */\n}\ntable.dataTable thead th,\ntable.dataTable tfoot th {\n  font-weight: bold;\n}\ntable.dataTable thead th,\ntable.dataTable thead td {\n  padding: 10px 18px;\n  border-bottom: 1px solid #111111;\n}\ntable.dataTable thead th:active,\ntable.dataTable thead td:active {\n  outline: none;\n}\ntable.dataTable tfoot th,\ntable.dataTable tfoot td {\n  padding: 10px 18px 6px 18px;\n  border-top: 1px solid #111111;\n}\ntable.dataTable thead .sorting,\ntable.dataTable thead .sorting_asc,\ntable.dataTable thead .sorting_desc {\n  cursor: pointer;\n  *cursor: hand;\n}\ntable.dataTable thead .sorting,\ntable.dataTable thead .sorting_asc,\ntable.dataTable thead .sorting_desc,\ntable.dataTable thead .sorting_asc_disabled,\ntable.dataTable thead .sorting_desc_disabled {\n  background-repeat: no-repeat;\n  background-position: center right;\n}\ntable.dataTable thead .sorting {\n  background-image: url(" + __webpack_require__(/*! ../images/sort_both.png */ 230) + ");\n}\ntable.dataTable thead .sorting_asc {\n  background-image: url(" + __webpack_require__(/*! ../images/sort_asc.png */ 231) + ");\n}\ntable.dataTable thead .sorting_desc {\n  background-image: url(" + __webpack_require__(/*! ../images/sort_desc.png */ 232) + ");\n}\ntable.dataTable thead .sorting_asc_disabled {\n  background-image: url(" + __webpack_require__(/*! ../images/sort_asc_disabled.png */ 233) + ");\n}\ntable.dataTable thead .sorting_desc_disabled {\n  background-image: url(" + __webpack_require__(/*! ../images/sort_desc_disabled.png */ 234) + ");\n}\ntable.dataTable tbody tr {\n  background-color: white;\n}\ntable.dataTable tbody tr.selected {\n  background-color: #b0bed9;\n}\ntable.dataTable tbody th,\ntable.dataTable tbody td {\n  padding: 8px 10px;\n}\ntable.dataTable.row-border tbody th, table.dataTable.row-border tbody td, table.dataTable.display tbody th, table.dataTable.display tbody td {\n  border-top: 1px solid #dddddd;\n}\ntable.dataTable.row-border tbody tr:first-child th,\ntable.dataTable.row-border tbody tr:first-child td, table.dataTable.display tbody tr:first-child th,\ntable.dataTable.display tbody tr:first-child td {\n  border-top: none;\n}\ntable.dataTable.cell-border tbody th, table.dataTable.cell-border tbody td {\n  border-top: 1px solid #dddddd;\n  border-right: 1px solid #dddddd;\n}\ntable.dataTable.cell-border tbody tr th:first-child,\ntable.dataTable.cell-border tbody tr td:first-child {\n  border-left: 1px solid #dddddd;\n}\ntable.dataTable.cell-border tbody tr:first-child th,\ntable.dataTable.cell-border tbody tr:first-child td {\n  border-top: none;\n}\ntable.dataTable.stripe tbody tr.odd, table.dataTable.display tbody tr.odd {\n  background-color: #f9f9f9;\n}\ntable.dataTable.stripe tbody tr.odd.selected, table.dataTable.display tbody tr.odd.selected {\n  background-color: #abb9d3;\n}\ntable.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {\n  background-color: whitesmoke;\n}\ntable.dataTable.hover tbody tr:hover.selected, table.dataTable.display tbody tr:hover.selected {\n  background-color: #a9b7d1;\n}\ntable.dataTable.order-column tbody tr > .sorting_1,\ntable.dataTable.order-column tbody tr > .sorting_2,\ntable.dataTable.order-column tbody tr > .sorting_3, table.dataTable.display tbody tr > .sorting_1,\ntable.dataTable.display tbody tr > .sorting_2,\ntable.dataTable.display tbody tr > .sorting_3 {\n  background-color: #f9f9f9;\n}\ntable.dataTable.order-column tbody tr.selected > .sorting_1,\ntable.dataTable.order-column tbody tr.selected > .sorting_2,\ntable.dataTable.order-column tbody tr.selected > .sorting_3, table.dataTable.display tbody tr.selected > .sorting_1,\ntable.dataTable.display tbody tr.selected > .sorting_2,\ntable.dataTable.display tbody tr.selected > .sorting_3 {\n  background-color: #acbad4;\n}\ntable.dataTable.display tbody tr.odd > .sorting_1, table.dataTable.order-column.stripe tbody tr.odd > .sorting_1 {\n  background-color: #f1f1f1;\n}\ntable.dataTable.display tbody tr.odd > .sorting_2, table.dataTable.order-column.stripe tbody tr.odd > .sorting_2 {\n  background-color: #f3f3f3;\n}\ntable.dataTable.display tbody tr.odd > .sorting_3, table.dataTable.order-column.stripe tbody tr.odd > .sorting_3 {\n  background-color: whitesmoke;\n}\ntable.dataTable.display tbody tr.odd.selected > .sorting_1, table.dataTable.order-column.stripe tbody tr.odd.selected > .sorting_1 {\n  background-color: #a6b3cd;\n}\ntable.dataTable.display tbody tr.odd.selected > .sorting_2, table.dataTable.order-column.stripe tbody tr.odd.selected > .sorting_2 {\n  background-color: #a7b5ce;\n}\ntable.dataTable.display tbody tr.odd.selected > .sorting_3, table.dataTable.order-column.stripe tbody tr.odd.selected > .sorting_3 {\n  background-color: #a9b6d0;\n}\ntable.dataTable.display tbody tr.even > .sorting_1, table.dataTable.order-column.stripe tbody tr.even > .sorting_1 {\n  background-color: #f9f9f9;\n}\ntable.dataTable.display tbody tr.even > .sorting_2, table.dataTable.order-column.stripe tbody tr.even > .sorting_2 {\n  background-color: #fbfbfb;\n}\ntable.dataTable.display tbody tr.even > .sorting_3, table.dataTable.order-column.stripe tbody tr.even > .sorting_3 {\n  background-color: #fdfdfd;\n}\ntable.dataTable.display tbody tr.even.selected > .sorting_1, table.dataTable.order-column.stripe tbody tr.even.selected > .sorting_1 {\n  background-color: #acbad4;\n}\ntable.dataTable.display tbody tr.even.selected > .sorting_2, table.dataTable.order-column.stripe tbody tr.even.selected > .sorting_2 {\n  background-color: #adbbd6;\n}\ntable.dataTable.display tbody tr.even.selected > .sorting_3, table.dataTable.order-column.stripe tbody tr.even.selected > .sorting_3 {\n  background-color: #afbdd8;\n}\ntable.dataTable.display tbody tr:hover > .sorting_1, table.dataTable.order-column.hover tbody tr:hover > .sorting_1 {\n  background-color: #eaeaea;\n}\ntable.dataTable.display tbody tr:hover > .sorting_2, table.dataTable.order-column.hover tbody tr:hover > .sorting_2 {\n  background-color: #ebebeb;\n}\ntable.dataTable.display tbody tr:hover > .sorting_3, table.dataTable.order-column.hover tbody tr:hover > .sorting_3 {\n  background-color: #eeeeee;\n}\ntable.dataTable.display tbody tr:hover.selected > .sorting_1, table.dataTable.order-column.hover tbody tr:hover.selected > .sorting_1 {\n  background-color: #a1aec7;\n}\ntable.dataTable.display tbody tr:hover.selected > .sorting_2, table.dataTable.order-column.hover tbody tr:hover.selected > .sorting_2 {\n  background-color: #a2afc8;\n}\ntable.dataTable.display tbody tr:hover.selected > .sorting_3, table.dataTable.order-column.hover tbody tr:hover.selected > .sorting_3 {\n  background-color: #a4b2cb;\n}\ntable.dataTable.no-footer {\n  border-bottom: 1px solid #111111;\n}\ntable.dataTable.nowrap th, table.dataTable.nowrap td {\n  white-space: nowrap;\n}\ntable.dataTable.compact thead th,\ntable.dataTable.compact thead td {\n  padding: 4px 17px 4px 4px;\n}\ntable.dataTable.compact tfoot th,\ntable.dataTable.compact tfoot td {\n  padding: 4px;\n}\ntable.dataTable.compact tbody th,\ntable.dataTable.compact tbody td {\n  padding: 4px;\n}\ntable.dataTable th.dt-left,\ntable.dataTable td.dt-left {\n  text-align: left;\n}\ntable.dataTable th.dt-center,\ntable.dataTable td.dt-center,\ntable.dataTable td.dataTables_empty {\n  text-align: center;\n}\ntable.dataTable th.dt-right,\ntable.dataTable td.dt-right {\n  text-align: right;\n}\ntable.dataTable th.dt-justify,\ntable.dataTable td.dt-justify {\n  text-align: justify;\n}\ntable.dataTable th.dt-nowrap,\ntable.dataTable td.dt-nowrap {\n  white-space: nowrap;\n}\ntable.dataTable thead th.dt-head-left,\ntable.dataTable thead td.dt-head-left,\ntable.dataTable tfoot th.dt-head-left,\ntable.dataTable tfoot td.dt-head-left {\n  text-align: left;\n}\ntable.dataTable thead th.dt-head-center,\ntable.dataTable thead td.dt-head-center,\ntable.dataTable tfoot th.dt-head-center,\ntable.dataTable tfoot td.dt-head-center {\n  text-align: center;\n}\ntable.dataTable thead th.dt-head-right,\ntable.dataTable thead td.dt-head-right,\ntable.dataTable tfoot th.dt-head-right,\ntable.dataTable tfoot td.dt-head-right {\n  text-align: right;\n}\ntable.dataTable thead th.dt-head-justify,\ntable.dataTable thead td.dt-head-justify,\ntable.dataTable tfoot th.dt-head-justify,\ntable.dataTable tfoot td.dt-head-justify {\n  text-align: justify;\n}\ntable.dataTable thead th.dt-head-nowrap,\ntable.dataTable thead td.dt-head-nowrap,\ntable.dataTable tfoot th.dt-head-nowrap,\ntable.dataTable tfoot td.dt-head-nowrap {\n  white-space: nowrap;\n}\ntable.dataTable tbody th.dt-body-left,\ntable.dataTable tbody td.dt-body-left {\n  text-align: left;\n}\ntable.dataTable tbody th.dt-body-center,\ntable.dataTable tbody td.dt-body-center {\n  text-align: center;\n}\ntable.dataTable tbody th.dt-body-right,\ntable.dataTable tbody td.dt-body-right {\n  text-align: right;\n}\ntable.dataTable tbody th.dt-body-justify,\ntable.dataTable tbody td.dt-body-justify {\n  text-align: justify;\n}\ntable.dataTable tbody th.dt-body-nowrap,\ntable.dataTable tbody td.dt-body-nowrap {\n  white-space: nowrap;\n}\n\ntable.dataTable,\ntable.dataTable th,\ntable.dataTable td {\n  -webkit-box-sizing: content-box;\n  box-sizing: content-box;\n}\n\n/*\n * Control feature layout\n */\n.dataTables_wrapper {\n  position: relative;\n  clear: both;\n  *zoom: 1;\n  zoom: 1;\n}\n.dataTables_wrapper .dataTables_length {\n  float: left;\n}\n.dataTables_wrapper .dataTables_filter {\n  float: right;\n  text-align: right;\n}\n.dataTables_wrapper .dataTables_filter input {\n  margin-left: 0.5em;\n}\n.dataTables_wrapper .dataTables_info {\n  clear: both;\n  float: left;\n  padding-top: 0.755em;\n}\n.dataTables_wrapper .dataTables_paginate {\n  float: right;\n  text-align: right;\n  padding-top: 0.25em;\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button {\n  box-sizing: border-box;\n  display: inline-block;\n  min-width: 1.5em;\n  padding: 0.5em 1em;\n  margin-left: 2px;\n  text-align: center;\n  text-decoration: none !important;\n  cursor: pointer;\n  *cursor: hand;\n  color: #333333 !important;\n  border: 1px solid transparent;\n  border-radius: 2px;\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {\n  color: #333333 !important;\n  border: 1px solid #979797;\n  background-color: white;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, white), color-stop(100%, gainsboro));\n  /* Chrome,Safari4+ */\n  background: -webkit-linear-gradient(top, white 0%, gainsboro 100%);\n  /* Chrome10+,Safari5.1+ */\n  background: -moz-linear-gradient(top, white 0%, gainsboro 100%);\n  /* FF3.6+ */\n  background: -ms-linear-gradient(top, white 0%, gainsboro 100%);\n  /* IE10+ */\n  background: -o-linear-gradient(top, white 0%, gainsboro 100%);\n  /* Opera 11.10+ */\n  background: linear-gradient(to bottom, white 0%, gainsboro 100%);\n  /* W3C */\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button.disabled, .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover, .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {\n  cursor: default;\n  color: #666 !important;\n  border: 1px solid transparent;\n  background: transparent;\n  box-shadow: none;\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button:hover {\n  color: white !important;\n  border: 1px solid #111111;\n  background-color: #585858;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #585858), color-stop(100%, #111111));\n  /* Chrome,Safari4+ */\n  background: -webkit-linear-gradient(top, #585858 0%, #111111 100%);\n  /* Chrome10+,Safari5.1+ */\n  background: -moz-linear-gradient(top, #585858 0%, #111111 100%);\n  /* FF3.6+ */\n  background: -ms-linear-gradient(top, #585858 0%, #111111 100%);\n  /* IE10+ */\n  background: -o-linear-gradient(top, #585858 0%, #111111 100%);\n  /* Opera 11.10+ */\n  background: linear-gradient(to bottom, #585858 0%, #111111 100%);\n  /* W3C */\n}\n.dataTables_wrapper .dataTables_paginate .paginate_button:active {\n  outline: none;\n  background-color: #2b2b2b;\n  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #2b2b2b), color-stop(100%, #0c0c0c));\n  /* Chrome,Safari4+ */\n  background: -webkit-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* Chrome10+,Safari5.1+ */\n  background: -moz-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* FF3.6+ */\n  background: -ms-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* IE10+ */\n  background: -o-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);\n  /* Opera 11.10+ */\n  background: linear-gradient(to bottom, #2b2b2b 0%, #0c0c0c 100%);\n  /* W3C */\n  box-shadow: inset 0 0 3px #111;\n}\n.dataTables_wrapper .dataTables_paginate .ellipsis {\n  padding: 0 1em;\n}\n.dataTables_wrapper .dataTables_processing {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  width: 100%;\n  height: 40px;\n  margin-left: -50%;\n  margin-top: -25px;\n  padding-top: 20px;\n  text-align: center;\n  font-size: 1.2em;\n  background-color: white;\n  background: -webkit-gradient(linear, left top, right top, color-stop(0%, rgba(255, 255, 255, 0)), color-stop(25%, rgba(255, 255, 255, 0.9)), color-stop(75%, rgba(255, 255, 255, 0.9)), color-stop(100%, rgba(255, 255, 255, 0)));\n  background: -webkit-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: -moz-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: -ms-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: -o-linear-gradient(left, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.9) 25%, rgba(255, 255, 255, 0.9) 75%, rgba(255, 255, 255, 0) 100%);\n}\n.dataTables_wrapper .dataTables_length,\n.dataTables_wrapper .dataTables_filter,\n.dataTables_wrapper .dataTables_info,\n.dataTables_wrapper .dataTables_processing,\n.dataTables_wrapper .dataTables_paginate {\n  color: #333333;\n}\n.dataTables_wrapper .dataTables_scroll {\n  clear: both;\n}\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody {\n  *margin-top: -1px;\n  -webkit-overflow-scrolling: touch;\n}\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody th, .dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody td {\n  vertical-align: middle;\n}\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody th > div.dataTables_sizing,\n.dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody td > div.dataTables_sizing {\n  height: 0;\n  overflow: hidden;\n  margin: 0 !important;\n  padding: 0 !important;\n}\n.dataTables_wrapper.no-footer .dataTables_scrollBody {\n  border-bottom: 1px solid #111111;\n}\n.dataTables_wrapper.no-footer div.dataTables_scrollHead table,\n.dataTables_wrapper.no-footer div.dataTables_scrollBody table {\n  border-bottom: none;\n}\n.dataTables_wrapper:after {\n  visibility: hidden;\n  display: block;\n  content: \"\";\n  clear: both;\n  height: 0;\n}\n\n@media screen and (max-width: 767px) {\n  .dataTables_wrapper .dataTables_info,\n  .dataTables_wrapper .dataTables_paginate {\n    float: none;\n    text-align: center;\n  }\n  .dataTables_wrapper .dataTables_paginate {\n    margin-top: 0.5em;\n  }\n}\n@media screen and (max-width: 640px) {\n  .dataTables_wrapper .dataTables_length,\n  .dataTables_wrapper .dataTables_filter {\n    float: none;\n    text-align: center;\n  }\n  .dataTables_wrapper .dataTables_filter {\n    margin-top: 0.5em;\n  }\n}\n", ""]);
 	
 	// exports
 
 
 /***/ },
 /* 229 */
+/*!**************************************!*\
+  !*** ./~/css-loader/lib/css-base.js ***!
+  \**************************************/
 /***/ function(module, exports) {
 
 	/*
@@ -35450,36 +35495,54 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 230 */
+/*!**************************************************!*\
+  !*** ./~/datatables.net-dt/images/sort_both.png ***!
+  \**************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAQAAADYWf5HAAAAkElEQVQoz7XQMQ5AQBCF4dWQSJxC5wwax1Cq1e7BAdxD5SL+Tq/QCM1oNiJidwox0355mXnG/DrEtIQ6azioNZQxI0ykPhTQIwhCR+BmBYtlK7kLJYwWCcJA9M4qdrZrd8pPjZWPtOqdRQy320YSV17OatFC4euts6z39GYMKRPCTKY9UnPQ6P+GtMRfGtPnBCiqhAeJPmkqAAAAAElFTkSuQmCC"
 
 /***/ },
 /* 231 */
+/*!*************************************************!*\
+  !*** ./~/datatables.net-dt/images/sort_asc.png ***!
+  \*************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAZ0lEQVQ4y2NgGLKgquEuFxBPAGI2ahhWCsS/gDibUoO0gPgxEP8H4ttArEyuQYxAPBdqEAxPBImTY5gjEL9DM+wTENuQahAvEO9DMwiGdwAxOymGJQLxTyD+jgWDxCMZRsEoGAVoAADeemwtPcZI2wAAAABJRU5ErkJggg=="
 
 /***/ },
 /* 232 */
+/*!**************************************************!*\
+  !*** ./~/datatables.net-dt/images/sort_desc.png ***!
+  \**************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAAZUlEQVQ4y2NgGAWjYBSggaqGu5FA/BOIv2PBIPFEUgxjB+IdQPwfC94HxLykus4GiD+hGfQOiB3J8SojEE9EM2wuSJzcsFMG4ttQgx4DsRalkZENxL+AuJQaMcsGxBOAmGvopk8AVz1sLZgg0bsAAAAASUVORK5CYII="
 
 /***/ },
 /* 233 */
+/*!**********************************************************!*\
+  !*** ./~/datatables.net-dt/images/sort_asc_disabled.png ***!
+  \**********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAQAAADYWf5HAAAAW0lEQVQoz2NgoCm4w3Vnwh02wspK7/y6k01Ikdadx3f+37l9RxmfIsY7c4GKQHDiHUbcyhzvvIMq+3THBpci3jv7oIpAcMcdduzKEu/8vPMdDn/eiWQYBYMKAAC3ykIEuYQJUgAAAABJRU5ErkJggg=="
 
 /***/ },
 /* 234 */
+/*!***********************************************************!*\
+  !*** ./~/datatables.net-dt/images/sort_desc_disabled.png ***!
+  \***********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAQAAADYWf5HAAAAWUlEQVQoz2NgGAWDCtyJvPPzznc4/HknEbsy9js77vyHw313eHGZZ3PnE1TRuzuOuK1lvDMRqmzuHUZ87lO+cxuo6PEdLUIeyb7z604pYf+y3Zlwh4u2YQoAc7ZCBHH4jigAAAAASUVORK5CYII="
 
 /***/ },
 /* 235 */
+/*!********************************!*\
+  !*** ./src/js/modules/util.js ***!
+  \********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -35644,6 +35707,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 236 */
+/*!**********************************!*\
+  !*** ./src/js/modules/editor.js ***!
+  \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -35660,12 +35726,12 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-		__webpack_require__(219),
-		__webpack_require__(237),
-		__webpack_require__(240),
-		__webpack_require__(241),
-		__webpack_require__(243),
-		__webpack_require__(218)
+		__webpack_require__(/*! underscore */ 219),
+		__webpack_require__(/*! ace */ 237),
+		__webpack_require__(/*! brace/theme/monokai */ 240),
+		__webpack_require__(/*! brace/mode/javascript */ 241),
+		__webpack_require__(/*! brace/ext/searchbox */ 243),
+		__webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 		_,
 	    ace
@@ -35739,6 +35805,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 237 */
+/*!**************************!*\
+  !*** ./~/brace/index.js ***!
+  \**************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/* ***** BEGIN LICENSE BLOCK *****
@@ -39450,7 +39519,7 @@ webpackJsonp([1],Array(215).concat([
 	};
 	init(true);function init(packaged) {
 	
-	    options.packaged = packaged || acequire.packaged || module.packaged || (global.define && __webpack_require__(238).packaged);
+	    options.packaged = packaged || acequire.packaged || module.packaged || (global.define && __webpack_require__(/*! !webpack amd define */ 238).packaged);
 	
 	    if (!global.document)
 	        return "";
@@ -52130,7 +52199,7 @@ webpackJsonp([1],Array(215).concat([
 	
 	    try {
 	            var workerSrc = mod.src;
-	    var Blob = __webpack_require__(239);
+	    var Blob = __webpack_require__(/*! w3c-blob */ 239);
 	    var blob = new Blob([ workerSrc ], { type: 'application/javascript' });
 	    var blobUrl = (window.URL || window.webkitURL).createObjectURL(blob);
 	
@@ -54406,6 +54475,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 238 */
+/*!***************************************!*\
+  !*** (webpack)/buildin/amd-define.js ***!
+  \***************************************/
 /***/ function(module, exports) {
 
 	module.exports = function() { throw new Error("define cannot be used indirect"); };
@@ -54413,6 +54485,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 239 */
+/*!***************************************!*\
+  !*** ./~/brace/~/w3c-blob/browser.js ***!
+  \***************************************/
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {module.exports = get_blob()
@@ -54448,6 +54523,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 240 */
+/*!**********************************!*\
+  !*** ./~/brace/theme/monokai.js ***!
+  \**********************************/
 /***/ function(module, exports) {
 
 	ace.define("ace/theme/monokai",["require","exports","module","ace/lib/dom"], function(acequire, exports, module) {
@@ -54559,6 +54637,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 241 */
+/*!************************************!*\
+  !*** ./~/brace/mode/javascript.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	ace.define("ace/mode/doc_comment_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules"], function(acequire, exports, module) {
@@ -55696,7 +55777,7 @@ webpackJsonp([1],Array(215).concat([
 	    };
 	
 	    this.createWorker = function(session) {
-	        var worker = new WorkerClient(["ace"], __webpack_require__(242), "JavaScriptWorker");
+	        var worker = new WorkerClient(["ace"], __webpack_require__(/*! ../worker/javascript */ 242), "JavaScriptWorker");
 	        worker.attachToDocument(session.getDocument());
 	
 	        worker.on("annotate", function(results) {
@@ -55719,6 +55800,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 242 */
+/*!**************************************!*\
+  !*** ./~/brace/worker/javascript.js ***!
+  \**************************************/
 /***/ function(module, exports) {
 
 	module.exports.id = 'ace/mode/javascript_worker';
@@ -55726,6 +55810,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 243 */
+/*!**********************************!*\
+  !*** ./~/brace/ext/searchbox.js ***!
+  \**********************************/
 /***/ function(module, exports) {
 
 	ace.define("ace/ext/searchbox",["require","exports","module","ace/lib/dom","ace/lib/lang","ace/lib/event","ace/keyboard/hash_handler","ace/lib/keys"], function(acequire, exports, module) {
@@ -56147,6 +56234,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 244 */
+/*!********************************!*\
+  !*** ./src/js/modules/task.js ***!
+  \********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -56163,17 +56253,17 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(216),
-	    __webpack_require__(221),
-	    __webpack_require__(223),
-	    __webpack_require__(226),
-	    __webpack_require__(235),
-	    __webpack_require__(245),
-	    __webpack_require__(246),
-	    __webpack_require__(247),
-	    __webpack_require__(248)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! app */ 216),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! jscookie */ 223),
+	    __webpack_require__(/*! modules/datatable */ 226),
+	    __webpack_require__(/*! modules/util */ 235),
+	    __webpack_require__(/*! text!../../templates/task.filter.html */ 245),
+	    __webpack_require__(/*! text!../../templates/task.selectable.html */ 246),
+	    __webpack_require__(/*! text!../../templates/task.breadcrumbs.html */ 247),
+	    __webpack_require__(/*! text!../../templates/task.detail.html */ 248)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -57002,30 +57092,45 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 245 */
+/*!********************************************************!*\
+  !*** ./~/text-loader!./src/templates/task.filter.html ***!
+  \********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<ul class=\"nav nav-pills filter\">\n    <li>\n        <a data-index='2' data-value=\"idle\" href=\"#\">Idle</a>\n    </li>\n    <li>\n        <a data-index='2' data-value=\"busy\" href=\"#\">Busy</a>\n    </li>\n    <li>\n        <a data-index='2' data-value=\"error\" href=\"#\">Error</a>\n    </li>\n</ul>\n"
 
 /***/ },
 /* 246 */
+/*!************************************************************!*\
+  !*** ./~/text-loader!./src/templates/task.selectable.html ***!
+  \************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group'>\n    <button id=\"kickTaskButton\" class='btn btn-default btn-green'>\n        Kick\n    </button>\n    <button id=\"stopTaskButton\" class='btn btn-default btn-red'>\n        Stop\n    </button>\n    <button id=\"killTaskButton\" class='btn btn-default btn-red'>\n        Kill\n    </button>\n</div>\n"
 
 /***/ },
 /* 247 */
+/*!*************************************************************!*\
+  !*** ./~/text-loader!./src/templates/task.breadcrumbs.html ***!
+  \*************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div>\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#jobs/<%-task.jobUuid%>/quick\">All Tasks</a>\n        </li>\n        <li class=\"active\">\n            <%-task.node%>\n        </li>\n    </ul>\n</div>\n"
 
 /***/ },
 /* 248 */
+/*!********************************************************!*\
+  !*** ./~/text-loader!./src/templates/task.detail.html ***!
+  \********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div style=\"flex: 1;width:100%;flex-basis: auto;flex-grow: 1;\" class=\"task-actions\">\n    <div class=\"btn-group pull-left\" style=\"width:43%;\">\n        <button id=\"kickTaskButton\" class=\"btn btn-default btn-small btn-green task-action\">\n            Kick\n        </button>\n        <button id=\"stopTaskButton\" class=\"btn btn-default btn-small btn-red task-action\">\n            Stop\n        </button>\n        <button id=\"killTaskButton\" class=\"btn btn-default btn-small btn-red task-action\">\n            Kill\n        </button>\n        <button id=\"revertTaskButton\" class=\"btn btn-default btn-small task-action\">\n            Revert\n        </button>\n        <span id=\"taskHost\" style=\"margin-left:10px;\"></span>\n        <span id=\"taskLabel\" style=\"margin-left:10px;\"></span>\n    </div>\n    <div class=\"btn-group pull-right\" style=\"width:57%;\">\n        <div class=\"btn-group log-types pull-right\" style=\"margin:0 0 0 20px;min-height:0px;\" data-toggle=\"buttons-radio\">\n            <button id=\"stdoutButton\" class=\"btn btn-default btn-tiny <%-(stdout?'active':'')%>\" data-toggle=\"button\">stdout</button>\n            <button id=\"stderrButton\" class=\"btn btn-default btn-tiny <%-(!stdout?'active':'')%>\" data-toggle=\"button\">stderr</button>\n        </div>\n        <div style=\"margin:0px;min-height:0px;display:inline;\" class=\"log-control-button pull-right\" data-toggle=\"buttons-radio\">\n            <button id=\"rollButton\" data-value=\"0\" class=\"btn btn-default btn-tiny log-action <%-(_.isEqual(type,0)?'active':'')%>\" data-toggle=\"button\" style=\"width: 50px;\">roll</button>\n            <button id=\"tailButton\" data-value=\"1\" class=\"btn btn-default btn-tiny log-action <%-(_.isEqual(type,1)?'active':'')%>\" data-toggle=\"button\" style=\"width: 50px;\">tail</button>\n            <button id=\"headButton\" data-value=\"2\" class=\"btn btn-default btn-tiny log-action <%-(_.isEqual(type,2)?'active':'')%>\" data-toggle=\"button\" style=\"width: 50px;\">head</button>\n            <input id=\"linesInput\" type=\"text\" style=\"padding: 0px; margin: 0px 0px 0px 10px; width: 40px;\" value=\"<%-lines%>\">\n            <span>lines</span>\n            <input id=\"runsAgoInput\" type=\"number\" style=\"padding: 0px; margin: 0px 0px 0px 10px; width: 40px;\" value=\"<%-runsAgo%>\">\n            <span>runs ago</span>\n        </div>\n    </div>\n</div>\n<div style=\"width: 100%;position: relative;flex: 1;overflow: auto;flex-basis: auto;flex-grow: 100;\">\n    <pre id=\"logContainer\" style=\"width:100%;\" class=\"log-container\">\n    </pre>\n</div>\n"
 
 /***/ },
 /* 249 */
+/*!*********************************!*\
+  !*** ./src/js/modules/graph.js ***!
+  \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -57042,10 +57147,10 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(218),
-	    __webpack_require__(250)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! backbone */ 218),
+	    __webpack_require__(/*! d3 */ 250)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -57370,6 +57475,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 250 */
+/*!********************!*\
+  !*** ./~/d3/d3.js ***!
+  \********************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;!function() {
@@ -66929,6 +67037,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 251 */
+/*!****************************************!*\
+  !*** ./src/js/modules/layout.views.js ***!
+  \****************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -66945,7 +67056,7 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(218)
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    Backbone
 	){
@@ -67098,114 +67209,171 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 252 */
+/*!*******************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.filter.html ***!
+  \*******************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<ul class=\"nav nav-pills filter\">\n    <li>\n        <a data-index='5' data-value=\"IDLE\" href=\"#\">Idle</a>\n    </li>\n    <li>\n        <a data-index='5' data-value=\"RUNNING\" href=\"#\">Running</a>\n    </li>\n    <li>\n        <a data-index='5' data-value=\"ERROR\" href=\"#\">Error</a>\n    </li>\n    <li>\n        <a id=\"myJobs\" data-index='4' data-value=\"<%-username%>\" href=\"#\">My Jobs</a>\n    </li>\n    <li>\n        <a id=\"statusFilter\" data-index='7' data-value=\"enabled\" href=\"#\">Enabled</a>\n    </li>\n</ul>\n"
 
 /***/ },
 /* 253 */
+/*!***********************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.selectable.html ***!
+  \***********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<a href=\"#jobs/create/conf\" class='btn btn-default btn-small btn-blue' style=\"margin:0px 4px;\">\n    Create\n</a>\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group'>\n    <button id=\"kickButton\" class='btn btn-default btn-green btn-hide-zero'>\n        Kick\n    </button>\n    <button id=\"stopButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Stop\n    </button>\n    <button id=\"killButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Kill\n    </button>\n    <button id=\"enableButton\" class='btn btn-default btn-hide-zero'>\n        Enable\n    </button>\n    <button id=\"disableButton\" class='btn btn-default btn-hide-zero'>\n        Disable\n    </button>\n    <button id=\"deleteButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Delete\n    </button>\n    <button id=\"createAlertButton\" class='btn btn-default btn-hide-zero'>\n        Create alert\n    </button>\n    <button id=\"changePermissionsButton\" class='btn btn-default btn-hide-zero'>\n        Permissions\n    </button>\n</div>\n<button id=\"findDeletedJobButton\" class=\"btn btn-default btn-small btn-blue\" style=\"margin:0px 4px;\">\n    Find Deleted\n</button>\n"
 
 /***/ },
 /* 254 */
+/*!*********************************************************!*\
+  !*** ./~/text-loader!./src/templates/task.divider.html ***!
+  \*********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"pull-left\">\n    <span style=\"font-weight:bold;\">Job ID:</span>\n    <span><%-id%></span>\n    <span style=\"font-weight:bold;\">Description:</span>\n    <span><%-description%></span>\n</div>\n<a href=\"#jobs\" class=\"pull-right\" style=\"text-decoration: none; font-weight:bold;cursor:pointer;\">X</a>\n"
 
 /***/ },
 /* 255 */
+/*!****************************************************************!*\
+  !*** ./~/text-loader!./src/templates/task.detail.divider.html ***!
+  \****************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div>\n    <div class=\"pull-left\">\n        <span style=\"font-weight:bold;\">ID:</span>\n        <span><%-job.id%></span>\n        <span style=\"font-weight:bold;\">Description:</span>\n        <span><%-job.description%></span>\n    </div>\n    <a href=\"#jobs\" class=\"pull-right\" style=\"text-decoration: none; font-weight:bold;cursor:pointer;margin-right:5px;\">X</a>\n</div>\n"
 
 /***/ },
 /* 256 */
+/*!********************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.setting.html ***!
+  \********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<table id=\"jobSettingTable\" class=\"table table-bordered\">\n    <tr class=\"row\">\n        <th colspan=\"2\">Task Settings</th>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Maximum Run Time</td>\n        <td width=\"70%\">\n            <input name=\"maxRunTime\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.maxRunTime%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Run Interval</td>\n        <td width=\"70%\">\n            <input name=\"rekickTimeout\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.rekickTimeout%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Job Priority</td>\n        <td width=\"70%\">\n            <input name=\"priority\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.priority%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Minion Type</td>\n        <td width=\"70%\">\n            <input name=\"minionType\" type='text' class=\"form-control trackable\" style=\"margin:0px;\" type=\"text\" value=\"<%-job.minionType%>\" <%-(_.isUndefined(job.id)? '' : 'disabled')%> ></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Max Simultaneous Running Tasks</td>\n        <td width=\"70%\">\n            <input name=\"maxSimulRunning\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.maxSimulRunning%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Enable Automatic Retries</td>\n        <td width=\"70%\">\n            <input name=\"autoRetry\" type=\"checkbox\" class=\"trackable\" <%-(job.autoRetry?\"checked='true'\":\"\")%>>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <th colspan=\"2\">Backup Settings</th>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Hourly Backups</td>\n        <td width=\"70%\">\n            <input name=\"hourlyBackups\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.hourlyBackups%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Daily Backups</td>\n        <td width=\"70%\">\n            <input name=\"dailyBackups\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.dailyBackups%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Weekly Backups</td>\n        <td width=\"70%\">\n            <input name=\"weeklyBackups\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.weeklyBackups%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Monthly Backups</td>\n        <td width=\"70%\">\n            <input name=\"monthlyBackups\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.monthlyBackups%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <th colspan=\"2\">Replica Settings</th>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Number of Replicas</td>\n        <td width=\"70%\">\n            <input name=\"replicas\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-job.replicas%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Do not delete</td>\n        <td width=\"70%\"><input name=\"dontDeleteMe\" class=\"trackable\" type=\"checkbox\" <%-(job.dontDeleteMe?\"checked='true'\":\"\")%>></td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Do not clone</td>\n        <td width=\"70%\"><input name=\"dontCloneMe\" class=\"trackable\" type=\"checkbox\" <%-(job.dontCloneMe?\"checked='true'\":\"\")%>></td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Do not automatically balance data</td>\n        <td width=\"70%\"><input name=\"dontAutoBalanceMe\" class=\"trackable\" type=\"checkbox\" <%-(job.dontAutoBalanceMe?\"checked='true'\":\"\")%>></td>\n    </tr>\n    <tr class=\"row\">\n        <th colspan=\"2\">Permissions Settings</th>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Creator</td>\n        <td width=\"70%\">\n            <input name=\"creator\" class=\"form-control trackable\" readonly style=\"margin:0px;\" type=\"text\" value=\"<%-job.creator%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Owner</td>\n        <td width=\"70%\">\n            <input id=\"jobOwner\" name=\"owner\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"text\" value=\"<%-job.owner%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Group</td>\n        <td width=\"70%\">\n            <input id=\"jobGroup\" name=\"group\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"text\" value=\"<%-job.group%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Writable</td>\n        <td>\n            <input id=\"ownerWritable\" name=\"ownerWritable\" class=\"trackable\" style=\"margin:0px;\" type=\"checkbox\" <%-(job.ownerWritable?\"checked='true'\":\"\")%>></input>\n            <label for=\"ownerWritable\">owner</label>\n            <input id=\"groupWritable\" name=\"groupWritable\" class=\"trackable\" style=\"margin-left:10px;\" type=\"checkbox\" <%-(job.groupWritable?\"checked='true'\":\"\")%>></input>\n            <label for=\"groupWritable\">group</label>\n            <input id=\"worldWritable\" name=\"worldWritable\" class=\"trackable\" style=\"margin-left:10px;\" type=\"checkbox\" <%-(job.worldWritable?\"checked='true'\":\"\")%>></input>\n            <label for=\"worldWritable\">world</label>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Executable</td>\n        <td>\n            <input id=\"ownerExecutable\" name=\"ownerExecutable\" class=\"trackable\" style=\"margin:0px;\" type=\"checkbox\" <%-(job.ownerExecutable?\"checked='true'\":\"\")%>></input>\n            <label for=\"ownerExecutable\">owner</label>\n            <input id=\"groupExecutable\" name=\"groupExecutable\" class=\"trackable\" style=\"margin-left:10px;\" type=\"checkbox\" <%-(job.groupExecutable?\"checked='true'\":\"\")%>></input>\n            <label for=\"groupExecutable\">group</label>\n            <input id=\"worldExecutable\" name=\"worldExecutable\" class=\"trackable\" style=\"margin-left:10px;\" type=\"checkbox\" <%-(job.worldExecutable?\"checked='true'\":\"\")%>></input>\n            <label for=\"worldExecutable\">world</label>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Last Modified By</td>\n        <td width=\"70%\">\n            <input name=\"lastModifiedBy\" class=\"form-control trackable\" readonly style=\"margin:0px;\" type=\"text\" value=\"<%-job.lastModifiedBy%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Last Modified At</td>\n        <td width=\"70%\">\n            <input name=\"lastModifiedAt\" class=\"form-control trackable\" readonly style=\"margin:0px;\" type=\"text\" value=\"<%-new Date(job.lastModifiedAt).toString('MM/dd/yy HH:mm')%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">&nbsp;</td>\n        <td wdith=\"70%\"><button type=\"button\" id=\"settingsChangePermission\" class=\"btn btn-default\" >Change Permissions</button>\n            <span style=\"vertical-align:middle\" >Owner and group can change permissions when writable status is disabled.</span></td>\n    </tr>\n    <tr class=\"row\">\n        <th colspan=\"2\">Query Settings</th>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Enable querying on this job</td>\n        <td width=\"70%\">\n            <input name=\"qc_canQuery\" type=\"checkbox\" class=\"trackable\" <%-(job.qc_canQuery?\"checked='true'\":\"\")%>>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <th colspan=\"2\">Post Hooks</th>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">On Success..</td>\n        <td width=\"70%\">\n            <input name=\"onComplete\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"text\" value=\"<%-job.onComplete%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">On Success Timeout (seconds)</td>\n        <td width=\"70%\">\n            <input name=\"onCompleteTimeout\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"text\" value=\"<%-job.onCompleteTimeout%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">On Error..</td>\n        <td width=\"70%\">\n            <input name=\"onError\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"text\" value=\"<%-job.onError%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">On Error Timeout (seconds)</td>\n        <td width=\"70%\">\n            <input name=\"onErrorTimeout\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"text\" value=\"<%-job.onErrorTimeout%>\"></input>\n        </td>\n    </tr>\n</table>\n"
 
 /***/ },
 /* 257 */
+/*!*******************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.detail.html ***!
+  \*******************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"topStatusBar\" class=\"top-bar\">\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#jobs\">\n                All Jobs\n            </a>\n        </li>\n        <li class=\"active\">\n            <%-(_.isUndefined(job.id)?'new':job.id)%>\n        </li>\n    </ul>\n    <%if(!_.isUndefined(job.id)){%>\n        <div id=\"stateTextBox\" class=\"label <%-job.stateLabel%>\" style=\"margin-right:10px;\">\n            <%-job.stateText%>\n        </div>\n        <span style=\"margin-right:10px;\">\n            <strong>nodes</strong>\n            <%-job.nodes%>\n        </span>\n        <span id=\"statusBox\" style=\"margin-right:10px;\">\n            <%-job.status%>\n        </span>\n    <%}%>\n    <div class=\"job-detail-actions pull-right\">\n        <%if(!_.isUndefined(job.id)){%>\n            <button id=\"queryJobButton\" class=\"btn btn-default btn-small btn-blue\" style=\"display:<%-(job.qc_canQuery?'inline':'none')%>;\">\n                Query\n            </button>\n            <button id=\"kickJobButton\" class=\"btn btn-default btn-small btn-green\">\n                Kick\n            </button>\n            <button id=\"stopJobButton\" class=\"btn btn-default btn-small btn-red\">\n                Stop\n            </button>\n            <button id=\"killJobButton\" class=\"btn btn-default btn-small btn-red\">\n                Kill\n            </button>\n            <button id=\"deleteJobButton\" class=\"btn btn-default btn-small btn-red\">\n                Delete\n            </button>\n            <div class=\"btn-group\">\n                <button type=\"button\" class=\"btn btn-default btn-small dropdown-toggle\" data-toggle=\"dropdown\">\n                   More\n                    <span class=\"caret\"></span>\n                </button>\n                <ul class=\"dropdown-menu\" role=\"menu\">\n                    <li><a id=\"cloneJobButton\" href=\"#\">Clone</a></li>\n                    <li><a id=\"rebalanceJobButton\" href=\"#\">Rebalance</a></li>\n                    <li><a id=\"enableJobButton\" href=\"#\">Enable</a></li>\n                    <li><a id=\"disableJobButton\" href=\"#\">Disable</a></li>\n                    <li><a id=\"checkDirsJobButton\" href=\"#\">Check Dirs</a></li>\n                    <li><a id=\"fixDirsJobButton\" href=\"#\">Fix Dirs</a></li>\n                    <li><a id=\"revertJobButton\" href=\"#\">Revert</a></li>\n                </ul>\n            </div>\n        <%}%>\n        <button id=\"commitJobButton\" class=\"btn btn-default btn-small\" style=\"margin-right:8px;\">\n            Save\n        </button>\n    </div>\n</div>\n<ul class=\"nav nav-tabs nav-justified\" style=\"margin-left: 0px; margin-bottom: 0px;\">\n    <li id=\"confTab\">\n        <a href=\"#jobs/<%-(_.isUndefined(job.id)?(isClone?cloneId+'/conf/clone':'create/conf'):job.id+'/conf')%>\">\n            Configuration\n        </a>\n    </li>\n    <li class=\"<%-(_.isUndefined(job.id)?'disabled':'')%>\" id=\"tasksTab\">\n        <a href=\"#jobs/<%-(_.isUndefined(job.id)?'create/tasks':job.id+'/tasks')%>\">\n            Tasks\n        </a>\n    </li>\n    <li id=\"settingsTab\">\n        <a href=\"#jobs/<%-(_.isUndefined(job.id)?(isClone?cloneId+'/settings/clone':'create/settings'):job.id+'/settings')%>\">\n            Settings\n        </a>\n    </li>\n    <li id=\"alertsTab\" class=\"<%-(_.isUndefined(job.id)?'disabled':'')%>\">\n        <a href=\"#jobs/<%-(_.isUndefined(job.id)?(isClone?cloneId+'/alerts/clone':'create/alerts'):job.id+'/alerts')%>\">\n            Alerts\n        </a>\n    </li>\n    <li class=\"<%-(_.isUndefined(job.id)?'disabled':'')%>\" id=\"depTab\">\n        <a href=\"#jobs/<%-(_.isUndefined(job.id)?'create':job.id)%>/deps\">\n            Dependencies\n        </a>\n    </li>\n    <li  id=\"expTab\">\n        <a href=\"#jobs/<%-(_.isUndefined(job.id)?'create':job.id)%>/expanded\">\n            Expanded Configuration\n        </a>\n    </li>\n    <li class=\"<%-(_.isUndefined(job.id)?'disabled':'')%>\" id=\"historyTab\">\n        <a href=\"#jobs/<%-(_.isUndefined(job.id)?'create':job.id)%>/history\">\n            History\n        </a>\n    </li>\n</ul>\n<div id=\"detailContainer\" class=\"main-container\">\n</div>\n"
 
 /***/ },
 /* 258 */
+/*!*******************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.alerts.html ***!
+  \*******************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"span12\" style=\"padding:0px;margin:0px;\">\n    <button id=\"addAlertButton\" class=\"btn btn-default btn-small\">Add Alert</button> <br>\n    <button id=\"viewAlertsButton\" class=\"btn btn-default btn-small\">View Alerts Using This Job...</button>\n    \n</div>\n"
 
 /***/ },
 /* 259 */
+/*!*************************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.dependencies.html ***!
+  \*************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "job dependencies for <%-job.id%>"
 
 /***/ },
 /* 260 */
+/*!*************************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.expandedconf.html ***!
+  \*************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = ""
 
 /***/ },
 /* 261 */
+/*!********************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.history.html ***!
+  \********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"tableDiv\" style=\"width:100%;min-height:max-height:400px;\">\n\n</div>\n<div id=\"editorDiv\">\n\n</div>\n"
 
 /***/ },
 /* 262 */
+/*!*****************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.task.html ***!
+  \*****************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "job tasks for <%-job.id%>"
 
 /***/ },
 /* 263 */
+/*!**********************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.parameter.html ***!
+  \**********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"\" style=\"min-height:0px;\">\n    <a id=\"hideParamLink\" data-hide=\"<%-(hidden?'1':'0')%>\" class=\"pull-left\" style=\"cursor:pointer;\">\n        <%-(hidden?\"Show\":\"Hide\")%> Parameters (<%-parameters.length%>)\n    </a>\n    <a id=\"validateLink\" class=\"pull-right\" style=\"margin-right:12px;cursor:pointer;\">\n        Validate Source\n    </a>\n</div>\n<br/>\n<div id=\"paramBox\" class=\"span12 form\" style=\"min-height:0px;display:<%-(hidden?'none':'inline')%>;\">\n    <%_.each(parameters,function(param,index){%>\n        <div class=\"span3 form-group\" style=\"margin-left:0px;display:inline-block;margin-bottom:0px;\">\n            <label style=\"margin-bottom:0px;\"><%-param.name%></label>\n            <input type=\"text\" data-index=\"<%-index%>\" class=\"span10 form-control\" name=\"<%-param.name%>\" value=\"<%-param.value%>\" placeholder=\"<%-param.defaultValue%>\">\n        </div>\n    <%})%>\n</div>\n"
 
 /***/ },
 /* 264 */
+/*!***********************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.taskdetail.html ***!
+  \***********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = ""
 
 /***/ },
 /* 265 */
+/*!*****************************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.task.breadcrumbs.html ***!
+  \*****************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div>\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#jobs/<%-task.jobUuid%>/tasks\">All Tasks</a>\n        </li>\n        <li class=\"active\">\n            <%-task.node%>\n        </li>\n    </ul>\n</div>\n"
 
 /***/ },
 /* 266 */
+/*!*************************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.revert.modal.html ***!
+  \*************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"modal-dialog\">\n    <div class=\"modal-content\">\n        <div class=\"modal-header\">\n            <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">&times;</button>\n            <h4 class=\"modal-title\"><%-title%></h4>\n        </div>\n        <div class=\"modal-body\">\n            <div>\n                <span id=\"backupMessage\" style=\"padding:6px;float:left;\"></span>\n            </div>\n            <table class=\"table table-condensed\" style=\"margin-bottom: 0px; margin-top:10px;\">\n                <tbody>\n                    <!-- revert to gold buackup by revision -->\n                    <tr id=\"goldRevertByRevision\">\n                        <td style=\"width:25%;padding-top:10px;\">\n                            Recent run:\n                        </td>\n                        <td style=\"width:50%;\">\n                            <select id=\"runSelect\" class=\"form-control\">\n                                <option value=\"0\">Last run</option>\n                                <option value=\"1\">2 runs ago</option>\n                                <option value=\"2\">3 runs ago</option>\n                            </select>\n                        </td>\n                        <td style=\"width:25%;\">\n                            <button id=\"runButton\" class=\"btn btn-default btn-medium\">now</button>\n                        </td>\n                    </tr>\n                    <!-- revert to gold backup by timestamp -->\n                    <tr id=\"goldRevertByTimestamp\" style=\"display:none;\">\n                        <td style=\"width:25%;padding-top:10px;\">\n                            Recent run:\n                        </td>\n                        <td style=\"width:50%;\">\n                            <select id=\"goldSelect\" class=\"form-control\">\n                            </select>\n                        </td>\n                        <td style=\"width:25%;\">\n                            <button id=\"goldButton\" class=\"btn btn-default btn-medium\">now</button>\n                        </td>\n                    </tr>\n                    <!-- hourly backups -->\n                    <tr style=\"display:none;\">\n                        <td style=\"width:25%;padding-top:10px;\">\n                            Hourly backup:\n                        </td>\n                        <td style=\"width:50%;\">\n                            <select id=\"hourlySelect\" class=\"form-control\">\n                            </select>\n                        </td>\n                        <td style=\"width:25%;\">\n                            <button id=\"hourlyButton\" class=\"btn btn-default btn-medium\">now</button>\n                        </td>\n                    </tr>\n                    <!-- daily backups -->\n                    <tr style=\"display:none;\">\n                        <td style=\"width:25%;padding-top:10px;\">\n                            Daily backup:\n                        </td>\n                        <td style=\"width:50%;\">\n                            <select id=\"dailySelect\" class=\"form-control\">\n                                <option value=\"2\"></option>\n                            </select>\n                        </td>\n                        <td style=\"width:25%;\">\n                            <button id=\"dailyButton\" class=\"btn btn-default btn-medium\">now</button>\n                        </td>\n                    </tr>\n                    <!-- weekly backups -->\n                    <tr style=\"display:none;\">\n                        <td style=\"width:25%;padding-top:10px;\">\n                            Weekly backup:\n                        </td>\n                        <td style=\"width:50%;\">\n                            <select id=\"weeklySelect\" class=\"form-control\">\n                            </select>\n                        </td>\n                        <td style=\"width:25%;\">\n                            <button id=\"weeklyButton\" class=\"btn btn-default btn-medium\">now</button>\n                        </td>\n                    </tr>\n                    <!-- monthly backups -->\n                    <tr style=\"display:none;\">\n                        <td style=\"width:25%;padding-top:10px;\">\n                            Monthly backup:\n                        </td>\n                        <td style=\"width:50%;\">\n                            <select id=\"monthlySelect\" class=\"form-control\">\n                            </select>\n                        </td>\n                        <td style=\"width:25%;\">\n                            <button id=\"monthlyButton\" class=\"btn btn-default btn-medium\">now</button>\n                        </td>\n                    </tr>\n                </tbody>\n            </table>\n        </div>\n        <div class=\"modal-footer\">\n            <button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Close</button>\n            <!--<button type=\"button\" class=\"btn btn-primary\">Save changes</button>-->\n        </div>\n    </div><!-- /.modal-content -->\n</div><!-- /.modal-dialog -->\n"
 
 /***/ },
 /* 267 */
+/*!******************************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.permissions.modal.html ***!
+  \******************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"modal-dialog\">\n    <div class=\"modal-content\">\n        <div class=\"modal-header\">\n            <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">&times;</button>\n            <h4 class=\"modal-title\">Change Permissions</h4>\n        </div>\n        <div class=\"modal-body\">\n            <table class=\"table table-condensed\" style=\"margin-bottom: 0px; margin-top:10px;\">\n                <tbody>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            Creator (requires sudo):\n                        </td>\n                        <td style=\"\">\n                            <input type=\"text\" name=\"creatorModal\" value=\"\"/>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            Owner:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"text\" name=\"chownModal\" value=\"\"/>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            Group:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"text\" name=\"chgrpModal\" value=\"\"/>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            Owner writable:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"radio\" name=\"ownerWritable\" value=\"true\" id=\"owtrue\">\n                            <label for=\"owtrue\">true</label>\n                            <input type=\"radio\" name=\"ownerWritable\" value=\"false\" id=\"owfalse\">\n                            <label for=\"owfalse\">false</label>\n                            <input type=\"radio\" name=\"ownerWritable\" value=\"no change\" id=\"ownc\" checked>\n                            <label for=\"ownc\">no change</label>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            Group writable:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"radio\" name=\"groupWritable\" value=\"true\" id=\"gwtrue\">\n                            <label for=\"gwtrue\">true</label>\n                            <input type=\"radio\" name=\"groupWritable\" value=\"false\" id=\"gwfalse\">\n                            <label for=\"gwfalse\">false</label>\n                            <input type=\"radio\" name=\"groupWritable\" value=\"no change\" id=\"gwnc\" checked>\n                            <label for=\"gwnc\">no change</label>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            World writable:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"radio\" name=\"worldWritable\" value=\"true\" id=\"wdtrue\">\n                            <label for=\"wdtrue\">true</label>\n                            <input type=\"radio\" name=\"worldWritable\" value=\"false\" id=\"wdfalse\">\n                            <label for=\"wdfalse\">false</label>\n                            <input type=\"radio\" name=\"worldWritable\" value=\"no change\" id=\"wdnc\" checked>\n                            <label for=\"wdnc\">no change</label>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            Owner executable:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"radio\" name=\"ownerExecutable\" value=\"true\" id=\"oetrue\">\n                            <label for=\"oetrue\">true</label>\n                            <input type=\"radio\" name=\"ownerExecutable\" value=\"false\" id=\"oefalse\">\n                            <label for=\"oefalse\">false</label>\n                            <input type=\"radio\" name=\"ownerExecutable\" value=\"no change\" id=\"oenc\" checked>\n                            <label for=\"oenc\">no change</label>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            Group executable:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"radio\" name=\"groupExecutable\" value=\"true\" id=\"getrue\">\n                            <label for=\"getrue\">true</label>\n                            <input type=\"radio\" name=\"groupExecutable\" value=\"false\" id=\"gefalse\">\n                            <label for=\"gefalse\">false</label>\n                            <input type=\"radio\" name=\"groupExecutable\" value=\"no change\" id=\"genc\" checked>\n                            <label for=\"genc\">no change</label>\n                        </td>\n                    </tr>\n                    <tr>\n                        <td style=\"padding-top:10px;\">\n                            World executable:\n                        </td>\n                        <td style=\"\">\n                            <input type=\"radio\" name=\"worldExecutable\" value=\"true\" id=\"wetrue\">\n                            <label for=\"wetrue\">true</label>\n                            <input type=\"radio\" name=\"worldExecutable\" value=\"false\" id=\"wefalse\">\n                            <label for=\"wefalse\">false</label>\n                            <input type=\"radio\" name=\"worldExecutable\" value=\"no change\" id=\"wenc\" checked>\n                            <label for=\"wenc\">no change</label>\n                        </td>\n                    </tr>\n                </tbody>\n            </table>\n        </div>\n        <div class=\"modal-footer\" style=\"border-top:none\">\n            <button type=\"button\" class=\"btn btn-primary\" data-dismiss=\"modal\" id=\"jobPermissionsModalSubmit\">Submit</button>\n            <button type=\"button\" class=\"btn btn-default\" data-dismiss=\"modal\">Close</button>\n        </div>\n    </div><!-- /.modal-content -->\n</div><!-- /.modal-dialog -->\n"
 
 /***/ },
 /* 268 */
+/*!***********************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.table.info.html ***!
+  \***********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"jobCount\">\n    <span class=\"key\">jobs:</span>\n    <span class=\"value\"><%-(jobCount===0?\"-\":jobCount)%></span>\n</div>\n<div id=\"hostCount\">\n    <span class=\"key\">hosts:</span>\n    <span class=\"value\"><%-(hostCount===0?\"-\":hostCount)%></span>\n</div>\n<div id=\"tasksCount\">\n    <span class=\"key\">tasks:</span>\n    <span class=\"value\"><%-(tasksCount===0?\"-\":tasksCount)%></span>\n</div>\n<div id=\"queuedCount\">\n    <span class=\"key\">queued:</span>\n    <span class=\"value\"><%-(queuedCount===0?\"-\":queuedCount)%></span>\n</div>\n<div id=\"queuedCountNoSlot\">\n    <span class=\"key\">queued-no-slots:</span>\n    <span class=\"value\"><%-(queuedCountNoSlot===0?\"-\":queuedCountNoSlot)%></span>\n</div>\n<div id=\"runningCount\">\n    <span class=\"key\">running:</span>\n    <span class=\"value\"><%-(runningCount===0?\"-\":runningCount)%></span>\n</div>\n<div id=\"erroredCount\">\n    <span class=\"key\">errored:</span>\n    <span class=\"value\"><%-(erroredCount===0?\"-\":erroredCount)%></span>\n</div>\n<div id=\"slots\">\n    <span class=\"key\">slots:</span>\n    <span class=\"value\"><%-(availTaskSlots===0?\"-\":availTaskSlots)%></span>\n</div>\n<div id=\"disk\">\n    <span class=\"key\">disk:</span>\n    <span class=\"value\"><%-(disk===0?\"-\":disk)%></span>\n</div>\n"
 
 /***/ },
 /* 269 */
+/*!**********************************************************!*\
+  !*** ./~/text-loader!./src/templates/job.checkdirs.html ***!
+  \**********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"modal-dialog\" style=\"position: absolute;top: 20px;bottom: 20px;left: 100px;right: 100px;width:800px;\">\n    <div class=\"modal-content\" style=\"position: absolute;top: 20px;bottom: 20px;left: 0;right: 0;\">\n        <div class=\"modal-header\">\n            <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">&times;</button>\n            <h4 class=\"modal-title\">Check Dirs: <%-job.id%></h4>\n        </div>\n        <div class=\"modal-body\" style=\"overflow-y: auto;position: absolute;top: 56px;bottom: 69px;right: 0;left: 0;\">\n            <table class=\"table table-condensed table-body\">\n                <thead>\n                <tr class=\"row\">\n                    <th style=\"width:10%;\">\n                        <a href=\"#\" data-sortby=\"0\">Node</a>\n                    </th>\n                    <th style=\"width:20%;\">\n                        <a href=\"#\" data-sortby=\"1\">Type</a>\n                    </th>\n                    <th style=\"width:20%;\">\n                        <a href=\"#\" data-sortby=\"2\">Result</a>\n                    </th>\n                    <th style=\"width:45%;\">\n                        <a href=\"#\" data-sortby=\"3\">Host</a>\n                    </th>\n                    <th style=\"width:10%;\"></th>\n                </tr>\n                </thead>\n                <tbody></tbody>\n            </table>\n        </div>\n        <div class=\"modal-footer\" style=\"position:absolute;bottom:-4px;left:0;right:0;\">\n            <button class=\"fix-all btn btn-default btn-blue pull-left\" type=\"button\">Fix All Dirs</button>\n            <button type=\"button\" class=\"btn btn-default pull-right\" data-dismiss=\"modal\">Close</button>\n            <!--<button type=\"button\" class=\"btn btn-primary\">Save changes</button>-->\n        </div>\n    </div>\n</div><!-- /.modal-dialog -->\n"
 
 /***/ },
 /* 270 */
+/*!*********************************!*\
+  !*** ./src/js/modules/macro.js ***!
+  \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -67222,18 +67390,18 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(216),
-	    __webpack_require__(221),
-	    __webpack_require__(226),
-	    __webpack_require__(235),
-	    __webpack_require__(236),
-	    __webpack_require__(271),
-	    __webpack_require__(272),
-	    __webpack_require__(273),
-	    __webpack_require__(274),
-	    __webpack_require__(218)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! app */ 216),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! modules/datatable */ 226),
+	    __webpack_require__(/*! modules/util */ 235),
+	    __webpack_require__(/*! modules/editor */ 236),
+	    __webpack_require__(/*! text!../../templates/macro.filter.html */ 271),
+	    __webpack_require__(/*! text!../../templates/macro.selectable.html */ 272),
+	    __webpack_require__(/*! text!../../templates/macro.detail.html */ 273),
+	    __webpack_require__(/*! text!../../templates/macro.configuration.html */ 274),
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -67467,30 +67635,45 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 271 */
+/*!*********************************************************!*\
+  !*** ./~/text-loader!./src/templates/macro.filter.html ***!
+  \*********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = ""
 
 /***/ },
 /* 272 */
+/*!*************************************************************!*\
+  !*** ./~/text-loader!./src/templates/macro.selectable.html ***!
+  \*************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<a href=\"#macros/create\" class='btn btn-default btn-small' style=\"margin:0px 4px;\">\n    Create\n</a>\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group'>\n    <button id=\"deleteMacroButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Delete\n    </button>\n</div>\n"
 
 /***/ },
 /* 273 */
+/*!*********************************************************!*\
+  !*** ./~/text-loader!./src/templates/macro.detail.html ***!
+  \*********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"topStatusBar\" class=\"top-bar\">\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#macros\">\n                All Macros\n            </a>\n        </li>\n        <li class=\"active\">\n            <%-macro.name%>\n        </li>\n    </ul>\n    <span style=\"margin-left:10px;\">\n        <strong>Owner:</strong>\n        <%-macro.owner%>\n    </span>\n    <span style=\"margin-left:10px;\">\n        <strong>Last Modified:</strong>\n        <%-util.convertToDateTimeText(macro.modified)%>\n    </span>\n    <div class=\"job-detail-actions pull-right\">\n        <%if(!_.isEmpty(name)){%>\n            <button id=\"deleteMacroButton\" class=\"btn btn-default btn-small btn-red\">\n                Delete\n            </button>\n        <%}%>\n        <button id=\"saveMacroButton\" class=\"btn btn-default btn-small\" style=\"margin-left:8px;\">\n            Save\n        </button>\n    </div>\n</div>\n<div id=\"detailContainer\" class=\"macro main-container\">\n    <div class=\"form form-inline\" role=\"form\">\n        <div class=\"form-group\" style=\"width:20%;display:inline-block;\">\n            <label class=\"sr-only\" for=\"name\" style=\"margin-bottom:0px;\">Name</label>\n            <input value=\"<%-macro.name%>\" type=\"text\" class=\"form-control\" id=\"name\" name=\"name\" placeholder=\"Enter name\">\n        </div>\n        <div class=\"form-group\" style=\"width:79%;display:inline-block;\">\n            <label class=\"sr-only\" for=\"description\" style=\"margin-bottom:0px;\">Description</label>\n            <input value=\"<%-macro.description%>\" type=\"text\" class=\"form-control\" id=\"description\" name=\"description\" placeholder=\"Enter description\">\n        </div>\n    </div>\n</div>\n"
 
 /***/ },
 /* 274 */
+/*!****************************************************************!*\
+  !*** ./~/text-loader!./src/templates/macro.configuration.html ***!
+  \****************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div class=\"form form-inline\" role=\"form\">\n    <div class=\"form-group\" style=\"width:79%;display:inline-block;\">\n        <label class=\"sr-only\" for=\"name\" style=\"margin-bottom:0px;\">Name</label>\n        <input value=\"<%-macro.name%>\" type=\"text\" class=\"form-control\" id=\"name\" placeholder=\"Enter name\">\n    </div>\n    <div class=\"form-group\" style=\"width:20%;display:inline-block;\">\n        <label class=\"sr-only\" for=\"description\" style=\"margin-bottom:0px;\">Description</label>\n        <input value=\"<%-macro.description%>\" type=\"text\" class=\"form-control\" id=\"description\" placeholder=\"Enter description\">\n    </div>\n</div>\n"
 
 /***/ },
 /* 275 */
+/*!*********************************!*\
+  !*** ./src/js/modules/alias.js ***!
+  \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -67507,16 +67690,16 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(216),
-	    __webpack_require__(221),
-	    __webpack_require__(226),
-	    __webpack_require__(235),
-	    __webpack_require__(276),
-	    __webpack_require__(277),
-	    __webpack_require__(278),
-	    __webpack_require__(218)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! app */ 216),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! modules/datatable */ 226),
+	    __webpack_require__(/*! modules/util */ 235),
+	    __webpack_require__(/*! text!../../templates/alias.filter.html */ 276),
+	    __webpack_require__(/*! text!../../templates/alias.selectable.html */ 277),
+	    __webpack_require__(/*! text!../../templates/alias.detail.html */ 278),
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -67735,24 +67918,36 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 276 */
+/*!*********************************************************!*\
+  !*** ./~/text-loader!./src/templates/alias.filter.html ***!
+  \*********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = ""
 
 /***/ },
 /* 277 */
+/*!*************************************************************!*\
+  !*** ./~/text-loader!./src/templates/alias.selectable.html ***!
+  \*************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<a href=\"#alias/create\" class='btn btn-default btn-small' style=\"margin:0px 4px;\">\n    Create\n</a>\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group'>\n    <button id=\"deleteAliasButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Delete\n    </button>\n</div>\n"
 
 /***/ },
 /* 278 */
+/*!*********************************************************!*\
+  !*** ./~/text-loader!./src/templates/alias.detail.html ***!
+  \*********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"topStatusBar\" class=\"top-bar\">\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#alias\">\n                All Alias\n            </a>\n        </li>\n        <li class=\"active\">\n            <%-alias.name%>\n        </li>\n    </ul>\n    <div class=\"job-detail-actions pull-right\">\n        <button id=\"deleteAliasButton\" class=\"btn btn-default btn-small btn-red\">\n            Delete\n        </button>\n        <button id=\"saveAliasButton\" class=\"btn btn-default btn-small\" style=\"margin-left:8px;\">\n            Save\n        </button>\n    </div>\n</div>\n<div id=\"detailContainer\" class=\"main-container\">\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"name\" style=\"margin-bottom:0px;\">Name</label>\n            <input value=\"<%-alias.name%>\" type=\"text\" class=\"form-control\" id=\"name\" name=\"name\" placeholder=\"Enter name\">\n        </div>\n    </div>\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"name\" style=\"margin-bottom:0px;\">Job IDs</label>\n            <textarea class='form-control' id=\"jobInput\" name=\"jobs\" rows=\"12\"><%-alias.jobs.join(',')%></textarea>\n        </div>\n    </div>\n</div>\n"
 
 /***/ },
 /* 279 */
+/*!**********************************!*\
+  !*** ./src/js/modules/alerts.js ***!
+  \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -67769,16 +67964,16 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-		__webpack_require__(216),
-		__webpack_require__(221),
-		__webpack_require__(226),
-	    __webpack_require__(235),
-	   	__webpack_require__(280),
-	   	__webpack_require__(281),
-	   	__webpack_require__(282),
-	   	__webpack_require__(218)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+		__webpack_require__(/*! app */ 216),
+		__webpack_require__(/*! alertify */ 221),
+		__webpack_require__(/*! modules/datatable */ 226),
+	    __webpack_require__(/*! modules/util */ 235),
+	   	__webpack_require__(/*! text!../../templates/alerts.filter.html */ 280),
+	   	__webpack_require__(/*! text!../../templates/alerts.selectable.html */ 281),
+	   	__webpack_require__(/*! text!../../templates/alerts.detail.html */ 282),
+	   	__webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -68141,24 +68336,36 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 280 */
+/*!**********************************************************!*\
+  !*** ./~/text-loader!./src/templates/alerts.filter.html ***!
+  \**********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = ""
 
 /***/ },
 /* 281 */
+/*!**************************************************************!*\
+  !*** ./~/text-loader!./src/templates/alerts.selectable.html ***!
+  \**************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<a href=\"#alerts/create\" class='btn btn-default btn-small' style=\"margin:0px 4px;\">\n    Create\n</a>\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group'>\n    <button id=\"deleteAlertButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Delete\n    </button>\n</div>\n"
 
 /***/ },
 /* 282 */
+/*!**********************************************************!*\
+  !*** ./~/text-loader!./src/templates/alerts.detail.html ***!
+  \**********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"topStatusBar\" class=\"top-bar\">\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#alerts\">\n                All Alerts\n            </a>\n        </li>\n        <li class=\"active\">\n            <%-alert.alertId ? alert.alertId : \"New Alert\"%>\n        </li>\n    </ul>\n    <div class=\"job-detail-actions pull-right\">\n        <button id=\"deleteAlertButton\" class=\"btn btn-default btn-small btn-red\">\n            Delete\n        </button>\n        <button id=\"saveAlertButton\" class=\"btn btn-default btn-small\" style=\"margin-left:8px;\">\n            Save\n        </button>\n    </div>\n</div>\n<div id=\"detailContainer\" class=\"main-container\">\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"alertType\" style=\"margin-bottom:0px;\">Type</label>\n            <select id=\"alertType\" class=\"form-control\">\n                <%_.each(alertTypes,function(val, key){%>\n                    <option value=\"<%-key%>\"><%-val%></option>\n                <%})%>\n            </select>\n        </div>\n    </div>\n    <div id=\"alertTimeout\" class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"timeout\" style=\"margin-bottom:0px;\">Timeout (minutes)</label>\n            <input value=\"<%-alert.timeout%>\" type=\"text\" class=\"form-control\" id=\"timeout\" name=\"timeout\" placeholder=\"\">\n        </div>\n    </div>\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"email\" style=\"margin-bottom:0px;\">Emails (comma-separated)</label>\n            <input value=\"<%-alert.email%>\" type=\"text\" class=\"form-control\" id=\"email\" name=\"email\" placeholder=\"\">\n        </div>\n    </div>\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"webhookURL\" style=\"margin-bottom:0px;\">Webhook URL</label>\n            <input value=\"<%-alert.webhookURL%>\" type=\"text\" class=\"form-control\" id=\"email\" name=\"webhookURL\"\n                   placeholder=\"\">\n        </div>\n    </div>\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"jobIds\" style=\"margin-bottom:0px;\">Job Ids or Aliases (comma-separated)</label>\n            <input value=\"<%-alert.jobIds%>\" type=\"text\" class=\"form-control\" id=\"jobIds\" name=\"jobIds\" placeholder=\"\">\n        </div>\n    </div>\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"delay\" style=\"margin-bottom:0px;\">Delay (minutes)</label>\n            <input value=\"<%-alert.delay%>\" type=\"text\" class=\"form-control\" id=\"delay\" name=\"delay\" placeholder=\"\">\n        </div>\n    </div>\n    <div id=\"alertCanaryPathConfig\" class=\"form\" roles=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"canaryPath\" style=\"margin-bottom:0px;\">Path</label><div id=\"canaryPathHint\"></div>\n            <input value=\"<%-alert.canaryPath%>\" type=\"text\" class=\"form-control\" id=\"canaryPath\" name=\"canaryPath\" placeholder=\"\">\n        </div>\n    </div>\n    <div id=\"alertCanaryConfig\" class=\"form\" roles=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"canaryConfigThreshold\" style=\"margin-bottom:0px;\">Threshold (alert if below this value)</label>\n            <input value=\"<%-alert.canaryConfigThreshold%>\" type=\"text\" class=\"form-control\" id=\"canaryConfigThreshold\" name=\"canaryConfigThreshold\" placeholder=\"\">\n        </div>\n    </div>\n    <div id=\"alertCanaryFilterConfig\" class=\"form\" roles=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"canaryOps\" style=\"margin-bottom:0px;\">Ops</label>\n            <input value=\"<%-alert.canaryOps%>\" type=\"text\" class=\"form-control\" id=\"canaryOps\" name=\"canaryOps\" placeholder=\"\">\n        </div>\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"canaryRops\" style=\"margin-bottom:0px;\">Rops</label>\n            <input value=\"<%-alert.canaryRops%>\" type=\"text\" class=\"form-control\" id=\"canaryRops\" name=\"canaryRops\" placeholder=\"\">\n        </div>\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"canaryFilter\" style=\"margin-bottom:0px;\">Filter</label>\n            <input value=\"<%-alert.canaryFilter%>\" type=\"text\" class=\"form-control\" id=\"canaryFilter\" name=\"canaryFilter\" placeholder=\"\">\n        </div>\n    </div>\n    <div id=\"alertSigmaConfig\" class=\"form\" roles=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"sigma\" style=\"margin-bottom:0px;\">Sigma</label>\n            <input value=\"<%-alert.sigma%>\" type=\"text\" class=\"form-control\" id=\"sigma\" name=\"sigma\" placeholder=\"\">\n        </div>\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"tolerance\" style=\"margin-bottom:0px;\">Tolerance</label>\n            <input value=\"<%-alert.tolerance%>\" type=\"text\" class=\"form-control\" id=\"tolerance\" name=\"tolerance\" placeholder=\"\">\n        </div>\n    </div>\n    <div class=\"form\" role=\"form\">\n        <label class=\"sr-only\" for=\"suppressChanges\" style=\"margin-bottom:0px;\">Suppress Changes</label>\n        <input value=\"<%-alert.suppressChanges%>\" type=\"text\" class=\"form-control\" id=\"suppressChanges\" name=\"suppressChanges\" placeholder=\"\">\n    </div>\n    <div id=\"alertDescription\" class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"timeout\" style=\"margin-bottom:0px;\">Alert description</label>\n            <textarea rows=\"4\" cols=\"50\" class=\"form-control\" id=\"description\" name=\"description\" placeholder=\"\"><%-alert.description%></textarea>\n        </div>\n    </div>\n    <div id=\"activeAlerts\" class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"timeout\" style=\"margin-bottom:0px;\">Active alerts</label>\n            <textarea readonly rows=\"4\" cols=\"50\" class=\"form-control\" id=\"active\" name=\"active\" placeholder=\"\"><%-JSON.stringify(alert.activeJobs, null, '\\t')%></textarea>\n        </div>\n    </div>\n</div>\n<div id=\"alertDetailContainer\" class=\"main-container\">\n</div>\n"
 
 /***/ },
 /* 283 */
+/*!***********************************!*\
+  !*** ./src/js/modules/command.js ***!
+  \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -68175,16 +68382,16 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(216),
-	    __webpack_require__(221),
-	    __webpack_require__(226),
-	    __webpack_require__(235),
-	    __webpack_require__(284),
-	    __webpack_require__(285),
-	    __webpack_require__(286),
-	    __webpack_require__(218)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! app */ 216),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! modules/datatable */ 226),
+	    __webpack_require__(/*! modules/util */ 235),
+	    __webpack_require__(/*! text!../../templates/command.filter.html */ 284),
+	    __webpack_require__(/*! text!../../templates/command.selectable.html */ 285),
+	    __webpack_require__(/*! text!../../templates/command.detail.html */ 286),
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -68405,24 +68612,36 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 284 */
+/*!***********************************************************!*\
+  !*** ./~/text-loader!./src/templates/command.filter.html ***!
+  \***********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = ""
 
 /***/ },
 /* 285 */
+/*!***************************************************************!*\
+  !*** ./~/text-loader!./src/templates/command.selectable.html ***!
+  \***************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<a href=\"#commands/create\" class='btn btn-default btn-small' style=\"margin:0px 4px;\">\n    Create\n</a>\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group'>\n    <button id=\"deleteCommandButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Delete\n    </button>\n</div>\n"
 
 /***/ },
 /* 286 */
+/*!***********************************************************!*\
+  !*** ./~/text-loader!./src/templates/command.detail.html ***!
+  \***********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"topStatusBar\" class=\"top-bar\">\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#commands\">\n                All Commands\n            </a>\n        </li>\n        <li class=\"active\">\n            <%-command.name%>\n        </li>\n    </ul>\n    <div class=\"job-detail-actions pull-right\">\n        <button id=\"deleteCommandButton\" class=\"btn btn-default btn-small btn-red\">\n            Delete\n        </button>\n        <button id=\"saveCommandButton\" class=\"btn btn-default btn-small\" style=\"margin-left:8px;\">\n            Save\n        </button>\n    </div>\n</div>\n<div id=\"detailContainer\" class=\"main-container\">\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"name\" style=\"margin-bottom:0px;\">Name</label>\n            <input value=\"<%-command.name%>\" type=\"text\" class=\"form-control\" id=\"name\" name=\"name\" placeholder=\"Enter name\">\n        </div>\n    </div>\n    <div class=\"form\" role=\"form\">\n        <div class=\"form-group\">\n            <label class=\"sr-only\" for=\"name\" style=\"margin-bottom:0px;\">Commands</label>\n            <textarea class='form-control' id=\"commandInput\" rows=\"12\"><%-command.command.join('\\n')%></textarea>\n        </div>\n    </div>\n</div>\n"
 
 /***/ },
 /* 287 */
+/*!********************************!*\
+  !*** ./src/js/modules/host.js ***!
+  \********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -68439,17 +68658,17 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(220),
-	    __webpack_require__(219),
-	    __webpack_require__(216),
-	    __webpack_require__(221),
-	    __webpack_require__(226),
-	    __webpack_require__(244),
-	    __webpack_require__(235),
-	    __webpack_require__(288),
-	    __webpack_require__(289),
-	    __webpack_require__(290),
-	    __webpack_require__(218)
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! app */ 216),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! modules/datatable */ 226),
+	    __webpack_require__(/*! modules/task */ 244),
+	    __webpack_require__(/*! modules/util */ 235),
+	    __webpack_require__(/*! text!../../templates/host.filter.html */ 288),
+	    __webpack_require__(/*! text!../../templates/host.selectable.html */ 289),
+	    __webpack_require__(/*! text!../../templates/host.detail.html */ 290),
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    $,
 	    _,
@@ -68912,24 +69131,36 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 288 */
+/*!********************************************************!*\
+  !*** ./~/text-loader!./src/templates/host.filter.html ***!
+  \********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<ul class=\"nav nav-pills filter\">\n    <li>\n        <a data-index='6' data-value=\"up\" href=\"#\">Up</a>\n    </li>\n    <li>\n        <a data-index='6' data-value=\"down\" href=\"#\">Down</a>\n    </li>\n    <li>\n        <a data-index='6' data-value=\"disabled\" href=\"#\">Disabled</a>\n    </li>\n</ul>\n"
 
 /***/ },
 /* 289 */
+/*!************************************************************!*\
+  !*** ./~/text-loader!./src/templates/host.selectable.html ***!
+  \************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group host-actions'>\n    <button id=\"hostRebalanceButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Rebalance\n    </button>\n    <button id=\"hostFailFsOkayButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Fail (filesystem okay)\n    </button>\n    <button id=\"hostFailFsDeadButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Fail (filesystem dead)\n    </button>\n    <button id=\"hostFailCancelButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Cancel failure\n    </button>\n    <button id=\"hostDropButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Drop\n    </button>\n    <button id=\"hostEnableButton\" class='btn btn-default btn-hide-zero'>\n        Enable\n    </button>\n    <button id=\"hostDisableButton\" class='btn btn-default btn-hide-zero'>\n        Disable\n    </button>  \n</div>\n"
 
 /***/ },
 /* 290 */
+/*!********************************************************!*\
+  !*** ./~/text-loader!./src/templates/host.detail.html ***!
+  \********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<div id=\"topStatusBar\" class=\"top-bar\">\n    <ul class=\"breadcrumb pull-left\" style=\"display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;\">\n        <li>\n            <a href=\"#hosts\">\n                All Hosts\n            </a>\n        </li>\n        <li class=\"active\">\n            <%-host.uuid%>\n        </li>\n    </ul>\n</div>\n<ul class=\"nav nav-tabs nav-justified\" style=\"margin-left: 0px; margin-bottom: 0px;\">\n    <li id=\"tasksTab\">\n        <a href=\"#hosts/<%-host.uuid%>/tasks\">\n            Tasks\n        </a>\n    </li>\n    <li id=\"confTab\">\n        <a href=\"#hosts/<%-host.uuid%>/ganglia\">\n            Ganglia\n        </a>\n    </li>\n</ul>\n<div id=\"detailContainer\" class=\"main-container\">\n</div>\n"
 
 /***/ },
 /* 291 */
+/*!************************************!*\
+  !*** ./src/js/modules/task.log.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -68946,8 +69177,8 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(219),
-	    __webpack_require__(218)
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    _,
 	    Backbone
@@ -69005,6 +69236,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 292 */
+/*!*******************************!*\
+  !*** ./src/js/modules/git.js ***!
+  \*******************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -69021,9 +69255,9 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	   __webpack_require__(219),
-	   __webpack_require__(293),
-	   __webpack_require__(218)
+	   __webpack_require__(/*! underscore */ 219),
+	   __webpack_require__(/*! text!../../templates/git.properties.html */ 293),
+	   __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    _,
 	    gitPropertiesTemplate
@@ -69077,12 +69311,18 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 293 */
+/*!***********************************************************!*\
+  !*** ./~/text-loader!./src/templates/git.properties.html ***!
+  \***********************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<table class=\"table table-bordered auto-layout\">\n    <thead>\n        <tr class=\" \">\n            <th colspan=\"2\">Git Properties</th>\n        </tr>\n    </thead>\n    <tbody>\n        <tr class=\" \">\n            <td width=\"20%\">Git Branch</td>\n            <td width=\"70%\">\n                <input class=\"form-control\" disabled style=\"margin:0px;font-weight:bold;\" type=\"text\" value=\"<%-branch%>\">\n            </td>\n        </tr>\n        <tr class=\" \">\n            <td width=\"20%\">Hydra JAR Build Time</td>\n            <td width=\"70%\">\n                <input class=\"form-control\" disabled style=\"margin:0px;font-weight:bold;\" type=\"text\" value=\"<%-buildTime%>\">\n            </td>\n        </tr>\n        <tr class=\" \">\n            <td width=\"20%\">User that built Hydra JAR</td>\n            <td width=\"70%\">\n                <input class=\"form-control\" disabled style=\"margin:0px;font-weight:bold;\" type=\"text\" value=\"<%-buildUserName%>\">\n            </td>\n        </tr>\n        <tr class=\" \">\n            <td width=\"20%\">User that made last commit</td>\n            <td width=\"70%\">\n                <input class=\"form-control\" disabled style=\"margin:0px;font-weight:bold;\" type=\"text\" value=\"<%-commitUserName%>\">\n            </td>\n        </tr>\n        <tr class=\" \">\n            <td width=\"20%\">Time of last commit</td>\n            <td width=\"70%\">\n                <input class=\"form-control\" disabled style=\"margin:0px;font-weight:bold;\" type=\"text\" value=\"<%-commitTime%>\">\n            </td>\n        </tr>\n        <tr class=\" \">\n            <td width=\"20%\">Commit ID</td>\n            <td width=\"70%\">\n                <input class=\"form-control\" disabled style=\"margin:0px;font-weight:bold;\" type=\"text\" value=\"<%-commitId%>\">\n            </td>\n        </tr>\n        <tr class=\" \">\n            <td width=\"20%\">Message for last commit</td>\n            <td width=\"70%\">\n                <textarea  class=\"form-control\" rows=\"10\" disabled=\"disabled\" class=\"input-xxlarge\" style=\"\"><%-commitMessageFull%></textarea>\n            </td>\n        </tr>\n    </tbody>\n</table>\n"
 
 /***/ },
 /* 294 */
+/*!************************************!*\
+  !*** ./src/js/modules/settings.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -69099,11 +69339,11 @@ webpackJsonp([1],Array(215).concat([
 	 * limitations under the License.
 	 */
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-	    __webpack_require__(219),
-	    __webpack_require__(220),
-	    __webpack_require__(221),
-	    __webpack_require__(295),
-	    __webpack_require__(218)
+	    __webpack_require__(/*! underscore */ 219),
+	    __webpack_require__(/*! jquery */ 220),
+	    __webpack_require__(/*! alertify */ 221),
+	    __webpack_require__(/*! text!../../templates/settings.rebalance.html */ 295),
+	    __webpack_require__(/*! backbone */ 218)
 	], __WEBPACK_AMD_DEFINE_RESULT__ = function(
 	    _,
 	    $,
@@ -69183,40 +69423,49 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 295 */
+/*!***************************************************************!*\
+  !*** ./~/text-loader!./src/templates/settings.rebalance.html ***!
+  \***************************************************************/
 /***/ function(module, exports) {
 
 	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<table id=\"rebalanceParamFormTable\" class=\"table table-bordered form-table\">\n    <tr class=\"row\">\n        <th colspan=\"2\">\n            Cluster Balancing Configuration Parameters\n            <button id=\"resetButton\" class=\"btn btn-default btn-small\" style=\"width:80px;float:right;margin-left:10px;\">Reset</button>\n            <button id=\"saveButton\" class=\"btn btn-default btn-small btn-blue\" style=\"width:80px;float:right;\">Save</button>\n        </th>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Auto Balance Level</td>\n        <td width=\"70%\">\n            <input name=\"autoBalanceLevel\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-autoBalanceLevel%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Bytes Moved Full Rebalance</td>\n        <td width=\"70%\">\n            <input name=\"bytesMovedFullRebalance\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-bytesMovedFullRebalance%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Host Auto Balance Interval (millis)</td>\n        <td width=\"70%\">\n            <input name=\"hostAutobalanceIntervalMillis\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-hostAutobalanceIntervalMillis%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Job Auto Balance Interval (millis)</td>\n        <td width=\"70%\">\n            <input name=\"jobAutobalanceIntervalMillis\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-jobAutobalanceIntervalMillis%>\"></input>\n        </td>\n    </tr>\n    <tr class=\"row\">\n        <td width=\"30%\">Tasks Moved Full Rebalance</td>\n        <td width=\"70%\">\n            <input name=\"tasksMovedFullRebalance\" class=\"form-control trackable\" style=\"margin:0px;\" type=\"number\" value=\"<%-tasksMovedFullRebalance%>\"></input>\n        </td>\n    </tr>\n</table>\n"
 
 /***/ },
 /* 296 */
+/*!************************************!*\
+  !*** ./~/bootstrap/dist/js/npm.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	// This file is autogenerated via the `commonjs` Grunt task. You can require() this file in a CommonJS environment.
-	__webpack_require__(297)
-	__webpack_require__(298)
-	__webpack_require__(299)
-	__webpack_require__(300)
-	__webpack_require__(301)
-	__webpack_require__(302)
-	__webpack_require__(303)
-	__webpack_require__(304)
-	__webpack_require__(305)
-	__webpack_require__(306)
-	__webpack_require__(307)
-	__webpack_require__(308)
+	__webpack_require__(/*! ../../js/transition.js */ 297)
+	__webpack_require__(/*! ../../js/alert.js */ 298)
+	__webpack_require__(/*! ../../js/button.js */ 299)
+	__webpack_require__(/*! ../../js/carousel.js */ 300)
+	__webpack_require__(/*! ../../js/collapse.js */ 301)
+	__webpack_require__(/*! ../../js/dropdown.js */ 302)
+	__webpack_require__(/*! ../../js/modal.js */ 303)
+	__webpack_require__(/*! ../../js/tooltip.js */ 304)
+	__webpack_require__(/*! ../../js/popover.js */ 305)
+	__webpack_require__(/*! ../../js/scrollspy.js */ 306)
+	__webpack_require__(/*! ../../js/tab.js */ 307)
+	__webpack_require__(/*! ../../js/affix.js */ 308)
 
 
 /***/ },
 /* 297 */
+/*!**************************************!*\
+  !*** ./~/bootstrap/js/transition.js ***!
+  \**************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: transition.js v3.3.7
@@ -69282,11 +69531,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 298 */
+/*!*********************************!*\
+  !*** ./~/bootstrap/js/alert.js ***!
+  \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: alert.js v3.3.7
@@ -69387,11 +69639,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 299 */
+/*!**********************************!*\
+  !*** ./~/bootstrap/js/button.js ***!
+  \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: button.js v3.3.7
@@ -69523,11 +69778,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 300 */
+/*!************************************!*\
+  !*** ./~/bootstrap/js/carousel.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: carousel.js v3.3.7
@@ -69771,11 +70029,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 301 */
+/*!************************************!*\
+  !*** ./~/bootstrap/js/collapse.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: collapse.js v3.3.7
@@ -69994,11 +70255,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 302 */
+/*!************************************!*\
+  !*** ./~/bootstrap/js/dropdown.js ***!
+  \************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: dropdown.js v3.3.7
@@ -70170,11 +70434,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 303 */
+/*!*********************************!*\
+  !*** ./~/bootstrap/js/modal.js ***!
+  \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: modal.js v3.3.7
@@ -70520,11 +70787,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 304 */
+/*!***********************************!*\
+  !*** ./~/bootstrap/js/tooltip.js ***!
+  \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: tooltip.js v3.3.7
@@ -71051,11 +71321,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 305 */
+/*!***********************************!*\
+  !*** ./~/bootstrap/js/popover.js ***!
+  \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: popover.js v3.3.7
@@ -71170,11 +71443,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 306 */
+/*!*************************************!*\
+  !*** ./~/bootstrap/js/scrollspy.js ***!
+  \*************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: scrollspy.js v3.3.7
@@ -71353,11 +71629,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 307 */
+/*!*******************************!*\
+  !*** ./~/bootstrap/js/tab.js ***!
+  \*******************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: tab.js v3.3.7
@@ -71519,11 +71798,14 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 308 */
+/*!*********************************!*\
+  !*** ./~/bootstrap/js/affix.js ***!
+  \*********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	/*** IMPORTS FROM imports-loader ***/
-	var $ = __webpack_require__(220);
-	var jQuery = __webpack_require__(220);
+	var $ = __webpack_require__(/*! jquery */ 220);
+	var jQuery = __webpack_require__(/*! jquery */ 220);
 	
 	/* ========================================================================
 	 * Bootstrap: affix.js v3.3.7
@@ -71692,6 +71974,9 @@ webpackJsonp([1],Array(215).concat([
 
 /***/ },
 /* 309 */
+/*!*******************************!*\
+  !*** ./src/js/vendor/date.js ***!
+  \*******************************/
 /***/ function(module, exports) {
 
 	/**
