@@ -632,7 +632,7 @@ function(
         app.makeHtmlTitle("Alerts");
     });
     app.router.on("route:showAlertsTableFiltered",function(jobIdFilter) {
-        app.router.navigate("#alerts", {trigger: true});
+        app.router.navigate("#alerts", {trigger: true, replace: true});
         // Modify the table filter and apply it to the alert list.
         var inp = $("#alertTable_filter").find("input");
         inp.val(jobIdFilter);
