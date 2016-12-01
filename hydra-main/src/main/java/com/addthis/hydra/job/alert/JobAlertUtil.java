@@ -31,6 +31,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.util.DateUtil;
@@ -231,7 +232,7 @@ public class JobAlertUtil {
         }
         BundleFilter bFilter = null;
         try {
-            bFilter = CodecJSON.decodeString(BundleFilter.class, filter);
+            bFilter = Configs.decodeObject(BundleFilter.class, filter);
         } catch (Exception ex) {
             errorBuilder.append("Error attempting to create bundle filter: " + ex + "\n");
             log.error("Error attempting to create bundle filter", ex);

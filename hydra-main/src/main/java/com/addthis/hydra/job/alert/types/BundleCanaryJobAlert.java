@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.Time;
+import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.job.Job;
@@ -107,7 +108,7 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
             return "Canary filter is empty";
         }
         try {
-            CodecJSON.decodeString(BundleFilter.class, canaryFilter);
+            Configs.decodeObject(BundleFilter.class, canaryFilter);
         } catch (Exception ex) {
             return "Error attempting to create bundle filter";
         }
