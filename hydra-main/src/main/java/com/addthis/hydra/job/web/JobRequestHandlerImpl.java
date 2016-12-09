@@ -13,12 +13,17 @@
  */
 package com.addthis.hydra.job.web;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
@@ -28,6 +33,13 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
+import com.addthis.hydra.job.alert.AbstractJobAlert;
+import com.addthis.hydra.job.alert.Group;
+import com.addthis.hydra.job.alert.JobAlertManager;
+import com.addthis.hydra.job.alert.SuppressChanges;
+import com.addthis.hydra.job.alert.types.OnErrorJobAlert;
+import com.addthis.hydra.job.alert.types.RekickTimeoutJobAlert;
+import com.addthis.hydra.job.alert.types.RuntimeExceededJobAlert;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
@@ -35,6 +47,7 @@ import com.addthis.hydra.minion.Minion;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +55,8 @@ import org.slf4j.LoggerFactory;
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class JobRequestHandlerImpl implements JobRequestHandler {
+
+    private enum AlertAction {CREATE, DELETE, NO_OP}
 
     private static final Logger log = LoggerFactory.getLogger(JobRequestHandlerImpl.class);
 
@@ -97,6 +112,8 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         updateBasicSettings(kv, job, username);
         updateQueryConfig(kv, job);
         updateJobParameters(kv, job, expandedConfig);
+        updateBasicAlerts(kv, job);
+
         // persist update
         // XXX When this call fails the job will be left in an inconsistent state.
         // empirically, it happens rarely (e.g. no one sets replicas to an insanely large number).
@@ -125,6 +142,137 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     private void updateOwnership(IJob job, User user) {
         job.setOwner(user.name());
         job.setGroup(user.primaryGroup());
+    }
+
+    @SuppressWarnings("InstanceofConcreteClass") private void updateBasicAlerts(KVPairs kv, IJob job) {
+        log.info("updating alerts...");
+        JobAlertManager alertManager = spawn.getJobAlertManager();
+        // todo: configs for these!
+        @Nullable Group group = spawn.getGroupManager().getGroup(job.getGroup());
+        if (group == null) {
+            log.info("group was null");
+            return;
+        }
+        boolean basicAlerts = KVUtils.getBooleanValue(kv, false, "basicAlerts");
+        boolean basicPages = KVUtils.getBooleanValue(kv, false, "basicPages");
+
+        Set<AbstractJobAlert> alerts = alertManager.getAlertsForJob(job.getId());
+        updateBasicAlert(alerts, job, basicAlerts, job.getBasicAlerts(), group.email, group.webhookURL, job::setBasicAlerts);
+        updateBasicAlert(alerts, job, basicPages, job.getBasicPages(), group.pagerEmail, null, job:: setBasicPages);
+
+        log.info("finished updating alerts");
+    }
+
+    @SuppressWarnings({"InstanceofConcreteClass", "MethodWithTooManyParameters"})
+    private void updateBasicAlert(Set<AbstractJobAlert> alerts,
+                                  IJob job,
+                                  boolean alertsShouldExist,
+                                  boolean alertsDoExist,
+                                  @Nullable String email,
+                                  @Nullable String webhookURL,
+                                  Consumer<Boolean> saveAlertFn) {
+        log.info("updating alerts for {} {}", email, webhookURL);
+        if (email != null) {
+            AlertAction action = JobRequestHandlerImpl.determineAction(alertsShouldExist, alertsDoExist);
+            log.info("action is {}", action);
+            Stream<AbstractJobAlert> existingAlerts = alerts.stream().filter(alert -> {
+                boolean isBasicAlert = (alert instanceof OnErrorJobAlert) ||
+                                       (alert instanceof RekickTimeoutJobAlert) ||
+                                       (alert instanceof RuntimeExceededJobAlert);
+                return isBasicAlert && email.equals(alert.email);
+            });
+            // if any of these type of alerts already exist, make it a no-op, and unset user preference
+            if ((action == AlertAction.CREATE) && (existingAlerts.count() > 0)) {
+                saveAlertFn.accept(false);
+                action = AlertAction.NO_OP;
+            } else {
+                saveAlertFn.accept(alertsShouldExist);
+            }
+            log.info("now action is {}", action);
+            if (action == AlertAction.CREATE) {
+                log.info("creating alerts");
+                JobRequestHandlerImpl.createAlerts(spawn.getJobAlertManager(), job, email, webhookURL);
+            } else if (action == AlertAction.DELETE) {
+                log.info("deleting alerts");
+                JobRequestHandlerImpl.deleteAlerts(spawn.getJobAlertManager(), existingAlerts);
+            }
+            log.info("finished updating alert");
+        }
+    }
+
+    private static void createAlerts(JobAlertManager mgr, IJob job, String email, @Nullable String webhookURL) {
+        String jobId = job.getId();
+        // todo: config description
+        String description = "Automatically generated by Hydra, use job settings to delete. Do not edit directly.\n" +
+                "Changes will be overwritten if checkbox in job settings is unchecked then rechecked.";
+        log.info("creating error alert");
+        OnErrorJobAlert error = new OnErrorJobAlert(null,
+                                                    description,
+                                                    0,
+                                                    email,
+                                                    webhookURL,
+                                                    ImmutableList.of(jobId),
+                                                    SuppressChanges.FALSE,
+                                                    0,
+                                                    null,
+                                                    null);
+        mgr.putAlert(error.alertId, error);
+        log.info("creating rekick alert");
+
+        long rekickTimeout = (long) (job.getRekickTimeout() * 1.2); // todo config 1.2
+        RekickTimeoutJobAlert rekick = new RekickTimeoutJobAlert(null,
+                                                                 description,
+                                                                 rekickTimeout,
+                                                                 0,
+                                                                 email,
+                                                                 webhookURL,
+                                                                 ImmutableList.of(jobId),
+                                                                 SuppressChanges.FALSE,
+                                                                 0,
+                                                                 null,
+                                                                 null);
+        mgr.putAlert(rekick.alertId, rekick);
+        log.info("creating runtime alert");
+
+        long runtimeTimeout = calculateRuntimeTimeout (job.getTaskCount(), job.getMaxRunTime(), job.getMaxSimulRunning());
+        RuntimeExceededJobAlert runtime = new RuntimeExceededJobAlert(null,
+                                                                      description,
+                                                                      runtimeTimeout,
+                                                                      0,
+                                                                      email,
+                                                                      webhookURL,
+                                                                      ImmutableList.of(jobId),
+                                                                      SuppressChanges.FALSE,
+                                                                      0,
+                                                                      null,
+                                                                      null);
+        mgr.putAlert(runtime.alertId, runtime);
+    }
+
+    private static void deleteAlerts(JobAlertManager mgr, Stream<AbstractJobAlert> alerts) {
+        alerts.map(alert -> alert.alertId).forEach(mgr::removeAlert);
+    }
+
+    /**
+     * calculates the maximum time a job probably should run, then fudges it a bit.
+     */
+    private static long calculateRuntimeTimeout(int tasks, long maxRuntime, int maxSimul) {
+        double taskMultiplier = 1;
+        if (maxSimul != 0) {
+            taskMultiplier = (double) tasks / (double) maxSimul;
+        }
+        // todo config 1.2
+        return (long) ((double) maxRuntime * taskMultiplier * 1.2);
+    }
+
+    private static AlertAction determineAction(boolean shouldExist, boolean exists) {
+        if (shouldExist && !exists) {
+            return AlertAction.CREATE;
+        } else if (!shouldExist && exists) {
+            return AlertAction.DELETE;
+        } else {
+            return AlertAction.NO_OP;
+        }
     }
 
     private void updateBasicSettings(KVPairs kv, IJob job, String user) {

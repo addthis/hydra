@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.alert;
 
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -105,4 +107,7 @@ public class JobAlertManagerImpl implements JobAlertManager {
         return jobAlertRunner.getAlert(alertId);
     }
 
+    public Set<AbstractJobAlert> getAlertsForJob(String jobId) {
+        return jobAlertRunner.getAlertsForJob(jobId);
+    }
 }

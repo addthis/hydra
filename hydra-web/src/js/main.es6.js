@@ -761,7 +761,9 @@ function(
                 'replicas',
                 'replicationFactor',
                 'weeklyBackups',
-                'autoRetry'
+                'autoRetry',
+                'basicAlerts',
+                'basicPages'
             ]);
             data.description = "CLONE "+data.description;
             app.job = new Jobs.Model(data);

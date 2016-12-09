@@ -52,6 +52,18 @@
         </td>
     </tr>
     <tr class="row">
+        <td width="30%">Basic Hydra Alerts (err/rekick/runtime)</td>
+        <td width="70%">
+            <input name="basicAlerts" type="checkbox" class="trackable" <%-(job.basicAlerts?"checked='true'":"")%>>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Basic Hydra Pagerduty</td>
+        <td width="70%">
+            <input name="basicPages" type="checkbox" class="trackable" <%-(job.basicPages?"checked='true'":"")%>>
+        </td>
+    </tr>
+    <tr class="row">
         <th colspan="2">Backup Settings</th>
     </tr>
     <tr class="row">

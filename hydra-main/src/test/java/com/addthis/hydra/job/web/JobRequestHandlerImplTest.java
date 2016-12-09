@@ -20,6 +20,7 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.alert.GroupManager;
 import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobCommandManager;
@@ -62,6 +63,7 @@ public class JobRequestHandlerImplTest {
         jobCommandManager = mock(JobCommandManager.class);
         when(spawn.getJobCommandManager()).thenReturn(jobCommandManager);
         when(spawn.getPermissionsManager()).thenReturn(PermissionsManager.createManagerAllowAll());
+        when(spawn.getGroupManager()).thenReturn(new GroupManager(Lists.newArrayList()));
         when(jobCommandManager.getEntity("default-task")).thenReturn(new JobCommand());
 
         impl = new JobRequestHandlerImpl(spawn);

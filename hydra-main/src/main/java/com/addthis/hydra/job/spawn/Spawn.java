@@ -86,6 +86,7 @@ import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.RebalanceOutcome;
+import com.addthis.hydra.job.alert.GroupManager;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alert.JobAlertManagerImpl;
 import com.addthis.hydra.job.alias.AliasManager;
@@ -233,6 +234,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
     @Nullable private final JobStore jobStore;
+    @Nonnull private final GroupManager groupManager;
 
     @JsonCreator private Spawn(@JsonProperty("debug") String debug,
                                @JsonProperty(value = "queryPort", required = true) int queryPort,
@@ -258,7 +260,9 @@ public class Spawn implements Codable, AutoCloseable {
                                                       required = true) PermissionsManager permissionsManager,
                                @Nonnull @JsonProperty(value = "jobDefaults",
                                                       required = true) JobDefaults jobDefaults,
-                               @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize) throws Exception {
+                               @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize,
+                               @JsonProperty(value = "groupManager", required = true) GroupManager groupManager)
+            throws Exception {
         this.jobLock = new ReentrantLock();
         this.shuttingDown = new AtomicBoolean(false);
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
@@ -365,6 +369,7 @@ public class Spawn implements Codable, AutoCloseable {
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         this.jobStore = jobStore;
+        this.groupManager = groupManager;
         this.eventLog =
                 new RollingLog(new File(LOG_DIR, "events-jobs"), "job", EVENT_LOG_COMPRESS, LOG_MAX_SIZE, LOG_MAX_AGE);
         Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(hostManager));
@@ -806,6 +811,10 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     @Nonnull public PermissionsManager getPermissionsManager() { return permissionsManager; }
+
+    @Nonnull public GroupManager getGroupManager() {
+        return groupManager;
+    }
 
     public Collection<Job> listJobs() {
         List<Job> clones = new ArrayList<>(spawnState.jobs.size());

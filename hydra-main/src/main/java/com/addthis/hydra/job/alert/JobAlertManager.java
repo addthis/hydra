@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.alert;
 
+import java.util.Set;
+
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -37,5 +39,7 @@ public interface JobAlertManager {
     JSONObject fetchAllAlertsMap();
 
     String getAlert(String alertId);
+
+    public Set<AbstractJobAlert> getAlertsForJob(String jobId);
 
 }

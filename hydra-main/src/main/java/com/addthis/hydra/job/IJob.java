@@ -145,6 +145,8 @@ public interface IJob extends Comparable<IJob>, WritableAsset, ExecutableAsset {
 
     public boolean setState(JobState state);
 
+    public int getTaskCount();
+
     public JobTask getTask(int id);
 
     public List<JobTask> getCopyOfTasks();
@@ -186,4 +188,12 @@ public interface IJob extends Comparable<IJob>, WritableAsset, ExecutableAsset {
     public boolean getAutoRetry();
 
     public void setAutoRetry(boolean autoRetry);
+
+    public boolean getBasicAlerts();
+
+    public void setBasicAlerts(boolean basicAlerts);
+
+    public boolean getBasicPages();
+
+    public void setBasicPages(boolean basicPages);
 }

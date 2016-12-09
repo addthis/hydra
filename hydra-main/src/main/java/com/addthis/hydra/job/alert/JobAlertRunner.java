@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -538,6 +540,15 @@ public class JobAlertRunner {
                          jobId, mappedAlertId);
             }
         }
+    }
+
+    /**
+     * Returns alerts for the given job id. Does not look up aliases for a job id. If job id is an alias, will
+     * return any alerts that are configured on the alias, but will not look up alerts on the actual job id.
+     */
+    public Set<AbstractJobAlert> getAlertsForJob(String jobId) {
+        Set<String> alertIds = ImmutableSet.copyOf(jobToAlertsMap.get(jobId));
+        return alertIds.stream().map(alertMap::get).collect(Collectors.toSet());
     }
 
     @VisibleForTesting
