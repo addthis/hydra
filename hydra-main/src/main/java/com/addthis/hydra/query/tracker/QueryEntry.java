@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.hydra.data.query.Query;
+import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 
 import com.google.common.base.Objects;
@@ -30,6 +31,7 @@ public class QueryEntry {
     final int waitTime;
     final String[] opsLog;
     final TrackerHandler trackerHandler;
+    final MeshSourceAggregator aggregator;
 
     long runTime;
     long startTime;
@@ -37,12 +39,13 @@ public class QueryEntry {
     volatile TaskSourceInfo[] lastSourceInfo;
     volatile QueryState queryState = QueryState.AGGREGATING;
 
-    QueryEntry(Query query, String[] opsLog, TrackerHandler trackerHandler) {
+    QueryEntry(Query query, String[] opsLog, TrackerHandler trackerHandler, MeshSourceAggregator aggregator) {
         this.query = query;
         this.opsLog = opsLog;
         this.trackerHandler = trackerHandler;
         this.preOpLines = new AtomicInteger();
         this.postOpLines = new AtomicInteger();
+        this.aggregator = aggregator;
 
         final String timeoutInSeconds = query.getParameter("timeout");
         this.startTime = System.currentTimeMillis();
