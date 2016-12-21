@@ -29,14 +29,7 @@ public class DetailedStatusTask implements Runnable {
     @Override
     public void run() {
         try {
-            int lines = 0;
-            QueryTaskSource[] taskSources = sourceAggregator.taskSources;
-            TaskSourceInfo[] taskSourceInfos = new TaskSourceInfo[taskSources.length];
-            for (int i = 0; i < taskSources.length; i++) {
-                taskSourceInfos[i] = new TaskSourceInfo(taskSources[i]);
-                lines += taskSources[i].lines;
-            }
-            promise.trySuccess(taskSourceInfos);
+            promise.trySuccess(taskSourceInfo(sourceAggregator));
         } catch (Exception e) {
             promise.tryFailure(e);
         }
@@ -45,5 +38,14 @@ public class DetailedStatusTask implements Runnable {
     public void run(MeshSourceAggregator sourceAggregator) {
         this.sourceAggregator = sourceAggregator;
         run();
+    }
+
+    public static TaskSourceInfo[] taskSourceInfo(MeshSourceAggregator sourceAggregator) {
+        QueryTaskSource[] taskSources = sourceAggregator.taskSources;
+        TaskSourceInfo[] taskSourceInfos = new TaskSourceInfo[taskSources.length];
+        for (int i = 0; i < taskSources.length; i++) {
+            taskSourceInfos[i] = new TaskSourceInfo(taskSources[i]);
+        }
+        return taskSourceInfos;
     }
 }
