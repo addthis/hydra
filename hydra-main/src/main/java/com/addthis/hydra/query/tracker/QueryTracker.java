@@ -27,6 +27,9 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.query.aggregate.DetailedStatusTask;
+import com.addthis.hydra.query.aggregate.TaskSourceInfo;
+import com.addthis.hydra.query.aggregate.TaskSourceOptionInfo;
 import com.addthis.hydra.task.output.TaskDataOutput;
 import com.addthis.hydra.util.LogUtil;
 
@@ -62,6 +65,18 @@ public class QueryTracker implements Closeable {
         @Override
         public Integer value() {
             return running.size();
+        }
+    });
+    final Gauge blockedTasks = Metrics.newGauge(QueryTracker.class, "blockedTasks", new Gauge<Integer>() {
+        @Override
+        public Integer value() {
+            return blockedTaskStatsWithoutException()[0];
+        }
+    });
+    final Gauge maxTaskWaitTime = Metrics.newGauge(QueryTracker.class, "maxTaskWaitTime", new Gauge<Integer>() {
+        @Override
+        public Integer value() {
+            return blockedTaskStatsWithoutException()[1];
         }
     });
 
@@ -140,6 +155,34 @@ public class QueryTracker implements Closeable {
                     throw new RuntimeException(cause);
                 }
             }
+        }
+    }
+
+    private int[] blockedTaskStats() {
+        int blocked = 0;
+        int maxWaitTime = 0;
+        for(QueryEntry entry : this.running.values()) {
+            boolean isQueryBlocked = false;
+            for (TaskSourceInfo task : DetailedStatusTask.taskSourceInfo(entry.aggregator)) {
+                boolean isTaskBlocked = true;
+                for (TaskSourceOptionInfo option : task.options) {
+                    isTaskBlocked = isTaskBlocked && !option.active;
+                }
+                blocked = blocked + (isTaskBlocked ? 1 : 0);
+                isQueryBlocked = isQueryBlocked || isTaskBlocked;
+            }
+            maxWaitTime = isQueryBlocked ? Math.max(maxWaitTime, (int)entry.getRunTime()) : maxWaitTime;
+        }
+        return new int[]{blocked, maxWaitTime};
+    }
+
+    // used for gauge metrics which cannot throw exceptions
+    private int[] blockedTaskStatsWithoutException() {
+        try {
+            return this.blockedTaskStats();
+        } catch(Exception e) {
+            log.info("error computing blocked task metrics: ", e);
+            return new int[]{-1, -1};
         }
     }
 }

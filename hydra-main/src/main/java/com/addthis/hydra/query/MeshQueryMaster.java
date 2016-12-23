@@ -234,7 +234,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
 
         MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
         ctx.pipeline().addLast(ctx.executor(), "query aggregator", aggregator);
-        TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog);
+        TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog, aggregator);
         ctx.pipeline().addLast(ctx.executor(), "query tracker", trackerHandler);
         ctx.pipeline().remove(this);
         ctx.pipeline().write(query, promise);

@@ -26,6 +26,7 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.query.aggregate.DetailedStatusTask;
+import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
 
@@ -47,6 +48,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
 
     private final QueryTracker queryTracker;
     private final String[]     opsLog;
+    private final MeshSourceAggregator aggregator;
     private final BundleField  typeField;
     private final BundleField  errorField;
     private final BundleField  pathField;
@@ -73,9 +75,10 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     ChannelProgressivePromise opPromise;
     ChannelPromise            requestPromise;
 
-    public TrackerHandler(QueryTracker queryTracker, String[] opsLog) {
+    public TrackerHandler(QueryTracker queryTracker, String[] opsLog, MeshSourceAggregator aggregator) {
         this.queryTracker = queryTracker;
         this.opsLog = opsLog;
+        this.aggregator = aggregator;
         BundleFormat eventFormat = queryTracker.eventLog.createBundle().getFormat();
         typeField = eventFormat.getField("type");
         errorField = eventFormat.getField("error");
@@ -117,7 +120,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
         query.queryPromise = queryPromise;
         // create a processor chain based in query ops terminating the query user
         this.opProcessorConsumer = query.newProcessor(queryUser, opPromise);
-        queryEntry = new QueryEntry(query, opsLog, this);
+        queryEntry = new QueryEntry(query, opsLog, this, aggregator);
 
         // Check if the uuid is repeated, then make a new one
         if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
