@@ -433,11 +433,11 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 capacityLock.lock();
                 try {
                     boolean lackCap = activeTaskKeys.size() >= maxActiveTasks;
+                    Runnable rejectTask = () -> { sendStatusMessage(new StatusTaskCantBegin(getUUID(),
+                            nextKick.getJobUuid(), nextKick.getNodeID(), nextKick.getPriority()));
+                    };
                     if (lackCap) {
-                        sendStatusMessage(new StatusTaskCantBegin(getUUID(),
-                                                                  nextKick.getJobUuid(),
-                                                                  nextKick.getNodeID(),
-                                                                  nextKick.getPriority()));
+                        rejectTask.run();
                         jobQueue.remove(nextKick);
                         break;
                     } else {
@@ -450,6 +450,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                         task.setAutoRetry(nextKick.getAutoRetry());
                         try {
                             task.exec(nextKick, true);
+                        } catch (ExecStateException ex) {
+                            log.warn("[kick] failed to kick non-idle task {}", task.getName(), ex);
+                            rejectTask.run();
                         } catch (Exception ex) {
                             log.warn("[kick] exception while trying to kick {}", task.getName(), ex);
                             task.sendEndStatus(JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR);

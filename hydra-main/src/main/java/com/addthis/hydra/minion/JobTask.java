@@ -25,6 +25,7 @@ import java.util.List;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.Function;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
@@ -752,9 +753,13 @@ public class JobTask implements Codable {
         return backups.get(offset);
     }
 
-    private void require(boolean test, String msg) throws ExecException {
+    private void require(boolean test, String msg) throws Exception {
+        require(test, msg, ExecException::new);
+    }
+
+    private void require(boolean test, String msg, Function<String,Exception> exceptionType) throws Exception {
         if (!test) {
-            throw new ExecException(msg);
+            throw exceptionType.apply(msg);
         }
     }
 
@@ -789,7 +794,7 @@ public class JobTask implements Codable {
             String jobId = kickMessage.getJobUuid();
             int jobNode = kickMessage.getJobKey().getNodeNumber();
             log.debug("[task.exec] {}", kickMessage.getJobKey());
-            require(testTaskIdle(), "task is not idle");
+            require(testTaskIdle(), "task is not idle", ExecStateException::new);
             String jobCommand = kickMessage.getCommand();
             require(!LessStrings.isEmpty(jobCommand), "task command is missing or empty");
             // ensure we're not changing something critical on a re-spawn
