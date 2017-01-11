@@ -35,10 +35,7 @@ import com.addthis.basis.util.SimpleExec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.BackupWorkItem;
-import com.addthis.hydra.job.JobTaskErrorCode;
-import com.addthis.hydra.job.ReplicateWorkItem;
-import com.addthis.hydra.job.RunTaskWorkItem;
+import com.addthis.hydra.job.*;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.HourlyBackup;
@@ -794,7 +791,7 @@ public class JobTask implements Codable {
             String jobId = kickMessage.getJobUuid();
             int jobNode = kickMessage.getJobKey().getNodeNumber();
             log.debug("[task.exec] {}", kickMessage.getJobKey());
-            require(testTaskIdle(), "task is not idle", ExecStateException::new);
+            require(testTaskIdle(), "task is not idle, current state: " + this.getTaskState(), ExecStateException::new);
             String jobCommand = kickMessage.getCommand();
             require(!LessStrings.isEmpty(jobCommand), "task command is missing or empty");
             // ensure we're not changing something critical on a re-spawn
@@ -1159,6 +1156,18 @@ public class JobTask implements Codable {
             return false;
         }
         return !isRunning() && !isReplicating() && backupStartTime > 0 && !backupDone.exists() && isProcessRunning(backupPid);
+    }
+
+    public JobTaskState getTaskState() {
+        if(this.isRunning()) {
+            return JobTaskState.BUSY;
+        } else if(this.isReplicating()) {
+            return JobTaskState.REPLICATE;
+        } else if(this.isBackingUp()) {
+            return JobTaskState.BACKUP;
+        } else {
+            return JobTaskState.IDLE;
+        }
     }
 
     public File[] getActivePidFiles() {
