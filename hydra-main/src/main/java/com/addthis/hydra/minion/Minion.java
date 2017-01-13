@@ -100,6 +100,7 @@ import com.rabbitmq.client.Connection;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.Timer;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -178,6 +179,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     Timer fileStatsTimer;
     Counter sendStatusFailCount;
     Counter sendStatusFailAfterRetriesCount;
+    Meter nonIdleIgnoredKicks;
     final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
     final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
 
@@ -265,6 +267,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         sendStatusFailAfterRetriesCount = Metrics.newCounter(Minion.class,
                                                              "sendStatusFailAfterRetries-" + getJettyPort() +
                                                              "-JMXONLY");
+        nonIdleIgnoredKicks = Metrics.newMeter(Minion.class, "nonIdleIgnoredKicks", "ignored-kick", TimeUnit.MINUTES);
         fileStatsTimer = Metrics.newTimer(Minion.class, "JobTask-byte-size-timer");
         metricsHandler = MetricsServletMaker.makeHandler();
         activeTaskHistogram = Metrics.newHistogram(Minion.class, "activeTasks");
@@ -434,10 +437,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 try {
                     boolean lackCap = activeTaskKeys.size() >= maxActiveTasks;
                     if (lackCap) {
-                        sendStatusMessage(new StatusTaskCantBegin(getUUID(),
-                                                                  nextKick.getJobUuid(),
-                                                                  nextKick.getNodeID(),
-                                                                  nextKick.getPriority()));
+                        sendStatusMessage(new StatusTaskCantBegin(getUUID(), nextKick.getJobUuid(),
+                                nextKick.getNodeID(), nextKick.getPriority()));
                         jobQueue.remove(nextKick);
                         break;
                     } else {
@@ -450,6 +451,14 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                         task.setAutoRetry(nextKick.getAutoRetry());
                         try {
                             task.exec(nextKick, true);
+                        } catch (ExecStateException ex) {
+                            log.warn("[kick] failed to kick non-idle task {}", task.getName(), ex);
+                            // It should be okay to simply ignore non-idle kicks, since the actual task state has already
+                            // been sent back to spawn.
+                            // These ignored kicks are only expected to happen due to a race condition during failing
+                            // minions.  The below metric can be removed once we confirm that ignored kicks are not
+                            // happening when unexpected.
+                            nonIdleIgnoredKicks.mark();
                         } catch (Exception ex) {
                             log.warn("[kick] exception while trying to kick {}", task.getName(), ex);
                             task.sendEndStatus(JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR);

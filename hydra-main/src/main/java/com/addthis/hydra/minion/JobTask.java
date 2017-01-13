@@ -25,6 +25,7 @@ import java.util.List;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.Function;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
@@ -34,10 +35,7 @@ import com.addthis.basis.util.SimpleExec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.BackupWorkItem;
-import com.addthis.hydra.job.JobTaskErrorCode;
-import com.addthis.hydra.job.ReplicateWorkItem;
-import com.addthis.hydra.job.RunTaskWorkItem;
+import com.addthis.hydra.job.*;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.HourlyBackup;
@@ -752,9 +750,13 @@ public class JobTask implements Codable {
         return backups.get(offset);
     }
 
-    private void require(boolean test, String msg) throws ExecException {
+    private void require(boolean test, String msg) throws Exception {
+        require(test, msg, ExecException::new);
+    }
+
+    private void require(boolean test, String msg, Function<String,Exception> exceptionType) throws Exception {
         if (!test) {
-            throw new ExecException(msg);
+            throw exceptionType.apply(msg);
         }
     }
 
@@ -789,7 +791,7 @@ public class JobTask implements Codable {
             String jobId = kickMessage.getJobUuid();
             int jobNode = kickMessage.getJobKey().getNodeNumber();
             log.debug("[task.exec] {}", kickMessage.getJobKey());
-            require(testTaskIdle(), "task is not idle");
+            require(testTaskIdle(), "task is not idle, current state: " + this.getTaskState(), ExecStateException::new);
             String jobCommand = kickMessage.getCommand();
             require(!LessStrings.isEmpty(jobCommand), "task command is missing or empty");
             // ensure we're not changing something critical on a re-spawn
@@ -1154,6 +1156,18 @@ public class JobTask implements Codable {
             return false;
         }
         return !isRunning() && !isReplicating() && backupStartTime > 0 && !backupDone.exists() && isProcessRunning(backupPid);
+    }
+
+    public JobTaskState getTaskState() {
+        if(this.isRunning()) {
+            return JobTaskState.BUSY;
+        } else if(this.isReplicating()) {
+            return JobTaskState.REPLICATE;
+        } else if(this.isBackingUp()) {
+            return JobTaskState.BACKUP;
+        } else {
+            return JobTaskState.IDLE;
+        }
     }
 
     public File[] getActivePidFiles() {
