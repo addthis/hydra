@@ -13,22 +13,7 @@
  */
 package com.addthis.hydra.job.alert;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.net.SocketTimeoutException;
-
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
@@ -37,19 +22,24 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A job alert monitors for specific conditions in the state
@@ -133,7 +123,7 @@ public abstract class AbstractJobAlert implements Codable {
     protected final transient AtomicInteger consecutiveCanaryExceptionCount;
 
     private transient Iterator<Job> streamingIterator;
-
+    private transient boolean alertDisabled;
 
     private static <K, V> ImmutableMap<K, V> immutableOrEmpty(Map<K, V> input) {
         if (input == null) {
@@ -254,6 +244,10 @@ public abstract class AbstractJobAlert implements Codable {
             } else {
                 return previousErrorMessage;
             }
+        } else if (Throwables.getRootCause(ex) instanceof IOException) {
+            if(ex.getMessage().contains("Max retries exceeded")) {
+                setAlertDisabled(true);
+            }
         }
         return ex.toString();
     }
@@ -328,4 +322,11 @@ public abstract class AbstractJobAlert implements Codable {
         }
     }
 
+    public boolean isAlertDisabled() {
+        return alertDisabled;
+    }
+
+    public void setAlertDisabled(boolean alertDisabled) {
+        this.alertDisabled = alertDisabled;
+    }
 }

@@ -14,10 +14,6 @@
 
 package com.addthis.hydra.job.alert;
 
-import java.net.SocketTimeoutException;
-
-import java.util.List;
-
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
@@ -25,15 +21,15 @@ import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
-
 import com.google.common.collect.ImmutableMap;
-
 import org.junit.Test;
 
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.util.List;
+
 import static com.addthis.codec.config.Configs.decodeObject;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -205,5 +201,12 @@ public class JobAlertTest {
         assertEquals("benign exception #1", "some previous error",
                      alert.handleCanaryException(normallyOkException, "some previous error"));
         assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
+    }
+
+    @Test
+    public void queryDownAlertOnCanaryException() throws Exception {
+        AbstractJobAlert alert = decodeObject(AbstractJobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = [123]");
+        Exception queryDownException = new IOException("Max retries exceeded");
+        assertEquals("query down due to max retries exceed", queryDownException.toString(), alert.handleCanaryException(queryDownException, null));
     }
 }
