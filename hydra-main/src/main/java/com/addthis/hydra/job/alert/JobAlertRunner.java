@@ -237,14 +237,11 @@ public class JobAlertRunner {
     }
 
     private void sendAlert(AbstractJobAlert jobAlert, String reason, Map<String, String> errors) {
-
         if(jobAlert.isAlertDisabled()) {
             log.info("No alerting {} :: jobs : {} because the query system is down", jobAlert.alertId, jobAlert.jobIds);
             return;
         }
-
         if (errors.isEmpty()) {
-            log.info("No alerting {} :: jobs : {} b/c empty error = {}", jobAlert.alertId, jobAlert.jobIds, reason);
             return;
         }
 

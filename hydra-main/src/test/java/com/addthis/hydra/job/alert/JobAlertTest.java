@@ -205,7 +205,7 @@ public class JobAlertTest {
 
     @Test
     public void queryDownAlertOnCanaryException() throws Exception {
-        AbstractJobAlert alert = decodeObject(AbstractJobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = [123]");
+        AbstractJobAlert alert = decodeObject(AbstractJobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
         Exception queryDownException = new IOException("Max retries exceeded");
         assertEquals("query down due to max retries exceed", queryDownException.toString(), alert.handleCanaryException(queryDownException, null));
     }

@@ -161,6 +161,7 @@ public abstract class AbstractJobAlert implements Codable {
         this.lastAlertTime = lastAlertTime;
         this.streamingIterator = null;
         this.consecutiveCanaryExceptionCount = new AtomicInteger(0);
+        this.setAlertDisabled(false);
     }
 
     // getters/setters that trigger ser/deser and are not vanilla (also have in-code usages)
