@@ -32,7 +32,6 @@ import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.config.Configs;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.JSONFetcher;

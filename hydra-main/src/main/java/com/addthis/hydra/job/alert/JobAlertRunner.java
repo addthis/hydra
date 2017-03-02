@@ -13,9 +13,25 @@
  */
 package com.addthis.hydra.job.alert;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import java.io.IOException;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.net.http.HttpResponse;
 import com.addthis.basis.util.LessStrings;
+
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
@@ -29,25 +45,28 @@ import com.addthis.hydra.util.EmailUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.*;
 import com.typesafe.config.ConfigFactory;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.entity.ContentType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
 
@@ -125,6 +144,7 @@ public class JobAlertRunner {
                 for (Map.Entry<String, AbstractJobAlert> entry : alertMap.entrySet()) {
                     AbstractJobAlert oldAlert = entry.getValue();
                     Map<String, String> currentErrors = oldAlert.getActiveJobs();
+
                     // entry may be concurrently deleted, so only recompute if still present, and while locked
                     AbstractJobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
                         currentAlert.setAlertDisabled(false);

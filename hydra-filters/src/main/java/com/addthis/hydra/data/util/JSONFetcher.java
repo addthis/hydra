@@ -47,7 +47,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class JSONFetcher {
 
     private static final int DEFAULT_TIMEOUT = 60_000;
@@ -164,7 +163,7 @@ public class JSONFetcher {
         }
     }
 
-    private byte[] request(String url, MutableInt retry) throws URISyntaxException, IOException {
+    private byte[] request(String url, MutableInt retry) throws Exception {
         if (retry.getValue() > 0) {
             log.info("Attempting to fetch {}. Retry {}", url, retry.getValue());
         }
@@ -181,14 +180,17 @@ public class JSONFetcher {
         MutableInt retry = new MutableInt(0);
         try {
             return retryer.call(() -> request(url, retry));
-        } catch (ExecutionException e) {
-            throw Throwables.propagate(e.getCause());
-        } catch (RetryException e) {
-            if (e.getLastFailedAttempt().hasException()) {
+        }
+        catch (RetryException e) {
+            if (e.getCause().toString().contains("org.apache.http.conn.HttpHostConnectException")) {
+                throw Throwables.propagate(e.getCause());
+            } else if (e.getLastFailedAttempt().hasException()) {
                 throw new IOException("Max retries exceeded", e.getLastFailedAttempt().getExceptionCause());
             } else {
                 throw new IOException("Max retries exceeded", e);
             }
+        } catch (ExecutionException e) {
+            throw Throwables.propagate(e.getCause());
         }
     }
 
