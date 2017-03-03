@@ -14,6 +14,11 @@
 
 package com.addthis.hydra.job.alert;
 
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+
+import java.util.List;
+
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
@@ -21,15 +26,18 @@ import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
+
 import com.google.common.collect.ImmutableMap;
+
+import org.apache.http.HttpHost;
+import org.apache.http.conn.HttpHostConnectException;
+
 import org.junit.Test;
 
-import java.io.IOException;
-import java.net.SocketTimeoutException;
-import java.util.List;
-
 import static com.addthis.codec.config.Configs.decodeObject;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -206,7 +214,8 @@ public class JobAlertTest {
     @Test
     public void queryDownAlertOnCanaryException() throws Exception {
         AbstractJobAlert alert = decodeObject(AbstractJobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
-        Exception queryDownException = new IOException("Max retries exceeded");
-        assertEquals("query down due to max retries exceed", queryDownException.toString(), alert.handleCanaryException(queryDownException, null));
+        HttpHost host = new HttpHost("localhost", 8080, "https");
+        HttpHostConnectException httpHostConnectException = new HttpHostConnectException(host, new ConnectException());
+        assertEquals("query system is down", httpHostConnectException.toString(), alert.handleCanaryException(httpHostConnectException, null));
     }
 }
