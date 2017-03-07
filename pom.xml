@@ -487,6 +487,5 @@
     <connection>scm:git:git@github.com:addthis/hydra.git</connection>
     <developerConnection>scm:git:git@github.com:addthis/hydra.git</developerConnection>
     <url>https://github.com/addthis/hydra</url>
-    <tag>v4.2.2</tag>
   </scm>
 </project>
