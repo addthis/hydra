@@ -55,17 +55,17 @@ public class ValueFilterMapValue extends AbstractValueFilterContextual {
 
     @Override
     public ValueObject filterValue(ValueObject value, Bundle context) {
-        if (value == null || value.getObjectType() != ValueObject.TYPE.MAP) {
+        if (value == null || value.getObjectType() != ValueObject.TYPE.MAP || this.key == null) {
             // TODO: log error
             return null;
         }
         ValueMap mapValue = value.asMap();
-        if(this.put != null) {
+        if (this.put != null) {
             ValueMap copy = ValueFactory.createMap();
             copy.putAll(mapValue);
             copy.put(this.key.getString(context).get(), this.put.getValue(context));
             return copy;
-        } else if(this.defaultValue != null) {
+        } else if (this.defaultValue != null) {
             return mapValue.getOrDefault(this.key.getString(context).get(), this.defaultValue.getValue(context));
         } else {
             return mapValue.get(this.key.getString(context).get());
