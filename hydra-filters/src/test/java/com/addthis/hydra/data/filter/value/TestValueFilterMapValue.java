@@ -1,9 +1,5 @@
 package com.addthis.hydra.data.filter.value;
 
-/**
- * Created by steve on 3/20/17.
- */
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.value.ValueFactory;
@@ -13,9 +9,7 @@ import com.addthis.codec.config.Configs;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
