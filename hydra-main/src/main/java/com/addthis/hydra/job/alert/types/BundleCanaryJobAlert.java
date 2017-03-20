@@ -23,7 +23,6 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.config.Configs;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.alert.AbstractJobAlert;
@@ -42,7 +41,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BundleCanaryJobAlert extends AbstractJobAlert {
-
     /**
      * Query path.
      */

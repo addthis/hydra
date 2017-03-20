@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
@@ -38,19 +37,28 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.net.SocketTimeoutException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A job alert monitors for specific conditions in the state
@@ -83,7 +91,7 @@ public abstract class AbstractJobAlert implements Codable {
     private static final int WILDCARD_BATCH_SIZE = Parameter.intValue("spawn.alert.batchSize", 50);
 
     /** Trigger alert if number of consecutive canary check exception is >= this limit */
-    private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;
+    private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;  // TODO
 
     @Nonnull @JsonProperty public final String alertId;
 
