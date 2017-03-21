@@ -144,10 +144,8 @@ public class JobAlertRunner {
                 for (Map.Entry<String, AbstractJobAlert> entry : alertMap.entrySet()) {
                     AbstractJobAlert oldAlert = entry.getValue();
                     Map<String, String> currentErrors = oldAlert.getActiveJobs();
-
                     // entry may be concurrently deleted, so only recompute if still present, and while locked
                     AbstractJobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
-                        currentAlert.setAlertDisabled(false);
                         currentAlert.checkAlertForJobs(spawn, meshyClient);
                         if (!currentAlert.getActiveJobs().equals(currentErrors)) {
                             storeAlert(currentAlert.alertId, currentAlert);
@@ -180,7 +178,7 @@ public class JobAlertRunner {
                 log.info("Finished alert scan");
             } catch (Exception e) {
                 lastAlertScanFailed = true;
-                log.error("Unexpected error while scanning alerts: {}", e.getMessage(), e);
+                log.error("Unexpected error while scanning alerts: {}: {}", e.getMessage(), e);
             }
         }
     }
@@ -257,22 +255,15 @@ public class JobAlertRunner {
     }
 
     private void sendAlert(AbstractJobAlert jobAlert, String reason, Map<String, String> errors) {
-        if(jobAlert.isAlertDisabled()) {
-            log.info("No alerting {} :: jobs : {} because the query system is down", jobAlert.alertId, jobAlert.jobIds);
-            return;
-        }
         if (errors.isEmpty()) {
             return;
         }
 
         String alertLink = String.format("http://%s:5052/spawn2/index.html#alerts/%s", clusterHead, jobAlert.alertId);
-
         log.info("Alerting {} :: jobs : {} : {}", jobAlert.alertId, errors.keySet(), reason);
-
         if (StringUtils.isNotBlank(jobAlert.email)) {
             sendEmailAlert(jobAlert, alertLink, reason, errors);
         }
-
         if (StringUtils.isNotBlank(jobAlert.webhookURL)) {
             sendWebhookAlert(jobAlert, alertLink, reason, errors);
         }

@@ -29,9 +29,6 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.collect.ImmutableMap;
 
-import org.apache.http.HttpHost;
-import org.apache.http.conn.HttpHostConnectException;
-
 import org.junit.Test;
 
 import static com.addthis.codec.config.Configs.decodeObject;
@@ -214,8 +211,7 @@ public class JobAlertTest {
     @Test
     public void queryDownAlertOnCanaryException() throws Exception {
         AbstractJobAlert alert = decodeObject(AbstractJobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
-        HttpHost host = new HttpHost("localhost", 8080, "https");
-        HttpHostConnectException httpHostConnectException = new HttpHostConnectException(host, new ConnectException());
-        assertEquals("query system is down", httpHostConnectException.toString(), alert.handleCanaryException(httpHostConnectException, null));
+        ConnectException connectException = new ConnectException();
+        assertEquals("query system is down", "Connection Exception", alert.handleCanaryException(connectException, null));
     }
 }

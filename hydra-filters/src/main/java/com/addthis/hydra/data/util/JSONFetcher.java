@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 
+import java.net.ConnectException;
 import java.net.URISyntaxException;
 
 import java.util.HashMap;
@@ -180,9 +181,8 @@ public class JSONFetcher {
         MutableInt retry = new MutableInt(0);
         try {
             return retryer.call(() -> request(url, retry));
-        }
-        catch (RetryException e) {
-            if (e.getCause().toString().contains("org.apache.http.conn.HttpHostConnectException")) {
+        } catch (RetryException e) {
+            if ( Throwables.getRootCause(e) instanceof ConnectException) {
                 throw Throwables.propagate(e.getCause());
             } else if (e.getLastFailedAttempt().hasException()) {
                 throw new IOException("Max retries exceeded", e.getLastFailedAttempt().getExceptionCause());

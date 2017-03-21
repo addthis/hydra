@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.basis.util.Parameter;
+
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
@@ -37,28 +38,19 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.net.SocketTimeoutException;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A job alert monitors for specific conditions in the state
@@ -91,7 +83,7 @@ public abstract class AbstractJobAlert implements Codable {
     private static final int WILDCARD_BATCH_SIZE = Parameter.intValue("spawn.alert.batchSize", 50);
 
     /** Trigger alert if number of consecutive canary check exception is >= this limit */
-    private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;  // TODO
+    private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;
 
     @Nonnull @JsonProperty public final String alertId;
 
@@ -180,7 +172,6 @@ public abstract class AbstractJobAlert implements Codable {
         this.lastAlertTime = lastAlertTime;
         this.streamingIterator = null;
         this.consecutiveCanaryExceptionCount = new AtomicInteger(0);
-        this.setAlertDisabled(false);
     }
 
     // getters/setters that trigger ser/deser and are not vanilla (also have in-code usages)
@@ -253,16 +244,16 @@ public abstract class AbstractJobAlert implements Codable {
     @VisibleForTesting
     @Nullable
     protected String handleCanaryException(Exception ex, @Nullable String previousErrorMessage) {
-        if ( Throwables.getRootCause(ex) instanceof ConnectException) {
-            if (ex.getMessage().contains("HttpHostConnectException")) {
-                setAlertDisabled(true);
-            }
+        if (Throwables.getRootCause(ex) instanceof ConnectException) {
+            log.error("Connection Exception occurred due to the query system is down.");
+            return "Connection Exception";
         }
         // special handling for SocketTimeoutException which is mostly transient
         else if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
-          int c = consecutiveCanaryExceptionCount.incrementAndGet();
+            int c = consecutiveCanaryExceptionCount.incrementAndGet();
             if (c >= MAX_CONSECUTIVE_CANARY_EXCEPTION) {
                 consecutiveCanaryExceptionCount.set(0);
+                log.error("Canary check threw exception at least {} times in a row. The most recent error is: {}",  MAX_CONSECUTIVE_CANARY_EXCEPTION, ex);
                 return "Canary check threw exception at least " + MAX_CONSECUTIVE_CANARY_EXCEPTION + " times in a row. " +
                        "The most recent error is: " + ex;
             } else {
@@ -340,13 +331,5 @@ public abstract class AbstractJobAlert implements Codable {
         } catch (Exception ignored) {
             return super.toString();
         }
-    }
-
-    public boolean isAlertDisabled() {
-        return alertDisabled;
-    }
-
-    public void setAlertDisabled(boolean alertDisabled) {
-        this.alertDisabled = alertDisabled;
     }
 }
