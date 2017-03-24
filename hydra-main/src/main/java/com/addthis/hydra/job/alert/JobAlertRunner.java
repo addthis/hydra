@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import java.text.DecimalFormat;
@@ -32,7 +31,6 @@ import java.text.SimpleDateFormat;
 
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.net.http.HttpResponse;
-import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
@@ -284,8 +282,8 @@ public class JobAlertRunner {
         // Turn all the jobs in error into a list of information about each job
 
         AlertWebhookRequest webhookRequest = new AlertWebhookRequest();
+        webhookRequest.setAlertType(jobAlert.getTypeString());
         webhookRequest.setAlertLink(alertLink);
-        webhookRequest.setAlertType(jobAlert.getTypeString().trim());
         webhookRequest.setAlertReason(reason.trim());
         webhookRequest.setAlertDescription(jobAlert.description);
 
@@ -348,19 +346,16 @@ public class JobAlertRunner {
                                 Map<String, String> errors) {
 
         String description = jobAlert.description;
-        boolean hasDescription = LessStrings.isNotEmpty(description);
-        String subject;
-        if (hasDescription) {
-            subject = reason + ' ' + description.split("\n")[0];
-        } else {
-            subject = String.format("%s %s - %s - %s", reason, jobAlert.getTypeString(),
-                                    JobAlertRunner.getClusterHead(), errors.keySet());
+        boolean blankDescription = StringUtils.isBlank(description);
+        String shortDescription = description.split("\n")[0];
+        if (blankDescription) {
+            shortDescription = errors.keySet().toString();
         }
-
+        String subject = String.format("%s %s - %s", reason, jobAlert.getTypeString(), shortDescription);
         StringBuilder sb = new StringBuilder(reason + ' ' + jobAlert.getTypeString() + '\n');
         sb.append("Alert link : ").append(alertLink).append('\n');
 
-        if (StringUtils.isNotBlank(description)) {
+        if (!blankDescription) {
             sb.append("Alert Description : ").append(description).append('\n');
         }
 
@@ -493,10 +488,6 @@ public class JobAlertRunner {
             log.warn("Failed to fetch alert {}", alertId, e);
             return null;
         }
-    }
-
-    public static String getClusterHead() {
-        return clusterHead;
     }
 
     /** Copy and then modify an alert by removing a specific job id. */

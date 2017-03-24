@@ -62,25 +62,25 @@ public class MinionTaskDeleterTest {
      *
      * @throws Exception on failure
      */
-//    @Test
-//    public void taskDeleteTest() throws Exception {
-//        File tmpDir = LessFiles.createTempDir();
-//        try {
-//            GoldBackup goldBackup = new GoldBackup();
-//            List<String> directories = Arrays.asList("live", "config", "gold", goldBackup.generateNameForTime(now - dayInMillis, true), goldBackup.generateNameForTime(now, true));
-//            String basePath = tmpDir.getAbsolutePath() + "/";
-//            for (String dir : directories) {
-//                assertTrue(new File(basePath + dir).mkdir());
-//            }
-//            MinionTaskDeleter del = new MinionTaskDeleter();
-//            del.submitPathToDelete(tmpDir.getAbsolutePath());
-//            del.deleteStoredItems();
-//            assertArrayEquals("should have only recent b-gold directory remaining", tmpDir.list(), new String[]{directories.get(4)});
-//            assertEquals("should have remaining backup in backupsToDelete", del.getBackupsToDelete(), ImmutableSet.of(new BackupToDelete(basePath + directories.get(4), "gold")));
-//        } finally {
-//            assertTrue(LessFiles.deleteDir(tmpDir));
-//        }
-//    }
+    @Test
+    public void taskDeleteTest() throws Exception {
+        File tmpDir = LessFiles.createTempDir();
+        try {
+            GoldBackup goldBackup = new GoldBackup();
+            List<String> directories = Arrays.asList("live", "config", "gold", goldBackup.generateNameForTime(now - dayInMillis, true), goldBackup.generateNameForTime(now, true));
+            String basePath = tmpDir.getAbsolutePath() + "/";
+            for (String dir : directories) {
+                assertTrue(new File(basePath + dir).mkdir());
+            }
+            MinionTaskDeleter del = new MinionTaskDeleter();
+            del.submitPathToDelete(tmpDir.getAbsolutePath());
+            del.deleteStoredItems();
+            assertArrayEquals("should have only recent b-gold directory remaining", tmpDir.list(), new String[]{directories.get(4)});
+            assertEquals("should have remaining backup in backupsToDelete", del.getBackupsToDelete(), ImmutableSet.of(new BackupToDelete(basePath + directories.get(4), "gold")));
+        } finally {
+            assertTrue(LessFiles.deleteDir(tmpDir));
+        }
+    }
 
     /**
      * MinionTaskDeleter should persist its stored lists of tasks/backups
