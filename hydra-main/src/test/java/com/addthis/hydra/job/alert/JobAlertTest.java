@@ -190,10 +190,11 @@ public class JobAlertTest {
         Exception normallyOkException = new RuntimeException(new SocketTimeoutException("socket timeout"));
 
         assertEquals("bad exception", definitelyBadException.toString(), alert.handleCanaryException(definitelyBadException, null));
-        assertNull("benign exception #1", alert.handleCanaryException(normallyOkException, null));
-        assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
-        assertNotNull("benign exception #3", alert.handleCanaryException(normallyOkException, null));
-        assertNull("benign exception #4", alert.handleCanaryException(normallyOkException, null));
+        for (int i = 1; i < AbstractJobAlert.MAX_CONSECUTIVE_CANARY_EXCEPTION; i++) {
+            assertNull("benign exception #" + i, alert.handleCanaryException(normallyOkException, null));
+        }
+        assertNotNull("benign exception (exceeds MAX_CONSECUTIVE_CANARY_EXCEPTION)", alert.handleCanaryException(normallyOkException, null));
+        assertNull("benign exception (consective ex counter reset)", alert.handleCanaryException(normallyOkException, null));
     }
 
     @Test
@@ -211,7 +212,8 @@ public class JobAlertTest {
     @Test
     public void queryDownAlertOnCanaryException() throws Exception {
         AbstractJobAlert alert = decodeObject(AbstractJobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
-        ConnectException connectException = new ConnectException();
-        assertEquals("query system is down", "Connection Exception", alert.handleCanaryException(connectException, null));
+        Exception e = new RuntimeException(new ConnectException());
+        assertEquals("alert error message should be unchanged on ConnectException",
+                     "previous error", alert.handleCanaryException(e, "previous error"));
     }
 }

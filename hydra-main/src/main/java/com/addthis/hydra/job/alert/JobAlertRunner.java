@@ -178,7 +178,7 @@ public class JobAlertRunner {
                 log.info("Finished alert scan");
             } catch (Exception e) {
                 lastAlertScanFailed = true;
-                log.error("Unexpected error while scanning alerts: {}: {}", e.getMessage(), e);
+                log.error("Unexpected error while scanning alerts: {}", e.getMessage(), e);
             }
         }
     }

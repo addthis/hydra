@@ -83,7 +83,8 @@ public abstract class AbstractJobAlert implements Codable {
     private static final int WILDCARD_BATCH_SIZE = Parameter.intValue("spawn.alert.batchSize", 50);
 
     /** Trigger alert if number of consecutive canary check exception is >= this limit */
-    private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;
+    @VisibleForTesting
+    protected static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 10;
 
     @Nonnull @JsonProperty public final String alertId;
 
@@ -134,7 +135,6 @@ public abstract class AbstractJobAlert implements Codable {
     protected final transient AtomicInteger consecutiveCanaryExceptionCount;
 
     private transient Iterator<Job> streamingIterator;
-    private transient boolean alertDisabled;
 
     private static <K, V> ImmutableMap<K, V> immutableOrEmpty(Map<K, V> input) {
         if (input == null) {
@@ -244,23 +244,21 @@ public abstract class AbstractJobAlert implements Codable {
     @VisibleForTesting
     @Nullable
     protected String handleCanaryException(Exception ex, @Nullable String previousErrorMessage) {
-        if (Throwables.getRootCause(ex) instanceof ConnectException) {
-            log.error("Connection Exception occurred due to the query system is down.");
-            return "Connection Exception";
-        }
-        // special handling for SocketTimeoutException which is mostly transient
-        else if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
+        log.warn("Exception during canary check for alert {} : ", alertId, ex);
+        // special handling for transient exceptions due to query system down or busy
+        Throwable rootCause = Throwables.getRootCause(ex);
+        if ((rootCause instanceof SocketTimeoutException) || (rootCause instanceof ConnectException)) {
             int c = consecutiveCanaryExceptionCount.incrementAndGet();
             if (c >= MAX_CONSECUTIVE_CANARY_EXCEPTION) {
                 consecutiveCanaryExceptionCount.set(0);
-                log.error("Canary check threw exception at least {} times in a row. The most recent error is: {}",  MAX_CONSECUTIVE_CANARY_EXCEPTION, ex);
-                return "Canary check threw exception at least " + MAX_CONSECUTIVE_CANARY_EXCEPTION + " times in a row. " +
-                       "The most recent error is: " + ex;
+                return "Canary check threw exception at least " + MAX_CONSECUTIVE_CANARY_EXCEPTION +
+                       " times in a row. " +
+                       "The most recent error is: " + rootCause;
             } else {
                 return previousErrorMessage;
             }
         }
-        return ex.toString();
+        return rootCause.toString();
     }
 
     /**

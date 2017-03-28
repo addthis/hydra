@@ -17,7 +17,6 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 
-import java.net.ConnectException;
 import java.net.URISyntaxException;
 
 import java.util.HashMap;
@@ -31,6 +30,7 @@ import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessStrings;
 
 import com.addthis.maljson.JSONArray;
+import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 
 import com.clearspring.analytics.util.Preconditions;
@@ -117,7 +117,7 @@ public class JSONFetcher {
                 map.put(key, o.optString(key));
             }
             return map;
-        } catch (Exception e) {
+        } catch (JSONException e) {
             throw Throwables.propagate(e);
         }
     }
@@ -130,24 +130,20 @@ public class JSONFetcher {
      * @return string set
      */
     public HashSet<String> loadCSVSet(String mapURL, HashSet<String> set) {
-        try {
-            byte[] raw = retrieveBytes(mapURL);
-            String list = LessBytes.toString(raw);
+        byte[] raw = retrieveBytes(mapURL);
+        String list = LessBytes.toString(raw);
 
-            if (set == null) {
-                set = new HashSet<>();
-            }
-
-            Scanner in = new Scanner(list);
-
-            while (in.hasNext()) {
-                set.add(in.nextLine().replaceAll("^\"|\"$", ""));
-            }
-
-            return set;
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+        if (set == null) {
+            set = new HashSet<>();
         }
+
+        Scanner in = new Scanner(list);
+
+        while (in.hasNext()) {
+            set.add(in.nextLine().replaceAll("^\"|\"$", ""));
+        }
+
+        return set;
     }
 
     public JSONArray loadJSONArray(String mapURL) {
@@ -159,38 +155,36 @@ public class JSONFetcher {
             }
             JSONArray array = new JSONArray(list);
             return array;
-        } catch (Exception e) {
+        } catch (JSONException e) {
             throw Throwables.propagate(e);
         }
     }
 
-    private byte[] request(String url, MutableInt retry) throws Exception {
+    private byte[] request(String url, MutableInt retry) throws IOException, URISyntaxException {
         if (retry.getValue() > 0) {
             log.info("Attempting to fetch {}. Retry {}", url, retry.getValue());
         }
         retry.increment();
         try {
             return HttpUtil.httpGet(url, timeout).getBody();
-        } catch (URISyntaxException u) {
-            log.error("URISyntaxException on url {}", url, u);
-            throw u;
+        } catch (URISyntaxException e) {
+            log.error("URISyntaxException on url {}", url, e);
+            throw e;
         }
     }
 
-    private byte[] retrieveBytes(String url) throws IOException {
+    private byte[] retrieveBytes(String url) {
         MutableInt retry = new MutableInt(0);
         try {
             return retryer.call(() -> request(url, retry));
-        } catch (RetryException e) {
-            if ( Throwables.getRootCause(e) instanceof ConnectException) {
-                throw Throwables.propagate(e.getCause());
-            } else if (e.getLastFailedAttempt().hasException()) {
-                throw new IOException("Max retries exceeded", e.getLastFailedAttempt().getExceptionCause());
-            } else {
-                throw new IOException("Max retries exceeded", e);
-            }
         } catch (ExecutionException e) {
             throw Throwables.propagate(e.getCause());
+        } catch (RetryException e) {
+            if (e.getLastFailedAttempt().hasException()) {
+                throw new RuntimeException("Max retries exceeded", e.getLastFailedAttempt().getExceptionCause());
+            } else {
+                throw new RuntimeException("Max retries exceeded", e);
+            }
         }
     }
 
@@ -216,7 +210,7 @@ public class JSONFetcher {
                 set.add(o.getString(i));
             }
             return set;
-        } catch (Exception e) {
+        } catch (JSONException e) {
             throw Throwables.propagate(e);
         }
     }
