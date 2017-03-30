@@ -54,7 +54,7 @@ public class JobAlertUtil {
                                                + ":2222/query/call";
     private static final String defaultOps = "gather=s";
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
-    private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
+    private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 11);
     private static final int alertQueryMinBackoff = Parameter.intValue("alert.query.backoff.min", 10_000);
     private static final int alertQueryMaxBackoff = Parameter.intValue("alert.query.backoff.max", 120_000);
 
