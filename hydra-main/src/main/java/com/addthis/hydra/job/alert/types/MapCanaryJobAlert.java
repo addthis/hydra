@@ -39,7 +39,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MapCanaryJobAlert extends AbstractJobAlert {
-
     /**
      * Query path. For example, 'root/ymd/{{now-1}}:+count'.
      * The query should have exactly one '+' (generally, +count)
