@@ -13,36 +13,62 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.AutoParam;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the value associated with a specific key
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns or modifies the value associated with a specific key
  * from the input map</span>.
  * <p>A value of null is returned if the key is not present in the map.
  * <p>Example:</p>
  * <pre>
  *     {from:"URL_PARAMS", to:"foo", map-value.key:"foo"}
+ *     {from:"PARTNER_COUNTS", map-value: {key.field: partnerid, put.field: newcount}}
  * </pre>
  *
  * @user-reference
  */
-public class ValueFilterMapValue extends AbstractValueFilter {
+public class ValueFilterMapValue extends AbstractValueFilterContextual {
 
     /**
      * The key to match from the input map.
      */
-    @FieldConfig(codable = true)
-    private String key;
+    @AutoParam
+    private AutoField key;
+
+    /**
+     * Default value to return if key is not present in map.
+     */
+    @AutoParam
+    private AutoField defaultValue;
+
+    /**
+     * If specified, updates the key in the map with this value and returns the resulting map.
+     */
+    @AutoParam
+    private AutoField put;
 
     @Override
-    public ValueObject filterValue(ValueObject value) {
-        if (value == null || value.getObjectType() != ValueObject.TYPE.MAP) {
+    public ValueObject filterValue(ValueObject value, Bundle context) {
+        if (value == null || value.getObjectType() != ValueObject.TYPE.MAP || this.key == null) {
             // TODO: log error
             return null;
         }
         ValueMap mapValue = value.asMap();
-        return mapValue.get(key);
+        if (this.put != null) {
+            ValueMap copy = ValueFactory.createMap();
+            copy.putAll(mapValue);
+            copy.put(this.key.getString(context).get(), this.put.getValue(context));
+            return copy;
+        } else if (this.defaultValue != null) {
+            return mapValue.getOrDefault(this.key.getString(context).get(), this.defaultValue.getValue(context));
+        } else {
+            return mapValue.get(this.key.getString(context).get());
+        }
     }
 }

@@ -40,12 +40,11 @@ import com.addthis.maljson.JSONArray;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.google.common.base.Objects.firstNonNull;
 
 public class JobAlertUtil {
     private static final Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
@@ -189,8 +188,8 @@ public class JobAlertUtil {
 
     public static String evaluateQueryWithFilter(BundleCanaryJobAlert alert, String jobId) {
         String query = alert.canaryPath;
-        String ops = firstNonNull(alert.canaryOps, "");
-        String rops = firstNonNull(alert.canaryRops, "");
+        String ops = MoreObjects.firstNonNull(alert.canaryOps, "");
+        String rops = MoreObjects.firstNonNull(alert.canaryRops, "");
         String filter = alert.canaryFilter;
         // prevent query results from overwhelming spawn
         ops += ";limit=1000;merge=kkkkkkkkkkkk";
