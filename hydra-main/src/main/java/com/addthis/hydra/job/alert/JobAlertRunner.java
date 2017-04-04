@@ -347,9 +347,11 @@ public class JobAlertRunner {
 
         String description = jobAlert.description;
         boolean blankDescription = StringUtils.isBlank(description);
-        String shortDescription = description.split("\n")[0];
+        final String shortDescription;
         if (blankDescription) {
             shortDescription = errors.keySet().toString();
+        } else {
+            shortDescription = description.split("\n")[0];
         }
         String subject = String.format("%s %s - %s", reason, jobAlert.getTypeString(), shortDescription);
         StringBuilder sb = new StringBuilder(reason + ' ' + jobAlert.getTypeString() + '\n');

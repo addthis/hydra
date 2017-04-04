@@ -261,7 +261,7 @@ public class Spawn implements Codable, AutoCloseable {
                                @Nonnull @JsonProperty(value = "jobDefaults",
                                                       required = true) JobDefaults jobDefaults,
                                @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize,
-                               @JsonProperty(value = "groupManager", required = true) GroupManager groupManager)
+                               @Nonnull @JsonProperty(value = "groupManager", required = true) GroupManager groupManager)
             throws Exception {
         this.jobLock = new ReentrantLock();
         this.shuttingDown = new AtomicBoolean(false);

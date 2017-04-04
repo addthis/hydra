@@ -13,8 +13,7 @@
  */
 package com.addthis.hydra.job.alert;
 
-import java.util.Set;
-
+import com.addthis.hydra.job.IJob;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -40,6 +39,6 @@ public interface JobAlertManager {
 
     String getAlert(String alertId);
 
-    public Set<AbstractJobAlert> getAlertsForJob(String jobId);
+    void updateBasicAlerts(IJob job, boolean basicAlerts, boolean basicPages);
 
 }
