@@ -269,13 +269,10 @@ public class JobAlertRunner {
         }
 
         String alertLink = String.format("http://%s:5052/spawn2/index.html#alerts/%s", clusterHead, jobAlert.alertId);
-
         log.info("Alerting {} :: jobs : {} : {}", jobAlert.alertId, errors.keySet(), reason);
-
         if (StringUtils.isNotBlank(jobAlert.email)) {
             sendEmailAlert(jobAlert, alertLink, reason, errors);
         }
-
         if (StringUtils.isNotBlank(jobAlert.webhookURL)) {
             sendWebhookAlert(jobAlert, alertLink, reason, errors);
         }

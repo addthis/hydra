@@ -14,6 +14,7 @@
 
 package com.addthis.hydra.job.alert;
 
+import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 
 import java.util.List;
@@ -189,10 +190,11 @@ public class JobAlertTest {
         Exception normallyOkException = new RuntimeException(new SocketTimeoutException("socket timeout"));
 
         assertEquals("bad exception", definitelyBadException.toString(), alert.handleCanaryException(definitelyBadException, null));
-        assertNull("benign exception #1", alert.handleCanaryException(normallyOkException, null));
-        assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
-        assertNotNull("benign exception #3", alert.handleCanaryException(normallyOkException, null));
-        assertNull("benign exception #4", alert.handleCanaryException(normallyOkException, null));
+        for (int i = 1; i < AbstractJobAlert.MAX_CONSECUTIVE_CANARY_EXCEPTION; i++) {
+            assertNull("benign exception #" + i, alert.handleCanaryException(normallyOkException, null));
+        }
+        assertNotNull("benign exception (exceeds MAX_CONSECUTIVE_CANARY_EXCEPTION)", alert.handleCanaryException(normallyOkException, null));
+        assertNull("benign exception (consective ex counter reset)", alert.handleCanaryException(normallyOkException, null));
     }
 
     @Test
@@ -205,5 +207,13 @@ public class JobAlertTest {
         assertEquals("benign exception #1", "some previous error",
                      alert.handleCanaryException(normallyOkException, "some previous error"));
         assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
+    }
+
+    @Test
+    public void queryDownAlertOnCanaryException() throws Exception {
+        AbstractJobAlert alert = decodeObject(AbstractJobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
+        Exception e = new RuntimeException(new ConnectException());
+        assertEquals("alert error message should be unchanged on ConnectException",
+                     "previous error", alert.handleCanaryException(e, "previous error"));
     }
 }
