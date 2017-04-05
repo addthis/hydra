@@ -49,6 +49,21 @@
         <td width="30%">Enable Automatic Retries</td>
         <td width="70%">
             <input name="autoRetry" type="checkbox" class="trackable" <%-(job.autoRetry?"checked='true'":"")%>>
+            &nbsp;&nbsp;Retries tasks if jvm crashes (exit status = 128 + 6 (SIGABRT))
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Basic Hydra Alerts</td>
+        <td width="70%">
+            <input name="basicAlerts" type="checkbox" class="trackable" <%-(job.basicAlerts?"checked='true'":"")%>>
+            &nbsp;&nbsp;Creates 3 email/webhook alerts (error, rekick, runtime) that go to the team who owns the job.
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Basic Hydra Pagerduty</td>
+        <td width="70%">
+            <input name="basicPages" type="checkbox" class="trackable" <%-(job.basicPages?"checked='true'":"")%>>
+            &nbsp;&nbsp;Creates 3 pagerduty alerts (error, rekick, runtime) that go to the team who owns the job.
         </td>
     </tr>
     <tr class="row">

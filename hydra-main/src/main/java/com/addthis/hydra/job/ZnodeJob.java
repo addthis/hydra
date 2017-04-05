@@ -105,6 +105,8 @@ public class ZnodeJob implements IJob {
         @FieldConfig private int maxSimulRunning;
         @FieldConfig private String minionType;
         @FieldConfig private boolean autoRetry;
+        @FieldConfig private boolean basicAlerts;
+        @FieldConfig private boolean basicPages;
 
         @FieldConfig private ArrayList<JobTask> tasks;
 
@@ -152,6 +154,8 @@ public class ZnodeJob implements IJob {
                     .add("maxSimulRunning", maxSimulRunning)
                     .add("minionType", minionType)
                     .add("autoRetry", autoRetry)
+                    .add("basicAlerts", basicAlerts)
+                    .add("basicPages", basicPages)
                     .toString();
         }
     }
@@ -237,6 +241,8 @@ public class ZnodeJob implements IJob {
         rznData.maxSimulRunning = job.getMaxSimulRunning();
         rznData.minionType = job.getMinionType();
         rznData.autoRetry = job.getAutoRetry();
+        rznData.basicAlerts = job.getBasicAlerts();
+        rznData.basicPages = job.getBasicPages();
 
         setTasks(job.getCopyOfTasks());
 
@@ -510,6 +516,10 @@ public class ZnodeJob implements IJob {
         }
     }
 
+    @Override public int getTaskCount() {
+        return tasks.size();
+    }
+
     @Override public JobTask getTask(int id) {
         if (tasks == null) {
             return null;
@@ -675,5 +685,20 @@ public class ZnodeJob implements IJob {
         rznData.autoRetry = autoRetry;
     }
 
+    @Override public boolean getBasicAlerts() {
+        return rznData.basicAlerts;
+    }
+
+    @Override public void setBasicAlerts(boolean basicAlerts) {
+        rznData.basicAlerts = basicAlerts;
+    }
+
+    @Override public boolean getBasicPages() {
+        return rznData.basicPages;
+    }
+
+    @Override public void setBasicPages(boolean basicPages) {
+        rznData.basicPages = basicPages;
+    }
 
 }

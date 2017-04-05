@@ -125,6 +125,8 @@ public final class Job implements IJob {
     @FieldConfig private int maxSimulRunning;
     @FieldConfig private String minionType;
     @FieldConfig private boolean autoRetry;
+    @FieldConfig private boolean basicAlerts;
+    @FieldConfig private boolean basicPages;
     @FieldConfig private JobQueryConfig queryConfig;
 
 
@@ -194,6 +196,8 @@ public final class Job implements IJob {
         this.weeklyBackups = job.getWeeklyBackups();
         this.monthlyBackups = job.getMonthlyBackups();
         this.autoRetry = job.getAutoRetry();
+        this.basicAlerts = job.getBasicAlerts();
+        this.basicPages = job.getBasicPages();
         this.replicas = job.getReplicas();
         this.queryConfig = job.getQueryConfig();
         this.dontAutoBalanceMe = job.getDontAutoBalanceMe();
@@ -546,6 +550,7 @@ public final class Job implements IJob {
         return true;
     }
 
+    @Override
     public int getTaskCount() {
         return nodes.size();
     }
@@ -838,6 +843,22 @@ public final class Job implements IJob {
     @Override
     public void setAutoRetry(boolean autoRetry) {
         this.autoRetry = autoRetry;
+    }
+
+    @Override public boolean getBasicAlerts() {
+        return this.basicAlerts;
+    }
+
+    @Override public void setBasicAlerts(boolean basicAlerts) {
+        this.basicAlerts = basicAlerts;
+    }
+
+    @Override public boolean getBasicPages() {
+        return this.basicPages;
+    }
+
+    @Override public void setBasicPages(boolean basicPages) {
+        this.basicPages = basicPages;
     }
 
     private int countErrorTasks() {

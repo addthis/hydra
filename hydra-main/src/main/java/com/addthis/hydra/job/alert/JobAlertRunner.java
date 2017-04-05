@@ -24,13 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.net.http.HttpResponse;
-import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
@@ -102,7 +102,7 @@ public class JobAlertRunner {
     private boolean alertsEnabled;
     private volatile boolean lastAlertScanFailed;
 
-    public JobAlertRunner(Spawn spawn, boolean alertEnabled) {
+    public JobAlertRunner(Spawn spawn) {
         this.spawn = spawn;
         this.spawnDataStore = spawn.getSpawnDataStore();
         try {
@@ -111,18 +111,27 @@ public class JobAlertRunner {
             log.warn("Warning: failed to instantiate job alert mesh client", e);
             meshyClient = null;
         }
-        this.alertsEnabled = alertEnabled;
+        String alertsEnabledString = null;
+        try {
+            alertsEnabledString = spawnDataStore.get(SPAWN_COMMON_ALERT_PATH);
+        } catch (Exception e) {
+            log.warn("Unable to read alerts status due to: {}", e.getMessage());
+        }
+        this.alertsEnabled =
+                (alertsEnabledString == null) || alertsEnabledString.isEmpty() || "true".equals(alertsEnabledString);
         this.alertMap = new ConcurrentHashMap<>();
         loadAlertMap();
     }
 
     /** Disables alert scanning */
-    public void disableAlerts() {
+    public void disableAlerts() throws Exception {
+        spawnDataStore.put(SPAWN_COMMON_ALERT_PATH, "false");
         this.alertsEnabled = false;
     }
 
     /** Enables alert scanning */
-    public void enableAlerts() {
+    public void enableAlerts() throws Exception {
+        spawnDataStore.put(SPAWN_COMMON_ALERT_PATH, "true");
         this.alertsEnabled = true;
     }
 
@@ -279,8 +288,8 @@ public class JobAlertRunner {
         // Turn all the jobs in error into a list of information about each job
 
         AlertWebhookRequest webhookRequest = new AlertWebhookRequest();
+        webhookRequest.setAlertType(jobAlert.getTypeString());
         webhookRequest.setAlertLink(alertLink);
-        webhookRequest.setAlertType(jobAlert.getTypeString().trim());
         webhookRequest.setAlertReason(reason.trim());
         webhookRequest.setAlertDescription(jobAlert.description);
 
@@ -343,19 +352,18 @@ public class JobAlertRunner {
                                 Map<String, String> errors) {
 
         String description = jobAlert.description;
-        boolean hasDescription = LessStrings.isNotEmpty(description);
-        String subject;
-        if (hasDescription) {
-            subject = reason + ' ' + description.split("\n")[0];
+        boolean blankDescription = StringUtils.isBlank(description);
+        final String shortDescription;
+        if (blankDescription) {
+            shortDescription = errors.keySet().toString();
         } else {
-            subject = String.format("%s %s - %s - %s", reason, jobAlert.getTypeString(),
-                                    JobAlertRunner.getClusterHead(), errors.keySet());
+            shortDescription = description.split("\n")[0];
         }
-
+        String subject = String.format("%s %s - %s", reason, jobAlert.getTypeString(), shortDescription);
         StringBuilder sb = new StringBuilder(reason + ' ' + jobAlert.getTypeString() + '\n');
         sb.append("Alert link : ").append(alertLink).append('\n');
 
-        if (StringUtils.isNotBlank(description)) {
+        if (!blankDescription) {
             sb.append("Alert Description : ").append(description).append('\n');
         }
 
@@ -490,10 +498,6 @@ public class JobAlertRunner {
         }
     }
 
-    public static String getClusterHead() {
-        return clusterHead;
-    }
-
     /** Copy and then modify an alert by removing a specific job id. */
     private AbstractJobAlert copyWithoutJobId(@Nonnull String jobId, AbstractJobAlert old) {
         ObjectNode json = Jackson.defaultMapper().valueToTree(old);
@@ -535,6 +539,15 @@ public class JobAlertRunner {
                          jobId, mappedAlertId);
             }
         }
+    }
+
+    /**
+     * Returns alerts for the given job id. Does not look up aliases for a job id. If job id is an alias, will
+     * return any alerts that are configured on the alias, but will not look up alerts on the actual job id.
+     */
+    public Set<AbstractJobAlert> getAlertsForJob(String jobId) {
+        Set<String> alertIds = ImmutableSet.copyOf(jobToAlertsMap.get(jobId));
+        return alertIds.stream().map(alertMap::get).collect(Collectors.toSet());
     }
 
     @VisibleForTesting

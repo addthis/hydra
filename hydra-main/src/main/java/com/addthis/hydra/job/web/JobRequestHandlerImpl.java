@@ -28,6 +28,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
+import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
@@ -46,9 +47,11 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     private static final Logger log = LoggerFactory.getLogger(JobRequestHandlerImpl.class);
 
     private final Spawn spawn;
+    private final JobAlertManager jobAlertManager;
 
     public JobRequestHandlerImpl(Spawn spawn) {
         this.spawn = spawn;
+        this.jobAlertManager = spawn.getJobAlertManager();
     }
 
     @Override
@@ -97,6 +100,8 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         updateBasicSettings(kv, job, username);
         updateQueryConfig(kv, job);
         updateJobParameters(kv, job, expandedConfig);
+        updateBasicAlerts(kv, job);
+
         // persist update
         // XXX When this call fails the job will be left in an inconsistent state.
         // empirically, it happens rarely (e.g. no one sets replicas to an insanely large number).
@@ -126,6 +131,16 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         job.setOwner(user.name());
         job.setGroup(user.primaryGroup());
     }
+
+    /**
+     * Updates auto generated alerts on job. jobAlertManager may update the basicAlerts/basicPages job setting.
+     */
+    private void updateBasicAlerts(KVPairs kv, IJob job) {
+        boolean basicAlerts = KVUtils.getBooleanValue(kv, false, "basicAlerts");
+        boolean basicPages = KVUtils.getBooleanValue(kv, false, "basicPages");
+        jobAlertManager.updateBasicAlerts(job, basicAlerts, basicPages);
+    }
+
 
     private void updateBasicSettings(KVPairs kv, IJob job, String user) {
         job.setOwner(kv.getValue("owner", job.getOwner()));

@@ -86,8 +86,10 @@ import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.RebalanceOutcome;
+import com.addthis.hydra.job.alert.GroupManager;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alert.JobAlertManagerImpl;
+import com.addthis.hydra.job.alert.JobAlertRunner;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.alias.AliasManagerImpl;
 import com.addthis.hydra.job.auth.PermissionsManager;
@@ -258,7 +260,9 @@ public class Spawn implements Codable, AutoCloseable {
                                                       required = true) PermissionsManager permissionsManager,
                                @Nonnull @JsonProperty(value = "jobDefaults",
                                                       required = true) JobDefaults jobDefaults,
-                               @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize) throws Exception {
+                               @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize,
+                               @Nonnull @JsonProperty(value = "groupManager", required = true) GroupManager groupManager)
+            throws Exception {
         this.jobLock = new ReentrantLock();
         this.shuttingDown = new AtomicBoolean(false);
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
@@ -342,7 +346,7 @@ public class Spawn implements Codable, AutoCloseable {
         // SpawnBalancer, it's safer to start as late in the spawn init cycle as possible.
         hostFailWorker.initFailHostTaskSchedule();
         // start JobAlertManager
-        jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
+        jobAlertManager = new JobAlertManagerImpl(groupManager, new JobAlertRunner(this), scheduledExecutor);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(this::drainJobTaskUpdateQueue,

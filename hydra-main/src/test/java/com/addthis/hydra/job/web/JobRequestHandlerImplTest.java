@@ -20,6 +20,10 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.alert.Group;
+import com.addthis.hydra.job.alert.GroupManager;
+import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobCommandManager;
@@ -49,6 +53,7 @@ public class JobRequestHandlerImplTest {
 
     private Spawn spawn;
     private JobCommandManager jobCommandManager;
+    private JobAlertManager jobAlertManager;
     private JobRequestHandlerImpl impl;
     private String username = "megatron";
     private String token = "megatron";
@@ -60,7 +65,9 @@ public class JobRequestHandlerImplTest {
         // mocks and stubs
         spawn = mock(Spawn.class);
         jobCommandManager = mock(JobCommandManager.class);
+        jobAlertManager = mock(JobAlertManager.class);
         when(spawn.getJobCommandManager()).thenReturn(jobCommandManager);
+        when(spawn.getJobAlertManager()).thenReturn(jobAlertManager);
         when(spawn.getPermissionsManager()).thenReturn(PermissionsManager.createManagerAllowAll());
         when(jobCommandManager.getEntity("default-task")).thenReturn(new JobCommand());
 
@@ -293,6 +300,34 @@ public class JobRequestHandlerImplTest {
         assertEquals("parameter 'start-date' value", "140908", startDate.getValue());
         assertNotNull("parameter 'end-date' found", endDate);
         assertNull("parameter 'end-date' cleared", endDate.getValue());
+    }
+
+    @Test public void basicAlerts_enabled() throws Exception {
+        Job job = new Job("existing_job_id", "megatron");
+        // make sure nodes are created
+        job.addTask(new JobTask());
+        when(spawn.getJob("existing_job_id")).thenReturn(job);
+        kv.add("id", "existing_job_id");
+        kv.add("command", "default-task");
+        kv.add("config", "%[start-date]% %[end-date]%");
+        kv.add("basicAlerts", "true");
+        kv.add("basicPages", "true");
+        impl.createOrUpdateJob(kv, username, token, sudo, false);
+        verify(jobAlertManager).updateBasicAlerts(job, true, true);
+    }
+
+    @Test public void basicAlerts_disabled() throws Exception {
+        Job job = new Job("existing_job_id", "megatron");
+        // make sure nodes are created
+        job.addTask(new JobTask());
+        when(spawn.getJob("existing_job_id")).thenReturn(job);
+        kv.add("id", "existing_job_id");
+        kv.add("command", "default-task");
+        kv.add("config", "%[start-date]% %[end-date]%");
+        kv.add("maxRuntime", 30);
+        kv.add("rekickTimeout", 30);
+        impl.createOrUpdateJob(kv, username, token, sudo, false);
+        verify(jobAlertManager).updateBasicAlerts(job, false, false);
     }
 
     private void verifyNoSpawnCreateJobCall() throws Exception {

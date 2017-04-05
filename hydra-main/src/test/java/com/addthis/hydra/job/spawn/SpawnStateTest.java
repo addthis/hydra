@@ -103,7 +103,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost", null,
                                                         ImmutableList.of(job.getId()),
-                                                        SuppressChanges.FALSE, 0, null, null);
+                                                        SuppressChanges.FALSE, null, 0, null, null);
             spawn.getJobAlertManager().putAlert(input.alertId, input);
             String json = spawn.getJobAlertManager().getAlert(input.alertId);
             OnErrorJobAlert output = Configs.decodeObject(OnErrorJobAlert.class, json);
@@ -125,7 +125,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost", null,
                                                         ImmutableList.of(job.getId(), "foobar"),
-                                                        SuppressChanges.FALSE, 0, null, null);
+                                                        SuppressChanges.FALSE, null, 0, null, null);
             spawn.getJobAlertManager().putAlert(input.alertId, input);
             String json = spawn.getJobAlertManager().getAlert(input.alertId);
             OnErrorJobAlert output = Configs.decodeObject(OnErrorJobAlert.class, json);
