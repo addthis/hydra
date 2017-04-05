@@ -102,7 +102,7 @@ public class JobAlertRunner {
     private boolean alertsEnabled;
     private volatile boolean lastAlertScanFailed;
 
-    public JobAlertRunner(Spawn spawn, boolean alertEnabled) {
+    public JobAlertRunner(Spawn spawn) {
         this.spawn = spawn;
         this.spawnDataStore = spawn.getSpawnDataStore();
         try {
@@ -111,18 +111,27 @@ public class JobAlertRunner {
             log.warn("Warning: failed to instantiate job alert mesh client", e);
             meshyClient = null;
         }
-        this.alertsEnabled = alertEnabled;
+        String alertsEnabledString = null;
+        try {
+            alertsEnabledString = spawnDataStore.get(SPAWN_COMMON_ALERT_PATH);
+        } catch (Exception e) {
+            log.warn("Unable to read alerts status due to: {}", e.getMessage());
+        }
+        this.alertsEnabled =
+                (alertsEnabledString == null) || alertsEnabledString.isEmpty() || "true".equals(alertsEnabledString);
         this.alertMap = new ConcurrentHashMap<>();
         loadAlertMap();
     }
 
     /** Disables alert scanning */
-    public void disableAlerts() {
+    public void disableAlerts() throws Exception {
+        spawnDataStore.put(SPAWN_COMMON_ALERT_PATH, "false");
         this.alertsEnabled = false;
     }
 
     /** Enables alert scanning */
-    public void enableAlerts() {
+    public void enableAlerts() throws Exception {
+        spawnDataStore.put(SPAWN_COMMON_ALERT_PATH, "true");
         this.alertsEnabled = true;
     }
 

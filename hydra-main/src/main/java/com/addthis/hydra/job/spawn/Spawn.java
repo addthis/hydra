@@ -89,6 +89,7 @@ import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.alert.GroupManager;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alert.JobAlertManagerImpl;
+import com.addthis.hydra.job.alert.JobAlertRunner;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.alias.AliasManagerImpl;
 import com.addthis.hydra.job.auth.PermissionsManager;
@@ -234,7 +235,6 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
     @Nullable private final JobStore jobStore;
-    @Nonnull private final GroupManager groupManager;
 
     @JsonCreator private Spawn(@JsonProperty("debug") String debug,
                                @JsonProperty(value = "queryPort", required = true) int queryPort,
@@ -346,7 +346,7 @@ public class Spawn implements Codable, AutoCloseable {
         // SpawnBalancer, it's safer to start as late in the spawn init cycle as possible.
         hostFailWorker.initFailHostTaskSchedule();
         // start JobAlertManager
-        jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
+        jobAlertManager = new JobAlertManagerImpl(groupManager, new JobAlertRunner(this), scheduledExecutor);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(this::drainJobTaskUpdateQueue,
@@ -369,7 +369,6 @@ public class Spawn implements Codable, AutoCloseable {
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         this.jobStore = jobStore;
-        this.groupManager = groupManager;
         this.eventLog =
                 new RollingLog(new File(LOG_DIR, "events-jobs"), "job", EVENT_LOG_COMPRESS, LOG_MAX_SIZE, LOG_MAX_AGE);
         Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(hostManager));
@@ -811,10 +810,6 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     @Nonnull public PermissionsManager getPermissionsManager() { return permissionsManager; }
-
-    @Nonnull public GroupManager getGroupManager() {
-        return groupManager;
-    }
 
     public Collection<Job> listJobs() {
         List<Job> clones = new ArrayList<>(spawnState.jobs.size());

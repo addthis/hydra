@@ -42,12 +42,12 @@ public class JobAlertManagerImplTest {
     @Before public void setUp() throws Exception {
         spawn = mock(Spawn.class);
         runner = mock(JobAlertRunner.class);
-        when(spawn.getGroupManager()).thenReturn(new GroupManager(Lists.newArrayList(
+        GroupManager groupManager = new GroupManager(Lists.newArrayList(
                 new Group("nosettings", null, null, null),
                 new Group("allsettings", "email", "page", "webhook"),
                 new Group("emailonly", "email", null, null)
-        )));
-        impl = new JobAlertManagerImpl(spawn, runner, mock(ScheduledExecutorService.class));
+        ));
+        impl = new JobAlertManagerImpl(groupManager, runner, mock(ScheduledExecutorService.class));
         job = new Job("jobid");
         job.addTask(new JobTask());
         job.setRekickTimeout(30L);
@@ -107,7 +107,7 @@ public class JobAlertManagerImplTest {
     @Test public void basicAlerts_noJobSettings() throws Exception {
         job.setGroup("email");
         impl.updateBasicAlerts(job, true, true);
-        when(spawn.getGroupManager()).thenReturn(new GroupManager(Lists.newArrayList()));
+        impl = new JobAlertManagerImpl(new GroupManager(Lists.newArrayList()), runner, mock(ScheduledExecutorService.class));
         verify(runner, never()).putAlert(anyString(), any());
         assertFalse(job.getBasicAlerts());
         assertFalse(job.getBasicPages());
