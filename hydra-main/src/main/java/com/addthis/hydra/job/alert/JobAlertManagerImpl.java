@@ -151,7 +151,7 @@ public class JobAlertManagerImpl implements JobAlertManager {
         @Nullable final Group group = this.groupManager.getGroup(job.getGroup());
         // don't try to create alerts if config is not set up for the user/group
         if (group == null) {
-            log.info("group was null");
+            log.warn("No group '{}' found for job {}. Unable to create alerts without config.", job.getGroup(), job.getId());
             return;
         }
 
