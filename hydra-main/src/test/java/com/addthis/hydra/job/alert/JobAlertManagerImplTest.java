@@ -54,6 +54,49 @@ public class JobAlertManagerImplTest {
         job.setMaxRunTime(30L);
     }
 
+    private void setupPreviousAlerts() {
+        when(runner.getAlertsForJob("jobid")).thenReturn(Sets.newHashSet(
+                new OnErrorJobAlert("error",
+                        null,
+                        0,
+                        null,
+                        null,
+                        Lists.newArrayList("jobid"),
+                        null,
+                        BASIC_ALERT,
+                        0,
+                        null,
+                        null
+                ),
+                new RekickTimeoutJobAlert("rekick",
+                        null,
+                        0,
+                        0,
+                        null,
+                        null,
+                        Lists.newArrayList("jobid"),
+                        null,
+                        BASIC_ALERT,
+                        0,
+                        null,
+                        null
+                ),
+                new RuntimeExceededJobAlert("runtime",
+                        null,
+                        0,
+                        0,
+                        null,
+                        null,
+                        Lists.newArrayList("jobid"),
+                        null,
+                        BASIC_ALERT,
+                        0,
+                        null,
+                        null
+                )
+        ));
+    }
+
     @Test
     public void basicAlerts_groupWithOnlyEmail() throws Exception {
         job.setGroup("emailonly");
@@ -131,46 +174,7 @@ public class JobAlertManagerImplTest {
     }
 
     @Test public void basicAlerts_update() throws Exception {
-        when(runner.getAlertsForJob("jobid")).thenReturn(Sets.newHashSet(
-                new OnErrorJobAlert("error",
-                        null,
-                        0,
-                        null,
-                        null,
-                        Lists.newArrayList("existing_job_id"),
-                        null,
-                        BASIC_ALERT,
-                        0,
-                        null,
-                        null
-                ),
-                new RekickTimeoutJobAlert("rekick",
-                        null,
-                        0,
-                        0,
-                        null,
-                        null,
-                        Lists.newArrayList("existing_job_id"),
-                        null,
-                        BASIC_ALERT,
-                        0,
-                        null,
-                        null
-                ),
-                new RuntimeExceededJobAlert("runtime",
-                        null,
-                        0,
-                        0,
-                        null,
-                        null,
-                        Lists.newArrayList("existing_job_id"),
-                        null,
-                        BASIC_ALERT,
-                        0,
-                        null,
-                        null
-                )
-        ));
+        setupPreviousAlerts();
         job.setGroup("allsettings");
         impl.updateBasicAlerts(job, true, true);
         ArgumentCaptor<AbstractJobAlert> captor = ArgumentCaptor.forClass(AbstractJobAlert.class);
@@ -191,44 +195,7 @@ public class JobAlertManagerImplTest {
     }
 
     @Test public void basicAlerts_delete() throws Exception {
-        when(runner.getAlertsForJob("jobid")).thenReturn(Sets.newHashSet(new OnErrorJobAlert("error",
-                        null,
-                        0,
-                        null,
-                        null,
-                        Lists.newArrayList("existing_job_id"),
-                        null,
-                        BASIC_ALERT,
-                        0,
-                        null,
-                        null
-                ),
-                new RekickTimeoutJobAlert("rekick",
-                        null,
-                        0,
-                        0,
-                        null,
-                        null,
-                        Lists.newArrayList("existing_job_id"),
-                        null,
-                        BASIC_ALERT,
-                        0,
-                        null,
-                        null
-                ),
-                new RuntimeExceededJobAlert("runtime",
-                        null,
-                        0,
-                        0,
-                        null,
-                        null,
-                        Lists.newArrayList("existing_job_id"),
-                        null,
-                        BASIC_ALERT,
-                        0,
-                        null,
-                        null
-                )));
+        setupPreviousAlerts();
         job.setGroup("allsettings");
         job.setBasicAlerts(true);
         job.setBasicPages(false);
@@ -268,6 +235,24 @@ public class JobAlertManagerImplTest {
         impl.updateBasicAlerts(job, false, false);
         ArgumentCaptor<AbstractJobAlert> captor = ArgumentCaptor.forClass(AbstractJobAlert.class);
         verify(runner, never()).putAlert(anyString(), captor.capture());
+    }
+
+    @Test public void basicAlerts_removeRuntimeAlert() throws Exception {
+        setupPreviousAlerts();
+        job.setGroup("allsettings");
+        job.setMaxRunTime(0L);
+        impl.updateBasicAlerts(job, true, false);
+        verify(runner, times(2)).putAlert(anyString(), any());
+        verify(runner, times(1)).removeAlert("runtime");
+    }
+
+    @Test public void basicAlerts_removeRekickAlert() throws Exception {
+        setupPreviousAlerts();
+        job.setGroup("allsettings");
+        job.setRekickTimeout(0L);
+        impl.updateBasicAlerts(job, true, false);
+        verify(runner, times(2)).putAlert(anyString(), any());
+        verify(runner, times(1)).removeAlert("rekick");
     }
 
 }

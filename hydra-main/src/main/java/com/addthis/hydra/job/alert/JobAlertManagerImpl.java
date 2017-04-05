@@ -226,9 +226,10 @@ public class JobAlertManagerImpl implements JobAlertManager {
         );
         this.putAlert(error.alertId, error);
 
-        if (job.getRekickTimeout() != null) {
-            long rekickTimeout = job.getRekickTimeout() + REKICK_PADDING;
-            RekickTimeoutJobAlert rekick = new RekickTimeoutJobAlert(rekickId,
+        Long rekick = job.getRekickTimeout();
+        if ((rekick != null) && (rekick > 0)) {
+            long rekickTimeout = rekick + REKICK_PADDING;
+            RekickTimeoutJobAlert rekickAlert = new RekickTimeoutJobAlert(rekickId,
                     description,
                     rekickTimeout,
                     0,
@@ -241,15 +242,17 @@ public class JobAlertManagerImpl implements JobAlertManager {
                     null,
                     null
             );
-            this.putAlert(rekick.alertId, rekick);
+            this.putAlert(rekickAlert.alertId, rekickAlert);
+        } else if (rekickId != null) {
+            this.removeAlert(rekickId);
         }
-
-        if (job.getMaxRunTime() != null) {
+        Long runtime = job.getMaxRunTime();
+        if ((runtime != null) && (runtime > 0)) {
             long runtimeTimeout = JobAlertManagerImpl.calculateRuntimeTimeout(job.getTaskCount(),
-                    job.getMaxRunTime(),
+                    runtime,
                     job.getMaxSimulRunning()
             );
-            RuntimeExceededJobAlert runtime = new RuntimeExceededJobAlert(runtimeId,
+            RuntimeExceededJobAlert runtimeAlert = new RuntimeExceededJobAlert(runtimeId,
                     description,
                     runtimeTimeout,
                     0,
@@ -262,7 +265,9 @@ public class JobAlertManagerImpl implements JobAlertManager {
                     null,
                     null
             );
-            this.putAlert(runtime.alertId, runtime);
+            this.putAlert(runtimeAlert.alertId, runtimeAlert);
+        } else if (runtimeId != null) {
+            this.removeAlert(runtimeId);
         }
     }
 
@@ -271,7 +276,7 @@ public class JobAlertManagerImpl implements JobAlertManager {
      */
     private static long calculateRuntimeTimeout(int tasks, long maxRuntime, int maxSimul) {
         double taskMultiplier = 1;
-        if (maxSimul != 0) {
+        if (maxSimul > 0) {
             taskMultiplier = Math.ceil((double) tasks / (double) maxSimul);
         }
         long timeout = (long) (((double) maxRuntime * taskMultiplier) + ((double) RUNTIME_PADDING * taskMultiplier));
