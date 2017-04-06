@@ -16,11 +16,13 @@ package com.addthis.hydra.job.spawn.balancer;
 final class HostScore {
 
     private final double meanActiveTasks;
+    private final long diskFreeBytes;
     private final double usedDiskPercent;
     private final double overallScore;
 
-    HostScore(double meanActiveTasks, double usedDiskPercent, double overallScore) {
+    HostScore(double meanActiveTasks, double usedDiskPercent, long diskFreeBytes, double overallScore) {
         this.meanActiveTasks = meanActiveTasks;
+        this.diskFreeBytes = diskFreeBytes;
         this.usedDiskPercent = usedDiskPercent;
         this.overallScore = overallScore;
     }
@@ -31,5 +33,9 @@ final class HostScore {
 
     public double getScoreValue(boolean diskSpace) {
         return diskSpace ? usedDiskPercent : meanActiveTasks;
+    }
+
+    public long getDiskFreeBytes() {
+        return diskFreeBytes;
     }
 }

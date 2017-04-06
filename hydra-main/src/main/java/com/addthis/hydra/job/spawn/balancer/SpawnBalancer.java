@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import java.math.BigInteger;
+
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
@@ -65,6 +67,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Gauge;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,6 +96,14 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     // How often to update aggregate host statistics
     static final long AGGREGATE_STAT_UPDATE_INTERVAL = Parameter.intValue("spawnbalance.stat.update", 15 * 1000);
+
+    // metrics
+    private volatile long avgDiskFreeDiff = 0;
+    private volatile long minDiskFreeDiff = 0;
+    private volatile long maxDiskFreeDiff = 0;
+    private volatile double avgTaskPercentDiff = 0;
+    private volatile double minTaskPercentDiff = 0;
+    private volatile double maxTaskPercentDiff = 0;
 
     private final ConcurrentHashMap<String, HostScore> cachedHostScores;
     private final ReentrantLock aggregateStatisticsLock;
@@ -136,10 +148,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         recentlyReplicatedToHosts = CacheBuilder.newBuilder().expireAfterWrite(
                 Parameter.intValue("spawnbalance.host.replicate.interval.mins", 15), TimeUnit.MINUTES
         ).build();
-        hostAndScoreComparator = (firstHAS, secondHAS) -> Double.compare(firstHAS.score, secondHAS.score);
-        hostStateScoreComparator = (hostState, hostState1) -> Double.compare(
-                getHostScoreCached(hostState.getHostUuid()),
-                getHostScoreCached(hostState1.getHostUuid()));
+        hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
+        hostStateScoreComparator = Comparator.comparingDouble(hostState -> this.getHostScoreCached(hostState.getHostUuid()));
         jobAverageTaskSizeComparator = (job, job1) -> {
             if ((job == null) || (job1 == null)) {
                 return 0;
@@ -159,6 +169,37 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
             return -Double.compare(availBytes, availBytes1);
         };
+        // metrics
+        Metrics.newGauge(this.getClass(), "avgDiskFreeDiff", new Gauge<Long>() {
+            @Override public Long value() {
+                return avgDiskFreeDiff;
+            }
+        });
+        Metrics.newGauge(this.getClass(), "minDiskFreeDiff", new Gauge<Long>() {
+            @Override public Long value() {
+                return minDiskFreeDiff;
+            }
+        });
+        Metrics.newGauge(this.getClass(), "maxDiskFreeDiff", new Gauge<Long>() {
+            @Override public Long value() {
+                return maxDiskFreeDiff;
+            }
+        });
+        Metrics.newGauge(this.getClass(), "avgTaskPercentDiff", new Gauge<Double>() {
+            @Override public Double value() {
+                return avgTaskPercentDiff;
+            }
+        });
+        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", new Gauge<Double>() {
+            @Override public Double value() {
+                return minTaskPercentDiff;
+            }
+        });
+        Metrics.newGauge(this.getClass(), "maxTaskPercentDiff", new Gauge<Double>() {
+            @Override public Double value() {
+                return maxTaskPercentDiff;
+            }
+        });
     }
 
     /** Loads SpawnBalancerConfig from data store; if no data or failed, returns the default. */
@@ -1205,14 +1246,54 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 findActiveJobIDs();
                 double maxMeanActive = -1;
                 double maxDiskPercentUsed = -1;
+                long maxDiskFree = 0;
+                long minDiskFree = Long.MAX_VALUE;
+                BigInteger sumDiskFree = BigInteger.valueOf(0);
+                double maxTaskPercent = 0;
+                double minTaskPercent = 1;
+                double sumTaskPercent = 0;
                 for (HostState host : hosts) {
                     maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
                     maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
                 }
                 for (HostState host : hosts) {
-                    cachedHostScores.put(host.getHostUuid(),
-                                         calculateHostScore(host, maxMeanActive, maxDiskPercentUsed));
+                    // metrics here
+                    HostScore score = calculateHostScore(host, maxMeanActive, maxDiskPercentUsed);
+                    cachedHostScores.put(host.getHostUuid(), score);
+                    long freeDisk = score.getDiskFreeBytes();
+                    double taskPercent = score.getScoreValue(false);
+                    sumDiskFree.add(BigInteger.valueOf(freeDisk));
+                    sumTaskPercent += taskPercent;
+                    if (freeDisk > maxDiskFree) {
+                        maxDiskFree = freeDisk;
+                    }
+                    if (freeDisk < minDiskFree) {
+                        minDiskFree = freeDisk;
+                    }
+                    if (taskPercent > maxTaskPercent) {
+                        maxTaskPercent = taskPercent;
+                    }
+                    if (taskPercent < minTaskPercent) {
+                        minTaskPercent = taskPercent;
+                    }
                 }
+                // update average metrics
+                int numScores = cachedHostScores.size();
+                long avgDiskFree = sumDiskFree.divide(BigInteger.valueOf(numScores)).longValue();
+                double avgTaskPercent = sumTaskPercent / (double) numScores;
+                BigInteger sumDiskFreeDiff = BigInteger.valueOf(0);
+                double sumTaskPercentDiff = 0;
+                for (HostScore score : cachedHostScores.values()) {
+                    long diskDiff = Math.abs(avgDiskFree - score.getDiskFreeBytes());
+                    sumDiskFreeDiff.add(BigInteger.valueOf(diskDiff));
+                    sumTaskPercentDiff += Math.abs(avgTaskPercent - score.getScoreValue(false));
+                }
+                avgDiskFreeDiff = sumDiskFreeDiff.divide(BigInteger.valueOf((long) numScores)).longValue();
+                avgTaskPercentDiff = sumTaskPercentDiff / (double) numScores;
+                minDiskFreeDiff = avgDiskFree - minDiskFree;
+                maxDiskFreeDiff = maxDiskFree - avgDiskFree;
+                minTaskPercentDiff = avgTaskPercent - minTaskPercent;
+                maxTaskPercentDiff = maxTaskPercent - avgTaskPercent;
             } finally {
                 aggregateStatisticsLock.unlock();
             }
@@ -1225,6 +1306,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         double score = 0;
         double meanActive = host.getMeanActiveTasks();
         double usedDiskPercent = getUsedDiskPercent(host);
+        long diskFreeBytes = host.getMax().getDisk() - host.getUsed().getDisk();
         // If either metric is zero across the whole cluster, treat every host as having full load in that aspect
         if (clusterMaxMeanActive <= 0) {
             meanActive = 1;
@@ -1241,7 +1323,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         score += diskUsedWeight * Math.pow(usedDiskPercent / clusterMaxDiskUsed, 2.5);
         // If host is very full, make sure to give the host a big score
         score = Math.max(score, (activeTaskWeight + diskUsedWeight) * usedDiskPercent);
-        return new HostScore(meanActive, usedDiskPercent, score);
+        return new HostScore(meanActive, usedDiskPercent, diskFreeBytes, score);
     }
 
     /**
