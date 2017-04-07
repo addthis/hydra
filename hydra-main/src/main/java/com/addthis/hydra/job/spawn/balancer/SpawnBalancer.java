@@ -169,37 +169,24 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
             return -Double.compare(availBytes, availBytes1);
         };
-        // metrics
-        Metrics.newGauge(this.getClass(), "avgDiskFreeDiff", new Gauge<Long>() {
-            @Override public Long value() {
-                return avgDiskFreeDiff;
+        this.initMetrics();
+    }
+
+    private void initMetrics() {
+        Metrics.newGauge(this.getClass(), "minDiskFreeDiff", SpawnBalancer.makeGauge(minDiskFreeDiff));
+        Metrics.newGauge(this.getClass(), "maxDiskFreeDiff", SpawnBalancer.makeGauge(maxDiskFreeDiff));
+        Metrics.newGauge(this.getClass(), "avgDiskFreeDiff", SpawnBalancer.makeGauge(avgDiskFreeDiff));
+        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", SpawnBalancer.makeGauge(minTaskPercentDiff));
+        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", SpawnBalancer.makeGauge(minTaskPercentDiff));
+        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", SpawnBalancer.makeGauge(minTaskPercentDiff));
+    }
+
+    private static <T> Gauge<T> makeGauge(T value) {
+        return new Gauge<T>() {
+            @Override public T value() {
+                return value;
             }
-        });
-        Metrics.newGauge(this.getClass(), "minDiskFreeDiff", new Gauge<Long>() {
-            @Override public Long value() {
-                return minDiskFreeDiff;
-            }
-        });
-        Metrics.newGauge(this.getClass(), "maxDiskFreeDiff", new Gauge<Long>() {
-            @Override public Long value() {
-                return maxDiskFreeDiff;
-            }
-        });
-        Metrics.newGauge(this.getClass(), "avgTaskPercentDiff", new Gauge<Double>() {
-            @Override public Double value() {
-                return avgTaskPercentDiff;
-            }
-        });
-        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", new Gauge<Double>() {
-            @Override public Double value() {
-                return minTaskPercentDiff;
-            }
-        });
-        Metrics.newGauge(this.getClass(), "maxTaskPercentDiff", new Gauge<Double>() {
-            @Override public Double value() {
-                return maxTaskPercentDiff;
-            }
-        });
+        };
     }
 
     /** Loads SpawnBalancerConfig from data store; if no data or failed, returns the default. */
@@ -1248,7 +1235,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 double maxDiskPercentUsed = -1;
                 long maxDiskFree = 0;
                 long minDiskFree = Long.MAX_VALUE;
-                BigInteger sumDiskFree = BigInteger.valueOf(0);
+                long sumDiskFree = 0;
                 double maxTaskPercent = 0;
                 double minTaskPercent = 1;
                 double sumTaskPercent = 0;
@@ -1260,31 +1247,23 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     // metrics here
                     HostScore score = calculateHostScore(host, maxMeanActive, maxDiskPercentUsed);
                     cachedHostScores.put(host.getHostUuid(), score);
-                    long freeDisk = score.getDiskFreeBytes();
+                    long freeDisk = score.getFreeDiskBytes();
                     double taskPercent = score.getScoreValue(false);
-                    sumDiskFree.add(BigInteger.valueOf(freeDisk));
+                    sumDiskFree += freeDisk;
                     sumTaskPercent += taskPercent;
-                    if (freeDisk > maxDiskFree) {
-                        maxDiskFree = freeDisk;
-                    }
-                    if (freeDisk < minDiskFree) {
-                        minDiskFree = freeDisk;
-                    }
-                    if (taskPercent > maxTaskPercent) {
-                        maxTaskPercent = taskPercent;
-                    }
-                    if (taskPercent < minTaskPercent) {
-                        minTaskPercent = taskPercent;
-                    }
+                    maxDiskFree = Math.max(freeDisk, maxDiskFree);
+                    minDiskFree = Math.min(freeDisk, minDiskFree);
+                    maxTaskPercent = Math.max(taskPercent, maxTaskPercent);
+                    minTaskPercent = Math.min(taskPercent, minTaskPercent);
                 }
                 // update average metrics
                 int numScores = cachedHostScores.size();
-                long avgDiskFree = sumDiskFree.divide(BigInteger.valueOf(numScores)).longValue();
+                long avgDiskFree = sumDiskFree / (long) numScores;
                 double avgTaskPercent = sumTaskPercent / (double) numScores;
                 BigInteger sumDiskFreeDiff = BigInteger.valueOf(0);
                 double sumTaskPercentDiff = 0;
                 for (HostScore score : cachedHostScores.values()) {
-                    long diskDiff = Math.abs(avgDiskFree - score.getDiskFreeBytes());
+                    long diskDiff = Math.abs(avgDiskFree - score.getFreeDiskBytes());
                     sumDiskFreeDiff.add(BigInteger.valueOf(diskDiff));
                     sumTaskPercentDiff += Math.abs(avgTaskPercent - score.getScoreValue(false));
                 }
@@ -1306,7 +1285,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         double score = 0;
         double meanActive = host.getMeanActiveTasks();
         double usedDiskPercent = getUsedDiskPercent(host);
-        long diskFreeBytes = host.getMax().getDisk() - host.getUsed().getDisk();
+
+        long diskFreeBytes = getAvailDiskBytes(host);
         // If either metric is zero across the whole cluster, treat every host as having full load in that aspect
         if (clusterMaxMeanActive <= 0) {
             meanActive = 1;
