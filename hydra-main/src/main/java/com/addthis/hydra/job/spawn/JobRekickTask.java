@@ -41,12 +41,12 @@ class JobRekickTask implements Runnable {
             try {
                 if (!spawn.getSystemManager().isQuiesced()) {
                     String[] jobids = null;
-                    spawn.jobLock.lock();
+                    spawn.acquireJobLock();
                     try {
                         jobids = new String[spawn.spawnState.jobs.size()];
                         jobids = spawn.spawnState.jobs.keySet().toArray(jobids);
                     } finally {
-                        spawn.jobLock.unlock();
+                        spawn.releaseJobLock();
                     }
                     long clock = System.currentTimeMillis();
                     for (String jobid : jobids) {

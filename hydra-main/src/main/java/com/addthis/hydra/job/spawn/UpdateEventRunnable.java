@@ -52,7 +52,7 @@ class UpdateEventRunnable implements Runnable {
         int taskQueuedNoSlot = 0;
         long files = 0;
         long bytes = 0;
-        spawn.jobLock.lock();
+        spawn.acquireJobLock();
         try {
             for (Job job : spawn.spawnState.jobs.values()) {
                 jobsTotal++;
@@ -129,7 +129,7 @@ class UpdateEventRunnable implements Runnable {
                 }
             }
         } finally {
-            spawn.jobLock.unlock();
+            spawn.releaseJobLock();
         }
         long diskUsed = 0;
         long diskCapacity = 0;

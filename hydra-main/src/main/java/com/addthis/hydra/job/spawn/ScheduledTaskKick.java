@@ -71,11 +71,11 @@ public class ScheduledTaskKick implements Runnable {
             }
         } catch (Exception e) {
             log.warn("failed to kick job {} task {} on host {}", jobId, kick.getNodeID(), kick.getHostUuid(), e);
-            spawn.jobLock.lock();
+            spawn.acquireJobLock();
             try {
                 job.errorTask(task, JobTaskErrorCode.KICK_ERROR);
             } finally {
-                spawn.jobLock.unlock();
+                spawn.releaseJobLock();
             }
         }
     }
