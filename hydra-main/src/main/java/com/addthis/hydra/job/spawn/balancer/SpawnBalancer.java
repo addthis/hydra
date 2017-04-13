@@ -1197,27 +1197,22 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param hosts A list of HostStates
      */
     protected void updateAggregateStatistics(Iterable<HostState> hosts) {
-        spawn.acquireJobLock();
+        aggregateStatisticsLock.lock();
         try {
-            aggregateStatisticsLock.lock();
-            try {
-                lastAggregateStatUpdateTime = JitterClock.globalTime();
-                findActiveJobIDs();
-                double maxMeanActive = -1;
-                double maxDiskPercentUsed = -1;
-                for (HostState host : hosts) {
-                    maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
-                    maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
-                }
-                for (HostState host : hosts) {
-                    cachedHostScores.put(host.getHostUuid(),
-                                         calculateHostScore(host, maxMeanActive, maxDiskPercentUsed));
-                }
-            } finally {
-                aggregateStatisticsLock.unlock();
+            lastAggregateStatUpdateTime = JitterClock.globalTime();
+            findActiveJobIDs();
+            double maxMeanActive = -1;
+            double maxDiskPercentUsed = -1;
+            for (HostState host : hosts) {
+                maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
+                maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
+            }
+            for (HostState host : hosts) {
+                cachedHostScores.put(host.getHostUuid(),
+                                     calculateHostScore(host, maxMeanActive, maxDiskPercentUsed));
             }
         } finally {
-            spawn.releaseJobLock();
+            aggregateStatisticsLock.unlock();
         }
     }
 
