@@ -13,13 +13,19 @@
  */
 package com.addthis.hydra.job.spawn.balancer;
 
-import com.addthis.basis.util.JitterClock;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+import com.addthis.hydra.job.mq.HostState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Update aggregate cluster statistics periodically */
 class AggregateStatUpdaterTask implements Runnable {
+
+    private static final Logger log = LoggerFactory.getLogger(AggregateStatUpdaterTask.class);
+    private static final AtomicLong errorCounter = new AtomicLong(0);
 
     private final SpawnBalancer spawnBalancer;
 
@@ -28,8 +34,16 @@ class AggregateStatUpdaterTask implements Runnable {
     }
 
     @Override public void run() {
-        if ((JitterClock.globalTime() - spawnBalancer.lastAggregateStatUpdateTime) > SpawnBalancer.AGGREGATE_STAT_UPDATE_INTERVAL) {
-            spawnBalancer.updateAggregateStatistics(spawnBalancer.hostManager.listHostStatus(null));
+        try {
+            List<HostState> allHosts = spawnBalancer.hostManager.listHostStatus(null);
+            spawnBalancer.updateAggregateStatistics(allHosts);
+        } catch (Exception e) {
+            // Only log full stack trace every 10 errors
+            if ((errorCounter.getAndIncrement() % 10) == 0) {
+                log.error("Error updating aggregate host stats for SpawnBalancer: {}", e.getMessage(), e);
+            } else {
+                log.error("Error updating aggregate host stats for SpawnBalancer: {}", e.getMessage());
+            }
         }
     }
 }

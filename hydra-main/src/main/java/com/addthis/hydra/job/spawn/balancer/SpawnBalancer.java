@@ -110,7 +110,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     final HostManager hostManager;
 
     private Set<String> activeJobIDs;
-    long lastAggregateStatUpdateTime;
 
     @FieldConfig SpawnBalancerConfig config;
 
@@ -125,7 +124,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         taskSizer = new SpawnBalancerTaskSizer(spawn, hostManager);
         cachedHostScores = new ConcurrentHashMap<>();
         aggregateStatisticsLock = new ReentrantLock();
-        lastAggregateStatUpdateTime = 0;
         autobalanceStarted = new AtomicBoolean(false);
         recentlyAutobalancedJobs = CacheBuilder.newBuilder().expireAfterWrite(
                 Parameter.intValue("spawnbalance.job.autobalance.interval.mins", 60 * 12), TimeUnit.MINUTES
@@ -1199,7 +1197,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     protected void updateAggregateStatistics(Iterable<HostState> hosts) {
         aggregateStatisticsLock.lock();
         try {
-            lastAggregateStatUpdateTime = JitterClock.globalTime();
             findActiveJobIDs();
             double maxMeanActive = -1;
             double maxDiskPercentUsed = -1;
