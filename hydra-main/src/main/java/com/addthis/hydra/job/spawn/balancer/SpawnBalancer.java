@@ -109,7 +109,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     final Spawn spawn;
     final HostManager hostManager;
 
-    private Set<String> activeJobIDs;
+    private volatile Set<String> activeJobIds;
 
     @FieldConfig SpawnBalancerConfig config;
 
@@ -157,6 +157,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
             return -Double.compare(availBytes, availBytes1);
         };
+        activeJobIds = new HashSet<>();
     }
 
     /** Loads SpawnBalancerConfig from data store; if no data or failed, returns the default. */
@@ -1063,39 +1064,30 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         int count = 0;
         if (host != null) {
             host.generateJobTaskCountMap();
-            aggregateStatisticsLock.lock();
-            try {
-                if (activeJobIDs == null) {
-                    activeJobIDs = findActiveJobIDs();
-                }
-                for (String jobID : activeJobIDs) {
-                    count += host.getTaskCount(jobID);
-                }
-            } finally {
-                aggregateStatisticsLock.unlock();
+            Set<String> jobIds = getActiveJobIds();
+            for (String jobId : jobIds) {
+                count += host.getTaskCount(jobId);
             }
         }
-
         return count;
     }
 
-    private Set<String> findActiveJobIDs() {
-        aggregateStatisticsLock.lock();
-        try {
-            activeJobIDs = new HashSet<>();
-            Collection<Job> jobs = spawn.listJobs();
-            if ((jobs != null) && !jobs.isEmpty()) {
-                for (Job job : jobs) {
-                    if (isWellFormedAndActiveJob(job)) {
-                        activeJobIDs.add(job.getId());
-                    }
+    private Set<String> getActiveJobIds() {
+        return activeJobIds;
+    }
+
+    /** Updates activeJobIds atomically */
+    private void updateActiveJobIDs() {
+        Collection<Job> jobs = spawn.listJobs();
+        if ((jobs != null) && !jobs.isEmpty()) {
+            Set<String> jobIds = new HashSet<>(getActiveJobIds().size());
+            for (Job job : jobs) {
+                if (isWellFormedAndActiveJob(job)) {
+                    jobIds.add(job.getId());
                 }
             }
-            return new HashSet<>(activeJobIDs);
-        } finally {
-            aggregateStatisticsLock.unlock();
+            this.activeJobIds = jobIds;
         }
-
     }
 
     /**
@@ -1197,7 +1189,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     protected void updateAggregateStatistics(Iterable<HostState> hosts) {
         aggregateStatisticsLock.lock();
         try {
-            findActiveJobIDs();
+            updateActiveJobIDs();
             double maxMeanActive = -1;
             double maxDiskPercentUsed = -1;
             for (HostState host : hosts) {
@@ -1395,7 +1387,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private Collection<JobTaskMoveAssignment> balanceActiveJobsOnHost(HostState host, List<HostState> hosts) {
         int totalTasksToMove = config.getTasksMovedFullRebalance();
         long totalBytesToMove = config.getBytesMovedFullRebalance();
-        Set<String> activeJobs = findActiveJobIDs();
+        Set<String> activeJobs = getActiveJobIds();
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, 1);
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {
