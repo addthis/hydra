@@ -136,7 +136,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
     static final String remoteConnectMethod = Parameter.value("minion.remote.connect.method",
-                                                              "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
+            "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
     static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
     static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
@@ -153,6 +153,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     public static final String defaultMinionType = Parameter.value("minion.type", "default");
     public static final String batchJobQueueSuffix = ".batchJob";
     public static final String batchControlQueueSuffix = ".batchControl";
+    public static final Meter tasksCompletedPerHour = Metrics.newMeter(Minion.class, "tasksCompletedPerHour", "tasksCompletedPerHour", TimeUnit.HOURS);
 
     public static void main(String[] args) throws Exception {
         Minion minion = Configs.newDefault(Minion.class);
