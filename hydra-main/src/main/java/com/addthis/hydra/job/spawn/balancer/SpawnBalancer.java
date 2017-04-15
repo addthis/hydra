@@ -1077,7 +1077,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     /** Updates activeJobIds atomically */
-    private void updateActiveJobIDs() {
+    @VisibleForTesting
+    void updateActiveJobIDs() {
         Collection<Job> jobs = spawn.listJobs();
         if ((jobs != null) && !jobs.isEmpty()) {
             Set<String> jobIds = new HashSet<>(getActiveJobIds().size());

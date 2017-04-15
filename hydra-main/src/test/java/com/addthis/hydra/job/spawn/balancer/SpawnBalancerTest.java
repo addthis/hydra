@@ -195,6 +195,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
         List<HostState> hosts = Arrays.asList(downHost, deadHost, oldNewHost, twoNewHost, emptyHost);
         HostState[] desiredOrder = new HostState[]{emptyHost, oldNewHost, twoNewHost};
+        // manually update active job ids which sortHostsByActiveTasks() depends on
+        // in production this is done periodically via scheduled calls to SpawnBalancer.updateAggregateStatistics()
+        bal.updateActiveJobIDs();
         List<HostState> sortedHosts = bal.sortHostsByActiveTasks(hosts);
         assertEquals("shouldn't include read only", false, sortedHosts.contains(readOnlyHost));
         assertEquals("shouldn't include down host", false, sortedHosts.contains(downHost));
