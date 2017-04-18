@@ -181,23 +181,14 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @return A non-negative number representing load.
      */
     public double getHostScoreCached(String hostId) {
-        double defaultScore = config.getDefaultHostScore();
         if (hostId == null) {
-            return defaultScore;
+            return config.getDefaultHostScore();
         }
-        aggregateStatisticsLock.lock();
-        try {
-            if (cachedHostScores == null) {
-                return defaultScore;
-            }
-            HostScore score = cachedHostScores.get(hostId);
-            if (score != null) {
-                return score.getOverallScore();
-            } else {
-                return defaultScore;
-            }
-        } finally {
-            aggregateStatisticsLock.unlock();
+        HostScore score = cachedHostScores.get(hostId);
+        if (score != null) {
+            return score.getOverallScore();
+        } else {
+            return config.getDefaultHostScore();
         }
     }
 
@@ -1079,7 +1070,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     /** Updates activeJobIds atomically */
     @VisibleForTesting
     void updateActiveJobIDs() {
-        Collection<Job> jobs = spawn.listJobs();
+        Collection<Job> jobs = spawn.listJobsConcurrentImmutable();
         if ((jobs != null) && !jobs.isEmpty()) {
             Set<String> jobIds = new HashSet<>(getActiveJobIds().size());
             for (Job job : jobs) {
