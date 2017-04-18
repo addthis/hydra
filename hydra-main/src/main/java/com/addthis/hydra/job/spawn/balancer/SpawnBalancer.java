@@ -122,10 +122,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     final Spawn spawn;
     final HostManager hostManager;
 
-    private Set<String> activeJobIDs;
-    long lastAggregateStatUpdateTime;
+    private volatile Set<String> activeJobIds;
 
-    @FieldConfig SpawnBalancerConfig config;
+    @FieldConfig
+    private volatile SpawnBalancerConfig config;
 
     public SpawnBalancer(Spawn spawn, HostManager hostManager) {
         this.spawn = spawn;
@@ -138,7 +138,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         taskSizer = new SpawnBalancerTaskSizer(spawn, hostManager);
         cachedHostScores = new ConcurrentHashMap<>();
         aggregateStatisticsLock = new ReentrantLock();
-        lastAggregateStatUpdateTime = 0;
         autobalanceStarted = new AtomicBoolean(false);
         recentlyAutobalancedJobs = CacheBuilder.newBuilder().expireAfterWrite(
                 Parameter.intValue("spawnbalance.job.autobalance.interval.mins", 60 * 12), TimeUnit.MINUTES
@@ -170,6 +169,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
             return -Double.compare(availBytes, availBytes1);
         };
+        activeJobIds = new HashSet<>();
         this.initMetrics();
     }
 
@@ -212,23 +212,14 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @return A non-negative number representing load.
      */
     public double getHostScoreCached(String hostId) {
-        double defaultScore = config.getDefaultHostScore();
         if (hostId == null) {
-            return defaultScore;
+            return config.getDefaultHostScore();
         }
-        aggregateStatisticsLock.lock();
-        try {
-            if (cachedHostScores == null) {
-                return defaultScore;
-            }
-            HostScore score = cachedHostScores.get(hostId);
-            if (score != null) {
-                return score.getOverallScore();
-            } else {
-                return defaultScore;
-            }
-        } finally {
-            aggregateStatisticsLock.unlock();
+        HostScore score = cachedHostScores.get(hostId);
+        if (score != null) {
+            return score.getOverallScore();
+        } else {
+            return config.getDefaultHostScore();
         }
     }
 
@@ -1095,39 +1086,31 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         int count = 0;
         if (host != null) {
             host.generateJobTaskCountMap();
-            aggregateStatisticsLock.lock();
-            try {
-                if (activeJobIDs == null) {
-                    activeJobIDs = findActiveJobIDs();
-                }
-                for (String jobID : activeJobIDs) {
-                    count += host.getTaskCount(jobID);
-                }
-            } finally {
-                aggregateStatisticsLock.unlock();
+            Set<String> jobIds = getActiveJobIds();
+            for (String jobId : jobIds) {
+                count += host.getTaskCount(jobId);
             }
         }
-
         return count;
     }
 
-    private Set<String> findActiveJobIDs() {
-        aggregateStatisticsLock.lock();
-        try {
-            activeJobIDs = new HashSet<>();
-            Collection<Job> jobs = spawn.listJobs();
-            if ((jobs != null) && !jobs.isEmpty()) {
-                for (Job job : jobs) {
-                    if (isWellFormedAndActiveJob(job)) {
-                        activeJobIDs.add(job.getId());
-                    }
+    private Set<String> getActiveJobIds() {
+        return activeJobIds;
+    }
+
+    /** Updates activeJobIds atomically */
+    @VisibleForTesting
+    void updateActiveJobIDs() {
+        Collection<Job> jobs = spawn.listJobsConcurrentImmutable();
+        if ((jobs != null) && !jobs.isEmpty()) {
+            Set<String> jobIds = new HashSet<>(getActiveJobIds().size());
+            for (Job job : jobs) {
+                if (isWellFormedAndActiveJob(job)) {
+                    jobIds.add(job.getId());
                 }
             }
-            return new HashSet<>(activeJobIDs);
-        } finally {
-            aggregateStatisticsLock.unlock();
+            this.activeJobIds = jobIds;
         }
-
     }
 
     /**
@@ -1227,59 +1210,53 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param hosts A list of HostStates
      */
     protected void updateAggregateStatistics(Iterable<HostState> hosts) {
-        spawn.acquireJobLock();
+        aggregateStatisticsLock.lock();
         try {
-            aggregateStatisticsLock.lock();
-            try {
-                lastAggregateStatUpdateTime = JitterClock.globalTime();
-                findActiveJobIDs();
-                double maxMeanActive = -1;
-                double maxDiskPercentUsed = -1;
-                long maxDiskFree = 0;
-                long minDiskFree = Long.MAX_VALUE;
-                long sumDiskFree = 0;
-                double maxTaskPercent = 0;
-                double minTaskPercent = 1;
-                double sumTaskPercent = 0;
-                for (HostState host : hosts) {
-                    maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
-                    maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
-                }
-                for (HostState host : hosts) {
-                    // metrics here
-                    HostScore score = calculateHostScore(host, maxMeanActive, maxDiskPercentUsed);
-                    cachedHostScores.put(host.getHostUuid(), score);
-                    long freeDisk = score.getFreeDiskBytes();
-                    double taskPercent = score.getScoreValue(false);
-                    sumDiskFree += freeDisk;
-                    sumTaskPercent += taskPercent;
-                    maxDiskFree = Math.max(freeDisk, maxDiskFree);
-                    minDiskFree = Math.min(freeDisk, minDiskFree);
-                    maxTaskPercent = Math.max(taskPercent, maxTaskPercent);
-                    minTaskPercent = Math.min(taskPercent, minTaskPercent);
-                }
-                // update average metrics
-                int numScores = cachedHostScores.size();
-                long avgDiskFree = sumDiskFree / (long) numScores;
-                double avgTaskPercent = sumTaskPercent / (double) numScores;
-                BigInteger sumDiskFreeDiff = BigInteger.valueOf(0);
-                double sumTaskPercentDiff = 0;
-                for (HostScore score : cachedHostScores.values()) {
-                    long diskDiff = Math.abs(avgDiskFree - score.getFreeDiskBytes());
-                    sumDiskFreeDiff.add(BigInteger.valueOf(diskDiff));
-                    sumTaskPercentDiff += Math.abs(avgTaskPercent - score.getScoreValue(false));
-                }
-                avgDiskFreeDiff = sumDiskFreeDiff.divide(BigInteger.valueOf((long) numScores)).longValue();
-                avgTaskPercentDiff = sumTaskPercentDiff / (double) numScores;
-                minDiskFreeDiff = avgDiskFree - minDiskFree;
-                maxDiskFreeDiff = maxDiskFree - avgDiskFree;
-                minTaskPercentDiff = avgTaskPercent - minTaskPercent;
-                maxTaskPercentDiff = maxTaskPercent - avgTaskPercent;
-            } finally {
-                aggregateStatisticsLock.unlock();
+            updateActiveJobIDs();
+            double maxMeanActive = -1;
+            double maxDiskPercentUsed = -1;
+            long maxDiskFree = 0;
+            long minDiskFree = Long.MAX_VALUE;
+            long sumDiskFree = 0;
+            double maxTaskPercent = 0;
+            double minTaskPercent = 1;
+            double sumTaskPercent = 0;
+            for (HostState host : hosts) {
+                maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
+                maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
             }
+            for (HostState host : hosts) {
+                // metrics here
+                HostScore score = calculateHostScore(host, maxMeanActive, maxDiskPercentUsed);
+                cachedHostScores.put(host.getHostUuid(), score);
+                long freeDisk = score.getFreeDiskBytes();
+                double taskPercent = score.getScoreValue(false);
+                sumDiskFree += freeDisk;
+                sumTaskPercent += taskPercent;
+                maxDiskFree = Math.max(freeDisk, maxDiskFree);
+                minDiskFree = Math.min(freeDisk, minDiskFree);
+                maxTaskPercent = Math.max(taskPercent, maxTaskPercent);
+                minTaskPercent = Math.min(taskPercent, minTaskPercent);
+            }
+            // update average metrics
+            int numScores = cachedHostScores.size();
+            long avgDiskFree = sumDiskFree / (long) numScores;
+            double avgTaskPercent = sumTaskPercent / (double) numScores;
+            BigInteger sumDiskFreeDiff = BigInteger.valueOf(0);
+            double sumTaskPercentDiff = 0;
+            for (HostScore score : cachedHostScores.values()) {
+                long diskDiff = Math.abs(avgDiskFree - score.getFreeDiskBytes());
+                sumDiskFreeDiff.add(BigInteger.valueOf(diskDiff));
+                sumTaskPercentDiff += Math.abs(avgTaskPercent - score.getScoreValue(false));
+            }
+            avgDiskFreeDiff = sumDiskFreeDiff.divide(BigInteger.valueOf((long) numScores)).longValue();
+            avgTaskPercentDiff = sumTaskPercentDiff / (double) numScores;
+            minDiskFreeDiff = avgDiskFree - minDiskFree;
+            maxDiskFreeDiff = maxDiskFree - avgDiskFree;
+            minTaskPercentDiff = avgTaskPercent - minTaskPercent;
+            maxTaskPercentDiff = maxTaskPercent - avgTaskPercent;
         } finally {
-            spawn.releaseJobLock();
+            aggregateStatisticsLock.unlock();
         }
     }
 
@@ -1467,7 +1444,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private Collection<JobTaskMoveAssignment> balanceActiveJobsOnHost(HostState host, List<HostState> hosts) {
         int totalTasksToMove = config.getTasksMovedFullRebalance();
         long totalBytesToMove = config.getBytesMovedFullRebalance();
-        Set<String> activeJobs = findActiveJobIDs();
+        Set<String> activeJobs = getActiveJobIds();
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, 1);
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {

@@ -200,7 +200,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull public final HostManager hostManager;
     private final JobExpanderImpl jobExpander;
 
-    @Nonnull final Lock jobLock;
+    @Nonnull private final Lock jobLock;
     @Nonnull final SpawnState spawnState;
     @Nonnull final ConcurrentMap<String, ClientEventListener> listeners;
     @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
@@ -681,7 +681,7 @@ public class Spawn implements Codable, AutoCloseable {
                          String minionType,
                          String command,
                          boolean defaults) throws Exception {
-        jobLock.lock();
+        acquireJobLock();
         try {
             Job job = new Job(UUID.randomUUID().toString(), creator);
             job.setMinionType(minionType);
@@ -717,7 +717,7 @@ public class Spawn implements Codable, AutoCloseable {
             submitConfigUpdate(job.getId(), creator, null);
             return job;
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -765,11 +765,11 @@ public class Spawn implements Codable, AutoCloseable {
         if (jobUUID == null) {
             return null;
         }
-        jobLock.lock();
+        acquireJobLock();
         try {
             return spawnState.jobs.get(jobUUID);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -777,11 +777,11 @@ public class Spawn implements Codable, AutoCloseable {
         if (jobUUID == null) {
             return null;
         }
-        jobLock.lock();
+        acquireJobLock();
         try {
             return jobConfigManager.getConfig(jobUUID);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -813,14 +813,14 @@ public class Spawn implements Codable, AutoCloseable {
 
     public Collection<Job> listJobs() {
         List<Job> clones = new ArrayList<>(spawnState.jobs.size());
-        jobLock.lock();
+        acquireJobLock();
         try {
             for (Job job : spawnState.jobs.values()) {
                 clones.add(job);
             }
             return clones;
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -1133,7 +1133,7 @@ public class Spawn implements Codable, AutoCloseable {
             return false;
         }
         Job job;
-        jobLock.lock();
+        acquireJobLock();
         try {
             job = getJob(task.getJobUUID());
             if (job == null) {
@@ -1144,7 +1144,7 @@ public class Spawn implements Codable, AutoCloseable {
             task.setHostUUID(replicaHostID);
             queueJobTaskUpdateEvent(job);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
         if (kickOnComplete) {
             try {
@@ -1260,7 +1260,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @return True if the task is successfully removed
      */
     public boolean deleteTask(String jobUUID, String hostUuid, Integer node, boolean isReplica) {
-        jobLock.lock();
+        acquireJobLock();
         try {
             if ((jobUUID == null) || (node == null)) {
                 return false;
@@ -1277,7 +1277,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
             return true;
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -1313,11 +1313,11 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public void queueJobTaskUpdateEvent(IJob job) {
-        jobLock.lock();
+        acquireJobLock();
         try {
             jobUpdateQueue.add(job.getId());
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -1339,7 +1339,7 @@ public class Spawn implements Codable, AutoCloseable {
     public void updateJob(@Nullable IJob ijob, boolean reviseReplicas) throws Exception {
         checkNotNull(ijob, "ijob");
         Job job = new Job(ijob);
-        jobLock.lock();
+        acquireJobLock();
         try {
             checkArgument(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
             updateJobDependencies(job.getId());
@@ -1360,7 +1360,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
             queueJobTaskUpdateEvent(job);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -1388,7 +1388,7 @@ public class Spawn implements Codable, AutoCloseable {
         if ((job == null) || (job.getParameters() == null)) {
             return dataSources;
         }
-        jobLock.lock();
+        acquireJobLock();
         try {
             for (JobParameter param : job.getParameters()) {
                 String value = param.getValue();
@@ -1407,7 +1407,7 @@ public class Spawn implements Codable, AutoCloseable {
                 }
             }
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
         return dataSources;
     }
@@ -1480,7 +1480,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @return A string description
      */
     public JSONObject fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean orphansOnly) {
-        jobLock.lock();
+        acquireJobLock();
         try {
             Job job = getJob(jobId);
             int numChanged = 0;
@@ -1508,7 +1508,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
             return new JSONObject(ImmutableMap.of("tasksChanged", numChanged));
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
 
     }
@@ -1552,7 +1552,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public JSONArray checkTaskDirJSON(String jobId, int node) {
         JSONArray resultList = new JSONArray();
-        jobLock.lock();
+        acquireJobLock();
         try {
             Job job = getJob(jobId);
             if (job == null) {
@@ -1571,7 +1571,7 @@ public class Spawn implements Codable, AutoCloseable {
         } catch (Exception ex) {
             log.warn("Error: checking dirs for job: {}, node: {}", jobId, node, ex);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
         return resultList;
     }
@@ -1656,7 +1656,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public boolean prepareTaskStatesForRebalance(Job job, JobTask task, boolean isMigration) {
-        jobLock.lock();
+        acquireJobLock();
         try {
             if (!SpawnBalancer.isInMovableState(task)) {
                 log.warn("[task.mover] decided not to move non-idle task {}", task);
@@ -1667,12 +1667,12 @@ public class Spawn implements Codable, AutoCloseable {
             queueJobTaskUpdateEvent(job);
             return true;
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
     public DeleteStatus forceDeleteJob(String jobUUID) throws Exception {
-        jobLock.lock();
+        acquireJobLock();
         Job job;
         try {
             job = getJob(jobUUID);
@@ -1685,7 +1685,7 @@ public class Spawn implements Codable, AutoCloseable {
             job.setEnabled(false);
             jobAlertManager.removeAlertsForJob(jobUUID);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
         while ((job != null) && (job.getCountActiveTasks() > 0)) {
             stopJob(jobUUID);
@@ -1698,7 +1698,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public DeleteStatus deleteJob(String jobUUID) throws Exception {
-        jobLock.lock();
+        acquireJobLock();
         try {
             Job job = getJob(jobUUID);
             if (job == null) {
@@ -1723,7 +1723,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
             Job.logJobEvent(job, JobEvent.DELETE, eventLog);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
         jobAlertManager.removeAlertsForJob(jobUUID);
         return DeleteStatus.SUCCESS;
@@ -1932,7 +1932,7 @@ public class Spawn implements Codable, AutoCloseable {
     public void killJob(String jobUUID) throws Exception {
         boolean success = false;
         while (!success && !shuttingDown.get()) {
-            jobLock.lock();
+            acquireJobLock();
             try {
                 if (taskQueuesByPriority.tryLock()) {
                     success = true;
@@ -1947,7 +1947,7 @@ public class Spawn implements Codable, AutoCloseable {
                     }
                 }
             } finally {
-                jobLock.unlock();
+                releaseJobLock();
                 if (success) {
                     taskQueuesByPriority.unlock();
                 }
@@ -2099,7 +2099,7 @@ public class Spawn implements Codable, AutoCloseable {
     public JobMacro createJobHostMacro(String job, int port) {
         String sPort = Integer.valueOf(port).toString();
         Set<String> jobHosts = new TreeSet<>();// best set?
-        jobLock.lock();
+        acquireJobLock();
         try {
             Collection<HostState> hosts = hostManager.listHostStatus(null);
             Map<String, String> uuid2Host = new HashMap<>();
@@ -2123,7 +2123,7 @@ public class Spawn implements Codable, AutoCloseable {
                 }
             }
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
 
         List<String> hostStrings = new ArrayList<>();
@@ -2138,7 +2138,7 @@ public class Spawn implements Codable, AutoCloseable {
      * sent for a while.
      */
     public void saveAllJobs() {
-        jobLock.lock();
+        acquireJobLock();
         try {
             for (Job job : listJobs()) {
                 if (job != null) {
@@ -2146,7 +2146,7 @@ public class Spawn implements Codable, AutoCloseable {
                 }
             }
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
     }
 
@@ -2157,11 +2157,11 @@ public class Spawn implements Codable, AutoCloseable {
      * send job update event to registered listeners (usually http clients)
      */
     private void sendJobUpdateEvent(Job job) {
-        jobLock.lock();
+        acquireJobLock();
         try {
             jobConfigManager.updateJob(job);
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
         sendJobUpdateEvent("job.update", job);
     }
@@ -2457,7 +2457,7 @@ public class Spawn implements Codable, AutoCloseable {
         boolean success = false;
         while (!success && !shuttingDown.get()) {
             // need the job lock first
-            jobLock.lock();
+            acquireJobLock();
             try {
                 if (taskQueuesByPriority.tryLock()) {
                     success = true;
@@ -2475,7 +2475,7 @@ public class Spawn implements Codable, AutoCloseable {
                     sendTaskQueueUpdateEvent();
                 }
             } finally {
-                jobLock.unlock();
+                releaseJobLock();
                 if (success) {
                     taskQueuesByPriority.unlock();
                 }
@@ -2555,7 +2555,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     @VisibleForTesting protected void loadJobs() {
-        jobLock.lock();
+        acquireJobLock();
         try {
             for (IJob iJob : jobConfigManager.loadJobs().values()) {
                 if (iJob != null) {
@@ -2563,7 +2563,7 @@ public class Spawn implements Codable, AutoCloseable {
                 }
             }
         } finally {
-            jobLock.unlock();
+            releaseJobLock();
         }
         Thread loadDependencies = new Thread(() -> {
             Set<String> jobIds = spawnState.jobs.keySet();

@@ -255,6 +255,7 @@ public class JobTask implements Codable {
         end.setExitState(exitState);
         setRebalanceSource(null);
         setRebalanceTarget(null);
+        Minion.tasksCompletedPerHour.mark();
         minion.sendStatusMessage(end);
         try {
             minion.kickNextJob();
