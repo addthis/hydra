@@ -52,6 +52,7 @@ class UpdateEventRunnable implements Runnable {
         int taskQueuedNoSlot = 0;
         long files = 0;
         long bytes = 0;
+        // Why?
         spawn.acquireJobLock();
         try {
             for (Job job : spawn.spawnState.jobs.values()) {
