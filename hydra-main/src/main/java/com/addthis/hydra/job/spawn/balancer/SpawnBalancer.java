@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 import java.math.BigInteger;
 
@@ -173,20 +174,21 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     private void initMetrics() {
-        Metrics.newGauge(this.getClass(), "minDiskFreeDiff", SpawnBalancer.makeGauge(minDiskFreeDiff));
-        Metrics.newGauge(this.getClass(), "maxDiskFreeDiff", SpawnBalancer.makeGauge(maxDiskFreeDiff));
-        Metrics.newGauge(this.getClass(), "avgDiskFreeDiff", SpawnBalancer.makeGauge(avgDiskFreeDiff));
-        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", SpawnBalancer.makeGauge(minTaskPercentDiff));
-        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", SpawnBalancer.makeGauge(minTaskPercentDiff));
-        Metrics.newGauge(this.getClass(), "minTaskPercentDiff", SpawnBalancer.makeGauge(minTaskPercentDiff));
+        SpawnBalancer.makeGauge("minDiskFreeDiff", () -> minDiskFreeDiff);
+        SpawnBalancer.makeGauge("maxDiskFreeDiff", () -> maxDiskFreeDiff);
+        SpawnBalancer.makeGauge("avgDiskFreeDiff", () -> avgDiskFreeDiff);
+        SpawnBalancer.makeGauge("minTaskPercentDiff", () -> minTaskPercentDiff);
+        SpawnBalancer.makeGauge("minTaskPercentDiff", () -> minTaskPercentDiff);
+        SpawnBalancer.makeGauge("minTaskPercentDiff", () -> minTaskPercentDiff);
     }
 
-    private static <T> Gauge<T> makeGauge(T value) {
-        return new Gauge<T>() {
+    private static <T> void makeGauge(String name, Supplier<T> value) {
+        Gauge<T> gauge = new Gauge<T>() {
             @Override public T value() {
-                return value;
+                return value.get();
             }
         };
+        Metrics.newGauge(SpawnBalancer.class, name, gauge);
     }
 
     /** Loads SpawnBalancerConfig from data store; if no data or failed, returns the default. */
