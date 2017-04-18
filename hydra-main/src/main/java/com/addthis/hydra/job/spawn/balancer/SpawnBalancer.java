@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
-import java.math.BigInteger;
-
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
@@ -1242,14 +1240,14 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             int numScores = cachedHostScores.size();
             long avgDiskFree = sumDiskFree / (long) numScores;
             double avgTaskPercent = sumTaskPercent / (double) numScores;
-            BigInteger sumDiskFreeDiff = BigInteger.valueOf(0);
+            long sumDiskFreeDiff = 0;
             double sumTaskPercentDiff = 0;
             for (HostScore score : cachedHostScores.values()) {
                 long diskDiff = Math.abs(avgDiskFree - score.getFreeDiskBytes());
-                sumDiskFreeDiff.add(BigInteger.valueOf(diskDiff));
+                sumDiskFreeDiff += diskDiff;
                 sumTaskPercentDiff += Math.abs(avgTaskPercent - score.getScoreValue(false));
             }
-            avgDiskFreeDiff = sumDiskFreeDiff.divide(BigInteger.valueOf((long) numScores)).longValue();
+            avgDiskFreeDiff = sumDiskFreeDiff / (long) numScores;
             avgTaskPercentDiff = sumTaskPercentDiff / (double) numScores;
             minDiskFreeDiff = avgDiskFree - minDiskFree;
             maxDiskFreeDiff = maxDiskFree - avgDiskFree;
@@ -1265,7 +1263,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         double meanActive = host.getMeanActiveTasks();
         double usedDiskPercent = getUsedDiskPercent(host);
 
-        long diskFreeBytes = getAvailDiskBytes(host);
+        long freeDiskBytes = getAvailDiskBytes(host);
         // If either metric is zero across the whole cluster, treat every host as having full load in that aspect
         if (clusterMaxMeanActive <= 0) {
             meanActive = 1;
@@ -1282,7 +1280,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         score += diskUsedWeight * Math.pow(usedDiskPercent / clusterMaxDiskUsed, 2.5);
         // If host is very full, make sure to give the host a big score
         score = Math.max(score, (activeTaskWeight + diskUsedWeight) * usedDiskPercent);
-        return new HostScore(meanActive, usedDiskPercent, diskFreeBytes, score);
+        return new HostScore(meanActive, usedDiskPercent, freeDiskBytes, score);
     }
 
     /**
