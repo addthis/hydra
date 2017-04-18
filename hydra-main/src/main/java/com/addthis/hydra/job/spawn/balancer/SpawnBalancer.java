@@ -111,7 +111,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     private volatile Set<String> activeJobIds;
 
-    @FieldConfig SpawnBalancerConfig config;
+    @FieldConfig
+    private volatile SpawnBalancerConfig config;
 
     public SpawnBalancer(Spawn spawn, HostManager hostManager) {
         this.spawn = spawn;

@@ -48,14 +48,14 @@ class AutobalanceTask implements Runnable {
         long now = System.currentTimeMillis();
         // Don't autobalance if spawn is quiesced, busy, etc.
         if (spawnBalancer.okayToAutobalance()) {
-            if ((now - lastHostAutobalanceTime) > spawnBalancer.config.getHostAutobalanceIntervalMillis()) {
+            if ((now - lastHostAutobalanceTime) > spawnBalancer.getConfig().getHostAutobalanceIntervalMillis()) {
                 log.warn("Performing host autobalance.");
                 RebalanceWeight weight = rebalanceWeightToggle ? RebalanceWeight.HEAVY : RebalanceWeight.LIGHT;
                 rebalance(RebalanceType.HOST, weight);
                 rebalanceWeightToggle = !rebalanceWeightToggle;
                 lastHostAutobalanceTime = now;
                 minutesSinceLastBalanceGauge.setLastBalanceTime(now);
-            } else if ((now - lastJobAutobalanceTime) > spawnBalancer.config.getJobAutobalanceIntervalMillis()) {
+            } else if ((now - lastJobAutobalanceTime) > spawnBalancer.getConfig().getJobAutobalanceIntervalMillis()) {
                 log.warn("Performing job autobalance.");
                 rebalance(RebalanceType.JOB, RebalanceWeight.HEAVY);
                 lastJobAutobalanceTime = now;
