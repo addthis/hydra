@@ -1227,7 +1227,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 // metrics here
                 HostScore score = calculateHostScore(host, maxMeanActive, maxDiskPercentUsed);
                 cachedHostScores.put(host.getHostUuid(), score);
-                long freeDisk = score.getFreeDiskBytes();
+                long freeDisk = host.getAvailDiskBytes();
                 double taskPercent = score.getScoreValue(false);
                 sumDiskFree += freeDisk;
                 sumTaskPercent += taskPercent;
@@ -1242,10 +1242,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             double avgTaskPercent = sumTaskPercent / (double) numScores;
             long sumDiskFreeDiff = 0;
             double sumTaskPercentDiff = 0;
-            for (HostScore score : cachedHostScores.values()) {
-                long diskDiff = Math.abs(avgDiskFree - score.getFreeDiskBytes());
+            // second loop through for aggregate stats
+            for (HostState host : hosts) {
+                long diskDiff = Math.abs(avgDiskFree - host.getAvailDiskBytes());
                 sumDiskFreeDiff += diskDiff;
-                sumTaskPercentDiff += Math.abs(avgTaskPercent - score.getScoreValue(false));
+                double taskDiff = cachedHostScores.get(host.getHostUuid()).getScoreValue(false);
+                sumTaskPercentDiff += Math.abs(avgTaskPercent - taskDiff);
             }
             avgDiskFreeDiff = sumDiskFreeDiff / (long) numScores;
             avgTaskPercentDiff = sumTaskPercentDiff / (double) numScores;
