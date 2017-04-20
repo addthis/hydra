@@ -1259,8 +1259,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         double score = 0;
         double meanActive = host.getMeanActiveTasks();
         double usedDiskPercent = getUsedDiskPercent(host);
-
-        long freeDiskBytes = getAvailDiskBytes(host);
         // If either metric is zero across the whole cluster, treat every host as having full load in that aspect
         if (clusterMaxMeanActive <= 0) {
             meanActive = 1;
@@ -1277,7 +1275,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         score += diskUsedWeight * Math.pow(usedDiskPercent / clusterMaxDiskUsed, 2.5);
         // If host is very full, make sure to give the host a big score
         score = Math.max(score, (activeTaskWeight + diskUsedWeight) * usedDiskPercent);
-        return new HostScore(meanActive, usedDiskPercent, freeDiskBytes, score);
+        return new HostScore(meanActive, usedDiskPercent, score);
     }
 
     /**
