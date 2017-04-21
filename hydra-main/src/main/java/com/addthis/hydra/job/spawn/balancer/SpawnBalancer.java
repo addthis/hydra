@@ -176,8 +176,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         SpawnBalancer.makeGauge("maxDiskPercentUsedDiff", () -> maxDiskPercentUsedDiff);
         SpawnBalancer.makeGauge("avgDiskPercentUsedDiff", () -> avgDiskPercentUsedDiff);
         SpawnBalancer.makeGauge("minTaskPercentDiff", () -> minTaskPercentDiff);
-        SpawnBalancer.makeGauge("minTaskPercentDiff", () -> minTaskPercentDiff);
-        SpawnBalancer.makeGauge("minTaskPercentDiff", () -> minTaskPercentDiff);
+        SpawnBalancer.makeGauge("maxTaskPercentDiff", () -> maxTaskPercentDiff);
+        SpawnBalancer.makeGauge("avgTaskPercentDiff", () -> avgTaskPercentDiff);
     }
 
     private static <T> void makeGauge(String name, Supplier<T> value) {
@@ -1228,7 +1228,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 // update average metrics
                 double diskDiff = Math.abs(avgDiskPercentUsed - host.getDiskUsedPercent());
                 sumDiskPercentUsedDiff += diskDiff;
-                double taskDiff = cachedHostScores.get(host.getHostUuid()).getScoreValue(false);
+                double taskDiff = score.getScoreValue(false);
                 sumTaskPercentDiff += Math.abs(avgTaskPercent - taskDiff);
             }
             avgDiskPercentUsedDiff = sumDiskPercentUsedDiff / (double) numScores;
