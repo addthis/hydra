@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -65,6 +66,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Gauge;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,6 +95,14 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     // How often to update aggregate host statistics
     static final long AGGREGATE_STAT_UPDATE_INTERVAL = Parameter.intValue("spawnbalance.stat.update", 15 * 1000);
+
+    // metrics
+    private volatile double avgDiskPercentUsedDiff = 0;
+    private volatile double minDiskPercentUsedDiff = 0;
+    private volatile double maxDiskPercentUsedDiff = 0;
+    private volatile double avgTaskPercentDiff = 0;
+    private volatile double minTaskPercentDiff = 0;
+    private volatile double maxTaskPercentDiff = 0;
 
     private final ConcurrentHashMap<String, HostScore> cachedHostScores;
     private final ReentrantLock aggregateStatisticsLock;
@@ -135,10 +146,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         recentlyReplicatedToHosts = CacheBuilder.newBuilder().expireAfterWrite(
                 Parameter.intValue("spawnbalance.host.replicate.interval.mins", 15), TimeUnit.MINUTES
         ).build();
-        hostAndScoreComparator = (firstHAS, secondHAS) -> Double.compare(firstHAS.score, secondHAS.score);
-        hostStateScoreComparator = (hostState, hostState1) -> Double.compare(
-                getHostScoreCached(hostState.getHostUuid()),
-                getHostScoreCached(hostState1.getHostUuid()));
+        hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
+        hostStateScoreComparator = Comparator.comparingDouble(hostState -> this.getHostScoreCached(hostState.getHostUuid()));
         jobAverageTaskSizeComparator = (job, job1) -> {
             if ((job == null) || (job1 == null)) {
                 return 0;
@@ -159,6 +168,25 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             return -Double.compare(availBytes, availBytes1);
         };
         activeJobIds = new HashSet<>();
+        this.initMetrics();
+    }
+
+    private void initMetrics() {
+        SpawnBalancer.makeGauge("minDiskPercentUsedDiff", () -> minDiskPercentUsedDiff);
+        SpawnBalancer.makeGauge("maxDiskPercentUsedDiff", () -> maxDiskPercentUsedDiff);
+        SpawnBalancer.makeGauge("avgDiskPercentUsedDiff", () -> avgDiskPercentUsedDiff);
+        SpawnBalancer.makeGauge("minTaskPercentDiff", () -> minTaskPercentDiff);
+        SpawnBalancer.makeGauge("maxTaskPercentDiff", () -> maxTaskPercentDiff);
+        SpawnBalancer.makeGauge("avgTaskPercentDiff", () -> avgTaskPercentDiff);
+    }
+
+    private static <T> void makeGauge(String name, Supplier<T> value) {
+        Gauge<T> gauge = new Gauge<T>() {
+            @Override public T value() {
+                return value.get();
+            }
+        };
+        Metrics.newGauge(SpawnBalancer.class, name, gauge);
     }
 
     /** Loads SpawnBalancerConfig from data store; if no data or failed, returns the default. */
@@ -1179,20 +1207,49 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      *
      * @param hosts A list of HostStates
      */
-    protected void updateAggregateStatistics(Iterable<HostState> hosts) {
+    protected void updateAggregateStatistics(List<HostState> hosts) {
         aggregateStatisticsLock.lock();
         try {
             updateActiveJobIDs();
             double maxMeanActive = -1;
             double maxDiskPercentUsed = -1;
+            double minDiskPercentUsed = 0;
+            double sumDiskPercentUsed = 0;
+            double maxTaskPercent = 0;
+            double minTaskPercent = 1;
+            double sumTaskPercent = 0;
             for (HostState host : hosts) {
                 maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
-                maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
+                double diskPercentUsed = getUsedDiskPercent(host);
+                sumDiskPercentUsed += diskPercentUsed;
+                maxDiskPercentUsed = Math.max(diskPercentUsed, maxDiskPercentUsed);
+                minDiskPercentUsed = Math.min(diskPercentUsed, minDiskPercentUsed);
+                double taskPercent = host.getMeanActiveTasks();
+                sumTaskPercent += taskPercent;
+                maxTaskPercent = Math.max(taskPercent, maxTaskPercent);
+                minTaskPercent = Math.min(taskPercent, minTaskPercent);
             }
+            int numScores = hosts.size();
+            double avgDiskPercentUsed = sumDiskPercentUsed / (double) numScores;
+            double sumDiskPercentUsedDiff = 0;
+            double avgTaskPercent = sumTaskPercent / (double) numScores;
+            double sumTaskPercentDiff = 0;
             for (HostState host : hosts) {
-                cachedHostScores.put(host.getHostUuid(),
-                                     calculateHostScore(host, maxMeanActive, maxDiskPercentUsed));
+                HostScore score = calculateHostScore(host, maxMeanActive, maxDiskPercentUsed);
+                cachedHostScores.put(host.getHostUuid(), score);
+
+                // update average metrics
+                double diskDiff = Math.abs(avgDiskPercentUsed - getUsedDiskPercent(host));
+                sumDiskPercentUsedDiff += diskDiff;
+                double taskDiff = score.getScoreValue(false);
+                sumTaskPercentDiff += Math.abs(avgTaskPercent - taskDiff);
             }
+            avgDiskPercentUsedDiff = sumDiskPercentUsedDiff / (double) numScores;
+            avgTaskPercentDiff = sumTaskPercentDiff / (double) numScores;
+            minDiskPercentUsedDiff = avgDiskPercentUsed - minDiskPercentUsed;
+            maxDiskPercentUsedDiff = maxDiskPercentUsed - avgDiskPercentUsed;
+            minTaskPercentDiff = avgTaskPercent - minTaskPercent;
+            maxTaskPercentDiff = maxTaskPercent - avgTaskPercent;
         } finally {
             aggregateStatisticsLock.unlock();
         }
