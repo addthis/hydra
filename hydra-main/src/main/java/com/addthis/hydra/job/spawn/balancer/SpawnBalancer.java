@@ -157,8 +157,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         };
         hostStateReplicationSuitabilityComparator = (hostState, hostState1) -> {
             // Treat recently-replicated-to hosts as having fewer than their reported available bytes
-            long availBytes = getAvailDiskBytes(hostState);
-            long availBytes1 = getAvailDiskBytes(hostState1);
+            long availBytes = hostState.getAvailDiskBytes();
+            long availBytes1 = hostState1.getAvailDiskBytes();
             if (recentlyReplicatedToHosts.getIfPresent(hostState.getHostUuid()) != null) {
                 availBytes /= 2;
             }
@@ -219,13 +219,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         } else {
             return config.getDefaultHostScore();
         }
-    }
-
-    private static long getAvailDiskBytes(HostState host) {
-        if ((host.getMax() == null) || (host.getUsed() == null)) {
-            return 1; // Fix some tests
-        }
-        return host.getMax().getDisk() - host.getUsed().getDisk();
     }
 
     /** Start a thread that will perform autobalancing in the background if appropriate to do so */
@@ -377,8 +370,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         if (spawn.getHostFailWorker().getFailureState(host.getHostUuid()) != HostFailWorker.FailState.ALIVE) {
             return false;
         }
-        return host.canMirrorTasks() &&
-               (getUsedDiskPercent(host) < (1 - config.getMinDiskPercentAvailToReceiveNewTasks()));
+        return host.canMirrorTasks() && (host.getAvailDiskBytes() > config.getMinFreeDiskSpaceToRecieveNewTasks());
     }
 
     /**
@@ -412,13 +404,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             rv.put(task, hostIterator.next());
         }
         return rv;
-    }
-
-    private static double getUsedDiskPercent(HostState host) {
-        if ((host.getMax() == null) || (host.getUsed() == null) || (host.getMax().getDisk() <= 0)) {
-            return 0;
-        }
-        return (double) host.getUsed().getDisk() / host.getMax().getDisk();
     }
 
     public List<JobTaskMoveAssignment> pushTasksOffDiskForFilesystemOkayFailure(HostState host, int moveLimit) {
@@ -619,7 +604,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             return false;
         }
         /* try not to put a task on a host if it would almost fill the host */
-        if (taskSizer.estimateTrueSize(task) > (config.getHostDiskFactor() * getAvailDiskBytes(hostCandidate))) {
+        if (taskSizer.estimateTrueSize(task) > (config.getHostDiskFactor() * hostCandidate.getAvailDiskBytes())) {
             return false;
         }
         return true;
@@ -631,11 +616,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @return True if it is okay to autobalance
      */
     public boolean okayToAutobalance() {
-        // Don't autobalance if it is disabled, spawn is quiesced, the failure queue is non-empty, or the number of queued tasks is high
+        // Don't autobalance if it is disabled, spawn is quiesced, or the failure queue is non-empty
         if ((config.getAutoBalanceLevel() == 0) ||
             spawn.getSystemManager().isQuiesced() ||
-            spawn.getHostFailWorker().queuedHosts().size() > 0 ||
-            (spawn.getLastQueueSize() > hostManager.listHostStatus(null).size())) {
+            spawn.getHostFailWorker().queuedHosts().size() > 0) {
             return false;
         }
         // Don't autobalance if there are still jobs in rebalance state
@@ -772,7 +756,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
             for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
                 if (host.isUp() && !host.isDead()) {
-                    double availDisk = 1 - getUsedDiskPercent(host);
+                    double availDisk = 1 - host.getDiskUsedPercent();
                     rv.put(host.getHostUuid(), addOrIncrement(rv.get(host.getHostUuid()), availDisk));
                 }
             }
@@ -1044,7 +1028,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
         if ((failState == HostFailWorker.FailState.FAILING_FS_OKAY) || isExtremeHost(hostID, true, true) ||
-            (getUsedDiskPercent(host) > (1 - config.getMinDiskPercentAvailToReceiveNewTasks()))) {
+            (host.getAvailDiskBytes() > config.getMinFreeDiskSpaceToRecieveNewTasks())) {
             // Host disk is overloaded
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
@@ -1075,8 +1059,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     public List<HostState> sortHostsByActiveTasks(Collection<HostState> hosts) {
         List<HostState> hostList = new ArrayList<>(hosts);
         removeDownHosts(hostList);
-        Collections.sort(hostList, (hostState, hostState1) ->
-                Double.compare(countTotalActiveTasksOnHost(hostState), countTotalActiveTasksOnHost(hostState1)));
+        Collections.sort(hostList, Comparator.comparingDouble(this::countTotalActiveTasksOnHost));
         return hostList;
     }
 
@@ -1193,11 +1176,15 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param host The host to check
      * @return True if the disk is nearly full
      */
-    public boolean isDiskFull(HostState host) {
-        boolean full = (host != null) && (getUsedDiskPercent(host) > (1 - config.getMinDiskPercentAvailToRunJobs()));
+    public boolean isDiskFull(@Nullable HostState host) {
+        if (host == null) {
+            return false;
+        }
+        long freeSpace = host.getAvailDiskBytes();
+        boolean full = freeSpace <= config.getMinFreeDiskSpaceToRunJobs();
         if (full) {
-            log.warn("[spawn.balancer] Host {} with uuid {} is nearly full, with used disk {}", host.getHost(),
-                     host.getHostUuid(), getUsedDiskPercent(host));
+            log.warn("[spawn.balancer] Host {} with uuid {} is nearly full, with {} GB free disk space", host.getHost(),
+                     host.getHostUuid(), freeSpace / 1_000_000_000);
         }
         return full;
     }
@@ -1220,7 +1207,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             double sumTaskPercent = 0;
             for (HostState host : hosts) {
                 maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
-                double diskPercentUsed = getUsedDiskPercent(host);
+                double diskPercentUsed = host.getDiskUsedPercent();
                 sumDiskPercentUsed += diskPercentUsed;
                 maxDiskPercentUsed = Math.max(diskPercentUsed, maxDiskPercentUsed);
                 minDiskPercentUsed = Math.min(diskPercentUsed, minDiskPercentUsed);
@@ -1239,7 +1226,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 cachedHostScores.put(host.getHostUuid(), score);
 
                 // update average metrics
-                double diskDiff = Math.abs(avgDiskPercentUsed - getUsedDiskPercent(host));
+                double diskDiff = Math.abs(avgDiskPercentUsed - host.getDiskUsedPercent());
                 sumDiskPercentUsedDiff += diskDiff;
                 double taskDiff = score.getScoreValue(false);
                 sumTaskPercentDiff += Math.abs(avgTaskPercent - taskDiff);
@@ -1256,26 +1243,18 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     private HostScore calculateHostScore(HostState host, double clusterMaxMeanActive, double clusterMaxDiskUsed) {
-        double score = 0;
         double meanActive = host.getMeanActiveTasks();
-        double usedDiskPercent = getUsedDiskPercent(host);
-        // If either metric is zero across the whole cluster, treat every host as having full load in that aspect
-        if (clusterMaxMeanActive <= 0) {
-            meanActive = 1;
-            clusterMaxMeanActive = 1;
-        }
-        if (clusterMaxDiskUsed <= 0) {
-            usedDiskPercent = 1;
-            clusterMaxDiskUsed = 1;
-        }
+        double diskUsedPercentModified = host.getDiskUsedPercentModified(config.getMinFreeDiskSpaceToRunJobs());
         int activeTaskWeight = config.getActiveTaskWeight();
         int diskUsedWeight = config.getDiskUsedWeight();
         // Assemble the score as a combination of the mean active tasks and the disk used
-        score += activeTaskWeight * Math.pow(meanActive / clusterMaxMeanActive, 2.5);
-        score += diskUsedWeight * Math.pow(usedDiskPercent / clusterMaxDiskUsed, 2.5);
+        double exponent = 2.5;
+        double score = activeTaskWeight * Math.pow(meanActive, exponent);
+        double diskPercentPowered = Math.pow(diskUsedPercentModified, exponent);
+        score += diskUsedWeight * diskPercentPowered;
         // If host is very full, make sure to give the host a big score
-        score = Math.max(score, (activeTaskWeight + diskUsedWeight) * usedDiskPercent);
-        return new HostScore(meanActive, usedDiskPercent, score);
+        score = Math.max(score, (activeTaskWeight + diskUsedWeight) * diskPercentPowered);
+        return new HostScore(meanActive, diskUsedPercentModified, score);
     }
 
     /**

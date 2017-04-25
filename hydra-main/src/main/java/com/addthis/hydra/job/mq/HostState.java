@@ -391,6 +391,24 @@ public class HostState implements HostMessage {
         this.max = max;
     }
 
+    public long getAvailDiskBytes() {
+        if ((max == null) || (used == null)) {
+            return 1; // Fix some tests
+        }
+        return max.getDisk() - used.getDisk();
+    }
+
+    public double getDiskUsedPercent() {
+        return getDiskUsedPercentModified(0);
+    }
+
+    public double getDiskUsedPercentModified(long reduce) {
+        if ((max == null) || (used == null) || (max.getDisk() <= 0)) {
+            return 0;
+        }
+        return (double) (used.getDisk() / (max.getDisk() - reduce));
+    }
+
     public void setDead(boolean dead) {
         this.dead = dead;
     }
