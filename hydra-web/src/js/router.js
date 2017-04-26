@@ -56,7 +56,6 @@ define([
 
                 'alias': 'showAliasTable',
                 'alias/:name': 'showAliasDetail',
-                // 'alias/:jobid/:tab/conf': 'showJobConf',
                 'commands': 'showCommandTable',
                 'commands/:name': 'showCommandDetail',
                 'git': 'showGitProperties',
