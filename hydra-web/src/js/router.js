@@ -54,9 +54,9 @@ define([
                 'macros/:name/line/:line/conf': 'showMacroDetail',
                 'macros/:name/line/:line/col/:col/conf': 'showMacroDetail',
 
-
                 'alias': 'showAliasTable',
                 'alias/:name': 'showAliasDetail',
+                'alias/:jobid/:tab/conf': 'showJobConf',
                 'commands': 'showCommandTable',
                 'commands/:name': 'showCommandDetail',
                 'git': 'showGitProperties',

@@ -131,7 +131,7 @@ function(
                     "bVisible":true,
                     "bSearchable":true,
                     "mRender":function(val,type,data){
-                        return val.join(",");
+                        return "<a href='#alias/"+encodeURIComponent(val)+"/alias/conf'>"+val+"</a>";
                     }
                 }
             ];
