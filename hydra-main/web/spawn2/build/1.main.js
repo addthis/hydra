@@ -3079,7 +3079,7 @@ webpackJsonp([1],Array(215).concat([
 	
 	                'alias': 'showAliasTable',
 	                'alias/:name': 'showAliasDetail',
-	                'alias/:jobid/:tab/conf': 'showJobConf',
+	                // 'alias/:jobid/:tab/conf': 'showJobConf',
 	                'commands': 'showCommandTable',
 	                'commands/:name': 'showCommandDetail',
 	                'git': 'showGitProperties',
@@ -67816,7 +67816,7 @@ webpackJsonp([1],Array(215).concat([
 	                    "bVisible":true,
 	                    "bSearchable":true,
 	                    "mRender":function(val,type,data){
-	                        return "<a href='#alias/"+encodeURIComponent(val)+"/alias/conf'>"+val+"</a>";
+	                        return "<a href='#jobs/"+encodeURIComponent(val)+"/conf'>"+val+"</a>";
 	                    }
 	                }
 	            ];

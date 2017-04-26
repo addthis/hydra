@@ -199,7 +199,7 @@
 	        throw thrown;
 	    });
 	
-	    app.router.on('route:showJobConf', function (jobId, tab) {
+	    app.router.on('route:showJobConf', function (jobId) {
 	        var line = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 	        var col = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
 	
@@ -213,11 +213,7 @@
 	                commandCollection: app.commandCollection
 	            });
 	            app.commandCollection.fetch();
-	            if(tab == null) {
-                    app.showView(view, "#jobs");
-				} else {
-                    app.showView(view, "#alias");
-				}
+				app.showView(view, "#jobs");
 	        }
 	    });
 	    app.router.on("route:showJobSettings", function (jobId) {
