@@ -29,6 +29,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.Beta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -38,11 +39,12 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.DecoderFactory;
 
+import org.apache.avro.specific.SpecificData;
+import org.apache.avro.specific.SpecificDatumReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,15 +53,12 @@ public class DataSourceAvro extends BundleizerFactory {
     private static final Logger log = LoggerFactory.getLogger(DataSourceAvro.class);
 
     private final Schema inputSchema;
-    private final GenericDatumReader<GenericRecord> datumReader;
+    private final SpecificDatumReader<GenericRecord> datumReader;
+    private final int skipBytes;
 
-    public DataSourceAvro(String schema) {
-        this.inputSchema = new Schema.Parser().parse(schema);
-        this.datumReader = new GenericDatumReader<>(inputSchema);
-    }
 
     @JsonCreator
-    public DataSourceAvro(JsonNode nodeSchema) {
+    public DataSourceAvro(@JsonProperty(value = "schema", required = true) JsonNode nodeSchema, @JsonProperty(value="skipBytes") int skipBytes) {
         if (nodeSchema.hasNonNull("_optional-strings")) {
             ArrayNode fields = (ArrayNode) nodeSchema.get("fields");
             ArrayNode optionalStrings = (ArrayNode) nodeSchema.get("_optional-strings");
@@ -77,7 +76,8 @@ public class DataSourceAvro extends BundleizerFactory {
         }
         String schema = nodeSchema.toString();
         inputSchema = new Schema.Parser().parse(schema);
-        datumReader = new GenericDatumReader<>(inputSchema);
+        datumReader = new SpecificDatumReader<>(inputSchema);
+        this.skipBytes = skipBytes;
     }
 
     public static ValueObject getValueObject(GenericRecord genericRecord,
@@ -106,18 +106,25 @@ public class DataSourceAvro extends BundleizerFactory {
                 return replacement;
             case BYTES:
                 return ValueFactory.create((byte[]) recordValue);
-            case ENUM:
-                return ValueFactory.create((double) recordValue);
             case FIXED:
                 throw new RuntimeException("FIXED type is not supported");
             case FLOAT:
-                // fall through
+                return ValueFactory.create((float) recordValue);
             case DOUBLE:
                 return ValueFactory.create((double) recordValue);
             case INT:
                 return ValueFactory.create((int) recordValue);
             case LONG:
                 return ValueFactory.create((long) recordValue);
+            case RECORD:
+                GenericData.Record r = (GenericData.Record)recordValue;
+                ValueMap rMap = ValueFactory.createMap();
+                for (Schema.Field field : r.getSchema().getFields()) {
+                    ValueObject value = DataSourceAvro.getValueObject(
+                            r, field, genericData);
+                    rMap.put(field.name(), value);
+                }
+                return rMap;
             case MAP:
                 Map<String, Object> recordMap = (Map<String, Object>) recordValue;
                 ValueMap newMap = ValueFactory.createMap();
@@ -132,6 +139,8 @@ public class DataSourceAvro extends BundleizerFactory {
                 return newMap;
             case NULL:
                 return null;
+            case ENUM:
+                // fall through
             case STRING:
                 // fall through
             case BOOLEAN:
@@ -146,16 +155,27 @@ public class DataSourceAvro extends BundleizerFactory {
 
     @Override public Bundleizer createBundleizer(final InputStream input,
                                                  final BundleFactory factory) {
+
+
+
         return new Bundleizer() {
+
+
+
             private final BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(input, null);
             private GenericRecord reusableRecord = null;
+
+
 
             @Override public Bundle next() throws IOException {
                 if (decoder.isEnd()) {
                     return null;
                 }
+                if (skipBytes > 0) {
+                    decoder.skipFixed(skipBytes);
+                }
                 reusableRecord = datumReader.read(reusableRecord, decoder);
-                GenericData genericData = datumReader.getData();
+                SpecificData genericData = datumReader.getSpecificData();
                 Bundle bundle = factory.createBundle();
                 for (Schema.Field field : inputSchema.getFields()) {
                     ValueObject value = DataSourceAvro.getValueObject(
@@ -168,4 +188,5 @@ public class DataSourceAvro extends BundleizerFactory {
             }
         };
     }
+
 }
