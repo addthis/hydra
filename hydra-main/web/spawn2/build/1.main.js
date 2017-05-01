@@ -23542,11 +23542,17 @@ webpackJsonp([1],Array(215).concat([
 	                checkbox.attr("class","checkbox checked-all");
 	                checkbox.parent().data("state","all");
 	                this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+	                this.views.selectable.find("button.btn-show-one").addClass("disabled");
 	            }
 	            else if(keys.length>0){
-	                checkbox.attr("class","checkbox checked-partial");
-	                checkbox.parent().data("state","partial");
-	                this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+	                if(keys.length == 1) {
+	                    this.views.selectable.find("button.btn-show-one").removeClass("disabled");
+	                } else {
+	                    checkbox.attr("class","checkbox checked-partial");
+	                    checkbox.parent().data("state","partial");
+	                    this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+	                    this.views.selectable.find("button.btn-show-one").addClass("disabled");
+	                }
 	            }
 	            else{
 	                checkbox.attr("class","checkbox");
@@ -69153,7 +69159,7 @@ webpackJsonp([1],Array(215).concat([
   \************************************************************/
 /***/ (function(module, exports) {
 
-	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group host-actions'>\n    <button id=\"hostRebalanceButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Rebalance\n    </button>\n    <button id=\"hostFailFsOkayButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Queue to Fail\n    </button>\n    <button id=\"hostFailCancelButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Cancel failure\n    </button>\n    <button id=\"hostFailFsDeadButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Fail Now!\n    </button>\n    <button id=\"hostDropButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Drop\n    </button>\n    <button id=\"hostEnableButton\" class='btn btn-default btn-hide-zero'>\n        Enable\n    </button>\n    <button id=\"hostDisableButton\" class='btn btn-default btn-hide-zero'>\n        Disable\n    </button>  \n</div>\n"
+	module.exports = "<!--\n    Licensed under the Apache License, Version 2.0 (the \"License\");\n    you may not use this file except in compliance with the License.\n    You may obtain a copy of the License at\n\n    http://www.apache.org/licenses/LICENSE-2.0\n\n    Unless required by applicable law or agreed to in writing, software\n    distributed under the License is distributed on an \"AS IS\" BASIS,\n    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n    See the License for the specific language governing permissions and\n    limitations under the License.\n-->\n<button class='btn btn-default checkbox-button' style=\"margin:0px 4px;\">\n    <span class=\"checkbox\"></span>\n    <span id=\"selectedCount\"></span>\n</button>\n<div class='btn-group host-actions'>\n    <button id=\"hostRebalanceButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Rebalance\n    </button>\n    <button id=\"hostFailFsOkayButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Queue to Fail\n    </button>\n    <button id=\"hostFailCancelButton\" class='btn btn-default btn-blue btn-hide-zero'>\n        Cancel failure\n    </button>\n    <button id=\"hostFailFsDeadButton\" class='btn btn-default btn-red btn-hide-zero btn-show-one'>\n        Fail Now!\n    </button>\n    <button id=\"hostDropButton\" class='btn btn-default btn-red btn-hide-zero'>\n        Drop\n    </button>\n    <button id=\"hostEnableButton\" class='btn btn-default btn-hide-zero'>\n        Enable\n    </button>\n    <button id=\"hostDisableButton\" class='btn btn-default btn-hide-zero'>\n        Disable\n    </button>  \n</div>\n"
 
 /***/ }),
 /* 290 */

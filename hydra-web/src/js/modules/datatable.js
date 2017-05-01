@@ -925,11 +925,17 @@ function(_, $, dt, Backbone){
                 checkbox.attr("class","checkbox checked-all");
                 checkbox.parent().data("state","all");
                 this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+                this.views.selectable.find("button.btn-show-one").addClass("disabled");
             }
             else if(keys.length>0){
-                checkbox.attr("class","checkbox checked-partial");
-                checkbox.parent().data("state","partial");
-                this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+                if(keys.length == 1) {
+                    this.views.selectable.find("button.btn-show-one").removeClass("disabled");
+                } else {
+                    checkbox.attr("class","checkbox checked-partial");
+                    checkbox.parent().data("state","partial");
+                    this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+                    this.views.selectable.find("button.btn-show-one").addClass("disabled");
+                }
             }
             else{
                 checkbox.attr("class","checkbox");
