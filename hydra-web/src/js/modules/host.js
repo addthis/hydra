@@ -273,7 +273,8 @@ function(
                     "mRender":function(val,type,data){
                         if(self.selectedIds[val]){
                             return "<input checked class='row_selectable' type='checkbox'></input>";
-                        } else{
+                        }
+                        else{
                             return "<input class='row_selectable' type='checkbox'></input>";
                         }
                     }

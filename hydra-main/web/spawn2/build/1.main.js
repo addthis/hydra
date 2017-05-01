@@ -23214,7 +23214,6 @@ webpackJsonp([1],Array(215).concat([
 	            this.idAttribute=options.idAttribute || "DT_RowId";
 	            this.loadSelectedState();
 	            this.cacheColumnIndices();
-	            this.checkedCount = 0;
 	        },
 	        cacheColumnIndices:function(){
 	            var map={};
@@ -23440,22 +23439,8 @@ webpackJsonp([1],Array(215).concat([
 	        handleSelect:function(event){
 	            var currentTarget = $(event.currentTarget);
 	            var target = $(event.target);
-	
-	            if( target.is(':checked') ) {
-	                this.checkedCount++;
-	            } else{
-	                this.checkedCount--;
-	            }
-	
-	            if( this.checkedCount%(this.rowCount+1) == 1 ) {
-	                this.views.parent.find("button#hostFailFsDeadButton").prop("disabled",false);
-	            } else   {
-	                this.views.parent.find("button#hostFailFsDeadButton").prop("disabled",true);
-	            }
-	
 	            if(!target.is("a") && !target.is("button")){
 	                var row = currentTarget;
-	
 	                if(row.hasClass("row_selected")){
 	                    delete this.selectedIds[row.attr("id")];
 	                    row.removeClass("row_selected");
@@ -23553,7 +23538,6 @@ webpackJsonp([1],Array(215).concat([
 	            localStorage[this.id+"_selected"]=JSON.stringify(this.selectedIds);
 	            var keys= _.keys(this.selectedIds), checkbox=this.views.selectable.find("span.checkbox");
 	            this.views.parent.find("#selectedCount").html("["+keys.length+"]");
-	
 	            if(_.isEqual(keys.length,this.collection.length)){
 	                checkbox.attr("class","checkbox checked-all");
 	                checkbox.parent().data("state","all");
@@ -23582,6 +23566,7 @@ webpackJsonp([1],Array(215).concat([
 	            if(!$(event.currentTarget).is("button.checkbox-button")){
 	                return;
 	            }
+	            var button = this.views.parent.find("button.checkbox-button");
 	            if(_.isEqual(button.data("state"),"partial")){
 	                this.handleCheckboxPartialClick(event);
 	            }else if(_.isEqual(button.data("state"),"none")){
@@ -68941,7 +68926,8 @@ webpackJsonp([1],Array(215).concat([
 	                    "mRender":function(val,type,data){
 	                        if(self.selectedIds[val]){
 	                            return "<input checked class='row_selectable' type='checkbox'></input>";
-	                        } else{
+	                        }
+	                        else{
 	                            return "<input class='row_selectable' type='checkbox'></input>";
 	                        }
 	                    }
