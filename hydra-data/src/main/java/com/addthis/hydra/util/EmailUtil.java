@@ -31,6 +31,7 @@ public final class EmailUtil {
     private static final Logger log = LoggerFactory.getLogger(EmailUtil.class);
     private static final String FROM_ADDRESS = Parameter.value("email.fromAddress");
     private static final String MAILX_ACCOUNT = Parameter.value("email.mailxAccount");
+    private static final String REPLY_TO = Parameter.value("email.replyTo");
 
     private EmailUtil() {}
 
@@ -40,6 +41,10 @@ public final class EmailUtil {
             if (FROM_ADDRESS != null) {
                 cmd.add("-S");
                 cmd.add("from=" + FROM_ADDRESS);
+            }
+            if (REPLY_TO != null) {
+                cmd.add("-S");
+                cmd.add("replyto=" + REPLY_TO);
             }
             if (MAILX_ACCOUNT != null) {
                 cmd.add("-A");
