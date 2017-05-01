@@ -210,7 +210,7 @@ function(
         getFailInfo:function(self, hostIds, deadFs){
             var count = hostIds.length;
             var parameters = {};
-            parameters["id"] = hostIds.join();
+            parameters["id"] = hostIds.join()
             parameters["deadFs"] = deadFs;
             app.authQueryParameters(parameters);
             $.ajax({
@@ -224,8 +224,8 @@ function(
 					alertify.error("Fatal warning for failing " + uuids + ": " + data.fatal + "; fail aborted");
 					return;
 				}
-				var msg = "Are you sure you want to fail " + uuids + "?\n";
-				msg += "After failing, cluster will go from " + util.formatPercent(data.prefail) + "% disk used to " + util.formatPercent(data.postfail) + "%.\n";	
+				var msg = "<span class=\"bold-red\">Do you seriously want to fail (file system dead) " + uuids + "?</span><br/>";
+				msg += "(After failing, cluster will go from " + util.formatPercent(data.prefail) + "% disk used to " + util.formatPercent(data.postfail) + "%)";
 				if (data.warning){
 					msg += "Warning: " + data.warning;
 				}
@@ -408,7 +408,7 @@ function(
         },
         handleFailFsDeadButtonClick:function(event){
             var ids = this.getSelectedIds(), self=this;
-            this.collection.getFailInfo(self, ids, true);        
+            this.collection.getFailInfo(self, ids, true);
         },
         handleCancelFailButtonClick:function(event){
         	var ids = this.getSelectedIds(), self=this;

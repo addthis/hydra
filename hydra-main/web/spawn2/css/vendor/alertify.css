@@ -874,3 +874,8 @@
 .alertify-notifier.ajs-left .ajs-message.ajs-visible {
   left: 0;
 }
+
+span.bold-red {
+  color: red;
+  font-weight: bold;
+}
