@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="moment.js"></script>
+    <script type="text/javascript" src="mesh.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css"
+          integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
+    <style type="text/css">
+        #spinner {
+            display: none;
+            text-align: center;
+            height: 100%;
+        }
+        #spinner:before {
+            content: ' ';
+            display: inline-block;
+            vertical-align: middle;
+            height: 100%;
+        }
+        #spinner img {
+            vertical-align: middle;
+            display: inline-block;
+        }
+        html, body {
+            height: 100%;
+            margin: 0px;
+            padding: 0px;
+        }
+        body {
+            width: 100%;
+            background: #ccc;
+            overflow: hidden;
+        }
+        #mesh {
+            height: calc(100% - 80px);
+            width: 70%;
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 1200px;
+            min-width: 500px;
+            background: #fff;
+            box-shadow: 0px 0px 8px 1px rgba(112,112,112,1);
+        }
+        #pwd {
+            width: calc(100% - 210px);
+            margin: 0 10px;
+        }
+        #nav button {
+            width: 90px;
+        }
+        #table {
+            margin-top: 20px;
+            height: calc(100% - 50px);
+            overflow: scroll;
+        }
+        table {
+            width: 100%;
+        }
+        a, a:visited {
+            color: rgb(50,50,100);
+        }
+    </style>
+    <title>Mesh Browser</title>
+</head>
+<body>
+    <div id="mesh">
+        <div id="nav">
+            <form class="pure-form">
+                <button id="up" class="pure-button pure-button-primary">Go Up</button>
+                <input type="text" id="pwd" class="pure-input pure-input-rounded">
+                <button id="cancel" class="pure-button pure-button-primary">Cancel</button>
+            </form>
+        </div>
+        <div id="table">
+            <table class="pure-table pure-table-horizontal pure-table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Size</th>
+                        <th>Modified</th>
+                        <th>Host</th>
+                    </tr>
+                </thead>
+                <tbody id="files"></tbody>
+            </table>
+            <div id="spinner">
+                <img src="ring-alt.svg">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

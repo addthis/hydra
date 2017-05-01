@@ -43,6 +43,7 @@
     <module>hydra-store</module>
     <module>hydra-task</module>
     <module>hydra-uber</module>
+    <module>hydra-meshy-http</module>
   </modules>
 
   <profiles>
