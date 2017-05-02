@@ -224,8 +224,15 @@ function(
 					alertify.error("Fatal warning for failing " + uuids + ": " + data.fatal + "; fail aborted");
 					return;
 				}
-				var msg = "<span class=\"bold-red\">Do you seriously want to fail (file system dead) " + uuids + "?</span><br/>";
-				msg += "(After failing, cluster will go from " + util.formatPercent(data.prefail) + "% disk used to " + util.formatPercent(data.postfail) + "%)";
+
+                var msg = "";
+                if(deadFs) {        // dead
+                    msg = "<span class=\"bold-red\">Do you really want to fail now (file system dead) " + uuids + "?</span><br/>";
+                } else {            // queue
+                    msg = "<span>Do you really want to queue " + uuids + " to fail?</span><br/>";
+                }
+                msg += "(After failing, cluster will go from " + util.formatPercent(data.prefail) + "% disk used to " + util.formatPercent(data.postfail) + "%)";
+
 				if (data.warning){
 					msg += "Warning: " + data.warning;
 				}

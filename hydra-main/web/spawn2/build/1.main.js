@@ -23543,18 +23543,14 @@ webpackJsonp([1],Array(215).concat([
 	                checkbox.parent().data("state","all");
 	                this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
 	                this.views.selectable.find("button.btn-show-one").addClass("disabled");
-	            }
-	            else if(keys.length>0){
-	                if(keys.length == 1) {
-	                    this.views.selectable.find("button.btn-show-one").removeClass("disabled");
-	                } else {
-	                    checkbox.attr("class","checkbox checked-partial");
-	                    checkbox.parent().data("state","partial");
-	                    this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
-	                    this.views.selectable.find("button.btn-show-one").addClass("disabled");
-	                }
-	            }
-	            else{
+	            } else if(keys.length == 1) {
+	                this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+	            } else if(keys.length > 1) {
+	                checkbox.attr("class","checkbox checked-partial");
+	                checkbox.parent().data("state","partial");
+	                this.views.selectable.find("button.btn-hide-zero").removeClass("disabled");
+	                this.views.selectable.find("button.btn-show-one").addClass("disabled");
+	            } else{
 	                checkbox.attr("class","checkbox");
 	                checkbox.parent().data("state","none");
 	                this.views.selectable.find("button.btn-hide-zero").addClass("disabled");
@@ -67822,7 +67818,17 @@ webpackJsonp([1],Array(215).concat([
 	                    "bVisible":true,
 	                    "bSearchable":true,
 	                    "mRender":function(val,type,data){
-	                        return val.join(",");
+	                        var length = val.length;
+	                        if(length == 1) {
+	                            return "<a href='#jobs/"+encodeURIComponent(val)+"/conf'>"+val+"</a>";
+	                        } else if(length > 1) {
+	                            var list = "";
+	                            for(i in val)
+	                                list += "<a href='#jobs/"+encodeURIComponent(val[i])+"/conf'>"+val[i]+"</a>&nbsp;&nbsp;";
+	                            return list;
+	                        } else {
+	                            return "";
+	                        }
 	                    }
 	                }
 	            ];
@@ -68883,8 +68889,15 @@ webpackJsonp([1],Array(215).concat([
 						alertify.error("Fatal warning for failing " + uuids + ": " + data.fatal + "; fail aborted");
 						return;
 					}
-					var msg = "<span class=\"bold-red\">Do you seriously want to fail (file system dead) " + uuids + "?</span><br/>";
-					msg += "(After failing, cluster will go from " + util.formatPercent(data.prefail) + "% disk used to " + util.formatPercent(data.postfail) + "%)";
+	
+	                var msg = "";
+	                if(deadFs) {        // dead
+	                    msg = "<span class=\"bold-red\">Do you really want to fail now (file system dead) " + uuids + "?</span><br/>";
+	                } else {            // queue
+	                    msg = "<span>Do you really want to queue " + uuids + " to fail?</span><br/>";
+	                }
+	                msg += "(After failing, cluster will go from " + util.formatPercent(data.prefail) + "% disk used to " + util.formatPercent(data.postfail) + "%)";
+	
 					if (data.warning){
 						msg += "Warning: " + data.warning;
 					}
