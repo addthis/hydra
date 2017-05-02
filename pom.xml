@@ -440,6 +440,11 @@
         <artifactId>hydra-uber</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-meshy-http</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!--
           The sleepycat license has surprisingly strong copyleft

@@ -8,13 +8,19 @@ import org.eclipse.jetty.util.resource.Resource;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        Server server = new Server(8080);
-        MeshConnection connection = new MeshConnection("spawn-lax", 5500);
+        if (args.length != 3) {
+            System.out.println("Required arguments: <server-port> <mesh-host> <mesh-port>");
+        }
+
+        int serverPort = Integer.parseInt(args[0]);
+        String meshHost = args[1];
+        int meshPort = Integer.parseInt(args[2]);
+        Server server = new Server(serverPort);
+        MeshConnection connection = new MeshConnection(meshHost, meshPort);
 
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
-//        resourceHandler.setBaseResource(Resource.newClassPathResource("/webroot"));
-        resourceHandler.setResourceBase("/Users/ted/workspace/hydra/hydra-meshy-http/src/main/resources/webroot");
+        resourceHandler.setBaseResource(Resource.newClassPathResource("/meshy-http-webroot"));
 
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[] {resourceHandler, new MeshHandler(connection)});
