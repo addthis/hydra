@@ -15,14 +15,19 @@ $(function() {
     $("table").click(function (e) {
         var elem = e.target
         if (elem.tagName == "A" && elem.classList.contains("file-link")) {
-            mesh.navigateTo(elem.text + "/*")
+            mesh.navigateLink(elem)
         }
+    })
+    $("#close-file").click(function () {
+        $("#viewer").hide(0)
+        $("table").show(0)
     })
 
     var path = "/job/*"
     if (localStorage['path']) {
         path = localStorage['path']
     }
+    mesh.sort = new Tablesort($("table").get(0))
     mesh.navigateTo(path)
 });
 
@@ -33,6 +38,15 @@ var mesh = {
 
 mesh.pwdUpdated = function() {
     mesh.navigateTo($("#pwd").val())
+}
+
+mesh.navigateLink = function(link) {
+    var path = link.text
+    if (link.classList.contains("dir")) {
+        mesh.navigateTo(path + "/*")
+    } else {
+        mesh.viewFile(path, link.dataset.uuid)
+    }
 }
 
 mesh.navigateUp = function() {
@@ -48,6 +62,7 @@ mesh.navigateTo = function(path, isDir) {
     var table = $("table")
     var spinner = $("#spinner")
     table.hide(0)
+    $("#viewer").hide(0)
     spinner.show(0)
     $("#pwd").val(path)
     var params = {path: path}
@@ -57,13 +72,27 @@ mesh.navigateTo = function(path, isDir) {
         $("#files").remove()
         table.append(tbody)
         spinner.hide(0)
+        mesh.sort.refresh()
         table.show(0)
     })
 }
 
+mesh.shimDirectory = function(file) {
+    if (!("isDirectory" in file)) {
+        file.isDirectory = mesh.getFilename(file.name).indexOf(".") == -1
+    }
+}
+
+mesh.getFilename = function(path) {
+    var index = path.lastIndexOf("/")
+    return path.substring(index + 1, path.length)
+}
+
 mesh.createRow = function(tbody) {
     return function(index, file) {
-        var name = '<td><a href="#" class="file-link">' + file.name + "</a></td>"
+        mesh.shimDirectory(file)
+        var type = file.isDirectory ? "dir" : "file"
+        var name = '<td><a href="#" class="file-link ' + type + '" data-uuid="' + file.hostUUID + '">' + file.name + "</a></td>"
         var size = "<td>" + mesh.humanReadableSize(file.size) + "</td>"
         var modified = "<td>" + moment(file.lastModified).format('MMMM Do YYYY, h:mm:ss a') + "</td>"
         var host = "<td>" + file.hostUUID.split("-")[0] + "</td>"
@@ -92,4 +121,20 @@ mesh.nthLastIndex = function(str, pat, n) {
         if (i <= 0) break;
     }
     return i;
+}
+
+mesh.viewFile = function(path, uuid) {
+    var content = $("#file-content")
+    var url = "get?uuid=" + uuid + "&path=" + encodeURIComponent(path)
+    content.attr("data", url)
+
+    var download = mesh.getFilename(path)
+    if (download.endsWith(".gz")) {
+        download = download.substring(0, download.length - 3)
+    }
+    $("#download").attr("download", download).attr("href", url)
+
+
+    $("table").hide(0)
+    $("#viewer").show(0)
 }

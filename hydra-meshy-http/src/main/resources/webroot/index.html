@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
     <script type="text/javascript" src="moment.js"></script>
+    <script type="text/javascript" src="tablesort.min.js"></script>
     <script type="text/javascript" src="mesh.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css"
           integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
     <style type="text/css">
-        #spinner {
+        #spinner, #viewer {
             display: none;
-            text-align: center;
             height: 100%;
         }
-        #spinner:before {
+        #spinner {
+            text-align: center;
+        }
+        #spinner::before {
             content: ' ';
             display: inline-block;
             vertical-align: middle;
@@ -22,6 +25,15 @@
         #spinner img {
             vertical-align: middle;
             display: inline-block;
+        }
+        #file-content {
+            width: calc(100% - 2px);
+            height: calc(100% - 20px);
+            border: #ccc 1px solid;
+        }
+        #buttons {
+            position: absolute;
+            right: 15%;
         }
         html, body {
             height: 100%;
@@ -58,8 +70,61 @@
         table {
             width: 100%;
         }
-        a, a:visited {
-            color: rgb(50,50,100);
+        #table table td {
+            padding: 5px;
+        }
+        a.file-link, a.file-link:visited {
+            color: #04A;
+        }
+        a.file-link::before {
+            content: '';
+            background: no-repeat center/20px;
+            height: 20px;
+            width: 20px;
+            margin: 0 5px 0;
+            display: inline-block;
+            vertical-align: bottom;
+        }
+        a.file::before {
+            background-image: url("file.svg");
+        }
+        a.dir::before {
+            background-image: url("dir.svg");
+        }
+
+        th {
+            white-space: nowrap;
+        }
+
+        th[role=columnheader]:not(.no-sort) {
+            cursor: pointer;
+        }
+
+        th[role=columnheader]:not(.no-sort):after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: url("up.svg") no-repeat 0px 5px/16px;
+            visibility: hidden;
+            opacity: 0;
+            user-select: none;
+            vertical-align: bottom;
+        }
+
+        th[aria-sort=ascending]:not(.no-sort):after {
+            content: '';
+            background-image: url("down.svg")
+        }
+
+        th[aria-sort]:not(.no-sort):after {
+            visibility: visible;
+            opacity: 0.4;
+        }
+
+        th[role=columnheader]:not(.no-sort):hover:after {
+            visibility: visible;
+            opacity: 1;
         }
     </style>
     <title>Mesh Browser</title>
@@ -87,6 +152,13 @@
             </table>
             <div id="spinner">
                 <img src="ring-alt.svg">
+            </div>
+            <div id="viewer">
+                <div id="buttons">
+                    <a id="download" class="pure-button">Download file</a>
+                    <button id="close-file" class="pure-button">Close</button>
+                </div>
+                <object id="file-content" type="text/html"></object>
             </div>
         </div>
     </div>
