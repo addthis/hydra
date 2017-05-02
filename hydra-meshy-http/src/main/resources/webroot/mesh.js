@@ -9,9 +9,6 @@ $(function() {
             return false
         }
     })
-    $("thead th").click(function () {
-        console.log($(this).text())
-    })
     $("table").click(function (e) {
         var elem = e.target
         if (elem.tagName == "A" && elem.classList.contains("file-link")) {
@@ -50,21 +47,20 @@ mesh.navigateLink = function(link) {
 }
 
 mesh.navigateUp = function() {
-    var lastSlash = mesh.nthLastIndex(mesh.path, "/", 2)
+    var index = mesh.path.endsWith("/*") ? 2 : 1
+    var lastSlash = mesh.nthLastIndex(mesh.path, "/", index)
     if (lastSlash > 0) {
         mesh.navigateTo(mesh.path.substring(0,lastSlash) + "/*")
     }
 }
 
 mesh.navigateTo = function(path, isDir) {
-    mesh.path = path
-    localStorage.path = path
+    mesh.updatePwd(path)
     var table = $("table")
     var spinner = $("#spinner")
     table.hide(0)
     $("#viewer").hide(0)
     spinner.show(0)
-    $("#pwd").val(path)
     var params = {path: path}
     $.getJSON(mesh.server + "/list?" + $.param(params), function(data) {
         var tbody = $('<tbody id="files"></tbody>')
@@ -75,6 +71,12 @@ mesh.navigateTo = function(path, isDir) {
         mesh.sort.refresh()
         table.show(0)
     })
+}
+
+mesh.updatePwd = function(path) {
+    mesh.path = path
+    localStorage.path = path
+    $("#pwd").val(path)
 }
 
 mesh.shimDirectory = function(file) {
@@ -94,7 +96,7 @@ mesh.createRow = function(tbody) {
         var type = file.isDirectory ? "dir" : "file"
         var name = '<td><a href="#" class="file-link ' + type + '" data-uuid="' + file.hostUUID + '">' + file.name + "</a></td>"
         var size = "<td>" + mesh.humanReadableSize(file.size) + "</td>"
-        var modified = "<td>" + moment(file.lastModified).format('MMMM Do YYYY, h:mm:ss a') + "</td>"
+        var modified = "<td data-sort='" + file.lastModified + "'>" + moment(file.lastModified).format('MMMM Do YYYY, h:mm:ss a') + "</td>"
         var host = "<td>" + file.hostUUID.split("-")[0] + "</td>"
         $("<tr>" + name + size + modified + host + "</tr>").appendTo(tbody)
     }
@@ -124,6 +126,7 @@ mesh.nthLastIndex = function(str, pat, n) {
 }
 
 mesh.viewFile = function(path, uuid) {
+    mesh.updatePwd(path)
     var content = $("#file-content")
     var url = "get?uuid=" + uuid + "&path=" + encodeURIComponent(path)
     content.attr("data", url)
