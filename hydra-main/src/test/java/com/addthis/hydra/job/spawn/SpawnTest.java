@@ -157,6 +157,11 @@ public class SpawnTest extends ZkCodecStartUtil {
                 task.setFileCount(10);
             }
             spawn.updateJob(job);
+            // at this point all tasks are live on host0, with replica on host1
+            // now setup hosts for misplaced task replicas:
+            // task 0 on host0 and host1 (as should be)
+            // task 1 on host1 (missing on host0)
+            // task 2 on host2 (missing on host0 and host1)
             host0.setStopped(new JobKey[]{new JobKey(job.getId(), 0)});
             spawn.hostManager.updateHostState(host0);
             host1.setStopped(new JobKey[]{new JobKey(job.getId(), 0), new JobKey(job.getId(), 1)});
@@ -164,13 +169,16 @@ public class SpawnTest extends ZkCodecStartUtil {
             HostState host2 = createHostState("host2");
             host2.setStopped(new JobKey[]{new JobKey(job.getId(), 2)});
             spawn.hostManager.updateHostState(host2);
+            // Wait for all hosts to be up due to time needed to pick up zk minion/up change. That matters because
+            // HostMnager.listHostStatus may set HostState.up to false depending on zk minion/up data, which may
+            // affect test results below
             boolean hostsAreUp = false;
             for (int i = 0; i < 10; i++) {
-                if (spawn.hostManager.listHostStatus(null).size() < 3) {
-                    Thread.sleep(1000); // Can take a little while for the hosts to appear as up
-                } else {
+                if (spawn.hostManager.listHostStatus(null).stream().allMatch(host -> host.isUp())) {
                     hostsAreUp = true;
                     break;
+                } else {
+                    Thread.sleep(1000);
                 }
             }
             if (!hostsAreUp) {
