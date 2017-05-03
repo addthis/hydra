@@ -1,5 +1,7 @@
 package com.addthis.hydra.meshy.http;
 
+import com.addthis.basis.util.Parameter;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -8,13 +10,9 @@ import org.eclipse.jetty.util.resource.Resource;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        if (args.length != 3) {
-            System.out.println("Required arguments: <server-port> <mesh-host> <mesh-port>");
-        }
-
-        int serverPort = Integer.parseInt(args[0]);
-        String meshHost = args[1];
-        int meshPort = Integer.parseInt(args[2]);
+        int serverPort = Parameter.intValue("mesh.http.port", 6000);
+        String meshHost = Parameter.value("mesh.host", "localhost");
+        int meshPort = Parameter.intValue("mesh.port", 5000);
         Server server = new Server(serverPort);
         MeshConnection connection = new MeshConnection(meshHost, meshPort);
 
