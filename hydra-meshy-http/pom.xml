@@ -15,12 +15,12 @@
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>meshy</artifactId>
-      <version>3.4.0</version>
+      <version>${hydra.dep.meshy.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>9.4.4.v20170414</version>
+      <version>${hydra.dep.jetty.version}</version>
     </dependency>
   </dependencies>
 
