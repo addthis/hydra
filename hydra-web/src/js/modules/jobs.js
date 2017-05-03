@@ -1684,7 +1684,7 @@ function(
             "click #settingsChangePermission":"handleSettingsChangePermissionClick",
             "click #validateLink":"handleValidateClick",
             "click li.disabled > a":"handleDisabledTabClick",
-            "click #cloneJobButton":"handleCloneClick"
+            "click #cloneJobButton":"handleCloneClick",
             "click #browseDataButton":"handleBrowseClick"
         },
         initialize:function(options){
