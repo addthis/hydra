@@ -10,7 +10,7 @@ import org.eclipse.jetty.util.resource.Resource;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        int serverPort = Parameter.intValue("mesh.http.port", 6000);
+        int serverPort = Parameter.intValue("mesh.http.port", 6001);
         String meshHost = Parameter.value("mesh.host", "localhost");
         int meshPort = Parameter.intValue("mesh.port", 5000);
         Server server = new Server(serverPort);

@@ -21,15 +21,20 @@ $(function() {
     })
 
     var path = "/job/*"
-    if (localStorage['path']) {
+    var pathParam = (new URL(location)).searchParams.get("path")
+    if (pathParam !== null) {
+        path = pathParam
+    } else if (localStorage['path']) {
         path = localStorage['path']
     }
     mesh.sort = new Tablesort($("table").get(0))
+    // get rid of any parameters in browser url
+    window.history.pushState({}, "", location.origin)
     mesh.navigateTo(path)
 });
 
 var mesh = {
-    server: "http://localhost:8080",
+    server: location.origin,
     path: ""
 };
 

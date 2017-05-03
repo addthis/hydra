@@ -48,16 +48,18 @@ public class SystemManagerImpl implements SystemManager {
     private String debug;
     private String queryHost;
     private String spawnHost;
+    private String meshHttpHost;
     private boolean sslEnabled;
 
     private volatile Properties gitProperties;
 
-    public SystemManagerImpl(Spawn spawn, String debug, String queryHost, String spawnHost,
+    public SystemManagerImpl(Spawn spawn, String debug, String queryHost, String spawnHost, String meshHttpHost,
                              int authenticationTokenTimeout, int authenticationSudoTimeout) {
         this.spawn = spawn;
         this.debug = debug;
         this.queryHost = queryHost;
         this.spawnHost = spawnHost;
+        this.meshHttpHost = meshHttpHost;
         this.authenticationTokenTimeout = authenticationTokenTimeout;
         this.authenticationSudoTimeout = authenticationSudoTimeout;
     }
@@ -115,6 +117,7 @@ public class SystemManagerImpl implements SystemManager {
                                      .setQuiesce(isQuiesced())
                                      .setQueryHost(queryHost)
                                      .setSpawnHost(spawnHost)
+                                     .setMeshHttpHost(meshHttpHost)
                                      .setDisabled(disabled)
                                      .setDefaultReplicaCount(Spawn.DEFAULT_REPLICA_COUNT)
                                      .setSslDefault(sslEnabled && SpawnServiceConfiguration.SINGLETON.defaultSSL)
