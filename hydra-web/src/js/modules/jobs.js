@@ -283,7 +283,7 @@ function(
         },
         browse : function(){
             window.open("http://"+app.meshHttpHost+"?path=/job/"+this.id+"/*","_blank")
-        }
+        },
         delete : function(dontShowSuccessAlert){
             var self=this;
             var parameters = {};
