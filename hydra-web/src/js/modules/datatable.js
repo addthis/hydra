@@ -921,6 +921,13 @@ function(_, $, dt, Backbone){
             localStorage[this.id+"_selected"]=JSON.stringify(this.selectedIds);
             var keys= _.keys(this.selectedIds), checkbox=this.views.selectable.find("span.checkbox");
             this.views.parent.find("#selectedCount").html("["+keys.length+"]");
+
+            if (keys.length == 1) {
+                this.views.selectable.find("button.btn-show-one").removeClass("disabled");
+            } else {
+                this.views.selectable.find("button.btn-show-one").addClass("disabled");
+            }
+
             if(_.isEqual(keys.length,this.collection.length)){
                 checkbox.attr("class","checkbox checked-all");
                 checkbox.parent().data("state","all");

@@ -131,7 +131,10 @@ function(
                     "bVisible":true,
                     "bSearchable":true,
                     "mRender":function(val,type,data){
-                        return val.join(",");
+                        var list = "";
+                        for(i in val)
+                            list += "<a href='#jobs/"+encodeURIComponent(val[i])+"/conf'>"+val[i]+"</a>&nbsp;&nbsp;";
+                        return list;
                     }
                 }
             ];
