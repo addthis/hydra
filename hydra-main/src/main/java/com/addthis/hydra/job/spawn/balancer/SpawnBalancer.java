@@ -1244,6 +1244,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     private HostScore calculateHostScore(HostState host, double clusterMaxMeanActive, double clusterMaxDiskUsed) {
         double meanActive = host.getMeanActiveTasks();
+        // Get percentage of allowed disk space used (max - min free space = allowed)
         double diskUsedPercentModified = host.getDiskUsedPercentModified(config.getMinFreeDiskSpaceToRunJobs());
         int activeTaskWeight = config.getActiveTaskWeight();
         int diskUsedWeight = config.getDiskUsedWeight();
