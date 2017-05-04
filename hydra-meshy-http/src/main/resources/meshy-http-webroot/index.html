@@ -1,12 +1,25 @@
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <script type="text/javascript" src="moment.js"></script>
-    <script type="text/javascript" src="tablesort.min.js"></script>
-    <script type="text/javascript" src="tablesort.number.js"></script>
-    <script type="text/javascript" src="tablesort.filesize.js"></script>
+    <script type="text/javascript" src="lib/moment/moment.js"></script>
+    <script type="text/javascript" src="lib/tablesort/tablesort.min.js"></script>
+    <script type="text/javascript" src="lib/tablesort/tablesort.number.js"></script>
+    <script type="text/javascript" src="lib/tablesort/tablesort.filesize.js"></script>
     <script type="text/javascript" src="mesh.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css"
           integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
@@ -88,10 +101,10 @@
             vertical-align: bottom;
         }
         a.file::before {
-            background-image: url("file.svg");
+            background-image: url("img/file.svg");
         }
         a.dir::before {
-            background-image: url("dir.svg");
+            background-image: url("img/dir.svg");
         }
 
         th {
@@ -107,7 +120,7 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            background: url("up.svg") no-repeat 0px 5px/16px;
+            background: url("img/up.svg") no-repeat 0px 5px/16px;
             visibility: hidden;
             opacity: 0;
             user-select: none;
@@ -116,7 +129,7 @@
 
         th[aria-sort=ascending]:not(.no-sort):after {
             content: '';
-            background-image: url("down.svg")
+            background-image: url("img/down.svg")
         }
 
         th[aria-sort]:not(.no-sort):after {
@@ -153,7 +166,7 @@
                 <tbody id="files"></tbody>
             </table>
             <div id="spinner">
-                <img src="ring-alt.svg">
+                <img src="img/ring-alt.svg">
             </div>
             <div id="viewer">
                 <div id="buttons">
