@@ -24,15 +24,14 @@ import org.eclipse.jetty.util.resource.Resource;
 public class Main {
     public static void main(String[] args) throws Exception {
         int serverPort = Parameter.intValue("mesh.http.port", 6001);
-        String meshHost = Parameter.value("mesh.host", "spawn-iad");
+        String meshHost = Parameter.value("mesh.host", "localhost");
         int meshPort = Parameter.intValue("mesh.port", 5000);
         Server server = new Server(serverPort);
         MeshConnection connection = new MeshConnection(meshHost, meshPort);
 
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
-//        resourceHandler.setBaseResource(Resource.newClassPathResource("/meshy-http-webroot"));
-        resourceHandler.setResourceBase("/Users/ted/workspace/hydra/hydra-meshy-http/src/main/resources/meshy-http-webroot");
+        resourceHandler.setBaseResource(Resource.newClassPathResource("/meshy-http-webroot"));
 
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[] {resourceHandler, new MeshHandler(connection)});
