@@ -32,8 +32,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MeshHandler extends AbstractHandler {
+    Logger log = LoggerFactory.getLogger(MeshHandler.class);
     MeshConnection connection;
     ObjectMapper mapper;
 
@@ -57,33 +60,62 @@ public class MeshHandler extends AbstractHandler {
                 response.setContentType("application/json");
                 doList(request.getParameter("path"), response.getOutputStream());
                 break;
+            case "/check-binary":
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.setContentType("application/json");
+                doCheckBinary(request.getParameter("uuid"), request.getParameter("path"), response.getOutputStream());
             default:
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                response.getWriter().print("Use /get or /list");
+                response.getWriter().print("Use /get, /list, or /check-binary");
         }
         baseRequest.setHandled(true);
     }
 
-    private void doGet(String uuid, String path, OutputStream outputStream) throws IOException {
-        Function<InputStream, ? extends InputStream> inputTransfomer;
+    private void doGet(String uuid, String path, OutputStream outputStream) {
+        try (OutputStream o = outputStream) {
+            connection.streamFile(uuid, path, o, MeshHandler.getTransformer(path));
+        } catch (IOException e) {
+            log.error("Error while streaming file", e);
+        }
+    }
+
+    private void doList(String path, OutputStream outputStream) {
+        Collection<FileReference> files = connection.list(path);
+        try (OutputStream o = outputStream) {
+            mapper.writeValue(o, files);
+        } catch (IOException e) {
+            log.error("Failed to write file list to http output", e);
+        }
+    }
+
+    private void doCheckBinary(String uuid, String path, OutputStream outputStream) {
+        try (OutputStream o = outputStream) {
+            boolean binary = connection.mightBeBinaryFile(uuid, path, MeshHandler.getTransformer(path));
+            // wrap and write the value
+            mapper.writeValue(outputStream, new Binary(binary));
+        } catch (IOException e) {
+            log.error("Error writing binary status to http output", e);
+        }
+    }
+
+    private static Function<InputStream, ? extends InputStream> getTransformer(String path) {
         if (path.endsWith(".gz")) {
-            inputTransfomer = in -> {
+            return in -> {
                 try {
                     return new GZIPInputStream(in);
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
             };
-        } else {
-            inputTransfomer = Function.identity();
         }
-        connection.streamFile(uuid, path, outputStream, inputTransfomer);
-        outputStream.close();
+        return Function.identity();
     }
 
-    private void doList(String path, OutputStream outputStream) throws IOException {
-        Collection<FileReference> files = connection.list(path);
-        mapper.writeValue(outputStream, files);
-        outputStream.close();
+    private static class Binary {
+        public boolean binary;
+
+        public Binary(boolean binary) {
+            this.binary = binary;
+        }
     }
 }

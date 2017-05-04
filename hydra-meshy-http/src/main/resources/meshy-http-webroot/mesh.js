@@ -144,18 +144,47 @@ mesh.nthLastIndex = function(str, pat, n) {
 }
 
 mesh.viewFile = function(path, uuid) {
-    mesh.updatePwd(path)
-    var content = $("#file-content")
-    var url = "get?uuid=" + uuid + "&path=" + encodeURIComponent(path)
-    content.attr("data", url)
+    // first, check if the file might be binary
+    var params = "?uuid=" + uuid + "&path=" + encodeURIComponent(path)
+    var binaryUrl = "check-binary" + params
+    var fileUrl = "get" + params
+    $.getJSON(binaryUrl, function(data) {
+        if (data.binary) {
+            vex.dialog.open({
+                message:'"' + path + '" might be a binary file. ' +
+                "Would you like to download this instead? You can't view it in the browser.",
+                buttons: [
+                    $.extend({}, vex.dialog.buttons.YES, { text: 'Download' }),
+                    $.extend({}, vex.dialog.buttons.NO, { text: 'Cancel' })
+                ],
+                callback: function(data) {
+                    if (data) {
+                        var link = document.createElement("a")
+                        link.download = mesh.getDownloadAttr(path)
+                        link.href = fileUrl
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                        delete link
+                    }
+                }
+            })
+        } else {
+            // not binary, so view it
+            mesh.updatePwd(path)
+            var content = $("#file-content")
+            content.attr("data", fileUrl)
+            $("#download").attr("download", mesh.getDownloadAttr(path)).attr("href", fileUrl)
+            $("table").hide(0)
+            $("#viewer").show(0)
+        }
+    })
+}
 
+mesh.getDownloadAttr = function(path) {
     var download = mesh.getFilename(path)
     if (download.endsWith(".gz")) {
         download = download.substring(0, download.length - 3)
     }
-    $("#download").attr("download", download).attr("href", url)
-
-
-    $("table").hide(0)
-    $("#viewer").show(0)
+    return download
 }
