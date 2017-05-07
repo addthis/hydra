@@ -103,6 +103,9 @@ function(
         .node('!.queryHost', function (queryHost) {
             app.queryHost = queryHost;
         })
+        .node('!.meshHttpHost', function (meshHttpHost) {
+            app.meshHttpHost = meshHttpHost;
+        })
         .node('!.hosts[*]', function (host) {
             app.hostCollection.add(host);
         })

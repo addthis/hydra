@@ -281,6 +281,9 @@ function(
         query : function(){
             window.open("http://"+app.queryHost+"/query/index.html?job="+this.id,"_blank");
         },
+        browse : function(){
+            window.open("http://"+app.meshHttpHost+"?path=/job/"+this.id+"/*","_blank")
+        },
         delete : function(dontShowSuccessAlert){
             var self=this;
             var parameters = {};
@@ -1681,7 +1684,8 @@ function(
             "click #settingsChangePermission":"handleSettingsChangePermissionClick",
             "click #validateLink":"handleValidateClick",
             "click li.disabled > a":"handleDisabledTabClick",
-            "click #cloneJobButton":"handleCloneClick"
+            "click #cloneJobButton":"handleCloneClick",
+            "click #browseDataButton":"handleBrowseClick"
         },
         initialize:function(options){
             options = options || {};
@@ -1715,6 +1719,10 @@ function(
             } else {
                 app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
             }
+        },
+        handleBrowseClick:function(event){
+            event.preventDefault();
+            this.model.browse();
         },
         handleCommitJobButton:function(event){
             event.preventDefault();

@@ -48,6 +48,10 @@
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-main</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.addthis.hydra</groupId>
+      <artifactId>hydra-meshy-http</artifactId>
+    </dependency>
 
     <!-- logging -->
     <dependency>
