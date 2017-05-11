@@ -111,8 +111,8 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
     public void fullDiskTest() throws Exception {
         String fullHostId = "full";
         String emptyHostId = "empty";
-        spawn.hostManager.updateHostState(makeHostState(fullHostId, true, 999, 1000));
-        spawn.hostManager.updateHostState(makeHostState(emptyHostId, true, 100, 1000));
+        spawn.hostManager.updateHostState(makeHostState(fullHostId, true, 999_000_000_000L, 1000_000_000_000L));
+        spawn.hostManager.updateHostState(makeHostState(emptyHostId, true, 100_000_000_000L, 1000_000_000_000L));
         zkClient.create().creatingParentsIfNeeded().forPath("/minion/up/" + fullHostId, new byte[]{});
         zkClient.create().creatingParentsIfNeeded().forPath("/minion/up/" + emptyHostId, new byte[]{});
         Thread.sleep(2000); // need to let spawn detect the new minions

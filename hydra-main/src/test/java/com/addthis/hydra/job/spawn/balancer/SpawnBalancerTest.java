@@ -141,8 +141,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             String hostID = "light" + i;
             hostIDs.add(hostID);
             HostState lightHost = installHostStateWithUUID(hostID, spawn, true);
-            lightHost.setUsed(new HostCapacity(0, 0, 0, 30));
-            lightHost.setMax(new HostCapacity(0, 0, 0, 10_000));
+            lightHost.setUsed(new HostCapacity(0, 0, 0, 200_000_000_000L));
+            lightHost.setMax(new HostCapacity(0, 0, 0, 1_000_000_000_000L));
         }
         Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
         job.setReplicas(1);
@@ -315,18 +315,18 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState readOnlyHost = installHostStateWithUUID(readOnlyHostUUID, spawn, true, true, 0, "default");
         List<HostState> hosts = Arrays.asList(heavyHost, lightHost, lightHost2, readOnlyHost);
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
-        Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 8_000_000_000l, 0);
-        Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 850_000_000l, 0);
-        Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 820_000_000l, 0);
+        Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 8_000_000_000_000L, 0);
+        Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 850_000_000L, 0);
+        Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 820_000_000L, 0);
         heavyHost.setStopped(simulateJobKeys(gargantuanJob, movableJob1, movableJob2));
-        heavyHost.setMax(new HostCapacity(10, 10, 10, 10_000_000_000l));
-        heavyHost.setUsed(new HostCapacity(10, 10, 10, 9_900_000_000l));
-        lightHost.setMax(new HostCapacity(10, 10, 10, 10_000_000_000l));
-        lightHost.setUsed(new HostCapacity(10, 10, 10, 20_000_0000l));
-        lightHost2.setMax(new HostCapacity(10, 10, 10, 10_000_000_000l));
-        lightHost2.setUsed(new HostCapacity(10, 10, 10, 20_000_000l));
-        readOnlyHost.setMax(new HostCapacity(10, 10, 10, 10_000_000_000l));
-        readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 20_000_000l));
+        heavyHost.setMax(new HostCapacity(10, 10, 10, 10_000_000_000_000L));
+        heavyHost.setUsed(new HostCapacity(10, 10, 10, 9_900_000_000_000L));
+        lightHost.setMax(new HostCapacity(10, 10, 10, 10_000_000_000_000L));
+        lightHost.setUsed(new HostCapacity(10, 10, 10, 20_000_000_0000L));
+        lightHost2.setMax(new HostCapacity(10, 10, 10, 10_000_000_000_000L));
+        lightHost2.setUsed(new HostCapacity(10, 10, 10, 20_000_000_000L));
+        readOnlyHost.setMax(new HostCapacity(10, 10, 10, 10_000_000_000_000L));
+        readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 20_000_000_000L));
         hostManager.updateHostState(heavyHost);
         hostManager.updateHostState(lightHost);
         hostManager.updateHostState(lightHost2);
@@ -372,7 +372,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         assertTrue("available host should be able to run task", avail.canMirrorTasks());
     }
 
-    @Ignore("Alwawys fail")
+    @Ignore("Always fails")
     @Test
     public void queuePersist() throws Exception {
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
@@ -418,7 +418,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             installHostStateWithUUID("h" + i, spawn, true);
             hosts.add("h" + i);
         }
-        Job myJob = createJobAndUpdateHosts(spawn, 20, hosts, JitterClock.globalTime(), 2000l, 0);
+        Job myJob = createJobAndUpdateHosts(spawn, 20, hosts, JitterClock.globalTime(), 2000L, 0);
         installHostStateWithUUID("hNEW1", spawn, true);
         installHostStateWithUUID("hNEW2", spawn, true);
         int tries = 50;
@@ -449,12 +449,12 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void hostScoreTest() throws Exception {
         // Test that heavily-loaded and lightly-loaded hosts are identified as such, and that medium-loaded hosts are
         // not identified as heavy or light
-        long[] used = new long[]{1000, 9900, 10000, 10500, 20000};
+        long[] used = new long[]{1000_000_000_000L, 9900_000_000_000L, 10000_000_000_000L, 10500_000_000_000L, 20000_000_000_000L};
         int i = 0;
         for (long usedVal : used) {
             HostState hostState = installHostStateWithUUID("host" + (i++), spawn, true);
             hostState.setUsed(new HostCapacity(0, 0, 0, usedVal));
-            hostState.setMax(new HostCapacity(0, 0, 0, 25000));
+            hostState.setMax(new HostCapacity(0, 0, 0, 25000_000_000_000L));
         }
         bal.updateAggregateStatistics(hostManager.listHostStatus(null));
         assertTrue("should correctly identify light host", bal.isExtremeHost("host0", true, false));
@@ -568,7 +568,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String zkPath = isUp ? "/minion/up/" + hostUUID : "/minion/dead/" + hostUUID;
         zkClient.create().withMode(CreateMode.EPHEMERAL).forPath(zkPath);
         HostState newHostState = new HostState(hostUUID);
-        newHostState.setMax(new HostCapacity(10, 10, 10, 1000));
+        newHostState.setMax(new HostCapacity(10, 10, 10, 1_000_000_000_000L));
         newHostState.setUsed(new HostCapacity(0, 0, 0, 100));
         newHostState.setHost("hostname-for:" + hostUUID);
         newHostState.setUp(isUp);

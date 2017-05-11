@@ -1028,7 +1028,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
         if ((failState == HostFailWorker.FailState.FAILING_FS_OKAY) || isExtremeHost(hostID, true, true) ||
-            (host.getAvailDiskBytes() > config.getMinFreeDiskSpaceToRecieveNewTasks())) {
+            (host.getAvailDiskBytes() < config.getMinFreeDiskSpaceToRecieveNewTasks())) {
             // Host disk is overloaded
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);

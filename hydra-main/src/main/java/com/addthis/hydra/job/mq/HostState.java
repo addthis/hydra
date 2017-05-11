@@ -408,10 +408,8 @@ public class HostState implements HostMessage {
         if ((max == null) || (used == null) || (max.getDisk() <= 0)) {
             return 0;
         }
-        double value = (double) (used.getDisk() / (max.getDisk() - reduce));
-        if (value < 0) {
-            return 0;
-        } else if (value > 1) {
+        double value = (double) used.getDisk() / (double) (max.getDisk() - reduce);
+        if ((value < 0) || (value > 1)) {
             return 1;
         }
         return value;
