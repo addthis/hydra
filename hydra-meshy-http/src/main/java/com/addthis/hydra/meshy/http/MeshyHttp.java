@@ -13,19 +13,36 @@
  */
 package com.addthis.hydra.meshy.http;
 
-import com.addthis.basis.util.Parameter;
+import com.addthis.codec.config.Configs;
 
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.ResourceHandler;
-import org.eclipse.jetty.server.handler.HandlerList;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
 
-public class Main {
+public class MeshyHttp {
+    private final int serverPort;
+    private final int meshPort;
+    private final String meshHost;
+
     public static void main(String[] args) throws Exception {
-        int serverPort = Parameter.intValue("mesh.http.port", 6001);
-        String meshHost = Parameter.value("mesh.host", "localhost");
-        int meshPort = Parameter.intValue("mesh.port", 5000);
+        MeshyHttp meshyHttp = Configs.newDefault(MeshyHttp.class);
+        meshyHttp.start();
+    }
+
+    @JsonCreator public MeshyHttp(@JsonProperty(value = "serverPort", required = true) int serverPort,
+            @JsonProperty(value = "meshHost", required = true) String meshHost,
+            @JsonProperty(value = "meshPort", required = true) int meshPort) {
+        this.serverPort = serverPort;
+        this.meshHost = meshHost;
+        this.meshPort = meshPort;
+    }
+
+    public void start() throws Exception {
         Server server = new Server(serverPort);
         MeshConnection connection = new MeshConnection(meshHost, meshPort);
 
@@ -34,7 +51,7 @@ public class Main {
         resourceHandler.setBaseResource(Resource.newClassPathResource("/meshy-http-webroot"));
 
         HandlerList handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] {resourceHandler, new MeshHandler(connection)});
+        handlers.setHandlers(new Handler[]{resourceHandler, new MeshHandler(connection)});
 
         server.setHandler(handlers);
         server.start();
