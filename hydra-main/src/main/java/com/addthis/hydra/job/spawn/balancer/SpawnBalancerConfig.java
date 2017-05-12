@@ -24,6 +24,8 @@ import com.addthis.codec.codables.Codable;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 
+import org.jboss.logging.Param;
+
 /**
  * This class stores various configuration parameters for spawn balancer, such as how many tasks to move, how many bytes to move, etc.
  */
@@ -71,6 +73,11 @@ public class SpawnBalancerConfig implements Codable {
     private int hostAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.host.autobalance", 6 * 60 * 60 * 1000);
     // Track the last time a job autobalance was done
     private long lastJobAutobalanceTime = 0L;
+
+    // This percentage of rebalance should be for rebalancing hosts
+    // note: job rebalance factor is 1 - hostRebalanceFactor
+    private double hostRebalanceFactor = Double.parseDouble(Parameter.value("spawnbalance.host.weight", "0.7"));
+    private int minScoreDiffToRebalance = Parameter.intValue("spawnbalance.min.score.diff.rebalance", 5);
 
     // If you have less than 700GB free disk space, you don't get assigned any new tasks or replicas
     private long minFreeDiskSpaceToRecieveNewTasks = Parameter.longValue("spawnbalance.disk.free.newtasks", 700_000_000_000L);
@@ -190,6 +197,22 @@ public class SpawnBalancerConfig implements Codable {
 
     public void setLastJobAutobalanceTime(long lastJobAutobalanceTime) {
         this.lastJobAutobalanceTime = lastJobAutobalanceTime;
+    }
+
+    public double getHostRebalanceFactor() {
+        return hostRebalanceFactor;
+    }
+
+    public void setHostRebalanceFactor(double hostRebalanceFactor) {
+        this.hostRebalanceFactor = hostRebalanceFactor;
+    }
+
+    public int getMinScoreDiffToRebalance() {
+        return minScoreDiffToRebalance;
+    }
+
+    public void setMinScoreDiffToRebalance(int minScoreDiffToRebalance) {
+        this.minScoreDiffToRebalance = minScoreDiffToRebalance;
     }
 
     public long getMinFreeDiskSpaceToRecieveNewTasks() {

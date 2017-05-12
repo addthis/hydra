@@ -1172,7 +1172,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
         log.info("[job.reallocate] starting reallocation for host: {} host is not a read only host", hostUUID);
         List<JobTaskMoveAssignment> assignments =
-                balancer.getAssignmentsToBalanceHost(host, hostManager.getLiveHosts(null));
+                balancer.getAssignmentsToBalanceHost(host, hostManager.getLiveHosts(null), -1);
         return new RebalanceOutcome(hostUUID,
                                     null,
                                     null,

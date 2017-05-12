@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -105,6 +107,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private volatile double maxTaskPercentDiff = 0;
 
     private final ConcurrentHashMap<String, HostScore> cachedHostScores;
+    private volatile double avgHostScore;
     private final ReentrantLock aggregateStatisticsLock;
     private final AtomicBoolean autobalanceStarted;
     private final Cache<String, Boolean> recentlyAutobalancedJobs;
@@ -632,6 +635,93 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return true;
     }
 
+    private int countRebalancingTasks() {
+        int count = 0;
+        for (Job job : spawn.listJobs()) {
+            if (job.getState() == JobState.REBALANCE) {
+                for (JobTask task : job.getCopyOfTasks()) {
+                    if (task.getState() == JobTaskState.REBALANCE) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    @Nullable public List<JobTaskMoveAssignment> getAutoBalanceAssignments() {
+        List<HostState> hosts = hostManager.getLiveHosts(null);
+        if (hosts.isEmpty()) {
+            return null;
+        }
+        List<Job> autobalanceJobs = getJobsToAutobalance(hosts);
+        if ((autobalanceJobs == null) || autobalanceJobs.isEmpty()) {
+            return null;
+        }
+        // how many slots do we have to rebalance?
+        int tasksToMove = config.getTasksMovedFullRebalance();
+        int tasksRebalancing = this.countRebalancingTasks();
+        tasksToMove -= tasksRebalancing;
+        if (tasksToMove > 0) {
+            List<HostState> hostsSorted = new ArrayList<>(hosts);
+            hostsSorted.sort(hostStateScoreComparator);
+            int hostTasks = (int) ((double) tasksToMove * config.getHostRebalanceFactor());
+            int jobTasks = tasksToMove - hostTasks;
+            // if no hosts need to be rebalanced, just rebalance jobs
+            if (this.areHostsBalanced(hostsSorted)) {
+                hostTasks = 0;
+                jobTasks = tasksToMove;
+            }
+            // todo : make comparator only once per class
+            TreeMap<String, HostState> hostmap = new TreeMap<>(Comparator.comparingDouble(this::getHostScoreCached));
+
+            // todo host assignments
+            if (hostTasks > 0) {
+                // figure out which hosts we want to rebalance (number of hosts, number of tasks for each)
+                // how many low vs high hosts
+
+                // (based on score difference)
+                // for each host, call getAssignementsToBalanceHost, giving the number, and the list of hosts
+                // after each call, get the hosts that were moved to and remove them from the list of hosts
+                // todo can we get hosts that were moved to?
+                // todo data structure that keeps sorted by comparator but is map
+
+//                List<JobTaskMoveAssignment> assignments = getAssignmentsToBalanceHost()
+            }
+
+            // todo job assignements
+            if (jobTasks > 0) {
+                // figure out which jobs we want to rebalance
+            }
+
+        } else {
+            log.info("Not rebalancing due to too many rebalancing tasks (or allowed rebalances is 0)");
+        }
+        // allow rebalancing multiple hosts/jobs at once
+
+
+    }
+
+
+    private List<HostBalanceAssignment> chooseHostsToRebalance(SortedMap<String, HostState> hostmap, int hostTasks) {
+        // only rebalance if score is different from avg enough
+        // take enough hosts until either each can rebalance one task, or some can do 2 and some 1
+        // do both under and overloaded hosts.
+        
+    }
+
+    private boolean areHostsBalanced(List<HostState> hostsSorted) {
+        if (hostsSorted.size() > 1) {
+            double topScore = getHostScoreCached(hostsSorted.get(hostsSorted.size() - 1).getHostUuid());
+            double bottomScore = getHostScoreCached(hostsSorted.get(0).getHostUuid());
+            boolean topNeedsBalancing = Math.abs(avgHostScore - topScore) > (double) config.getMinScoreDiffToRebalance();
+            boolean bottomNeedsBalancing = Math.abs(avgHostScore - bottomScore) > (double) config.getMinScoreDiffToRebalance();
+            return topNeedsBalancing || bottomNeedsBalancing;
+        } else {
+            return true;
+        }
+    }
+
     /**
      * Find some task move assignments to autobalance the cluster
      *
@@ -651,7 +741,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 Collections.sort(hostsSorted, hostStateScoreComparator);
                 HostState hostToBalance = hostsSorted.get(getWeightedElementIndex(hostsSorted.size(), weight));
                 return getAssignmentsToBalanceHost(hostToBalance,
-                                                   hostManager.listHostStatus(hostToBalance.getMinionTypes()));
+                                                   hostManager.listHostStatus(hostToBalance.getMinionTypes()), -1);
             case JOB:
                 List<Job> autobalanceJobs = getJobsToAutobalance(hosts);
                 if ((autobalanceJobs == null) || autobalanceJobs.isEmpty()) {
@@ -1017,7 +1107,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param hosts All available hosts; should include host
      * @return a (possibly empty) map specifying some tasks and advised destinations for those tasks
      */
-    public List<JobTaskMoveAssignment> getAssignmentsToBalanceHost(HostState host, List<HostState> hosts) {
+    public List<JobTaskMoveAssignment> getAssignmentsToBalanceHost(HostState host, List<HostState> hosts, int tasksToMove) {
+        int maxTasksToMove = (tasksToMove > 0) ? tasksToMove : config.getTasksMovedFullRebalance();
         String hostID = host.getHostUuid();
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
         if ((hosts == null) || hosts.isEmpty()) {
@@ -1032,20 +1123,21 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // Host disk is overloaded
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
-            rv.addAll(pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true));
+            rv.addAll(pushTasksOffHost(host, lightHosts, true, 1, maxTasksToMove, true));
         } else if (isExtremeHost(hostID, true, false)) {
             // Host disk is underloaded
             log.info("[spawn.balancer] {} categorized as underloaded host; looking for tasks to pull onto it", hostID);
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
-            pushTasksOntoDisk(host, heavyHosts);
+            pushTasksOntoDisk(host, heavyHosts, maxTasksToMove);
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
             log.info("[spawn.balance] {} categorized as overworked host; looking for tasks to push off it", hostID);
-            rv.addAll(balanceActiveJobsOnHost(host, hosts));
+            rv.addAll(balanceActiveJobsOnHost(host, hosts, maxTasksToMove));
         }
         if (rv.isEmpty()) {
-            rv.addAll(balanceActiveJobsOnHost(host, hosts));
+            // default to overworked behavior
+            rv.addAll(balanceActiveJobsOnHost(host, hosts, maxTasksToMove));
         }
         return pruneTaskReassignments(rv);
     }
@@ -1216,14 +1308,16 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 maxTaskPercent = Math.max(taskPercent, maxTaskPercent);
                 minTaskPercent = Math.min(taskPercent, minTaskPercent);
             }
-            int numScores = hosts.size();
-            double avgDiskPercentUsed = sumDiskPercentUsed / (double) numScores;
+            double numScores = (double) hosts.size();
+            double avgDiskPercentUsed = sumDiskPercentUsed / numScores;
             double sumDiskPercentUsedDiff = 0;
-            double avgTaskPercent = sumTaskPercent / (double) numScores;
+            double avgTaskPercent = sumTaskPercent / numScores;
             double sumTaskPercentDiff = 0;
+            double sumHostScores = 0;
             for (HostState host : hosts) {
                 HostScore score = calculateHostScore(host, maxMeanActive, maxDiskPercentUsed);
                 cachedHostScores.put(host.getHostUuid(), score);
+                sumHostScores += score.getOverallScore();
 
                 // update average metrics
                 double diskDiff = Math.abs(avgDiskPercentUsed - host.getDiskUsedPercent());
@@ -1231,8 +1325,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 double taskDiff = score.getScoreValue(false);
                 sumTaskPercentDiff += Math.abs(avgTaskPercent - taskDiff);
             }
-            avgDiskPercentUsedDiff = sumDiskPercentUsedDiff / (double) numScores;
-            avgTaskPercentDiff = sumTaskPercentDiff / (double) numScores;
+            avgHostScore = sumHostScores / numScores;
+            avgDiskPercentUsedDiff = sumDiskPercentUsedDiff / numScores;
+            avgTaskPercentDiff = sumTaskPercentDiff / numScores;
             minDiskPercentUsedDiff = avgDiskPercentUsed - minDiskPercentUsed;
             maxDiskPercentUsedDiff = maxDiskPercentUsed - avgDiskPercentUsed;
             minTaskPercentDiff = avgTaskPercent - minTaskPercent;
@@ -1401,21 +1496,20 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    private List<JobTaskMoveAssignment> pushTasksOntoDisk(HostState host, Iterable<HostState> heavyHosts) {
+    private List<JobTaskMoveAssignment> pushTasksOntoDisk(HostState host, Iterable<HostState> heavyHosts, int tasksToMove) {
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
         for (HostState heavyHost : heavyHosts) {
             double byteLimitFactor =
                     1 - ((double) moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
             moveAssignments.addAll(pushTasksOffHost(heavyHost, Collections.singletonList(host), true, byteLimitFactor,
-                                                    config.getTasksMovedFullRebalance(), true));
+                                                    tasksToMove, true));
         }
         moveAssignments.addAll(purgeMisplacedTasks(host, 1));
         return moveAssignments;
     }
 
     /* For each active job, ensure that the given host has a fair share of tasks from that job */
-    private Collection<JobTaskMoveAssignment> balanceActiveJobsOnHost(HostState host, List<HostState> hosts) {
-        int totalTasksToMove = config.getTasksMovedFullRebalance();
+    private Collection<JobTaskMoveAssignment> balanceActiveJobsOnHost(HostState host, List<HostState> hosts, int tasksToMove) {
         long totalBytesToMove = config.getBytesMovedFullRebalance();
         Set<String> activeJobs = getActiveJobIds();
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, 1);
@@ -1440,7 +1534,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     boolean pushFrom = (numExistingTasks > maxPerHost) || ((numExistingTasks == maxPerHost) &&
                                                                            (tasksByHost.findLeastTasksOnHost() <
                                                                             (maxPerHost - 1)));
-                    if (totalTasksToMove > 0) {
+                    if (tasksToMove > 0) {
                         MoveAssignmentList assignments = pushFrom ?
                                                          moveTasksOffHost(tasksByHost, maxPerHost, 1, totalBytesToMove,
                                                                           host.getHostUuid())
@@ -1448,7 +1542,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                          moveTasksOntoHost(tasksByHost, maxPerHost, 1, totalBytesToMove,
                                                                            host.getHostUuid());
                         rv.addAll(assignments);
-                        totalTasksToMove -= assignments.size();
+                        tasksToMove -= assignments.size();
                         totalBytesToMove -= assignments.getBytesUsed();
                     } else {
                         break;
