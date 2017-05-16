@@ -1200,7 +1200,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             updateActiveJobIDs();
             double maxMeanActive = -1;
             double maxDiskPercentUsed = -1;
-            double minDiskPercentUsed = 0;
+            double minDiskPercentUsed = 1;
             double sumDiskPercentUsed = 0;
             double maxTaskPercent = 0;
             double minTaskPercent = 1;
