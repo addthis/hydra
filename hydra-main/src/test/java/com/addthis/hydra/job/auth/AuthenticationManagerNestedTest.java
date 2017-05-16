@@ -20,6 +20,8 @@ import com.google.common.collect.ImmutableList;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class AuthenticationManagerNestedTest {
 
@@ -29,20 +31,24 @@ public class AuthenticationManagerNestedTest {
 
     private static List<StaticUser> innerUsers = ImmutableList.of(user3);
     private static List<StaticUser> outerUsers = ImmutableList.of(user1, user2);
-
     private static AuthenticationManagerStatic inner = new AuthenticationManagerStatic(innerUsers, ImmutableList.of(),
-                                                                                       ImmutableList.of(),
+                                                                                       ImmutableList.of("user1"),
                                                                                        ImmutableList.of(), false);
     private static AuthenticationManagerStatic outer = new AuthenticationManagerStatic(outerUsers, ImmutableList.of(),
-                                                                                       ImmutableList.of(),
+                                                                                       ImmutableList.of("user2"),
                                                                                        ImmutableList.of(), false);
-
     private static AuthenticationManagerNested auth = new AuthenticationManagerNested(inner, outer);
-
     @Test
     public void authentication() {
         assertEquals("password1", auth.login("user1", "password1", false));
         assertEquals(ImmutableList.of("group1", "group2"), auth.authenticate("user1", "password1").groups());
         assertEquals("password2", auth.login("user2", "password2", false));
+    }
+
+    @Test
+    public void isAdmin(){
+        assertTrue(auth.isAdmin(auth.authenticate("user1","password1")));
+        assertTrue(auth.isAdmin(auth.authenticate("user2","password2")));
+        assertFalse(auth.isAdmin(auth.authenticate("user3","password3")));
     }
 }

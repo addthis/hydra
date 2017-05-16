@@ -26,7 +26,6 @@ import java.net.URI;
 
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 
 import org.slf4j.Logger;
@@ -64,34 +63,12 @@ public class AuthenticationResource {
                 builder = Response.ok(token);
             }
             builder.header("Access-Control-Allow-Origin",
-                               "http://" + uriInfo.getAbsolutePath().getHost() +
-                               ":" + configuration.webPort);
+                            "http://" + uriInfo.getAbsolutePath().getHost() +
+                            ":" + configuration.webPort);
             builder.header("Access-Control-Allow-Methods", "POST");
             return builder.build();
         } catch (Exception ex)  {
             log.warn("Internal error in authentication attempt for user {} with ssl {}", username, usingSSL, ex);
-            return Response.serverError().entity("internal error").build();
-        }
-    }
-
-    @POST
-    @Path("/validate")
-    @Produces(MediaType.TEXT_PLAIN)
-    public Response validate(@FormParam("user") String username,
-                             @FormParam("token") String token,
-                             @Context UriInfo uriInfo) {
-        URI uri = uriInfo.getRequestUri();
-        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
-        try {
-            User user = spawn.getPermissionsManager().authenticate(username, token);
-            Response.ResponseBuilder builder = Response.ok(Boolean.toString(user != null));
-            builder.header("Access-Control-Allow-Origin",
-                           "http://" + uriInfo.getAbsolutePath().getHost() +
-                           ":" + configuration.webPort);
-            builder.header("Access-Control-Allow-Methods", "POST");
-            return builder.build();
-        } catch (Exception ex)  {
-            log.warn("Internal error in validation attempt for user {} with ssl {}", username, usingSSL, ex);
             return Response.serverError().entity("internal error").build();
         }
     }
@@ -125,6 +102,30 @@ public class AuthenticationResource {
     }
 
     @POST
+    @Path("/validate")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response validate(@FormParam("user") String username,
+                             @FormParam("token") String token,
+                             @Context UriInfo uriInfo) {
+        URI uri = uriInfo.getRequestUri();
+        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
+
+        try {
+            User user = spawn.getPermissionsManager().authenticate(username, token);
+            Response.ResponseBuilder builder = Response.ok(Boolean.toString(user != null));
+            builder.header("Access-Control-Allow-Origin",
+                           "http://" + uriInfo.getAbsolutePath().getHost() +
+                           ":" + configuration.webPort);
+            builder.header("Access-Control-Allow-Methods", "POST");
+            return builder.build();
+        } catch (Exception ex)  {
+            // TODO: don't show "Accept out https certificate" and hydra.png
+            log.warn("Internal error in validation attempt for user {} with ssl {}", username, usingSSL, ex);
+            return Response.serverError().entity("internal error").build();
+        }
+    }
+
+    @POST
     @Path("/evict")
     public Response evict(@FormParam("user") String user,
                       @FormParam("token") String token,
@@ -143,6 +144,27 @@ public class AuthenticationResource {
         } else {
             builder = Response.ok("User " + target + " evicted");
         }
+        return builder.build();
+    }
+
+    @POST
+    @Path("/isadmin")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response isAdmin(@FormParam("user") String username,
+                            @FormParam("token") String token,
+                            @Context UriInfo uriInfo) {
+        User user = spawn.getPermissionsManager().authenticate(username, token);
+        boolean isamdin = spawn.getPermissionsManager().isamdin(user);
+        Response.ResponseBuilder builder;
+        if (!isamdin) {
+            builder = Response.ok(Boolean.toString(false));
+        } else {
+            builder = Response.ok(Boolean.toString(true));
+        }
+        builder.header("Access-Control-Allow-Origin",
+                       "http://" + uriInfo.getAbsolutePath().getHost() +
+                       ":" + configuration.webPort);
+        builder.header("Access-Control-Allow-Methods", "POST");
         return builder.build();
     }
 

@@ -111,6 +111,10 @@ public final class PermissionsManager implements Closeable {
         return authentication.authenticate(username, secret);
     }
 
+    public boolean isamdin(User user) {
+        return authentication.isAdmin(user);
+    }
+
     public String login(String username, String password, boolean ssl) {
         return authentication.login(username, password, ssl);
     }
@@ -147,6 +151,11 @@ public final class PermissionsManager implements Closeable {
             authentication.logout(username, secret);
             authorization.logout(username);
         }
+    }
+
+    public User getUser(String username) {
+        User user = authentication.getUser(username);
+        return user;
     }
 
     @Override

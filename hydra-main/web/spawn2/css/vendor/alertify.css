@@ -879,3 +879,10 @@ span.bold-red {
   color: red;
   font-weight: bold;
 }
+
+span.bold-blue {
+    color: blue;
+    font-weight: bold;
+    box-sizing: border-box
+}
+
