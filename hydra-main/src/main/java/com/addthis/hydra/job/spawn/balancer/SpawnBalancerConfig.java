@@ -72,10 +72,10 @@ public class SpawnBalancerConfig implements Codable {
     // Track the last time a job autobalance was done
     private long lastJobAutobalanceTime = 0L;
 
-    // If you have less than 700GB free disk space, you don't get assigned any new tasks or replicas
-    private long minFreeDiskSpaceToRecieveNewTasks = Parameter.longValue("spawnbalance.disk.free.newtasks", 700_000_000_000L);
-    // If you have less than 350GB free disk space, push tasks off before running additional tasks
-    private long minFreeDiskSpaceToRunJobs = Parameter.longValue("spawnbalance.disk.free.runjobs", 350_000_000_000L);
+    // If you have less than this many bytes of free disk space, you don't get assigned any new tasks or replicas
+    private long minFreeDiskSpaceToRecieveNewTasks = Parameter.longValue("spawnbalance.disk.free.newtasks", 20_000_000_000L);
+    // If you have less than this many bytes of free disk space, push tasks off before running additional tasks
+    private long minFreeDiskSpaceToRunJobs = Parameter.longValue("spawnbalance.disk.free.runjobs", 10_000_000_000L);
     // Max number of read-only-replicas for a given host
     private int maxReadonlyReplicas = Parameter.intValue("spawnbalance.max.job.task.replicas.per.host", 5);
 
