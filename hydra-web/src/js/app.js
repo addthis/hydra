@@ -243,9 +243,14 @@ function(
                         alertify.error("Authentication error");
                         sudoCb(false, false);
                     } else {
-                        Cookies.set("sudo", sudoToken);
-                        app.user.set("sudo", sudoToken);
-                        app.sudoCb(true, true);
+                        var message = "Are you ready to be working as sudo?";
+                        alertify.confirm(message, function(e) {
+                            Cookies.set("sudo", sudoToken);
+                            app.user.set("sudo", sudoToken);
+                            app.sudoCb(true, true);
+                        }, function(e) {
+                            app.sudoCb(false, true);
+                        });
                     }
                 },
                 error: function (jqXHR, textStatus) {
