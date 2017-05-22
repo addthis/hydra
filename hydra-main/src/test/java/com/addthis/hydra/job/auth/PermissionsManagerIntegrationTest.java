@@ -20,6 +20,7 @@ import java.util.UUID;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -66,12 +67,13 @@ public class PermissionsManagerIntegrationTest {
                                          "adminGroups: [admin]\n" +
                                          "requireSSL: false\n";
 
-    private static final PermissionsManager permissions;
+    private PermissionsManager permissions;
+    private AuthorizationManager authorizationManager;
+    private AuthenticationManager authenticationManager;
+    private PermissionsManager permissionsManager = null;
 
-    static {
-        AuthorizationManager authorizationManager;
-        AuthenticationManager authenticationManager;
-        PermissionsManager permissionsManager = null;
+    @Before
+    public void setup() {
         try {
             authenticationManager = Configs.decodeObject(AuthenticationManagerStatic.class, config);
             authorizationManager = Configs.decodeObject(AuthorizationManagerBasic.class, "");
@@ -99,11 +101,27 @@ public class PermissionsManagerIntegrationTest {
     }
 
     @Test
+    public void isadmin() {
+        User alice = authenticationManager.authenticate("alice", "alicesecret");
+        User bob = authenticationManager.authenticate("bob", "bobsecret");
+        User carol = authenticationManager.authenticate("carol", "carolsecret");
+        User dan = authenticationManager.authenticate("dan", "dansecret");
+        assertFalse("alice is not in adminGroups nor in adminUsers", permissions.isamdin(alice));
+        assertFalse("bob is not in adminGroups nor in adminUsers", permissions.isamdin(bob));
+        assertTrue("carol is in adminUsers", permissions.isamdin(carol));
+        assertTrue("dan is in adminGroups", permissions.isamdin(dan));
+    }
+
+    @Test
     public void sudo() {
         assertNull(permissions.sudo("alice", "alicesecret", true));
         assertNull(permissions.sudo("alice", "alicesecret", false));
-        assertEquals("bobsudo", permissions.sudo("bob", "bobsecret", true));
-        assertEquals("bobsudo", permissions.sudo("bob", "bobsecret", false));
+        assertNull(permissions.sudo("bob", "bobsecret", true));
+        assertNull(permissions.sudo("bob", "bobsecret", false));
+        assertNotNull(permissions.sudo("carol", "carolsecret", true));
+        assertNotNull(permissions.sudo("carol", "carolsecret", false));
+        assertNotNull(permissions.sudo("dan", "dansecret", true));
+        assertNotNull(permissions.sudo("dan", "dansecret", false));
         sudoUUID("carol", "carolsecret");
         sudoUUID("dan", "dansecret");
     }

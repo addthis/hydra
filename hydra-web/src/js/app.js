@@ -31,7 +31,6 @@ function(
     $,
     _
 ){
-    var passwordCache;
     var app = {
         router: new Router(),
         currentView:null,
@@ -72,11 +71,11 @@ function(
             // delete legacy cookies
             Cookies.set("username", "", {expires:0, path:"/spawn2"});
             Cookies.set("spawn", "", {expires:0, path:"/spawn2"});
-            var sudoToken = Cookies.get("sudo");
-            if(sudoToken) {
-                $("#sudoCheckbox").prop("checked", true);
+            var username = Cookies.get("username");
+            var token = Cookies.get("token");
+            if(app.issudo(username, token)) {
+                app.sudoCb(false, true);
             }
-
             $.ajax({
                 url: '/job/defaults',
                 dataType: 'json',
@@ -104,8 +103,7 @@ function(
                                 app.user.set("username", username);
                                 app.user.set("token", token);
                                 if(Cookies.get("sudo")) {
-                                    $("#sudoCheckboxLabel").show();
-                                    $("#sudoCheckbox").show();
+                                    app.sudoCb(true, true);
                                 }
                             } else {
                                 alertify.error("Invalid credentials. Please login. (Click to dismiss)", 0);
@@ -118,6 +116,27 @@ function(
                 },
                 error: function(error) {
                     alertify.error("Failure on /update/settings", 0);
+                }
+            });
+        },
+        issudo: function(username, token) {
+            $.ajax({
+                type: 'POST',
+                url:"/authentication/isadmin",
+                data: {
+                    user: username,
+                    token: token
+                },
+                dataType: 'Text',
+                success: function(response) {
+                    if(response == "true") {
+                        app.sudoCb(false, true);
+                    } else {
+                        app.sudoCb(false, false);
+                    }
+                },
+                error: function(error) {
+                    alertify.error("Failure on /authentication/issudo", 0);
                 }
             });
         },
@@ -135,11 +154,9 @@ function(
             }
             var username = $.trim(usernameInput.value);
             var password = passwordInput.value;
-            passwordCache = passwordInput.value;
+            var loginUrl = app.authprefix() + urlPath;
             usernameInput.value = "";
             passwordInput.value = "";
-            var loginUrl = app.authprefix() + urlPath;
-
             $.ajax({
                 type: 'POST',
                 url: loginUrl,
@@ -163,28 +180,7 @@ function(
                             app.user.set("username", username);
                             app.user.set("token", token);
                             app.user.set("sudo", "");
-                            $.ajax({
-                                type: 'POST',
-                                url:"/authentication/isadmin",
-                                data: {
-                                  user: username,
-                                  token: token
-                                },
-                                dataType: 'Text',
-                                success: function(response) {
-                                    if(response == "true") {
-                                        $("#sudoCheckboxLabel").show();
-                                        $("#sudoCheckbox").show();
-                                    } else {
-                                        $("#sudoCheckbox").prop("checked", false);
-                                        $("#sudoCheckboxLabel").hide();
-                                        $("#sudoCheckbox").hide();
-                                    }
-                                },
-                                error: function(error) {
-                                    alertify.error("Failure on /authentication/isadmin", 0);
-                                }
-                            });
+                            app.issudo(username, token);
                         }
                     }
                 },
@@ -194,8 +190,6 @@ function(
                     }
                     if (jqXHR.status === 401) {
                         alertify.error("Invalid username/password provided");
-                    } else {
-                        alertify.error("Accept our <a target=\"_blank\" href=\"" + app.authprefix() + "/spawn2/landing.html"+ "\">https certificate</a>", 0);
                     }
                 }
             });
@@ -205,76 +199,61 @@ function(
             $("#loginToken")[0].value = "token";
             app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
         },
-        sudo:function(evt) {
-            evt.preventDefault();
-            var tokenName="sudo";
-            var urlPath;
-
-            if (tokenName == "sudo") {
-                urlPath = "/authentication/sudo";
-            } else {
-                alertify.error("Unknown token name " + tokenName);
-                return;
-            }
-
-            var loginUrl = app.authprefix() + urlPath;
-            var checked =  $("#sudoCheckbox").is(':checked');
-            if (checked) {
-                var username = Cookies.get("username");
-                var token = Cookies.get("token");
-                var sudoToken = Cookies.get("sudo");
-                var password = passwordCache;
-
-                if (!username || !token) {
-                    alertify.error("Please login first");
-                } else if (sudoToken) {
-                    app.user.set("sudo", sudoToken);
-                } else {
-                    $("#loginToken")[0].value = "sudo";
-                    $("#loginUsername")[0].value = username;
-                }
-            } else {
-                Cookies.set("sudo", "", {expires:0});
-                app.user.set("sudo", "");
-            }
-
+        unsudo: function(username, token) {
+            var unsudoUrl = "/authentication/unsudo";
             $.ajax({
                 type: 'POST',
-                url: loginUrl,
+                url: unsudoUrl,
+                data: {
+                    username: username,
+                    token: token,
+                    sudo: Cookies.get("sudo"),
+                },
+            });
+            Cookies.set("sudo", "", {expires:0});
+            app.user.set("sudo", "");
+            app.sudoCb(false, true);
+        },
+
+        sudo:function() {
+            var sudoUrl = app.authprefix() + "/authentication/sudo";
+            var checked =  $("#sudoCheckbox").is(':checked');
+            var username = Cookies.get("username");
+            var token = Cookies.get("token");
+            if (checked) {
+                if (!username || !token) {
+                    alertify.error("Please login first");
+                    return;
+                }
+            } else {
+                app.unsudo(username, token);
+                return;
+            }
+            $.ajax({
+                type: 'POST',
+                url: sudoUrl,
                 data: {
                     user: username,
-                    password: password
+                    token: token
                 },
                 dataType: 'text',
-                success: function(response) {
-                    if (app.loginDialog) {
-                        app.loginDialog.close();
-                    }
-                    var token = response;
-                    if (!token) {
+                success: function (response) {
+                    var sudoToken = response;
+                    if (!sudoToken) {
                         alertify.error("Authentication error");
-                        if (tokenName == "sudo") {
-                            $("#sudoCheckbox").prop("checked", false);
-                            $("#sudoCheckboxLabel").hide();
-                            $("#sudoCheckbox").hide();
-                        }
+                        sudoCb(false, false);
                     } else {
-                        Cookies.set("sudo", token);
-                        app.user.set("sudo", token);
-                        $("#sudoCheckbox").prop('checked', true);
+                        Cookies.set("sudo", sudoToken);
+                        app.user.set("sudo", sudoToken);
+                        app.sudoCb(true, true);
                     }
                 },
-                error: function(jqXHR, textStatus) {
-                    if (app.loginDialog) {
-                        app.loginDialog.close();
-                    }
+                error: function (jqXHR, textStatus) {
                     if (jqXHR.status === 401) {
-                        alertify.error("Invalid username/password provided");
-                    } else {
-                        alertify.error("Accept our <a target=\"_blank\" href=\"" + app.authprefix() + "/spawn2/landing.html"+ "\">https certificate</a>", 0);
+                        alertify.error("Invalid username/token provided");
                     }
                 }
-            });
+            })
         },
         logout:function() {
             document.activeElement.blur();
@@ -300,9 +279,7 @@ function(
             app.user.set("username", "");
             app.user.set("token", "");
             app.user.set("sudo", "");
-            $("#sudoCheckbox").prop("checked", false);
-            $("#sudoCheckboxLabel").show();
-            $("#sudoCheckbox").show();
+            app.sudoCb(false, false);
         },
         authQueryParameters:function(parameters) {
             var user = app.user.get("username");
@@ -370,6 +347,19 @@ function(
                 $("span#quiescedLabel").hide();
                 $("#topNavbar").removeClass("navbar-inverse");
             }
+        },
+        sudoCb:function(checked, show){
+            console.log();
+            $("#sudoCheckbox").prop("checked", checked);
+
+            if(show) {
+                 $("#sudoCheckboxLabel").show();
+                $("#sudoCheckbox").show();
+            } else {
+                $("#sudoCheckboxLabel").hide();
+                $("#sudoCheckbox").hide();
+            }
+
         }
     };
     return _.extend(app, Backbone.Events);

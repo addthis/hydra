@@ -77,16 +77,17 @@ public class AuthenticationResource {
     @Path("/sudo")
     @Produces(MediaType.TEXT_PLAIN)
     public Response sudo(@FormParam("user") String username,
-                         @FormParam("password") String password,
+                         @FormParam("token") String token,
                          @Context UriInfo uriInfo) {
         URI uri = uriInfo.getRequestUri();
         boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
+
         try {
-            String sudoToken = spawn.getPermissionsManager().sudo(username, password, usingSSL);
+            String sudoToken = spawn.getPermissionsManager().sudo(username, token, usingSSL);
             Response.ResponseBuilder builder;
             if (sudoToken == null) {
                 builder = Response.status(Response.Status.UNAUTHORIZED);
-                builder.entity("Invalid credentials provided");
+                builder.entity("Invalid credentials provided or you don't have sudo privilege");
             } else {
                 builder = Response.ok(sudoToken);
             }
@@ -169,6 +170,24 @@ public class AuthenticationResource {
     }
 
     @POST
+    @Path("/unsudo")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response unsudo(@FormParam("username") String username,
+                           @FormParam("token") String token,
+                           @FormParam("sudo") String sudo) {
+        Response.ResponseBuilder builder;
+        if (username == null) {
+            builder = Response.status(Response.Status.BAD_REQUEST);
+            builder.entity("username argument missing");
+        } else if (!spawn.getPermissionsManager().unsudo(username)) {
+            builder = Response.ok("User " + username + " was not logged in");
+        } else {
+            builder = Response.ok("User " + username + " is degraded to an ordinary user");
+        }
+        return builder.build();
+    }
+
+    @POST
     @Path("/logout")
     public void logout(@FormParam("user") String username,
                        @FormParam("token") String token,
@@ -181,5 +200,4 @@ public class AuthenticationResource {
             log.warn("Internal error in logout attempt for user {} with ssl {}", username, usingSSL, ex);
         }
     }
-
 }

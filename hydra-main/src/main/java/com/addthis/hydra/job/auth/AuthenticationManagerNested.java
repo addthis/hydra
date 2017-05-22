@@ -67,9 +67,7 @@ class AuthenticationManagerNested extends AuthenticationManager {
         if (user == null) {
             return false;
         }
-        if( inner != null && inner.isAdmin(user)) {
-            return true;
-        } else if (outer != null && outer.isAdmin(user)) {
+        if( (inner != null && inner.isAdmin(user)) || (outer != null && outer.isAdmin(user)) ) {
             return true;
         }
         return false;
