@@ -626,7 +626,7 @@ function(
             }).done(function(data){
                 showStartStopStateChange(data, "started");
             }).fail(function(e){
-                alertify.error("Error kicking: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("You cannot kick disabled job <br> ( "+ count + " jobs ) <br>  Enable it first to kick it.", 7);
             });
         },
         stopSelected:function(jobIds){
