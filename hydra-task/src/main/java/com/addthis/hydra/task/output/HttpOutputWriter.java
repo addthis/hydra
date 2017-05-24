@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -146,6 +147,7 @@ public class HttpOutputWriter extends AbstractOutputWriter {
         RetryerBuilder<Integer> retryerBuilder = RetryerBuilder
                 .<Integer>newBuilder()
                 .retryIfExceptionOfType(NoHttpResponseException.class)
+                .retryIfExceptionOfType(SocketException.class)
                 .retryIfResult((val) -> (val == null) || !(val >= 200 && val < 300))
                 .withStopStrategy(StopStrategies.stopAfterAttempt(retries));
         if (backoffMax > 0) {
