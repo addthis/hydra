@@ -18,7 +18,6 @@ import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.IOException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.Closer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -35,7 +34,6 @@ public final class PermissionsManager implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(PermissionsManager.class);
 
-    @VisibleForTesting
     @Nonnull
     private final AuthenticationManager authentication;
 
@@ -113,7 +111,7 @@ public final class PermissionsManager implements Closeable {
         return authentication.authenticate(username, secret);
     }
 
-    public boolean isamdin(User user) {
+    public boolean isAdmin(User user) {
         return authentication.isAdmin(user);
     }
 
@@ -126,7 +124,7 @@ public final class PermissionsManager implements Closeable {
         if (user == null) {
             return null;
         } else {
-            if(!isamdin(user)) {
+            if(!isAdmin(user)) {
                 return null;
             }
             String staticToken = authentication.sudoToken(username);
@@ -158,8 +156,7 @@ public final class PermissionsManager implements Closeable {
     }
 
     public User getUser(String username) {
-        User user = authentication.getUser(username);
-        return user;
+        return authentication.getUser(username);
     }
 
     @Override

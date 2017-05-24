@@ -67,10 +67,7 @@ class AuthenticationManagerNested extends AuthenticationManager {
         if (user == null) {
             return false;
         }
-        if( (inner != null && inner.isAdmin(user)) || (outer != null && outer.isAdmin(user)) ) {
-            return true;
-        }
-        return false;
+        return (inner != null && inner.isAdmin(user)) || (outer != null && outer.isAdmin(user));
     }
 
     @Override String login(String username, String password, boolean ssl) {

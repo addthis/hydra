@@ -106,10 +106,10 @@ public class PermissionsManagerIntegrationTest {
         User bob = authenticationManager.authenticate("bob", "bobsecret");
         User carol = authenticationManager.authenticate("carol", "carolsecret");
         User dan = authenticationManager.authenticate("dan", "dansecret");
-        assertFalse("alice is not in adminGroups nor in adminUsers", permissions.isamdin(alice));
-        assertFalse("bob is not in adminGroups nor in adminUsers", permissions.isamdin(bob));
-        assertTrue("carol is in adminUsers", permissions.isamdin(carol));
-        assertTrue("dan is in adminGroups", permissions.isamdin(dan));
+        assertFalse("alice is not in adminGroups nor in adminUsers", permissions.isAdmin(alice));
+        assertFalse("bob is not in adminGroups nor in adminUsers", permissions.isAdmin(bob));
+        assertTrue("carol is in adminUsers", permissions.isAdmin(carol));
+        assertTrue("dan is in adminGroups", permissions.isAdmin(dan));
     }
 
     @Test

@@ -71,11 +71,6 @@ function(
             // delete legacy cookies
             Cookies.set("username", "", {expires:0, path:"/spawn2"});
             Cookies.set("spawn", "", {expires:0, path:"/spawn2"});
-            var username = Cookies.get("username");
-            var token = Cookies.get("token");
-            if(app.issudo(username, token)) {
-                app.sudoCb(false, true);
-            }
             $.ajax({
                 url: '/job/defaults',
                 dataType: 'json',
@@ -90,6 +85,9 @@ function(
                     app.loginSSLDefault = response.sslDefault;
                     var username = Cookies.get("username");
                     var token = Cookies.get("token");
+                    if(app.isadmin(username, token)) {
+                        app.sudoCheckbox(false, true);
+                    }
                     $.ajax({
                         type: 'POST',
                         url: '/authentication/validate',
@@ -103,7 +101,7 @@ function(
                                 app.user.set("username", username);
                                 app.user.set("token", token);
                                 if(Cookies.get("sudo")) {
-                                    app.sudoCb(true, true);
+                                    app.sudoCheckbox(true, true);
                                 }
                             } else {
                                 alertify.error("Invalid credentials. Please login. (Click to dismiss)", 0);
@@ -119,7 +117,7 @@ function(
                 }
             });
         },
-        issudo: function(username, token) {
+        isadmin: function(username, token) {
             $.ajax({
                 type: 'POST',
                 url:"/authentication/isadmin",
@@ -129,14 +127,10 @@ function(
                 },
                 dataType: 'Text',
                 success: function(response) {
-                    if(response == "true") {
-                        app.sudoCb(false, true);
-                    } else {
-                        app.sudoCb(false, false);
-                    }
+                    app.sudoCheckbox(false, response == "true");
                 },
                 error: function(error) {
-                    alertify.error("Failure on /authentication/issudo", 0);
+                    alertify.error("Failure on /authentication/isadmin", 0);
                 }
             });
         },
@@ -180,7 +174,7 @@ function(
                             app.user.set("username", username);
                             app.user.set("token", token);
                             app.user.set("sudo", "");
-                            app.issudo(username, token);
+                            app.isadmin(username, token);
                         }
                     }
                 },
@@ -207,26 +201,42 @@ function(
                 data: {
                     username: username,
                     token: token,
-                    sudo: Cookies.get("sudo"),
+                    sudo: Cookies.get("sudo")
                 },
             });
             Cookies.set("sudo", "", {expires:0});
             app.user.set("sudo", "");
-            app.sudoCb(false, true);
+            app.sudoCheckbox(false, true);
         },
-
-        sudo:function() {
-            var sudoUrl = app.authprefix() + "/authentication/sudo";
+        cansudo: function(username, token) {
             var checked =  $("#sudoCheckbox").is(':checked');
-            var username = Cookies.get("username");
-            var token = Cookies.get("token");
             if (checked) {
                 if (!username || !token) {
                     alertify.error("Please login first");
-                    return;
+                    return false;
                 }
             } else {
                 app.unsudo(username, token);
+                return false;
+            }
+            return true;
+        },
+        setTimer: function (username, token, sudoToken, mins) {
+            var inTime = new Date(new Date().getTime() + mins * 60 * 1000);
+            Cookies.set("sudo", sudoToken, {expires: inTime});
+            var timerId = setInterval(function() {
+                app.unsudo(username, token);
+                app.unsetTimer(timerId);
+            }, mins*60*1000);
+        },
+        unsetTimer: function(timerId) {
+            clearTimeout(timerId);
+        },
+        sudo:function() {
+            var sudoUrl = app.authprefix() + "/authentication/sudo";
+            var username = Cookies.get("username");
+            var token = Cookies.get("token");
+            if(!app.cansudo(username, token)) {
                 return;
             }
             $.ajax({
@@ -241,15 +251,16 @@ function(
                     var sudoToken = response;
                     if (!sudoToken) {
                         alertify.error("Authentication error");
-                        sudoCb(false, false);
+                        sudoCheckbox(false, false);
                     } else {
-                        var message = "Are you ready to be working as sudo?";
+                        var message = "Please confirm that you want to enable sudo privilege";
                         alertify.confirm(message, function(e) {
-                            Cookies.set("sudo", sudoToken);
+                            // BUG: swhen you refresh the page before expire, GUI does not uncheck automatically after expire
+                            app.setTimer(username, token, sudoToken, 0.5);
                             app.user.set("sudo", sudoToken);
-                            app.sudoCb(true, true);
+                            app.sudoCheckbox(true, true);
                         }, function(e) {
-                            app.sudoCb(false, true);
+                            app.sudoCheckbox(false, true);
                         });
                     }
                 },
@@ -284,7 +295,7 @@ function(
             app.user.set("username", "");
             app.user.set("token", "");
             app.user.set("sudo", "");
-            app.sudoCb(false, false);
+            app.sudoCheckbox(false, false);
         },
         authQueryParameters:function(parameters) {
             var user = app.user.get("username");
@@ -353,8 +364,7 @@ function(
                 $("#topNavbar").removeClass("navbar-inverse");
             }
         },
-        sudoCb:function(checked, show){
-            console.log();
+        sudoCheckbox:function(checked, show){
             $("#sudoCheckbox").prop("checked", checked);
 
             if(show) {
@@ -364,7 +374,6 @@ function(
                 $("#sudoCheckboxLabel").hide();
                 $("#sudoCheckbox").hide();
             }
-
         }
     };
     return _.extend(app, Backbone.Events);

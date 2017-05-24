@@ -120,7 +120,6 @@ public class AuthenticationResource {
             builder.header("Access-Control-Allow-Methods", "POST");
             return builder.build();
         } catch (Exception ex)  {
-            // TODO: don't show "Accept out https certificate" and hydra.png
             log.warn("Internal error in validation attempt for user {} with ssl {}", username, usingSSL, ex);
             return Response.serverError().entity("internal error").build();
         }
@@ -155,13 +154,9 @@ public class AuthenticationResource {
                             @FormParam("token") String token,
                             @Context UriInfo uriInfo) {
         User user = spawn.getPermissionsManager().authenticate(username, token);
-        boolean isamdin = spawn.getPermissionsManager().isamdin(user);
+        boolean isAmdin = spawn.getPermissionsManager().isAdmin(user);
         Response.ResponseBuilder builder;
-        if (!isamdin) {
-            builder = Response.ok(Boolean.toString(false));
-        } else {
-            builder = Response.ok(Boolean.toString(true));
-        }
+        builder = Response.ok(Boolean.toString(isAmdin));
         builder.header("Access-Control-Allow-Origin",
                        "http://" + uriInfo.getAbsolutePath().getHost() +
                        ":" + configuration.webPort);
