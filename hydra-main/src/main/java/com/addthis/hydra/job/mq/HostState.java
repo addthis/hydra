@@ -25,6 +25,7 @@ import java.util.Set;
 import com.addthis.hydra.minion.Minion;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -389,6 +390,29 @@ public class HostState implements HostMessage {
 
     public void setMax(HostCapacity max) {
         this.max = max;
+    }
+
+    public long getAvailDiskBytes() {
+        if ((max == null) || (used == null)) {
+            return 1; // Fix some tests
+        }
+        return max.getDisk() - used.getDisk();
+    }
+
+    public double getDiskUsedPercent() {
+        return getDiskUsedPercentModified(0);
+    }
+
+    public double getDiskUsedPercentModified(long reduce) {
+        Preconditions.checkArgument(reduce >= 0, "reduce must be non-negative");
+        if ((max == null) || (used == null) || (max.getDisk() <= 0)) {
+            return 0;
+        }
+        double value = (double) used.getDisk() / (double) (max.getDisk() - reduce);
+        if ((value < 0) || (value > 1)) {
+            return 1;
+        }
+        return value;
     }
 
     public void setDead(boolean dead) {

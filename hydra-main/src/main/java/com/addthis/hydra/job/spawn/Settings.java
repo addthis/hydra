@@ -22,6 +22,7 @@ public class Settings {
     public final boolean quiesce;
     public final String queryHost;
     public final String spawnHost;
+    public final String meshHttpHost;
     public final String disabled;
     public final int defaultReplicaCount;
     public final boolean sslDefault;
@@ -33,6 +34,7 @@ public class Settings {
         private Boolean quiesce;
         private String queryHost;
         private String spawnHost;
+        private String meshHttpHost;
         private String disabled;
         private Integer defaultReplicaCount;
         private Boolean sslDefault;
@@ -56,6 +58,11 @@ public class Settings {
 
         public Builder setSpawnHost(String spawnHost) {
             this.spawnHost = spawnHost;
+            return this;
+        }
+
+        public Builder setMeshHttpHost(String meshHttpHost) {
+            this.meshHttpHost = meshHttpHost;
             return this;
         }
 
@@ -93,17 +100,18 @@ public class Settings {
             Preconditions.checkArgument(sslDefault != null, "parameter sslDefault must be specified");
             Preconditions.checkArgument(authTimeout != null, "parameter authTimeout must be specified");
             Preconditions.checkArgument(sudoTimeout != null, "parameter sudoTimeout must be specified");
-            return new Settings(debug, quiesce, queryHost, spawnHost, disabled,
+            return new Settings(debug, quiesce, queryHost, spawnHost, meshHttpHost, disabled,
                                 defaultReplicaCount, sslDefault, authTimeout, sudoTimeout);
         }
     }
 
     private Settings(
-            String debug, 
-            boolean quiesce, 
-            String queryHost, 
-            String spawnHost, 
-            String disabled, 
+            String debug,
+            boolean quiesce,
+            String queryHost,
+            String spawnHost,
+            String meshHttpHost,
+            String disabled,
             int defaultReplicaCount,
             boolean sslDefault,
             int authTimeout,
@@ -111,6 +119,7 @@ public class Settings {
         this.debug = debug;
         this.queryHost = queryHost;
         this.spawnHost = spawnHost;
+        this.meshHttpHost = meshHttpHost;
         this.quiesce = quiesce;
         this.disabled = disabled;
         this.defaultReplicaCount = defaultReplicaCount;

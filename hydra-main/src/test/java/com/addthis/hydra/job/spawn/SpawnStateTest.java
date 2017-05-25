@@ -28,7 +28,9 @@ import com.addthis.hydra.job.JobExpanderImpl;
 import com.addthis.hydra.job.alert.SuppressChanges;
 import com.addthis.hydra.job.alert.types.OnErrorJobAlert;
 import com.addthis.hydra.job.entity.JobCommand;
+import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.job.spawn.balancer.SpawnBalancerConfig;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.ZkCodecStartUtil;
@@ -36,6 +38,7 @@ import com.addthis.hydra.util.ZkCodecStartUtil;
 import com.google.common.collect.ImmutableList;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
@@ -48,6 +51,7 @@ import static org.junit.Assert.assertTrue;
 public class SpawnStateTest extends ZkCodecStartUtil {
 
     File logDir;
+    HostState host;
 
     @Override
     protected void onAfterZKStart() {
@@ -66,6 +70,17 @@ public class SpawnStateTest extends ZkCodecStartUtil {
         LessFiles.deleteDir(logDir);
     }
 
+    @Before public void setup() {
+        host = new HostState("h");
+        host.setMax(new HostCapacity());
+        SpawnBalancerConfig spawnBalancerConfig = new SpawnBalancerConfig();
+        host.getMax().setDisk(spawnBalancerConfig.getMinFreeDiskSpaceToRecieveNewTasks() + 1);
+        host.setUsed(new HostCapacity());
+        host.getUsed().setDisk(0);
+        host.setUp(true);
+        host.setDead(false);
+    }
+
     @Test
     public void testJobConfigs() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
@@ -78,9 +93,6 @@ public class SpawnStateTest extends ZkCodecStartUtil {
 
             String config = "// MY JOB CONFIG";
             spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
-            HostState host = new HostState("h");
-            host.setUp(true);
-            host.setDead(false);
             spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             job.setReplicas(0);
@@ -96,9 +108,6 @@ public class SpawnStateTest extends ZkCodecStartUtil {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
 
             spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
-            HostState host = new HostState("h");
-            host.setUp(true);
-            host.setDead(false);
             spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost", null,
@@ -118,9 +127,6 @@ public class SpawnStateTest extends ZkCodecStartUtil {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
 
             spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
-            HostState host = new HostState("h");
-            host.setUp(true);
-            host.setDead(false);
             spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost", null,

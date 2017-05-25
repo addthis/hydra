@@ -240,6 +240,7 @@ public class Spawn implements Codable, AutoCloseable {
                                @JsonProperty(value = "queryPort", required = true) int queryPort,
                                @JsonProperty("queryHttpHost") String queryHttpHost,
                                @JsonProperty("httpHost") String httpHost,
+                               @JsonProperty("meshHttpPort") String meshHttpPort,
                                @JsonProperty("dataDir") File dataDir,
                                @Nonnull @JsonProperty("stateFile") File stateFile,
                                @Nonnull @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
@@ -298,6 +299,7 @@ public class Spawn implements Codable, AutoCloseable {
                                                    debug,
                                                    queryHttpHost + ":" + queryPort,
                                                    httpHost + ":" + SpawnServiceConfiguration.SINGLETON.webPort,
+                                                   httpHost + ":" + meshHttpPort,
                                                    SpawnServiceConfiguration.SINGLETON.authenticationTimeout,
                                                    SpawnServiceConfiguration.SINGLETON.sudoTimeout);
 

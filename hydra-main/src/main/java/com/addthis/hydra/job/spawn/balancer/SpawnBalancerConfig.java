@@ -72,10 +72,10 @@ public class SpawnBalancerConfig implements Codable {
     // Track the last time a job autobalance was done
     private long lastJobAutobalanceTime = 0L;
 
-    // If you're at more than 80% disk capacity, you don't get assigned any new tasks or replicas
-    private double minDiskPercentAvailToReceiveNewTasks = Double.parseDouble(Parameter.value("spawnbalance.min.disk.percent.avail.newtasks", ".2"));
-    // If you're at more than 90% disk capacity, push tasks off before running additional tasks
-    private double minDiskPercentAvailToRunJobs = Double.parseDouble(Parameter.value("spawnbalance.min.disk.percent.avail.runtasks", ".1"));
+    // If you have less than this many bytes of free disk space, you don't get assigned any new tasks or replicas
+    private long minFreeDiskSpaceToRecieveNewTasks = Parameter.longValue("spawnbalance.disk.free.newtasks", 20_000_000_000L);
+    // If you have less than this many bytes of free disk space, push tasks off before running additional tasks
+    private long minFreeDiskSpaceToRunJobs = Parameter.longValue("spawnbalance.disk.free.runjobs", 10_000_000_000L);
     // Max number of read-only-replicas for a given host
     private int maxReadonlyReplicas = Parameter.intValue("spawnbalance.max.job.task.replicas.per.host", 5);
 
@@ -192,20 +192,20 @@ public class SpawnBalancerConfig implements Codable {
         this.lastJobAutobalanceTime = lastJobAutobalanceTime;
     }
 
-    public double getMinDiskPercentAvailToReceiveNewTasks() {
-        return minDiskPercentAvailToReceiveNewTasks;
+    public long getMinFreeDiskSpaceToRecieveNewTasks() {
+        return minFreeDiskSpaceToRecieveNewTasks;
     }
 
-    public void setMinDiskPercentAvailToReceiveNewTasks(double minDiskPercentAvailToReceiveNewTasks) {
-        this.minDiskPercentAvailToReceiveNewTasks = minDiskPercentAvailToReceiveNewTasks;
+    public void setMinFreeDiskSpaceToRecieveNewTasks(long minFreeDiskSpaceToRecieveNewTasks) {
+        this.minFreeDiskSpaceToRecieveNewTasks = minFreeDiskSpaceToRecieveNewTasks;
     }
 
-    public double getMinDiskPercentAvailToRunJobs() {
-        return minDiskPercentAvailToRunJobs;
+    public long getMinFreeDiskSpaceToRunJobs() {
+        return minFreeDiskSpaceToRunJobs;
     }
 
-    public void setMinDiskPercentAvailToRunJobs(double minDiskPercentAvailToRunJobs) {
-        this.minDiskPercentAvailToRunJobs = minDiskPercentAvailToRunJobs;
+    public void setMinFreeDiskSpaceToRunJobs(long minFreeDiskSpaceToRunJobs) {
+        this.minFreeDiskSpaceToRunJobs = minFreeDiskSpaceToRunJobs;
     }
 
     public int getMaxReadonlyReplicas() {
