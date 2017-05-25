@@ -63,6 +63,13 @@ class AuthenticationManagerNested extends AuthenticationManager {
         log.info("Registering nested authentication");
     }
 
+    @Override boolean isAdmin(User user) {
+        if (user == null) {
+            return false;
+        }
+        return (inner != null && inner.isAdmin(user)) || (outer != null && outer.isAdmin(user));
+    }
+
     @Override String login(String username, String password, boolean ssl) {
         if ((username == null) || (password == null)) {
             return null;

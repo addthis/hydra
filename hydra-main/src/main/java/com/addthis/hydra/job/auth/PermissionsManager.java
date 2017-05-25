@@ -111,21 +111,27 @@ public final class PermissionsManager implements Closeable {
         return authentication.authenticate(username, secret);
     }
 
+    public boolean isAdmin(User user) {
+        return authentication.isAdmin(user);
+    }
+
     public String login(String username, String password, boolean ssl) {
         return authentication.login(username, password, ssl);
     }
 
-    public String sudo(String username, String password, boolean ssl) {
-        boolean success = authentication.verify(username, password, ssl);
-        User user = success ? authentication.getUser(username) : null;
+    public String sudo(String username, String secret, boolean ssl) {
+        User user = authentication.authenticate(username, secret);
         if (user == null) {
             return null;
         } else {
+            if(!isAdmin(user)) {
+                return null;
+            }
             String staticToken = authentication.sudoToken(username);
             if (staticToken != null) {
                 return staticToken;
             } else {
-                return authorization.sudo(user, authentication.isAdmin(user));
+                return authorization.sudo(user, true);
             }
         }
     }
@@ -149,9 +155,22 @@ public final class PermissionsManager implements Closeable {
         }
     }
 
+    public User getUser(String username) {
+        return authentication.getUser(username);
+    }
+
     @Override
     public void close() throws IOException {
         closer.close();
     }
 
+    public boolean unsudo(String username) {
+        User user = authentication.getUser(username);
+        if (user != null) {
+            authorization.logout(username);
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

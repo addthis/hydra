@@ -26,7 +26,6 @@ import java.net.URI;
 
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 
 import org.slf4j.Logger;
@@ -64,8 +63,8 @@ public class AuthenticationResource {
                 builder = Response.ok(token);
             }
             builder.header("Access-Control-Allow-Origin",
-                               "http://" + uriInfo.getAbsolutePath().getHost() +
-                               ":" + configuration.webPort);
+                            "http://" + uriInfo.getAbsolutePath().getHost() +
+                            ":" + configuration.webPort);
             builder.header("Access-Control-Allow-Methods", "POST");
             return builder.build();
         } catch (Exception ex)  {
@@ -75,41 +74,20 @@ public class AuthenticationResource {
     }
 
     @POST
-    @Path("/validate")
-    @Produces(MediaType.TEXT_PLAIN)
-    public Response validate(@FormParam("user") String username,
-                             @FormParam("token") String token,
-                             @Context UriInfo uriInfo) {
-        URI uri = uriInfo.getRequestUri();
-        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
-        try {
-            User user = spawn.getPermissionsManager().authenticate(username, token);
-            Response.ResponseBuilder builder = Response.ok(Boolean.toString(user != null));
-            builder.header("Access-Control-Allow-Origin",
-                           "http://" + uriInfo.getAbsolutePath().getHost() +
-                           ":" + configuration.webPort);
-            builder.header("Access-Control-Allow-Methods", "POST");
-            return builder.build();
-        } catch (Exception ex)  {
-            log.warn("Internal error in validation attempt for user {} with ssl {}", username, usingSSL, ex);
-            return Response.serverError().entity("internal error").build();
-        }
-    }
-
-    @POST
     @Path("/sudo")
     @Produces(MediaType.TEXT_PLAIN)
     public Response sudo(@FormParam("user") String username,
-                         @FormParam("password") String password,
+                         @FormParam("token") String token,
                          @Context UriInfo uriInfo) {
         URI uri = uriInfo.getRequestUri();
         boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
+
         try {
-            String sudoToken = spawn.getPermissionsManager().sudo(username, password, usingSSL);
+            String sudoToken = spawn.getPermissionsManager().sudo(username, token, usingSSL);
             Response.ResponseBuilder builder;
             if (sudoToken == null) {
                 builder = Response.status(Response.Status.UNAUTHORIZED);
-                builder.entity("Invalid credentials provided");
+                builder.entity("Invalid credentials provided or you don't have sudo privilege");
             } else {
                 builder = Response.ok(sudoToken);
             }
@@ -121,6 +99,29 @@ public class AuthenticationResource {
         } catch (Exception ex)  {
             log.warn("Internal error in sudo attempt for user {} with ssl {}", username, usingSSL, ex);
             return Response.serverError().entity(ex.toString()).build();
+        }
+    }
+
+    @POST
+    @Path("/validate")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response validate(@FormParam("user") String username,
+                             @FormParam("token") String token,
+                             @Context UriInfo uriInfo) {
+        URI uri = uriInfo.getRequestUri();
+        boolean usingSSL = (uri.getPort() == configuration.webPortSSL);
+
+        try {
+            User user = spawn.getPermissionsManager().authenticate(username, token);
+            Response.ResponseBuilder builder = Response.ok(Boolean.toString(user != null));
+            builder.header("Access-Control-Allow-Origin",
+                           "http://" + uriInfo.getAbsolutePath().getHost() +
+                           ":" + configuration.webPort);
+            builder.header("Access-Control-Allow-Methods", "POST");
+            return builder.build();
+        } catch (Exception ex)  {
+            log.warn("Internal error in validation attempt for user {} with ssl {}", username, usingSSL, ex);
+            return Response.serverError().entity("internal error").build();
         }
     }
 
@@ -147,6 +148,41 @@ public class AuthenticationResource {
     }
 
     @POST
+    @Path("/isadmin")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response isAdmin(@FormParam("user") String username,
+                            @FormParam("token") String token,
+                            @Context UriInfo uriInfo) {
+        User user = spawn.getPermissionsManager().authenticate(username, token);
+        boolean isAmdin = spawn.getPermissionsManager().isAdmin(user);
+        Response.ResponseBuilder builder;
+        builder = Response.ok(Boolean.toString(isAmdin));
+        builder.header("Access-Control-Allow-Origin",
+                       "http://" + uriInfo.getAbsolutePath().getHost() +
+                       ":" + configuration.webPort);
+        builder.header("Access-Control-Allow-Methods", "POST");
+        return builder.build();
+    }
+
+    @POST
+    @Path("/unsudo")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response unsudo(@FormParam("username") String username,
+                           @FormParam("token") String token,
+                           @FormParam("sudo") String sudo) {
+        Response.ResponseBuilder builder;
+        if (username == null) {
+            builder = Response.status(Response.Status.BAD_REQUEST);
+            builder.entity("username argument missing");
+        } else if (!spawn.getPermissionsManager().unsudo(username)) {
+            builder = Response.ok("User " + username + " was not logged in");
+        } else {
+            builder = Response.ok("User " + username + " is degraded to an ordinary user");
+        }
+        return builder.build();
+    }
+
+    @POST
     @Path("/logout")
     public void logout(@FormParam("user") String username,
                        @FormParam("token") String token,
@@ -159,5 +195,4 @@ public class AuthenticationResource {
             log.warn("Internal error in logout attempt for user {} with ssl {}", username, usingSSL, ex);
         }
     }
-
 }
