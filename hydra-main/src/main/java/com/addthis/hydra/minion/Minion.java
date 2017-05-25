@@ -139,6 +139,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
     static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
+    static final String minionTypes = Parameter.value("minion.types", "default");
     static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
     /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
@@ -163,7 +164,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     @FieldConfig String uuid;
     @FieldConfig MinionTaskDeleter minionTaskDeleter;
     @FieldConfig List<CommandTaskKick> jobQueue = new ArrayList<>(10);
-    @FieldConfig String minionTypes;
 
     final Set<String> activeTaskKeys;
     final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -257,8 +257,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         } else {
             uuid = UUID.randomUUID().toString();
         }
-        File minionTypesFile = new File(rootDir, "minion.types");
-        minionTypes = minionTypesFile.exists() ? new String(LessFiles.read(minionTypesFile)).replaceAll("\n", "") : defaultMinionType;
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
         jetty.setHandler(minionHandler);
