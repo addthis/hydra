@@ -122,7 +122,7 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-@JsonIgnoreProperties(value="stopped")
+@JsonIgnoreProperties(ignoreUnknown = true, value="stopped")
 public class Minion implements MessageListener<CoreMessage>, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
