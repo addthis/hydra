@@ -927,6 +927,7 @@ function(
         render:function(){
             DataTable.View.prototype.render.apply(this,[]);
             if(!this.hasRendered){
+                this.views.selectable.find("#createButton").on("click",this.handleCreateButtonClick);
                 this.views.selectable.find("#kickButton").on("click",this.handleKickButtonClick);
                 this.views.selectable.find("#stopButton").on("click",this.handleStopButtonClick);
                 this.views.selectable.find("#killButton").on("click",this.handleKillButtonClick);
@@ -951,6 +952,15 @@ function(
                 }
             }
             return this;
+        },
+        handleCreateButtonClick:function(event) {
+            console.log("token = " + Cookies.get("token"));
+            if(Cookies.get("token")) {
+                app.router.navigate("#jobs/create/conf",{trigger:true});
+            } else {
+                alertify.error("Please Login first!");
+                return;
+            }
         },
         handleKickButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
@@ -1714,10 +1724,14 @@ function(
         },
         handleCloneClick:function(event){
             event.preventDefault();
-            if (this.model.attributes.dontCloneMe) {
-                alertify.alert("Job with id "+this.model.id+" has \"do not clone\" parameter enabled.");
+            if(Cookies.get("token")) {
+                if (this.model.attributes.dontCloneMe) {
+                    alertify.alert("Job with id "+this.model.id+" has \"do not clone\" parameter enabled.");
+                } else {
+                    app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
+                }
             } else {
-                app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
+                alertify.alert("You can't clone a job before you log in. <br> Please Login first!");
             }
         },
         handleBrowseClick:function(event){
