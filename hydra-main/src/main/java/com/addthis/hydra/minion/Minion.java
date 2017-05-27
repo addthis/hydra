@@ -14,6 +14,7 @@
 package com.addthis.hydra.minion;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +25,7 @@ import java.net.InetAddress;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -139,6 +141,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
     static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
+    private static final String activeTasksPerMinionType = Parameter.value("minion.active.tasks.per.minion.type.mapping", "");
     static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
     /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
@@ -164,6 +167,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     @FieldConfig MinionTaskDeleter minionTaskDeleter;
     @FieldConfig List<CommandTaskKick> jobQueue = new ArrayList<>(10);
     @FieldConfig String minionTypes;
+    @FieldConfig int maxActiveTasksPerMinionType;
 
     final Set<String> activeTaskKeys;
     final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -259,6 +263,25 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         }
         File minionTypesFile = new File(rootDir, "minion.types");
         minionTypes = minionTypesFile.exists() ? new String(LessFiles.read(minionTypesFile)).replaceAll("\n", "") : defaultMinionType;
+        HashMap<String, Integer> maxActiveTasksPerMinionTypeMap = new HashMap<>();
+        List<String> tasksMapAsList = Arrays.asList(activeTasksPerMinionType.split("\\s*,\\s*"));
+        for(String taskKv : tasksMapAsList) {
+            log.info("Tasks per minion type setting: {}", taskKv);
+            List<String> taskKvAsList = Arrays.asList(taskKv.split("="));
+            log.info("Parsed tasks per minion type setting: {}:{}", taskKvAsList.get(0), Integer.parseInt(taskKvAsList.get(1)));
+            maxActiveTasksPerMinionTypeMap.put(taskKvAsList.get(0), Integer.parseInt(taskKvAsList.get(1)));
+        }
+
+        log.info(minionTypesFile.exists() ? "Minion types file found!" : "Minion types file not found! User type default.");
+        List<String> minionTypeList = Arrays.asList(minionTypes.split("\\s*,\\s*"));
+        maxActiveTasksPerMinionType = maxActiveTasks;
+        for(String minionType : minionTypeList) {
+            log.info("Minion Type is {}", minionType);
+            log.info("Current max active tasks is {}", maxActiveTasksPerMinionTypeMap.getOrDefault(minionType, maxActiveTasks));
+            maxActiveTasksPerMinionType = Math.max(maxActiveTasksPerMinionType, maxActiveTasksPerMinionTypeMap.getOrDefault(minionType, maxActiveTasks));
+        }
+        log.info("maxActiveTasksPerMinionType is {}", maxActiveTasksPerMinionType);
+
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
         jetty.setHandler(minionHandler);
@@ -436,7 +459,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             for (CommandTaskKick nextKick : jobQueue) {
                 capacityLock.lock();
                 try {
-                    boolean lackCap = activeTaskKeys.size() >= maxActiveTasks;
+                    boolean lackCap = activeTaskKeys.size() >= maxActiveTasksPerMinionType;
                     if (lackCap) {
                         sendStatusMessage(new StatusTaskCantBegin(getUUID(), nextKick.getJobUuid(),
                                 nextKick.getNodeID(), nextKick.getPriority()));
@@ -609,7 +632,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         status.setUptime(time - startTime);
         capacityLock.lock();
         try {
-            int availSlots = maxActiveTasks - activeTaskKeys.size();
+            int availSlots = maxActiveTasksPerMinionType - activeTaskKeys.size();
             status.setAvailableTaskSlots(Math.max(0, availSlots));
         } finally {
             capacityLock.unlock();
@@ -657,8 +680,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             minionStateLock.unlock();
         }
         status.setQueued(queued.toArray(new JobKey[queued.size()]));
-        status.setMeanActiveTasks(activeTaskHistogram.mean() / (maxActiveTasks > 0 ? maxActiveTasks : 1));
-        status.setMaxTaskSlots(maxActiveTasks);
+        status.setMeanActiveTasks(activeTaskHistogram.mean() / (maxActiveTasksPerMinionType > 0 ? maxActiveTasksPerMinionType : 1));
+        status.setMaxTaskSlots(maxActiveTasksPerMinionType);
         status.setMinionTypes(minionTypes);
         status.setUpdated();
         return status;
