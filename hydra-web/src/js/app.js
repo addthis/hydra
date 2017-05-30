@@ -64,8 +64,7 @@ function(
         },
         authprefix:function() {
             var useSSL = app.loginSSLDefault || (window.location.href.lastIndexOf("https", 0) == 0);
-            return (useSSL ? "https://" : "http://") + window.location.hostname + ":" +
-                (useSSL ? "5053" : "5052");
+            return (useSSL ? "https://" : "http://") + window.location.hostname + ":" + (useSSL ? "5053" : "5052");
         },
         initialize:function() {
             // delete legacy cookies
@@ -82,12 +81,8 @@ function(
                 url: '/update/settings',
                 dataType: 'json',
                 success: function(response) {
-                    app.loginSSLDefault = response.sslDefault;
                     var username = Cookies.get("username");
                     var token = Cookies.get("token");
-                    if(app.isadmin(username, token)) {
-                        app.sudoCheckbox(false, true);
-                    }
                     $.ajax({
                         type: 'POST',
                         url: '/authentication/validate',
@@ -100,9 +95,7 @@ function(
                             if (response === "true") {
                                 app.user.set("username", username);
                                 app.user.set("token", token);
-                                if(Cookies.get("sudo")) {
-                                    app.sudoCheckbox(true, true);
-                                }
+                                app.user.set("sudo", Cookies.get("sudo"));
                             } else {
                                 alertify.error("Invalid credentials. Please login. (Click to dismiss)", 0);
                             }
@@ -117,7 +110,26 @@ function(
                 }
             });
         },
-        isadmin: function(username, token) {
+        cbcontrol: function(hasAdminRight) {
+            if(hasAdminRight === "true" || !hasAdminRight) {
+                if(hasAdminRight === "true") {
+                    Cookies.set("cansudo", "true");
+                }
+                if( Cookies.get("sudo")) {
+                    app.sudoCheckbox(true, true);
+                    return "checkSudo";
+                } else if(Cookies.get("cansudo")) {
+                    app.sudoCheckbox(false, true);
+                    return "uncheckSudo";
+                }
+            } else if(hasAdminRight === "false") {
+                app.sudoCheckbox(false, false);
+                return "noSudo";
+            }
+            app.user.set("sudo", Cookies.get("sudo"));
+        },
+        // check if user belongs to adminGroup or adminUser or not
+        isadmin: function(username, token, cbcontrol) {
             $.ajax({
                 type: 'POST',
                 url:"/authentication/isadmin",
@@ -127,7 +139,7 @@ function(
                 },
                 dataType: 'Text',
                 success: function(response) {
-                    app.sudoCheckbox(false, response == "true");
+                    app.cbcontrol(response);
                 },
                 error: function(error) {
                     alertify.error("Failure on /authentication/isadmin", 0);
@@ -173,17 +185,21 @@ function(
                             Cookies.set("sudo", "", {expires:0});
                             app.user.set("username", username);
                             app.user.set("token", token);
-                            app.user.set("sudo", "");
+                            app.user.set("sudo", Cookies.get("sudo"));
                             app.isadmin(username, token);
                         }
                     }
                 },
                 error: function(jqXHR, textStatus) {
+                    console.log("jqXHR = " + jqXHR + ", textStatus = " + textStatus);
+
                     if (app.loginDialog) {
                         app.loginDialog.close();
                     }
                     if (jqXHR.status === 401) {
                         alertify.error("Invalid username/password provided");
+                    } else {
+                        alertify.error("Accept our <a target=\"_blank\" href=\"" + app.authprefix() + "/spawn2/landing.html"+ "\">https certificate</a>", 0);
                     }
                 }
             });
@@ -205,8 +221,7 @@ function(
                 },
             });
             Cookies.set("sudo", "", {expires:0});
-            app.user.set("sudo", "");
-            app.sudoCheckbox(false, true);
+            app.user.set("sudo", Cookies.get("sudo"));
         },
         cansudo: function(username, token) {
             var checked =  $("#sudoCheckbox").is(':checked');
@@ -217,6 +232,7 @@ function(
                 }
             } else {
                 app.unsudo(username, token);
+                app.user.set("sudo", Cookies.get("sudo"));
                 return false;
             }
             return true;
@@ -260,7 +276,7 @@ function(
                             app.user.set("sudo", sudoToken);
                             app.sudoCheckbox(true, true);
                         }, function(e) {
-                            app.sudoCheckbox(false, true);
+                            app.user.set("sudo", Cookies.get("sudo"));
                         });
                     }
                 },
@@ -292,6 +308,7 @@ function(
             Cookies.set("token", "", {expires:0});
             Cookies.set("tokenExpires", "", {expires:0});
             Cookies.set("sudo", "", {expires:0});
+            Cookies.set("cansudo", "", {expires:0});
             app.user.set("username", "");
             app.user.set("token", "");
             app.user.set("sudo", "");
