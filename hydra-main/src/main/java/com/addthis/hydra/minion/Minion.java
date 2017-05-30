@@ -122,7 +122,7 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-@JsonIgnoreProperties(ignoreUnknown = true, value="stopped")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Minion implements MessageListener<CoreMessage>, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
@@ -151,7 +151,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     static final String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
 
     public static final String MINION_ZK_PATH = "/minion/";
-    public static final String defaultMinionType = Parameter.value("minion.type", "default");
     public static final String batchJobQueueSuffix = ".batchJob";
     public static final String batchControlQueueSuffix = ".batchControl";
     public static final Meter tasksCompletedPerHour = Metrics.newMeter(Minion.class, "tasksCompletedPerHour", "tasksCompletedPerHour", TimeUnit.HOURS);

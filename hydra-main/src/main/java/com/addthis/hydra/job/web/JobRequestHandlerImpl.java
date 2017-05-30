@@ -45,6 +45,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class JobRequestHandlerImpl implements JobRequestHandler {
 
     private static final Logger log = LoggerFactory.getLogger(JobRequestHandlerImpl.class);
+    public static final String defaultMinionType = "default";
 
     private final Spawn spawn;
     private final JobAlertManager jobAlertManager;
@@ -76,7 +77,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                     kv.getValue("creator", username),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
-                    kv.getValue("minionType", Minion.defaultMinionType),
+                    kv.getValue("minionType", defaultMinionType),
                     command, defaults);
             updateOwnership(job, user);
         } else {
