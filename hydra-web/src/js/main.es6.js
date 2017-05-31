@@ -141,8 +141,15 @@ function(
             throw thrown;
         });
 
-
-
+    window.onload = function () {
+        var username = Cookies.get("username");
+        var token = Cookies.get("token");
+        if (username && token) {
+            app.sudoCheckboxControl();
+        } else {                                    // not login yet
+            app.sudoCheckbox(false, false);
+        }
+    }
 
     app.router.on('route:showJobConf', function(jobId, line = 0, col = 0){
         app.trigger('loadJob', jobId);
