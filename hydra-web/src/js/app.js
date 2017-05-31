@@ -214,10 +214,11 @@ function(
                     username: username,
                     token: token,
                     sudo: Cookies.get("sudo")
-                },
+                }
             });
             Cookies.set("sudo", "", {expires:0});
-            app.user.set("sudo", Cookies.get("sudo"));
+            app.sudoCheckbox(false, true);
+            app.user.set("sudo", "");
         },
         cansudo: function(username, token) {
             var checked =  $("#sudoCheckbox").is(':checked');
@@ -228,7 +229,6 @@ function(
                 }
             } else {
                 app.unsudo(username, token);
-                app.user.set("sudo", Cookies.get("sudo"));
                 return false;
             }
             return true;
@@ -267,7 +267,7 @@ function(
                     } else {
                         var message = "Please confirm that you want to enable sudo privilege";
                         alertify.confirm(message, function(e) {
-                            // BUG: swhen you refresh the page before expire, GUI does not uncheck automatically after expire
+                            // BUG: when you refresh the page before expire, GUI does not uncheck automatically after expire
                             app.setTimer(username, token, sudoToken, 15);
                             app.user.set("sudo", sudoToken);
                             app.sudoCheckbox(true, true);
