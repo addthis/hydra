@@ -26,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
                        "replicationFactor", "alerts", "properties", "backups", "submitCommand", "retries"})
 public interface IJob extends Comparable<IJob>, WritableAsset, ExecutableAsset {
 
+    public static final String DEFAULT_MINION_TYPE = "default";
+
     public String getId();
 
     public String getOwner();

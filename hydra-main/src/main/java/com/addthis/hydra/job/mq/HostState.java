@@ -184,7 +184,7 @@ public class HostState implements HostMessage {
     // share at least one type; imperfect host pruning
     public boolean hasType(String externalType) {
         if (minionTypes == null) {
-            minionTypes = Minion.defaultMinionType;
+            return false;
         }
         Set<String> externalTypes = HostState.typeStringToSet(externalType);
         Set<String> myTypes = HostState.typeStringToSet(minionTypes);
