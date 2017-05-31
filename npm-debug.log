@@ -1,0 +1,73 @@
+0 info it worked if it ends with ok
+1 verbose cli [ '/usr/local/Cellar/node/6.6.0/bin/node',
+1 verbose cli   '/usr/local/bin/npm',
+1 verbose cli   'install',
+1 verbose cli   '-g',
+1 verbose cli   'iterm2-tab-set' ]
+2 info using npm@3.10.7
+3 info using node@v6.6.0
+4 silly loadCurrentTree Starting
+5 silly install loadCurrentTree
+6 silly install readGlobalPackageData
+7 silly fetchPackageMetaData iterm2-tab-set
+8 silly fetchNamedPackageData iterm2-tab-set
+9 silly mapToRegistry name iterm2-tab-set
+10 silly mapToRegistry using default registry
+11 silly mapToRegistry registry https://registry.npmjs.org/
+12 silly mapToRegistry data Result {
+12 silly mapToRegistry   raw: 'iterm2-tab-set',
+12 silly mapToRegistry   scope: null,
+12 silly mapToRegistry   escapedName: 'iterm2-tab-set',
+12 silly mapToRegistry   name: 'iterm2-tab-set',
+12 silly mapToRegistry   rawSpec: '',
+12 silly mapToRegistry   spec: 'latest',
+12 silly mapToRegistry   type: 'tag' }
+13 silly mapToRegistry uri https://registry.npmjs.org/iterm2-tab-set
+14 verbose request uri https://registry.npmjs.org/iterm2-tab-set
+15 verbose request no auth needed
+16 info attempt registry request try #1 at 10:23:28 AM
+17 verbose request id 288a0ad3aefe1240
+18 http request GET https://registry.npmjs.org/iterm2-tab-set
+19 info retry will retry, error on last attempt: Error: connect ETIMEDOUT 151.101.48.162:443
+20 info attempt registry request try #2 at 10:24:53 AM
+21 http request GET https://registry.npmjs.org/iterm2-tab-set
+22 info retry will retry, error on last attempt: Error: connect ETIMEDOUT 151.101.48.162:443
+23 info attempt registry request try #3 at 10:27:09 AM
+24 http request GET https://registry.npmjs.org/iterm2-tab-set
+25 silly fetchPackageMetaData Error: connect ETIMEDOUT 151.101.48.162:443
+25 silly fetchPackageMetaData     at Object.exports._errnoException (util.js:1036:11)
+25 silly fetchPackageMetaData     at exports._exceptionWithHostPort (util.js:1059:20)
+25 silly fetchPackageMetaData     at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1080:14)
+25 silly fetchPackageMetaData  error for iterm2-tab-set { Error: connect ETIMEDOUT 151.101.48.162:443
+25 silly fetchPackageMetaData     at Object.exports._errnoException (util.js:1036:11)
+25 silly fetchPackageMetaData     at exports._exceptionWithHostPort (util.js:1059:20)
+25 silly fetchPackageMetaData     at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1080:14)
+25 silly fetchPackageMetaData   code: 'ETIMEDOUT',
+25 silly fetchPackageMetaData   errno: 'ETIMEDOUT',
+25 silly fetchPackageMetaData   syscall: 'connect',
+25 silly fetchPackageMetaData   address: '151.101.48.162',
+25 silly fetchPackageMetaData   port: 443 }
+26 silly rollbackFailedOptional Starting
+27 silly rollbackFailedOptional Finishing
+28 silly runTopLevelLifecycles Finishing
+29 silly install printInstalled
+30 verbose stack Error: connect ETIMEDOUT 151.101.48.162:443
+30 verbose stack     at Object.exports._errnoException (util.js:1036:11)
+30 verbose stack     at exports._exceptionWithHostPort (util.js:1059:20)
+30 verbose stack     at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1080:14)
+31 verbose cwd /Users/irene.cho/Project1/hydra
+32 error Darwin 15.3.0
+33 error argv "/usr/local/Cellar/node/6.6.0/bin/node" "/usr/local/bin/npm" "install" "-g" "iterm2-tab-set"
+34 error node v6.6.0
+35 error npm  v3.10.7
+36 error code ETIMEDOUT
+37 error errno ETIMEDOUT
+38 error syscall connect
+39 error network connect ETIMEDOUT 151.101.48.162:443
+40 error network This is most likely not a problem with npm itself
+40 error network and is related to network connectivity.
+40 error network In most cases you are behind a proxy or have bad network settings.
+40 error network
+40 error network If you are behind a proxy, please make sure that the
+40 error network 'proxy' config is set properly.  See: 'npm help config'
+41 verbose exit [ 1, true ]

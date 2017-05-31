@@ -110,27 +110,23 @@ function(
                 }
             });
         },
-        cbcontrol: function(hasAdminRight) {
-            if(hasAdminRight === "true" || !hasAdminRight) {
-                if(hasAdminRight === "true") {
-                    Cookies.set("cansudo", "true");
-                }
-                if( Cookies.get("sudo")) {
-                    app.sudoCheckbox(true, true);
-                    return "checkSudo";
-                } else if(Cookies.get("cansudo")) {
-                    app.sudoCheckbox(false, true);
-                    return "uncheckSudo";
-                }
+        sudoCheckboxControl: function(hasAdminRight) {
+            if(hasAdminRight === "true") {
+                Cookies.set("cansudo", "true");
+                app.sudoCheckbox(Cookies.get("sudo") !== undefined, true);
             } else if(hasAdminRight === "false") {
                 app.sudoCheckbox(false, false);
-                return "noSudo";
+            } else if(!hasAdminRight) {
+                if(Cookies.get("cansudo")) {
+                    app.sudoCheckbox(Cookies.get("sudo") !== undefined, true);
+                } else {
+                    app.sudoCheckbox(false, false);
+                }
             }
             app.user.set("sudo", Cookies.get("sudo"));
         },
-        // check if user belongs to adminGroup or adminUser or not
-        isadmin: function(username, token, cbcontrol) {
-            $.ajax({
+        isadmin: function(username, token) {
+                $.ajax({
                 type: 'POST',
                 url:"/authentication/isadmin",
                 data: {
@@ -139,7 +135,7 @@ function(
                 },
                 dataType: 'Text',
                 success: function(response) {
-                    app.cbcontrol(response);
+                    app.sudoCheckboxControl(response);
                 },
                 error: function(error) {
                     alertify.error("Failure on /authentication/isadmin", 0);

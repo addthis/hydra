@@ -144,16 +144,8 @@ function(
     window.onload = function () {
         var username = Cookies.get("username");
         var token = Cookies.get("token");
-
         if (username && token) {
-            var result = app.cbcontrol();
-            if (result === "checkSudo") {
-                app.sudoCheckbox(true, true);
-            } else if (result === "uncheckSudo") {
-                app.sudoCheckbox(false, true);
-            } else if (result === "noSudo") {
-                app.sudoCheckbox(false, false);
-            }
+            app.sudoCheckboxControl();
         } else {                                    // not login yet
             app.sudoCheckbox(false, false);
         }
