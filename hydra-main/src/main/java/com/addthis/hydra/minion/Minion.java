@@ -122,7 +122,7 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-@JsonIgnoreProperties(value="stopped")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Minion implements MessageListener<CoreMessage>, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
@@ -139,6 +139,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
     static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
+    private static final String minionTypes = Parameter.value("minion.types", "default");
     static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
     /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
@@ -150,7 +151,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     static final String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
 
     public static final String MINION_ZK_PATH = "/minion/";
-    public static final String defaultMinionType = Parameter.value("minion.type", "default");
     public static final String batchJobQueueSuffix = ".batchJob";
     public static final String batchControlQueueSuffix = ".batchControl";
     public static final Meter tasksCompletedPerHour = Metrics.newMeter(Minion.class, "tasksCompletedPerHour", "tasksCompletedPerHour", TimeUnit.HOURS);
@@ -163,7 +163,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     @FieldConfig String uuid;
     @FieldConfig MinionTaskDeleter minionTaskDeleter;
     @FieldConfig List<CommandTaskKick> jobQueue = new ArrayList<>(10);
-    @FieldConfig String minionTypes;
 
     final Set<String> activeTaskKeys;
     final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -257,8 +256,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         } else {
             uuid = UUID.randomUUID().toString();
         }
-        File minionTypesFile = new File(rootDir, "minion.types");
-        minionTypes = minionTypesFile.exists() ? new String(LessFiles.read(minionTypesFile)).replaceAll("\n", "") : defaultMinionType;
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
         jetty.setHandler(minionHandler);

@@ -32,7 +32,7 @@ import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.minion.Minion;
+import static com.addthis.hydra.job.IJob.DEFAULT_MINION_TYPE;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -76,7 +76,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                     kv.getValue("creator", username),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
-                    kv.getValue("minionType", Minion.defaultMinionType),
+                    kv.getValue("minionType", DEFAULT_MINION_TYPE),
                     command, defaults);
             updateOwnership(job, user);
         } else {

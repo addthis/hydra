@@ -40,7 +40,6 @@ import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnMQ;
-import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
@@ -52,6 +51,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
+import static com.addthis.hydra.job.IJob.DEFAULT_MINION_TYPE;
 import static org.junit.Assert.*;
 
 @Category(SlowTest.class)
@@ -506,7 +506,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
 
-        Job job = spawn.createJob("fsm", numTasks, hosts, Minion.defaultMinionType, "foo", false);
+        Job job = spawn.createJob("fsm", numTasks, hosts, DEFAULT_MINION_TYPE, "foo", false);
         job.setReplicas(numReplicas);
         for (JobTask task : job.getCopyOfTasks()) {
             task.setByteCount(taskSizeBytes);
