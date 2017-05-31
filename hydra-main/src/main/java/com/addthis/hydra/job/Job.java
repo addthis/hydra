@@ -891,6 +891,9 @@ public final class Job implements IJob {
 
     @Override
     public String getMinionType() {
+        if (minionType == null) {
+            minionType = DEFAULT_MINION_TYPE;
+        }
         return minionType;
     }
 

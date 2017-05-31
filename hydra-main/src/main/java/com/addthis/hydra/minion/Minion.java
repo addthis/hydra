@@ -139,7 +139,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
     static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
-    static final String minionTypes = Parameter.value("minion.types", "default");
+    private static final String minionTypes = Parameter.value("minion.types", "default");
     static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
     /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
