@@ -78,7 +78,9 @@ public class MinionTaskDeleterTest {
             assertArrayEquals("should have only recent b-gold directory remaining", tmpDir.list(), new String[]{directories.get(4)});
             assertEquals("should have remaining backup in backupsToDelete", del.getBackupsToDelete(), ImmutableSet.of(new BackupToDelete(basePath + directories.get(4), "gold")));
         } finally {
-            assertTrue(LessFiles.deleteDir(tmpDir));
+            assertTrue("if deleting the task directory fails, it was likely because the directory was already " +
+                            "deleted due to the disk being nearly full and thus no backups are being preserved",
+                    LessFiles.deleteDir(tmpDir));
         }
     }
 
