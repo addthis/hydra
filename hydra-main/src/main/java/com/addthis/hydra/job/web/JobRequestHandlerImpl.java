@@ -32,7 +32,6 @@ import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
-import static com.addthis.hydra.job.IJob.DEFAULT_MINION_TYPE;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -40,6 +39,7 @@ import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.hydra.job.IJob.DEFAULT_MINION_TYPE;
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class JobRequestHandlerImpl implements JobRequestHandler {
@@ -60,6 +60,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         User user = spawn.getPermissionsManager().authenticate(username, token);
         if (user == null) {
             throw new InsufficientPrivilegesException(username, "invalid credentials provided");
+        }
+       if(kv.getValue("owner") == null || kv.getValue("owner").isEmpty()) {
+            kv.setValue("owner", username);
+            log.info("Owner field was empty, so filled with username = {} for a job creation or cloning a job", username);
+        }
+        if(kv.getValue("creator") == null || kv.getValue("creator").isEmpty()) {
+            kv.setValue("creator", username);
+            log.info("Creator field was empty, so filled with username = {} for a job creation or cloning a job", username);
         }
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
