@@ -1318,7 +1318,7 @@ public class Spawn implements Codable, AutoCloseable {
         acquireJobLock();
         try {
             jobUpdateQueue.add(job.getId());
-        } finally {
+        }  finally {
             releaseJobLock();
         }
     }
@@ -1812,8 +1812,8 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public void startJob(String jobUUID, int priority) throws Exception {
         Job job = getJob(jobUUID);
-        checkArgument(job != null, "job not found");
-        checkArgument(job.isEnabled(), "job disabled");
+        checkArgument(job != null, "job is not found");
+        checkArgument(job.isEnabled(), "job is disabled");
         checkArgument(scheduleJob(job, priority), "unable to schedule job");
         queueJobTaskUpdateEvent(job);
         Job.logJobEvent(job, JobEvent.START, eventLog);

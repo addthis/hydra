@@ -327,7 +327,7 @@ function(
             }).done(function(data){
                 showStartStopStateChange(data, "started");
             }).fail(function(e){
-                alertify.error("Error kicking: "+self.id+". <br/> "+e.responseText);
+                alertify.error("<p align='left'>Error kicking: " + self.id + "<br/>" + e.responseText + "</p>", 10);
             });
         },
         stop : function(){
@@ -626,7 +626,7 @@ function(
             }).done(function(data){
                 showStartStopStateChange(data, "started");
             }).fail(function(e){
-                alertify.error("Error kicking: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("Error kicking: " + count + " job(s) <br><p align='left'>" + e.responseText + "</p>", 10);
             });
         },
         stopSelected:function(jobIds){

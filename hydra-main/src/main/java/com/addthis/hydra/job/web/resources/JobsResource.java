@@ -1363,24 +1363,17 @@ public class JobsResource implements Closeable {
             log.trace("Save all jobs exception", ex);
             return Response.ok("{\"operation\":\"failed: " + ex.toString() + "\"").build();
         }
-
     }
 
     private static Response buildServerError(Exception exception) {
-        log.warn("", exception);
+        log.error("Error in kick job: {}", Throwables.getStackTraceAsString(exception));
         String message = exception.getMessage();
         if (message == null) {
             message = exception.toString();
         }
-
-        String stack = Throwables.getStackTraceAsString(exception);
-
-        final String response = "{" +
-                "\"error\": \"A java exception was thrown." +
-                "\"message\": \"" + StringEscapeUtils.escapeEcmaScript(message) + "\"" +
-                "\"stack\": \"" + StringEscapeUtils.escapeEcmaScript(stack) + "\"" +
-                "\"}";
-
+        final String response =
+                "ERROR: " + exception.getClass() + " was thrown <br/>" +
+                "MESSAGE: " + StringEscapeUtils.escapeEcmaScript(message);
         return Response.serverError().entity(response).build();
     }
 
