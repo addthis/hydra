@@ -1025,11 +1025,14 @@ public class JobsResource implements Closeable {
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
             }
-            String json = CodecJSON.encodeString(ImmutableMap.of(
-                    "success", success,
-                    "error", error,
-                    "unauthorized", unauthorized));
-            return Response.ok(json).build();
+            if(error.size() > 0) {
+                return Response.status(Response.Status.BAD_REQUEST).entity(error).build();
+            } else if(unauthorized.size() > 0) {
+                return Response.status(Response.Status.UNAUTHORIZED.getStatusCode()).build();
+            } else {
+                String json = CodecJSON.encodeString(ImmutableMap.of("success", success));
+                return Response.ok(json).build();
+            }
         } catch (Exception ex) {
             return buildServerError(ex);
         }
