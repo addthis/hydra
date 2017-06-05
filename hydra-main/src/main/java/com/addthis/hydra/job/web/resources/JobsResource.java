@@ -996,6 +996,7 @@ public class JobsResource implements Closeable {
 
         List<String> success = new ArrayList<>();
         List<String> error = new ArrayList<>();
+        List<String> disabled = new ArrayList<>();
         List<String> unauthorized = new ArrayList<>();
         try {
             if (jobIds.isPresent()) {
@@ -1004,6 +1005,8 @@ public class JobsResource implements Closeable {
                     IJob job = spawn.getJob(aJob);
                     if (job == null) {
                         error.add(aJob);
+                    } else if(!job.isEnabled()) {
+                        disabled.add(aJob);
                     } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
                         unauthorized.add(aJob);
                     } else {
@@ -1016,6 +1019,8 @@ public class JobsResource implements Closeable {
                 IJob job = spawn.getJob(jobId);
                 if (job == null) {
                     error.add(jobId);
+                } else if(!job.isEnabled()) {
+                    disabled.add(jobId);
                 } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
                     unauthorized.add(jobId);
                 } else {
@@ -1025,14 +1030,13 @@ public class JobsResource implements Closeable {
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
             }
-            if(error.size() > 0) {
-                return Response.status(Response.Status.BAD_REQUEST).entity(error).build();
-            } else if(unauthorized.size() > 0) {
-                return Response.status(Response.Status.UNAUTHORIZED.getStatusCode()).build();
-            } else {
-                String json = CodecJSON.encodeString(ImmutableMap.of("success", success));
-                return Response.ok(json).build();
-            }
+
+            String json = CodecJSON.encodeString(ImmutableMap.of(
+                    "success", success,
+                    "error", error,
+                    "disabled", disabled,
+                    "unauthorized", unauthorized));
+            return Response.ok(json).build();
         } catch (Exception ex) {
             return buildServerError(ex);
         }
