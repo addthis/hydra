@@ -1318,7 +1318,7 @@ public class Spawn implements Codable, AutoCloseable {
         acquireJobLock();
         try {
             jobUpdateQueue.add(job.getId());
-        }  finally {
+        } finally {
             releaseJobLock();
         }
     }
