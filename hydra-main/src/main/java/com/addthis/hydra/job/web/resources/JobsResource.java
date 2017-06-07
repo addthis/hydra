@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import com.addthis.basis.kv.KVPair;
@@ -121,6 +122,17 @@ public class JobsResource implements Closeable {
     private final JobRequestHandler requestHandler;
     private final CodecJackson validationCodec;
     private final CloseableHttpClient httpClient;
+
+    private static final String SUCCESS = "success";
+    private static final String ERROR = "error";
+    private static final String DISABLE = "disable";
+    private static final String UNAUTHRORIZED = "unauthorized";
+
+    private ConcurrentHashMap<String, List<String>> checkResults = null;
+    private List<String> success = null;
+    private List<String> error = null;
+    private List<String> disable = null;
+    private List<String> unauthorized = null;
 
     public JobsResource(Spawn spawn, SpawnServiceConfiguration configuration, JobRequestHandler requestHandler) {
         this.spawn = spawn;
@@ -819,7 +831,6 @@ public class JobsResource implements Closeable {
         }
     }
 
-
     @GET
     @Path("/revert")
     @Produces(MediaType.APPLICATION_JSON)
@@ -883,16 +894,16 @@ public class JobsResource implements Closeable {
         JSONObject body = new JSONObject();
         try {
             if (minion == null) {
-                body.put("error", "Missing required query parameter 'minion'");
+                body.put(ERROR, "Missing required query parameter 'minion'");
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else if (node == null) {
-                body.put("error", "Missing required query parameter 'node'");
+                body.put(ERROR, "Missing required query parameter 'node'");
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else if (port == null) {
-                body.put("error", "Missing required query parameter 'port'");
+                body.put(ERROR, "Missing required query parameter 'port'");
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else if (lines > maxLogFileLines) {
-                body.put("error", "Number of log lines requested " + lines + " is greater than max " + maxLogFileLines);
+                body.put(ERROR, "Number of log lines requested " + lines + " is greater than max " + maxLogFileLines);
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else {
                 URI uri = UriBuilder.fromUri("http://" + minion + ":" + port + "/job.log")
@@ -978,6 +989,41 @@ public class JobsResource implements Closeable {
         }
     }
 
+    private Map<String, List<String>> checkJob(String jobId, String user, String token, String sudo, int select, int priority)
+            throws Exception {
+
+        IJob job = spawn.getJob(jobId);
+        if (jobId == null) {
+            error.add(jobId);
+        } else if(!job.isEnabled()) {
+            disable.add(jobId);
+        } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+            unauthorized.add(jobId);
+        } else {
+            startJobHelper(jobId, select, priority);
+            success.add(jobId);
+        }
+        checkResults.put(SUCCESS, success);
+        checkResults.put(ERROR, error);
+        checkResults.put(DISABLE, disable);
+        checkResults.put(UNAUTHRORIZED, unauthorized);
+        return checkResults;
+    }
+
+    private void initCheckJob() {
+        checkResults = new ConcurrentHashMap<String, List<String>>();
+        success = new ArrayList<>();
+        error = new ArrayList<>();
+        disable = new ArrayList<>();
+        unauthorized = new ArrayList<>();
+    }
+
+    private void getCheckJobResult(Map<String, List<String>> checkResults) {
+        success = checkResults.get(SUCCESS);
+        error = checkResults.get(ERROR);
+        disable = checkResults.get(DISABLE);
+        unauthorized = checkResults.get(UNAUTHRORIZED);
+    }
     /**
      * Support for both the undocumented API that uses "jobid" and "select"
      * and the documented API that uses "id" and "task".
@@ -994,48 +1040,27 @@ public class JobsResource implements Closeable {
                               @QueryParam("token") String token,
                               @QueryParam("sudo") String sudo) {
 
-        List<String> success = new ArrayList<>();
-        List<String> error = new ArrayList<>();
-        List<String> disabled = new ArrayList<>();
-        List<String> unauthorized = new ArrayList<>();
         try {
             if (jobIds.isPresent()) {
                 Iterable<String> joblist = COMMA_SPLITTER.split(jobIds.get());
-                for (String aJob : joblist) {
-                    IJob job = spawn.getJob(aJob);
-                    if (job == null) {
-                        error.add(aJob);
-                    } else if(!job.isEnabled()) {
-                        disabled.add(aJob);
-                    } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
-                        unauthorized.add(aJob);
-                    } else {
-                        startJobHelper(aJob, select, priority);
-                        success.add(aJob);
-                    }
-                }
+                initCheckJob();
+                for (String jobId : joblist) {
+                    Map<String, List<String>> checkResults = checkJob(jobId, user, token, sudo, select, priority);
+                    getCheckJobResult(checkResults);
+              }
             } else if (id.isPresent()) {
-                String jobId = id.get();
-                IJob job = spawn.getJob(jobId);
-                if (job == null) {
-                    error.add(jobId);
-                } else if(!job.isEnabled()) {
-                    disabled.add(jobId);
-                } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
-                    unauthorized.add(jobId);
-                } else {
-                    startJobHelper(jobId, select, priority);
-                    success.add(jobId);
-                }
+                initCheckJob();
+                Map<String, List<String>> checkResults = checkJob(id.get(), user, token, sudo, select, priority);
+                getCheckJobResult(checkResults);
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
             }
 
             String json = CodecJSON.encodeString(ImmutableMap.of(
-                    "success", success,
-                    "error", error,
-                    "disabled", disabled,
-                    "unauthorized", unauthorized));
+                    SUCCESS, success,
+                    ERROR, error,
+                    DISABLE, disable,
+                    UNAUTHRORIZED, unauthorized));
             return Response.ok(json).build();
         } catch (Exception ex) {
             return buildServerError(ex);
@@ -1344,9 +1369,9 @@ public class JobsResource implements Closeable {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
             }
             String json = CodecJSON.encodeString(ImmutableMap.of(
-                    "success", success,
-                    "error", error,
-                    "unauthorized", unauthorized));
+                    SUCCESS, success,
+                    ERROR, error,
+                    UNAUTHRORIZED, unauthorized));
             return Response.ok(json).build();
         } catch (Exception ex) {
             return buildServerError(ex);
@@ -1373,14 +1398,17 @@ public class JobsResource implements Closeable {
     }
 
     private static Response buildServerError(Exception exception) {
-        log.error("Error in kick job: {}", Throwables.getStackTraceAsString(exception));
+        log.error("", exception);
         String message = exception.getMessage();
         if (message == null) {
             message = exception.toString();
         }
-        final String response =
-                "ERROR: " + exception.getClass() + " was thrown <br/>" +
-                "MESSAGE: " + StringEscapeUtils.escapeEcmaScript(message);
+
+        final String response = "{" +
+                        "\"error\": \"A java exception was thrown." +
+                        "\"message\": \"" + StringEscapeUtils.escapeEcmaScript(message) + "\"" +
+                        "\"}";
+
         return Response.serverError().entity(response).build();
     }
 
