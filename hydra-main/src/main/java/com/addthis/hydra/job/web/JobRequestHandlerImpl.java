@@ -78,7 +78,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", DEFAULT_MINION_TYPE),
                     command, defaults);
-            updateOwnership(job, user);
+            updateOwnership(kv, job, user);
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
@@ -127,7 +127,10 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         }
     }
 
-    private void updateOwnership(IJob job, User user) {
+    private void updateOwnership(KVPairs kv, IJob job, User user) {
+        if(Strings.isNullOrEmpty(kv.getValue("creator"))) {
+            job.setCreator(user.name());
+        }
         job.setOwner(user.name());
         job.setGroup(user.primaryGroup());
     }
@@ -142,12 +145,6 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     private void updateBasicSettings(KVPairs kv, IJob job, String user) {
-        if(kv.getValue("creator") == null || kv.getValue("creator").isEmpty()) {
-            job.setCreator(user);
-        }
-        if(kv.getValue("owner") == null || kv.getValue("owner").isEmpty()) {
-            job.setOwner(user);
-        }
         job.setGroup(kv.getValue("group", job.getGroup()));
         job.setOwnerWritable(KVUtils.getBooleanValue(kv, job.isOwnerWritable(), "ownerWritable"));
         job.setGroupWritable(KVUtils.getBooleanValue(kv, job.isGroupWritable(), "groupWritable"));

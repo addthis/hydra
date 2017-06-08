@@ -15,19 +15,13 @@ package com.addthis.hydra.job.web.resources;
 
 import javax.ws.rs.core.Response;
 
-import java.util.Collections;
-
 import com.addthis.basis.kv.KVPairs;
 
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.PermissionsManager;
-import com.addthis.hydra.job.entity.JobCommand;
-import com.addthis.hydra.job.entity.JobCommandManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.JobRequestHandler;
-import com.addthis.hydra.job.web.JobRequestHandlerImpl;
 import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 
 import org.junit.Before;
@@ -41,27 +35,21 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 public class JobsResourceTest {
+
     private Spawn spawn;
     private SpawnServiceConfiguration configuration;
-    private JobCommandManager jobCommandManager;
-    private JobAlertManager jobAlertManager;
     private JobRequestHandler requestHandler;
     private JobsResource resource;
     private KVPairs kv;
-    private JobRequestHandlerImpl impl;
 
     @Before
     public void setUp() {
         // mocks and stubs
         spawn = mock(Spawn.class);
         configuration = SpawnServiceConfiguration.SINGLETON;
-        jobCommandManager = mock(JobCommandManager.class);
-        jobAlertManager = mock(JobAlertManager.class);
-        requestHandler = mock(JobRequestHandler.class);
-        when(spawn.getJobCommandManager()).thenReturn(jobCommandManager);
-        when(spawn.getJobAlertManager()).thenReturn(jobAlertManager);
         when(spawn.getPermissionsManager()).thenReturn(PermissionsManager.createManagerAllowAll());
-        when(jobCommandManager.getEntity("default-task")).thenReturn(new JobCommand());
+        requestHandler = mock(JobRequestHandler.class);
+
         resource = new JobsResource(spawn, configuration, requestHandler);
         kv = new KVPairs();
     }
@@ -90,20 +78,6 @@ public class JobsResourceTest {
         Response response = resource.saveJob(kv, "megatron", "megatron", null, false);
         assertEquals(500, response.getStatus());
         verifyZeroInteractions(spawn);
-    }
-    @Test
-    public void saveJobWithoutCreator() throws Exception {
-        Job job = new Job();
-        when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
-
-        kv.add("config", "my job config");
-        kv.add("command", "default-task");
-        impl = new JobRequestHandlerImpl(spawn);
-        assertEquals("megatron", impl.createOrUpdateJob(kv, "megatron", "token", null, false).getCreator());
-
-        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null, false)).thenReturn(job);
-        Response response = resource.saveJob(kv, "megatron", "megatron", null, false);
-        assertEquals(200, response.getStatus());
     }
 
     @Test
