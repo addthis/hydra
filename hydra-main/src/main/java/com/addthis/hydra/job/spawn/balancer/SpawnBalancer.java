@@ -406,7 +406,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    public List<JobTaskMoveAssignment> pushTasksOffDiskForFilesystemOkayFailure(HostState host, int moveLimit) {
+    public List<JobTaskMoveAssignment> pushTasksOffHostForFilesystemOkayFailure(HostState host, int moveLimit) {
         List<HostState> hosts = hostManager.listHostStatus(null);
         return pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
     }
@@ -1025,8 +1025,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             return rv;
         }
         List<HostState> sortedHosts = sortHostsByDiskSpace(hosts);
-        HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
+
+        HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         if ((failState == HostFailWorker.FailState.FAILING_FS_OKAY) || isExtremeHost(hostID, true, true) ||
             (host.getAvailDiskBytes() < config.getMinFreeDiskSpaceToRecieveNewTasks())) {
             // Host disk is overloaded
@@ -1038,7 +1039,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             log.info("[spawn.balancer] {} categorized as underloaded host; looking for tasks to pull onto it", hostID);
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
-            pushTasksOntoDisk(host, heavyHosts);
+            rv.addAll(pushTasksOntoHost(host, heavyHosts));
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
             log.info("[spawn.balance] {} categorized as overworked host; looking for tasks to push off it", hostID);
@@ -1401,7 +1402,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    private List<JobTaskMoveAssignment> pushTasksOntoDisk(HostState host, Iterable<HostState> heavyHosts) {
+    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts) {
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
         for (HostState heavyHost : heavyHosts) {
             double byteLimitFactor =
@@ -1480,8 +1481,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 continue;
             }
             HostState newHost = hostManager.getHostState(newHostID);
-            if ((newHost == null) || newHost.hasLive(jobKey) ||
-                !canReceiveNewTasks(newHost)) {
+            if ((newHost == null) || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost)) {
                 log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
                          "because it cannot receive the new task", jobID, newHostID);
                 continue;

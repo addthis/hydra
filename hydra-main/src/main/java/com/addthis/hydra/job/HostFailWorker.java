@@ -260,7 +260,7 @@ public class HostFailWorker {
                     // Spawn is already moving enough tasks; hold off until later
                     return;
                 }
-                List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksToMove);
+                List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffHostForFilesystemOkayFailure(host, tasksToMove);
                 // no re-assignments available for this host, move it to the end of the fs-ok queue
                 if(assignments.isEmpty() && tasksRebalancing == 0 && failState == FailState.FAILING_FS_OKAY) {
                     hostFailState.removeHost(failedHostUuid);

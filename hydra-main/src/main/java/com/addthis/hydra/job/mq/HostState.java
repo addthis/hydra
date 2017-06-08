@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import com.addthis.hydra.minion.Minion;
-
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
@@ -188,7 +186,8 @@ public class HostState implements HostMessage {
         }
         Set<String> externalTypes = HostState.typeStringToSet(externalType);
         Set<String> myTypes = HostState.typeStringToSet(minionTypes);
-        return !Sets.intersection(externalTypes, myTypes).isEmpty();
+        Set<String> commonMinionTypes = Sets.intersection(externalTypes, myTypes);
+        return !commonMinionTypes.isEmpty();
     }
 
     private static Set<String> typeStringToSet(String typeString) {
