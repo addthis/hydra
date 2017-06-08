@@ -61,14 +61,6 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         if (user == null) {
             throw new InsufficientPrivilegesException(username, "invalid credentials provided");
         }
-       if(kv.getValue("owner") == null || kv.getValue("owner").isEmpty()) {
-            kv.setValue("owner", username);
-            log.info("Owner field was empty, so filled with username = {} for a job creation or cloning a job", username);
-        }
-        if(kv.getValue("creator") == null || kv.getValue("creator").isEmpty()) {
-            kv.setValue("creator", username);
-            log.info("Creator field was empty, so filled with username = {} for a job creation or cloning a job", username);
-        }
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig;
@@ -149,9 +141,13 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         jobAlertManager.updateBasicAlerts(job, basicAlerts, basicPages);
     }
 
-
     private void updateBasicSettings(KVPairs kv, IJob job, String user) {
-        job.setOwner(kv.getValue("owner", job.getOwner()));
+        if(kv.getValue("creator") == null || kv.getValue("creator").isEmpty()) {
+            job.setCreator(user);
+        }
+        if(kv.getValue("owner") == null || kv.getValue("owner").isEmpty()) {
+            job.setOwner(user);
+        }
         job.setGroup(kv.getValue("group", job.getGroup()));
         job.setOwnerWritable(KVUtils.getBooleanValue(kv, job.isOwnerWritable(), "ownerWritable"));
         job.setGroupWritable(KVUtils.getBooleanValue(kv, job.isGroupWritable(), "groupWritable"));
