@@ -21,8 +21,6 @@ import com.addthis.basis.util.LessStrings;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobTask;
-import com.addthis.hydra.job.alert.Group;
-import com.addthis.hydra.job.alert.GroupManager;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.entity.JobCommand;
@@ -120,6 +118,17 @@ public class JobRequestHandlerImplTest {
         kv.add("config", LessStrings.repeat('x', 1_000_001));
         callAndVerifyBadRequest();
         verifyNoSpawnCreateJobCall();
+    }
+
+    @Test
+    public void createJob_WithoutCreator() throws Exception {
+        Job job = new Job();
+        when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
+
+        kv.add("config", "my job config");
+        kv.add("command", "default-task");
+        impl = new JobRequestHandlerImpl(spawn);
+        assertEquals("megatron", impl.createOrUpdateJob(kv, "megatron", "token", null, false).getCreator());
     }
 
     @Test
