@@ -1374,11 +1374,10 @@ public class JobsResource implements Closeable {
             message = exception.toString();
         }
         final String response = "{" +
-                                "\"error\": \"A java exception was thrown." +
+                                "\"error\": \"A java exception was thrown.\", " +
                                 "\"message\": \"" + StringEscapeUtils.escapeEcmaScript(message) + "\"" +
-                                "\"}";
-
-        return Response.serverError().entity(response).build();
+                                "}";
+       return Response.serverError().entity(response).build();
     }
 
     private static void emitLogLineForAction(String user, String desc) {
