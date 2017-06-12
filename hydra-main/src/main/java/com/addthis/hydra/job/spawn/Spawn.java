@@ -3043,6 +3043,10 @@ public class Spawn implements Codable, AutoCloseable {
         }
         if (job.isFinished() && (update.getRebalanceSource() == null)) {
             finishJob(job, errored);
+            // todo: reset JobTask.error if job finish successfully
+            if(!errored) {
+                task.setErrors(0);
+            }
         }
         queueJobTaskUpdateEvent(job);
     }

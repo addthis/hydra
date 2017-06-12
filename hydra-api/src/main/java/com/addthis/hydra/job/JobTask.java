@@ -55,6 +55,7 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
     @FieldConfig private int runCount;
     @FieldConfig private int starts;
     @FieldConfig private long startTime;
+    // todo: can repurpose this with errorsCount
     @FieldConfig private int errors;
     @FieldConfig private long fileCount;
     @FieldConfig private long fileBytes;
@@ -171,6 +172,10 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
 
     public int getErrors() {
         return errors;
+    }
+
+    public void setErrors(int errors) {
+        this.errors = errors;
     }
 
     public int incrementErrors() {
