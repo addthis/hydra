@@ -72,13 +72,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             requireValidCommandParam(command);
             checkArgument(config != null, "Parameter 'config' is missing");
             expandedConfig = tryExpandJobConfigParam(config);
+            checkKvPairs(kv, user);
             job = spawn.createJob(
                     kv.getValue("creator", username),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", DEFAULT_MINION_TYPE),
                     command, defaults);
-            updateOwnership(kv, job, user);
+
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
@@ -127,12 +128,17 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         }
     }
 
-    private void updateOwnership(KVPairs kv, IJob job, User user) {
+    private void checkKvPairs(KVPairs kv, User user) {
+        String username = user.name();
         if(Strings.isNullOrEmpty(kv.getValue("creator"))) {
-            job.setCreator(user.name());
+            kv.setValue("creator", username);
         }
-        job.setOwner(user.name());
-        job.setGroup(user.primaryGroup());
+        if(Strings.isNullOrEmpty(kv.getValue("owner"))) {
+            kv.setValue("owner", username);
+        }
+        if(Strings.isNullOrEmpty(kv.getValue("group"))) {
+            kv.setValue("group", user.primaryGroup());
+        }
     }
 
     /**
