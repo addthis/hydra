@@ -28,6 +28,7 @@ import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.mq.StatusTaskEnd;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
@@ -35,10 +36,11 @@ import org.apache.zookeeper.CreateMode;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Category(SlowTest.class)
 public class SpawnTest extends ZkCodecStartUtil {
@@ -48,6 +50,17 @@ public class SpawnTest extends ZkCodecStartUtil {
     public void setParams() {
         System.setProperty("SPAWN_DATA_DIR", "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", "/tmp/spawn/log/events");
+    }
+
+    @Test
+    public void failJobCountTest() throws Exception {
+        StatusTaskEnd update = mock(StatusTaskEnd.class);
+        when(update.getExitCode()).thenReturn(1);
+
+        Spawn spawn = mock(Spawn.class);
+        Job job = mock(Job.class);
+        JobTask task = mock(JobTask.class);
+        spawn.handleStatusTaskEnd(job, task, update);
     }
 
     @Test
@@ -142,7 +155,7 @@ public class SpawnTest extends ZkCodecStartUtil {
     @Test
     public void fixDirsTest() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
-            spawn.setSpawnMQ(Mockito.mock(SpawnMQImpl.class));
+            spawn.setSpawnMQ(mock(SpawnMQImpl.class));
             HostState host0 = createHostState("host0");
             spawn.hostManager.updateHostState(host0);
             HostState host1 = createHostState("host1");

@@ -3020,6 +3020,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @param task   The task to modify
      * @param update The message
      */
+    @VisibleForTesting
     private void handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) {
         TaskExitState exitState = update.getExitState();
         boolean wasStopped = (exitState != null) && exitState.getWasStopped();
