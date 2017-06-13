@@ -18,11 +18,14 @@ import java.util.Collections;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.LessStrings;
 
+import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.PermissionsManager;
+import com.addthis.hydra.job.auth.StaticUser;
+import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobCommandManager;
 import com.addthis.hydra.job.spawn.Spawn;
@@ -42,6 +45,7 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyCollectionOf;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -55,7 +59,8 @@ public class JobRequestHandlerImplTest {
     private JobRequestHandlerImpl impl;
     private String username = "megatron";
     private String token = "megatron";
-    private String sudo = null;
+    private String group = "group1";
+    private String sudo = "sudo";
     private KVPairs kv;
 
     @Before
@@ -66,7 +71,11 @@ public class JobRequestHandlerImplTest {
         jobAlertManager = mock(JobAlertManager.class);
         when(spawn.getJobCommandManager()).thenReturn(jobCommandManager);
         when(spawn.getJobAlertManager()).thenReturn(jobAlertManager);
-        when(spawn.getPermissionsManager()).thenReturn(PermissionsManager.createManagerAllowAll());
+        PermissionsManager pm = mock(PermissionsManager.class);
+        when(spawn.getPermissionsManager()).thenReturn(pm);
+        User user = new StaticUser(username, Lists.newArrayList(group), token, sudo);
+        when(pm.authenticate(username, token)).thenReturn(user);
+        when(pm.isWritable(eq(username), eq(token), eq(sudo), any(IJob.class))).thenReturn(true);
         when(jobCommandManager.getEntity("default-task")).thenReturn(new JobCommand());
 
         impl = new JobRequestHandlerImpl(spawn);
@@ -124,15 +133,17 @@ public class JobRequestHandlerImplTest {
     @Test
     public void createJob_WithoutCreator() throws Exception {
         Job job = new Job("jobId", username);
-        when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
+        when(spawn.createJob(username, -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
 
         kv.add("creator", "");
         kv.add("owner", "");
+        kv.add("group", "");
         kv.add("config", "my job config");
         kv.add("command", "default-task");
-        Job rJob = impl.createOrUpdateJob(kv, username, token, null, false);
-        assertEquals("megatron", rJob.getCreator());
-        assertEquals("megatron", rJob.getOwner());
+        Job rJob = impl.createOrUpdateJob(kv, username, token, sudo, false);
+        assertEquals("creator", username, rJob.getCreator());
+        assertEquals("owner", username, rJob.getOwner());
+        assertEquals("group", group, rJob.getGroup());
         assertSame("returned job", job, rJob);
     }
 
