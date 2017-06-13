@@ -123,17 +123,17 @@ public class JobRequestHandlerImplTest {
 
     @Test
     public void createJob_WithoutCreator() throws Exception {
-        Job job = new Job("jobId", "megatron");
+        Job job = new Job("jobId", username);
         when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
 
         kv.add("creator", "");
         kv.add("owner", "");
         kv.add("config", "my job config");
         kv.add("command", "default-task");
-        Job rJob = impl.createOrUpdateJob(kv, "megatron", "token", null, false);
-
+        Job rJob = impl.createOrUpdateJob(kv, username, token, null, false);
         assertEquals("megatron", rJob.getCreator());
         assertEquals("megatron", rJob.getOwner());
+        assertSame("returned job", job, rJob);
     }
 
     @Test
