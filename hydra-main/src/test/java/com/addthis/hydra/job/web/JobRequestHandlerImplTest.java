@@ -80,6 +80,7 @@ public class JobRequestHandlerImplTest {
         when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
         when(spawn.getJob("new_job_id")).thenReturn(job);
 
+        kv.add("creator", "megatron");
         kv.add("config", "my job config");
         kv.add("command", "default-task");
         assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token, sudo, false));

@@ -74,7 +74,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             expandedConfig = tryExpandJobConfigParam(config);
             checkKvPairs(kv, user);
             job = spawn.createJob(
-                    kv.getValue("creator", username),
+                    kv.getValue("creator"),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", DEFAULT_MINION_TYPE),
