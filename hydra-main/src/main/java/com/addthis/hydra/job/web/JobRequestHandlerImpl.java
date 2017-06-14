@@ -131,13 +131,13 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     private void checkKvPairs(KVPairs kv, User user) {
         String username = user.name();
         if(Strings.isNullOrEmpty(kv.getValue("creator"))) {
-            kv.setValue("creator", username);
+            kv.replaceOrAdd("creator", username);
         }
         if(Strings.isNullOrEmpty(kv.getValue("owner"))) {
-            kv.setValue("owner", username);
+            kv.replaceOrAdd("owner", username);
         }
         if(Strings.isNullOrEmpty(kv.getValue("group"))) {
-            kv.setValue("group", user.primaryGroup());
+            kv.replaceOrAdd("group", user.primaryGroup());
         }
     }
 
