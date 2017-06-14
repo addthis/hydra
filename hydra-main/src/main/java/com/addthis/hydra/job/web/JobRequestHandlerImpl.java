@@ -32,7 +32,6 @@ import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
-import static com.addthis.hydra.job.IJob.DEFAULT_MINION_TYPE;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -40,6 +39,7 @@ import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.hydra.job.IJob.DEFAULT_MINION_TYPE;
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class JobRequestHandlerImpl implements JobRequestHandler {
@@ -72,13 +72,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             requireValidCommandParam(command);
             checkArgument(config != null, "Parameter 'config' is missing");
             expandedConfig = tryExpandJobConfigParam(config);
+            checkKvPairs(kv, user);
             job = spawn.createJob(
-                    kv.getValue("creator", username),
+                    kv.getValue("creator"),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", DEFAULT_MINION_TYPE),
                     command, defaults);
-            updateOwnership(job, user);
+
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
@@ -127,9 +128,17 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         }
     }
 
-    private void updateOwnership(IJob job, User user) {
-        job.setOwner(user.name());
-        job.setGroup(user.primaryGroup());
+    private void checkKvPairs(KVPairs kv, User user) {
+        String username = user.name();
+        if(Strings.isNullOrEmpty(kv.getValue("creator"))) {
+            kv.setValue("creator", username);
+        }
+        if(Strings.isNullOrEmpty(kv.getValue("owner"))) {
+            kv.setValue("owner", username);
+        }
+        if(Strings.isNullOrEmpty(kv.getValue("group"))) {
+            kv.setValue("group", user.primaryGroup());
+        }
     }
 
     /**

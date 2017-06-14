@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * Wrapper class around authentication and authorization. Provides convenience methods
  * for authorization operations that must first be authenticated.
  */
-public final class PermissionsManager implements Closeable {
+public class PermissionsManager implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(PermissionsManager.class);
 
