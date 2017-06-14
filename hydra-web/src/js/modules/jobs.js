@@ -77,10 +77,13 @@ function(
 ){
     var showStartStopStateChange = function(data, state){
         if (data.success.length > 0) {
-            alertify.success(data.success.length + " job(s) have been " + state, 5);
+            alertify.success(data.success.length + " job(s) have been " + state, 10);
         }
         if (data.error.length > 0) {
-            alertify.error(data.error.length + " job(s) have not been " + state, 5);
+            alertify.error(data.error.length + " job(s) have not been " + state, 10);
+        }
+        if (data.disable.length > 0) {
+            alertify.error(data.disable.length + " job(s) are disabled", 10);
         }
         if (data.unauthorized.length > 0) {
             alertify.error(data.unauthorized.length + " job(s) insufficient privileges");
@@ -327,7 +330,7 @@ function(
             }).done(function(data){
                 showStartStopStateChange(data, "started");
             }).fail(function(e){
-                alertify.error("Error kicking: "+self.id+". <br/> "+e.responseText);
+                alertify.error("<p align='left'>Error kicking: " + self.id + "<br/>" + e.responseText + "</p>", 10);
             });
         },
         stop : function(){
@@ -626,7 +629,7 @@ function(
             }).done(function(data){
                 showStartStopStateChange(data, "started");
             }).fail(function(e){
-                alertify.error("Error kicking: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("Error kicking: " + count + " job(s) <br><p align='left'>" + e.responseText + "</p>", 10);
             });
         },
         stopSelected:function(jobIds){

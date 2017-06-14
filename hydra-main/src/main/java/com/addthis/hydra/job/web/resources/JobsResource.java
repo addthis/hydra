@@ -35,6 +35,7 @@ import java.io.StringWriter;
 import java.net.URI;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -896,13 +897,13 @@ public class JobsResource implements Closeable {
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else {
                 URI uri = UriBuilder.fromUri("http://" + minion + ":" + port + "/job.log")
-                        .queryParam("id", jobID)
-                        .queryParam("node", node)
-                        .queryParam("runsAgo", runsAgo)
-                        .queryParam("lines", lines)
-                        .queryParam("out", out)
-                        .queryParam("offset", offset)
-                        .build();
+                                    .queryParam("id", jobID)
+                                    .queryParam("node", node)
+                                    .queryParam("runsAgo", runsAgo)
+                                    .queryParam("lines", lines)
+                                    .queryParam("out", out)
+                                    .queryParam("offset", offset)
+                                    .build();
 
                 HttpGet httpGet = new HttpGet(uri);
                 CloseableHttpResponse response = httpClient.execute(httpGet);
@@ -913,9 +914,9 @@ public class JobsResource implements Closeable {
                     String responseBody = IOUtils.toString(entity.getContent(), encoding);
 
                     return Response.status(response.getStatusLine().getStatusCode())
-                            .header("Content-type", response.getFirstHeader("Content-type"))
-                            .entity(responseBody)
-                            .build();
+                                   .header("Content-type", response.getFirstHeader("Content-type"))
+                                   .entity(responseBody)
+                                   .build();
                 } catch (IOException ex) {
                     return buildServerError(ex);
                 } finally {
@@ -986,52 +987,52 @@ public class JobsResource implements Closeable {
     @Path("/start")
     @Produces(MediaType.APPLICATION_JSON)
     public Response startJob(@QueryParam("jobid") Optional<String> jobIds,
-                              @QueryParam("select") @DefaultValue("-1") int select,
-                              @QueryParam("id") Optional<String> id,
-                              @QueryParam("task") @DefaultValue("-1") int task,
-                              @QueryParam("priority") @DefaultValue("0") int priority,
-                              @QueryParam("user") String user,
-                              @QueryParam("token") String token,
-                              @QueryParam("sudo") String sudo) {
+                             @QueryParam("select") @DefaultValue("-1") int select,
+                             @QueryParam("id") Optional<String> id,
+                             @QueryParam("task") @DefaultValue("-1") int task,
+                             @QueryParam("priority") @DefaultValue("0") int priority,
+                             @QueryParam("user") String user,
+                             @QueryParam("token") String token,
+                             @QueryParam("sudo") String sudo) {
 
-        List<String> success = new ArrayList<>();
-        List<String> error = new ArrayList<>();
-        List<String> unauthorized = new ArrayList<>();
+        Map<String, List<String>> checkJobMap = new HashMap<>();
+        checkJobMap.put("success", new ArrayList<>());
+        checkJobMap.put("error", new ArrayList<>());
+        checkJobMap.put("disable", new ArrayList<>());
+        checkJobMap.put("unauthorized", new ArrayList<>());
+
         try {
             if (jobIds.isPresent()) {
                 Iterable<String> joblist = COMMA_SPLITTER.split(jobIds.get());
-                for (String aJob : joblist) {
-                    IJob job = spawn.getJob(aJob);
-                    if (job == null) {
-                        error.add(aJob);
-                    } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
-                        unauthorized.add(aJob);
-                    } else {
-                        startJobHelper(aJob, select, priority);
-                        success.add(aJob);
-                    }
+                for (String jobId : joblist) {
+                    checkJob(jobId, select, priority, user, token, sudo, checkJobMap);
                 }
             } else if (id.isPresent()) {
                 String jobId = id.get();
-                IJob job = spawn.getJob(jobId);
-                if (job == null) {
-                    error.add(jobId);
-                } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
-                    unauthorized.add(jobId);
-                } else {
-                    startJobHelper(jobId, select, priority);
-                    success.add(jobId);
-                }
+                checkJob(jobId, select, priority, user, token, sudo, checkJobMap);
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
             }
-            String json = CodecJSON.encodeString(ImmutableMap.of(
-                    "success", success,
-                    "error", error,
-                    "unauthorized", unauthorized));
+            String json = CodecJSON.encodeString(checkJobMap);
             return Response.ok(json).build();
         } catch (Exception ex) {
             return buildServerError(ex);
+        }
+    }
+
+    private void checkJob(String jobId, int taskId, int priority, String user, String token, String sudo,
+                          Map<String, List<String>> checkJobMap) throws Exception {
+
+        IJob job = spawn.getJob(jobId);
+        if (job == null) {
+            checkJobMap.get("error").add(jobId);
+        } else if (!job.isEnabled()) {
+            checkJobMap.get("disable").add(jobId);
+        } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+            checkJobMap.get("unauthorized").add(jobId);
+        } else {
+            startJobHelper(jobId, taskId, priority);
+            checkJobMap.get("success").add(jobId);
         }
     }
 
@@ -1262,8 +1263,8 @@ public class JobsResource implements Closeable {
     }
 
     void stopJobHelper(IJob job, Optional<Boolean> cancelParam,
-                          Optional<Boolean> forceParam,
-                          int nodeId) throws Exception {
+                       Optional<Boolean> forceParam,
+                       int nodeId) throws Exception {
         String id = job.getId();
         boolean cancelRekick = cancelParam.or(false);
         boolean force = forceParam.or(false);
@@ -1372,16 +1373,11 @@ public class JobsResource implements Closeable {
         if (message == null) {
             message = exception.toString();
         }
-
-        String stack = Throwables.getStackTraceAsString(exception);
-
         final String response = "{" +
-                "\"error\": \"A java exception was thrown." +
-                "\"message\": \"" + StringEscapeUtils.escapeEcmaScript(message) + "\"" +
-                "\"stack\": \"" + StringEscapeUtils.escapeEcmaScript(stack) + "\"" +
-                "\"}";
-
-        return Response.serverError().entity(response).build();
+                                "\"error\": \"A java exception was thrown.\", " +
+                                "\"message\": \"" + StringEscapeUtils.escapeEcmaScript(message) + "\"" +
+                                "}";
+       return Response.serverError().entity(response).build();
     }
 
     private static void emitLogLineForAction(String user, String desc) {
