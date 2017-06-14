@@ -3021,11 +3021,13 @@ public class Spawn implements Codable, AutoCloseable {
      * @param update The message
      */
     @VisibleForTesting
-    private void handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) {
+    void handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) {
         TaskExitState exitState = update.getExitState();
+
         boolean wasStopped = (exitState != null) && exitState.getWasStopped();
         task.setFileCount(update.getFileCount());
         task.setByteCount(update.getByteCount());
+
         boolean errored = (update.getExitCode() != 0) && (update.getExitCode() != JobTaskErrorCode.REBALANCE_PAUSE);
         if (update.getRebalanceSource() != null) {
             handleRebalanceFinish(job, task, update);
@@ -3049,6 +3051,9 @@ public class Spawn implements Codable, AutoCloseable {
                 task.setErrors(0);
             }
         }
+
+        log.info("*** errored = {}, task.getErrors() = {},  task.getHostUUID() = {} ", errored, task.getErrors(), task.getHostUUID());
+
         queueJobTaskUpdateEvent(job);
     }
 
