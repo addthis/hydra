@@ -83,7 +83,7 @@ function(
             alertify.error(data.error.length + " job(s) have not been " + state, 10);
         }
         if (data.disable.length > 0) {
-            alertify.error(data.disable.length + " job(s) are disabled ", 10);
+            alertify.error(data.disable.length + " job(s) are disabled", 10);
         }
         if (data.unauthorized.length > 0) {
             alertify.error(data.unauthorized.length + " job(s) insufficient privileges");
