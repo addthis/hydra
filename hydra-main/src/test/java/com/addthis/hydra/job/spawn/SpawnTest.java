@@ -14,8 +14,10 @@
 package com.addthis.hydra.job.spawn;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
+import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.test.SlowTest;
 
 import com.addthis.codec.config.Configs;
@@ -24,10 +26,15 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.alert.JobAlertManager;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.entity.JobCommand;
+import com.addthis.hydra.job.entity.JobCommandManager;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.mq.StatusTaskEnd;
+import com.addthis.hydra.job.web.JobRequestHandlerImpl;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
@@ -35,19 +42,61 @@ import org.apache.zookeeper.CreateMode;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Category(SlowTest.class)
 public class SpawnTest extends ZkCodecStartUtil {
 
-    // todo: use random temp dirs
+    private Spawn spawn;
+    private JobCommandManager jobCommandManager;
+    private JobAlertManager jobAlertManager;
+    private JobRequestHandlerImpl impl;
+    private String username = "megatron";
+    private String token = "megatron";
+    private String sudo = null;
+    private KVPairs kv;
+
     @Before
-    public void setParams() {
+    public void setUp() {
         System.setProperty("SPAWN_DATA_DIR", "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", "/tmp/spawn/log/events");
+
+        // mocks and stubs
+        spawn = mock(Spawn.class);
+        jobCommandManager = mock(JobCommandManager.class);
+        jobAlertManager = mock(JobAlertManager.class);
+        when(spawn.getJobCommandManager()).thenReturn(jobCommandManager);
+        when(spawn.getJobAlertManager()).thenReturn(jobAlertManager);
+        when(spawn.getPermissionsManager()).thenReturn(PermissionsManager.createManagerAllowAll());
+        when(jobCommandManager.getEntity("default-task")).thenReturn(new JobCommand());
+
+        impl = new JobRequestHandlerImpl(spawn);
+        kv = new KVPairs();
+    }
+
+    @Test
+    public void failJobCountTest() throws Exception {
+        Job job = new Job("new_job_id", "megatron");
+        when(spawn.createJob("megatron", -1, Collections.<String> emptyList(), "default", "default-task", false)).thenReturn(job);
+        when(spawn.getJob("new_job_id")).thenReturn(job);
+
+        JobTask task = new JobTask("a", 0, 0);
+
+        StatusTaskEnd update = mock(StatusTaskEnd.class);
+        when(update.getExitCode()).thenReturn(1);
+
+        spawn.handleTaskError(job, task, update.getExitCode());
+        spawn.handleStatusTaskEnd(job, task, update);
+
+
+
+        System.out.println(task.getErrors());
+
+
     }
 
     @Test
@@ -142,7 +191,7 @@ public class SpawnTest extends ZkCodecStartUtil {
     @Test
     public void fixDirsTest() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
-            spawn.setSpawnMQ(Mockito.mock(SpawnMQImpl.class));
+            spawn.setSpawnMQ(mock(SpawnMQImpl.class));
             HostState host0 = createHostState("host0");
             spawn.hostManager.updateHostState(host0);
             HostState host1 = createHostState("host1");
