@@ -2762,7 +2762,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
         } else if (core instanceof StatusTaskEnd) {
             StatusTaskEnd end = (StatusTaskEnd) core;
-            log.info("[task.end] :: {}/{} exit={}", end.getJobUuid(), end.getNodeID(), end.getExitCode());
+            log.info("[task.end] :: {} / {} exit={}", end.getJobUuid(), end.getNodeID(), end.getExitCode());
             SpawnMetrics.tasksCompletedPerHour.mark();
             try {
                 job = getJob(end.getJobUuid());
@@ -2774,14 +2774,24 @@ public class Spawn implements Codable, AutoCloseable {
                         if (task.isRunning()) {
                             taskQueuesByPriority.incrementHostAvailableSlots(end.getHostUuid());
                         }
-                        handleStatusTaskEnd(job, task, end);
-                    }
+                        if(handleStatusTaskEnd(job, task, end) == 1) {
+                            resetTaskErrors(job);
+                        }
+                     }
                 }
             } catch (Exception ex) {
                 log.warn("Failed to handle end message", ex);
             }
         } else {
             log.warn("[mq.core] unhandled type = {}", core.getClass());
+        }
+    }
+
+    void resetTaskErrors(Job job) {
+        List<JobTask> tasks = job.getCopyOfTasks();
+        for(JobTask task : tasks) {
+            task.setErrors(0);
+            log.info("Error counter for consecutive job fails has been reset to 0 for job id = {}, host id = {}, taskId = {}", task.getJobUUID(), task.getHostUUID(), task.getTaskID());
         }
     }
 
@@ -3021,7 +3031,8 @@ public class Spawn implements Codable, AutoCloseable {
      * @param update The message
      */
     @VisibleForTesting
-    void handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) {
+    int handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) {
+        int flag = 0;
         TaskExitState exitState = update.getExitState();
 
         boolean wasStopped = (exitState != null) && exitState.getWasStopped();
@@ -3046,15 +3057,12 @@ public class Spawn implements Codable, AutoCloseable {
         }
         if (job.isFinished() && (update.getRebalanceSource() == null)) {
             finishJob(job, errored);
-            // todo: reset JobTask.error if job finish successfully
             if(!errored) {
-                task.setErrors(0);
+                flag = 1;
             }
         }
-
-        log.info("*** errored = {}, task.getErrors() = {},  task.getHostUUID() = {} ", errored, task.getErrors(), task.getHostUUID());
-
         queueJobTaskUpdateEvent(job);
+        return flag;
     }
 
     /**
