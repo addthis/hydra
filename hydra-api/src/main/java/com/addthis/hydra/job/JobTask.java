@@ -173,6 +173,10 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
         return errors;
     }
 
+    public void setErrors(int errors) {
+        this.errors = errors;
+    }
+
     public int incrementErrors() {
         return ++errors;
     }
