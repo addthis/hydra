@@ -13,11 +13,15 @@
  */
 package com.addthis.hydra.store.common;
 
+import java.util.concurrent.TimeUnit;
+
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.nonconcurrent.NonConcurrentPageCache;
+
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.Meter;
 
 public class PageCacheMetrics<K, V extends BytesCodable> {
 
@@ -48,6 +52,8 @@ public class PageCacheMetrics<K, V extends BytesCodable> {
 
     // This metrics counts compressed bytes
     public final Histogram numberKeysPerPage;
+
+    public final Meter pagesDeletedMeter;
 
     public PageCacheMetrics(AbstractPageCache<K, V> cache) {
         parent = cache;
@@ -111,6 +117,8 @@ public class PageCacheMetrics<K, V extends BytesCodable> {
                 Metrics.newHistogram(cache.getClass(), "numberKeysPerPage", parent.scope) :
                             null;
 
+        pagesDeletedMeter = Metrics.newMeter(cache.getClass(), "pagesDeleted", "pagesDeleted", TimeUnit.MINUTES);
+        pagesDeletedMeter.mark();
     }
 
 }

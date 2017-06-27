@@ -16,6 +16,7 @@ package com.addthis.hydra.data.query.engine;
 
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.cache.RemovalCause;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 
@@ -37,6 +38,18 @@ class EngineRemovalListener implements RemovalListener<String, QueryEngine> {
     static final Meter directoriesEvicted = Metrics.newMeter(QueryEngineCache.class, "directoriesEvicted",
             "directoriesEvicted", TimeUnit.MINUTES);
 
+    static final Meter replacedEvicted = Metrics.newMeter(QueryEngineCache.class, "ReplacedEvicted",
+                                                          "ReplacedEvicted", TimeUnit.MINUTES);
+
+    static final Meter collectedEvicted = Metrics.newMeter(QueryEngineCache.class, "CollectedEvicted",
+                                                           "CollectedEvicted", TimeUnit.MINUTES);
+
+    static final Meter expiredEvicted = Metrics.newMeter(QueryEngineCache.class, "ExpiredEvicted",
+                                                         "ExpiredEvicted", TimeUnit.MINUTES);
+
+    static final Meter sizeEvicted = Metrics.newMeter(QueryEngineCache.class, "SizeEvicted",
+                                                      "SizeEvicted", TimeUnit.MINUTES);
+
     private final QueryEngineCache engineCache;
 
     public EngineRemovalListener(QueryEngineCache engineCache) {
@@ -57,6 +70,13 @@ class EngineRemovalListener implements RemovalListener<String, QueryEngine> {
             }
             if (currentEngine == null) {
                 directoriesEvicted.mark();
+                if(notification.getCause() == RemovalCause.REPLACED) {
+                    replacedEvicted.mark();
+                }
+                collectedEvicted.mark();
+                expiredEvicted.mark();
+                sizeEvicted.mark();
+
             }
         }
     }
