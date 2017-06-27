@@ -53,7 +53,7 @@ public class PageCacheMetrics<K, V extends BytesCodable> {
     // This metrics counts compressed bytes
     public final Histogram numberKeysPerPage;
 
-    public static final Meter pagesDeletedMeter = null;
+    public static Meter pagesDeletedMeter;
 
     public PageCacheMetrics(AbstractPageCache<K, V> cache) {
         parent = cache;
