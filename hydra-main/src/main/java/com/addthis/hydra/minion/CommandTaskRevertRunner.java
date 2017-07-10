@@ -72,7 +72,7 @@ class CommandTaskRevertRunner implements Runnable {
                     } else {
                         String jobId = task.getJobKey().getJobUuid().toString();
                         runCommand(rootDir + minion.getRootDir().getPath().toString(), "rm -rf " + jobId);
-                        log.warn("[task.revert] " + task.getJobKey() + " has NO any backup and remove {} directory", jobId);
+                        log.warn("[task.revert] " + task.getJobKey() + " has NO backup and remove {} directory", jobId);
                     }
                 }
             }
