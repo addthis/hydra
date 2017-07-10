@@ -13,6 +13,11 @@
  */
 package com.addthis.hydra.minion;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 import java.util.List;
 
 import com.addthis.hydra.job.JobTaskErrorCode;
@@ -24,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 class CommandTaskRevertRunner implements Runnable {
     private static final Logger log = LoggerFactory.getLogger(CommandTaskRevertRunner.class);
-
+    String rootDir = "";    // todo: will be removed when merge to master( just for testing )
     private Minion minion;
     CoreMessage core;
 
@@ -38,6 +43,7 @@ class CommandTaskRevertRunner implements Runnable {
         CommandTaskRevert revert = (CommandTaskRevert) core;
         List<JobTask> match = minion.getMatchingJobs(revert);
         log.warn("[task.revert] request " + revert.getJobKey() + " matched " + match.size());
+
         if (match.size() == 0 && revert.getNodeID() != null && revert.getNodeID() >= 0) {
             log.warn("[task.revert] unmatched for " + revert.getJobUuid() + " / " + revert.getNodeID());
         }
@@ -45,6 +51,7 @@ class CommandTaskRevertRunner implements Runnable {
             log.warn("[task.revert] got invalid node id " + revert.getNodeID());
             return;
         }
+
         for (JobTask task : match) {
             if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
                 log.warn("[task.revert] " + task.getJobKey() + " skipped. job node active.");
@@ -58,11 +65,53 @@ class CommandTaskRevertRunner implements Runnable {
                         task.sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
                     }
                 } else {
-                    task.revertToBackup(revert.getRevision(), revert.getTime(), revert.getBackupType());
+                    String dir = rootDir + task.taskRoot.toString();
+                    if(hasBackup(dir, task.taskRoot) > 0) {
+                        task.revertToBackup(revert.getRevision(), revert.getTime(), revert.getBackupType());
+                        log.warn("[task.revert] " + task.getJobKey() + " completed in " + (System.currentTimeMillis() - time) + "ms.");
+                    } else {
+                        String jobId = task.getJobKey().getJobUuid().toString();
+                        runCommand(rootDir + minion.getRootDir().getPath().toString(), "rm -rf " + jobId);
+                        log.warn("[task.revert] " + task.getJobKey() + " has NO any backup and remove {} directory", jobId);
+                    }
                 }
-                log.warn("[task.revert] " + task.getJobKey() + " completed in " + (System.currentTimeMillis() - time) + "ms.");
             }
         }
         minion.writeState();
+    }
+
+    private int hasBackup(String dir, File taskRootFile) {
+        String taskRootFileString = taskRootFile.toString();
+        int count = 0;
+        count += runCommand(dir, "ls -d b-hourly-*");
+        count += runCommand(dir, "ls -d b-daily-*");
+        count += runCommand(dir, "ls -d b-weekly-*");
+        count += runCommand(dir, "ls -d b-monthly-*");
+        return count;
+    }
+
+    private int runCommand(String path, String cmd) {
+        ProcessBuilder builder = new ProcessBuilder();
+        builder.command("bash", "-c", cmd);
+        File dir = new File(path);
+        builder.directory(dir);
+
+        Process process = null;
+        try {
+            process = builder.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        int lineCount = 0;
+        try {
+            while (reader.readLine()!= null) {
+                lineCount++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return lineCount;
     }
 }
