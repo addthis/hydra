@@ -778,6 +778,38 @@ public class JobsResource implements Closeable {
         }
     }
 
+    /**
+     * @param jobid    job ID
+     * @param minionType    new minion type
+     * @param user     username for authentication
+     * @param token    users current token for authentication
+     * @param sudo     optional sudo token. Currently unused by this endpoint.
+     * @param defaults If true then preserve legacy behavior of assigning defaults.
+     *                 This parameter is temporary is will be removed from the API shortly.
+     *                 The legacy behavior will no longer be supported.
+     */
+    @POST
+    @Path("/updateMinionType")
+    @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.WILDCARD})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateMinionType(@QueryParam("jobid") String id,
+                            @QueryParam("minionType") String minionType,
+                            @QueryParam("user") String user,
+                            @QueryParam("token") String token,
+                            @QueryParam("sudo") String sudo,
+                            @DefaultValue("true") @QueryParam("defaults") boolean defaults) {
+        Job job = spawn.getJob(id);
+        // check current minion type of each task
+
+        try {
+            Job updatedJob = requestHandler.updateMinionType(job, minionType, user, token, sudo);
+            return Response.ok("{\"id\":\"" + updatedJob.getId() + "\",\"updated\":\"true\"}").build();
+        } catch (Exception e) {
+            log.error("[job/minionUpdate][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
+            return buildServerError(e);
+        }
+    }
+
     private String jobUpdateAction(String id) {
         return Strings.isNullOrEmpty(id) ? "created" : "updated";
     }

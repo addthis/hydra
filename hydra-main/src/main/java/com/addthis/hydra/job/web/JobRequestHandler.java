@@ -39,6 +39,20 @@ public interface JobRequestHandler {
     Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo, boolean defaults) throws Exception;
 
     /**
+     * Update the minion type for a job. To update, All tasks need to be currently on hosts with this minion type.
+     *
+     * @param jobid job id
+     * @param minionType new minion type
+     * @param user the user who made the request
+     * @return the created/update job
+     * @throws IllegalArgumentException        If any parameter is invalid (400 response code)
+     * @throws InsufficientPrivilegesException If insufficient privileges are available (401 response code)
+     * @throws Exception                       If any other error occurred, typically an internal one
+     *                                         (500 response code)
+     */
+    Job updateMinionType(Job job, String minionType, String user, String token, String sudo) throws Exception;
+
+    /**
      * Kicks the specified job if the right parameters are set. (THIS IS A LEGACY METHOD!)
      * 
      * This method supports spawn v1's job.submit end point which is also used for kicking job/task.

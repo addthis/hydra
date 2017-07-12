@@ -116,6 +116,24 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         return job;
     }
 
+    @Override
+    public Job updateMinionType(Job job,
+                                String minionType,
+                                String username,
+                                String token,
+                                String sudo) throws Exception{
+        String id = job.getId();
+        checkArgument(job != null, "Job %s does not exist", id);
+        if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
+            log.warn("User {} (sudo = {}) had insufficient privileges to modify job {}", username,
+                     (sudo != null), id);
+            throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + id);
+        }
+        job.setMinionType(minionType);
+        spawn.updateJob(job);
+        return job;
+    }
+
     private void requireValidCommandParam(String command) throws IllegalArgumentException {
         checkArgument(spawn.getJobCommandManager().getEntity(command) != null, "Invalid command key '%s'", command);
     }
