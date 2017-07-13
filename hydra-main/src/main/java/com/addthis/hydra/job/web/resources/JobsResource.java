@@ -788,9 +788,8 @@ public class JobsResource implements Closeable {
      *                 This parameter is temporary is will be removed from the API shortly.
      *                 The legacy behavior will no longer be supported.
      */
-    @POST
+    @GET
     @Path("/updateMinionType")
-    @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.WILDCARD})
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateMinionType(@QueryParam("jobid") String id,
                             @QueryParam("minionType") String minionType,
