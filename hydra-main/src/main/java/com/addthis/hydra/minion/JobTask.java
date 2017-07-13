@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.function.Function;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
@@ -35,7 +35,11 @@ import com.addthis.basis.util.SimpleExec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.*;
+import com.addthis.hydra.job.BackupWorkItem;
+import com.addthis.hydra.job.JobTaskErrorCode;
+import com.addthis.hydra.job.JobTaskState;
+import com.addthis.hydra.job.ReplicateWorkItem;
+import com.addthis.hydra.job.RunTaskWorkItem;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.HourlyBackup;
@@ -492,7 +496,7 @@ public class JobTask implements Codable {
      * @param completeOnly Whether to restrict to backups that contain the backup.complete file
      * @return A list of directory names
      */
-    private String[] findLocalBackups(boolean completeOnly) {
+    String[] findLocalBackups(boolean completeOnly) {
         File[] dirs = jobDir.getParentFile().listFiles();
         if (dirs == null) {
             return new String[]{};
@@ -645,6 +649,17 @@ public class JobTask implements Codable {
         }
     }
 
+    String[] hasBackup() {
+        String[] backups = findLocalBackups(true);
+        if (backups == null || backups.length == 0) {
+            String delDir = minion.getRootDir() + "/" + id;
+            log.warn("[revert] fail, there are no local backups of type for {} and remove {} directory", getName(), delDir);
+            submitPathToDelete(delDir);        // deleting directory takes about 10 - 20 sec.
+            sendEndStatus(0);
+        }
+        return backups;
+    }
+
     public boolean revertToBackup(int revision, long time, String type) {
         Minion.revertLock.lock();
         try {
@@ -657,46 +672,52 @@ public class JobTask implements Codable {
                 log.warn("[revert] unrecognized backup type {}", type);
                 return false;
             }
-            String backupName;
-            if (revision < 0) {
-                backupName = getBackupByTime(time, type);
-            } else {
-                backupName = getBackupByRevision(revision, type);
-            }
-            if (backupName == null) {
-                log.warn("[revert] found no backups of type {} and time {} to revert to for {}; failing",
-                         type, time, getName());
+
+            String[] backups = hasBackup();
+            if (backups.length == 0) {
                 return false;
             }
-            File oldBackup = new File(jobDir.getParentFile(), backupName);
-            log.warn("[revert] {} from {}", getName(), oldBackup);
-            minion.sendStatusMessage(new StatusTaskRevert(minion.getUUID(), id, node));
-            boolean promoteSuccess = promoteBackupToLive(oldBackup, jobDir);
-            if (promoteSuccess) {
-                try {
-                    execReplicate(null, null, false, true, false);
-                    return true;
-                } catch (Exception ex) {
-                    log.warn("[revert] post-revert replicate of {} failed", getName(), ex);
+            else  {
+                String backupName;
+                if (revision < 0) {
+                    backupName = getBackupByTime(time, type, backups);
+                } else {
+                    backupName = getBackupByRevision(revision, type, backups);
+                }
+
+                if (backupName == null) {
+                    log.warn("[revert] found no backups of type {} and time {} to revert to for {}; failing",
+                             type, time, getName());
                     return false;
                 }
-            } else {
-                log.warn("[revert] {} from {} failed", getName(), oldBackup);
-                sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
-                return false;
+
+                File oldBackup = new File(jobDir.getParentFile(), backupName);
+                log.warn("[revert] {} from {}", getName(), oldBackup);
+                minion.sendStatusMessage(new StatusTaskRevert(minion.getUUID(), id, node));
+                boolean promoteSuccess = promoteBackupToLive(oldBackup, jobDir);
+
+                if (promoteSuccess) {
+                    try {
+                        execReplicate(null, null, false, true, false);
+                        return true;
+                    } catch (Exception ex) {
+                        log.warn("[revert] post-revert replicate of {} failed", getName(), ex);
+                        return false;
+                    }
+                } else {
+                    log.warn("[revert] {} from {} failed", getName(), oldBackup);
+                    sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
+                    return false;
+                }
             }
         } finally {
             Minion.revertLock.unlock();
         }
     }
 
-    private String getBackupByTime(long time, String type) {
+    private String getBackupByTime(long time, String type, String[] backups) {
         ScheduledBackupType backupType = ScheduledBackupType.getBackupTypes().get(type);
-        String[] backups = findLocalBackups(true);
-        if (backups == null || backups.length == 0) {
-            log.warn("[revert] fail, there are no local backups of type {} for {}", type, getName());
-            return null;
-        }
+
         String timeName = backupType.stripSuffixAndPrefix(backupType.generateNameForTime(time, true));
         for (String backupName : backups) {
             if (backupType.isValidName(backupName) && (backupType.stripSuffixAndPrefix(backupName).equals(timeName))) {
@@ -708,30 +729,15 @@ public class JobTask implements Codable {
     }
 
     /**
-     * Get all complete backups, ordered from most recent to earliest.
-     *
-     * @return A list of backup names
-     */
-    public List<String> getBackupsOrdered() {
-        List<String> backups = new ArrayList<>(Arrays.asList(findLocalBackups(true)));
-        ScheduledBackupType.sortBackupsByTime(backups);
-        return backups;
-    }
-
-    /**
      * Fetch the name of the backup directory for this task, n revisions back
      *
      * @param revision How far to go back -- 0 for latest stable version, 1 for the next oldest, etc.
      * @param type     Which backup type to use.
      * @return The name of the appropriate complete backup, if found, and null if no such backup was found
      */
-    String getBackupByRevision(int revision, String type) {
-
-        String[] backupsRaw = findLocalBackups(true);
+    String getBackupByRevision(int revision, String type, String[] backupsRaw) {
         List<String> backups = new ArrayList<>();
-        if (backupsRaw == null) {
-            return null;
-        }
+
         if ("all".equals(type)) {
             backups.addAll(Arrays.asList(backupsRaw));
             ScheduledBackupType.sortBackupsByTime(backups);
@@ -749,6 +755,17 @@ public class JobTask implements Codable {
             return null;
         }
         return backups.get(offset);
+    }
+
+    /**
+     * Get all complete backups, ordered from most recent to earliest.
+     *
+     * @return A list of backup names
+     */
+    public List<String> getBackupsOrdered() {
+        List<String> backups = new ArrayList<>(Arrays.asList(findLocalBackups(true)));
+        ScheduledBackupType.sortBackupsByTime(backups);
+        return backups;
     }
 
     private void require(boolean test, String msg) throws Exception {
@@ -900,7 +917,7 @@ public class JobTask implements Codable {
             File configDir = getConfigDir();
             LessFiles.initDirectory(configDir);
             // create shell wrapper
-            replicateSH = new File(configDir, "replicate.sh");
+            replicateSH = new File(configDir, ".sh");
             replicateRun = new File(configDir, "replicate.run");
             replicateDone = new File(configDir, "replicate.done");
             replicatePid = new File(configDir, "replicate.pid");
