@@ -36,21 +36,28 @@ class CommandTaskRevertRunner implements Runnable {
     @Override
     public void run() {
         CommandTaskRevert revert = (CommandTaskRevert) core;
+
         List<JobTask> match = minion.getMatchingJobs(revert);
         log.warn("[task.revert] request " + revert.getJobKey() + " matched " + match.size());
+
         if (match.size() == 0 && revert.getNodeID() != null && revert.getNodeID() >= 0) {
             log.warn("[task.revert] unmatched for " + revert.getJobUuid() + " / " + revert.getNodeID());
         }
+
         if (revert.getNodeID() == null || revert.getNodeID() < 0) {
             log.warn("[task.revert] got invalid node id " + revert.getNodeID());
             return;
         }
+
         for (JobTask task : match) {
             if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
                 log.warn("[task.revert] " + task.getJobKey() + " skipped. job node active.");
             } else {
                 long time = System.currentTimeMillis();
+
                 task.setReplicas(revert.getReplicas());
+
+                /* Whether to skip the mv gold live step and just rerun the replicate/backup */
                 if (revert.getSkipMove()) {
                     try {
                         task.execReplicate(null, null, false, true, false);

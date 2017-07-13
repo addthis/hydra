@@ -46,10 +46,13 @@ class CommandTaskReplicateRunner implements Runnable {
                 log.warn("[task.replicate] starting " + replicate.getJobKey());
                 minion.removeJobFromQueue(replicate.getJobKey(), false);
                 if (!task.isComplete()) {
-                    // Attempt to revert to the latest complete backup, if one can be found
-                    String latestCompleteBackup = task.getBackupByRevision(0, "gold");
-                    if (latestCompleteBackup != null) {
-                        task.promoteBackupToLive(new File(task.getJobDir(), latestCompleteBackup), task.getLiveDir());
+                    String[] backups = task.hasBackup();
+                    if(backups.length > 0) {
+                        // Attempt to revert to the latest complete backup, if one can be found
+                        String latestCompleteBackup = task.getBackupByRevision(0, "gold", backups);
+                        if (latestCompleteBackup != null) {
+                            task.promoteBackupToLive(new File(task.getJobDir(), latestCompleteBackup), task.getLiveDir());
+                        }
                     }
                 }
                 try {
