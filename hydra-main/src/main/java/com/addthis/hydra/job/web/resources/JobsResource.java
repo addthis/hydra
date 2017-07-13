@@ -800,6 +800,8 @@ public class JobsResource implements Closeable {
                             @DefaultValue("true") @QueryParam("defaults") boolean defaults) {
         Job job = spawn.getJob(id);
         // check current minion type of each task
+        boolean isDontAutoBalanceMe = job.getDontAutoBalanceMe();
+        job.setDontAutoBalanceMe(true);
         Set<String> hostsWithTargetMinionType = new HashSet<String>();
         List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
         for (HostState hostState : hostStates) {
@@ -818,6 +820,8 @@ public class JobsResource implements Closeable {
         } catch (Exception e) {
             log.error("[job/minionUpdate][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
             return buildServerError(e);
+        } finally {
+            job.setDontAutoBalanceMe(isDontAutoBalanceMe);
         }
     }
 
