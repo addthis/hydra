@@ -36,6 +36,7 @@ import java.net.URI;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +79,6 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -800,6 +800,17 @@ public class JobsResource implements Closeable {
                             @DefaultValue("true") @QueryParam("defaults") boolean defaults) {
         Job job = spawn.getJob(id);
         // check current minion type of each task
+        Set<String> hostsWithTargetMinionType = new HashSet<String>();
+        List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
+        for (HostState hostState : hostStates) {
+            hostsWithTargetMinionType.add(hostState.getHostUuid());
+        }
+        for (JobTask jobTask : job.getCopyOfTasks()) {
+            if (!hostsWithTargetMinionType.contains(jobTask.getHostUUID())) {
+                return Response.notModified("Not all tasks run on hosts with minion type " + minionType
+                                            + ", update abort.").build();
+            }
+        }
 
         try {
             Job updatedJob = requestHandler.updateMinionType(job, minionType, user, token, sudo);
