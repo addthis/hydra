@@ -125,41 +125,36 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job updateMinionType(String jobId,
-                                String minionType,
-                                String username,
-                                String token,
-                                String sudo) throws Exception{
-        Job job = spawn.getJob(jobId);
-        checkArgument(job != null, "Job %s does not exist", jobId);
+    public void updateMinionType(Job job, String minionType) throws Exception{
         String originalMinionType = job.getMinionType();
+        boolean isDontAutoBalanceMe = job.getDontAutoBalanceMe();
 
-        if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
-            throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + jobId);
+        try {
+            job.setEnabled(false);
+            job.setDontAutoBalanceMe(true);
+
+            if (job.getState() != JobState.IDLE) {
+                throw new RuntimeException("Job " + job.getId() + "must be in idle state. Update abort.");
+            }
+
+            if (isJobOnMinionType(job, minionType) == false) {
+                throw new RuntimeException("Not all tasks and their replicas of job " + job.getId() + " have the target minion type. Update abort.");
+            }
+
+            job.setMinionType(minionType);
+
+            // after change check
+            if (isJobOnMinionType(job, minionType) == false) {
+                job.setMinionType(originalMinionType);
+                throw new RuntimeException("Not all tasks and their replicas of job " + job.getId() + " have the target minion type. Update reverted.");
+            }
+            spawn.updateJob(job);
+        } catch (Exception e) {
+            throw e;
+        } finally {
+            job.setEnabled(true);
+            job.setDontAutoBalanceMe(isDontAutoBalanceMe);
         }
-
-        if (job.getState() != JobState.IDLE) {
-            throw new RuntimeException("Job must be in idle state. Update abort.");
-        }
-
-        job.setEnabled(false);
-
-        if (isJobOnMinionType(job, minionType) == false) {
-            throw new RuntimeException("Not all tasks with target minion type. Update abort.");
-        }
-
-        job.setMinionType(minionType);
-
-        // after change check
-        if(isJobOnMinionType(job, minionType) == false) {
-            job.setMinionType(originalMinionType);
-            throw new RuntimeException("Not all tasks with target minion type. Update reverted.");
-        }
-
-        job.setEnabled(true);
-
-        spawn.updateJob(job);
-        return job;
     }
 
     private boolean isJobOnMinionType(Job job, String minionType) {
@@ -173,23 +168,17 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
 
         for (JobTask jobTask : job.getCopyOfTasks()) {
             if (!hostsWithTargetMinionType.contains(jobTask.getHostUUID())) {
-                isValidMinionType = false;
+                return false;
             }
             List<JobTaskReplica> replicas = jobTask.getReplicas();
             for (JobTaskReplica replica : replicas) {
                 if (!hostsWithTargetMinionType.contains(replica.getHostUUID())) {
-                    isValidMinionType = false;
+                    return false;
                 }
             }
 
         }
-
-        if (isValidMinionType == false) {
-            log.warn("Not all tasks of job {} has the target minion type. Update abort.", job.getId());
-            return false;
-        } else {
-            return true;
-        }
+        return true;
     }
 
     private void requireValidCommandParam(String command) throws IllegalArgumentException {

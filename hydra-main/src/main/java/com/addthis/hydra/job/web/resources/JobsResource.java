@@ -779,25 +779,25 @@ public class JobsResource implements Closeable {
     }
 
     /**
-     * @param jobid    job ID
+     * @param jobId    job ID
      * @param minionType    new minion type
-     * @param user     username for authentication
-     * @param token    users current token for authentication
-     * @param sudo     optional sudo token. Currently unused by this endpoint.
      */
     @GET
     @Path("/updateMinionType")
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateMinionType(@QueryParam("jobId") String jobId,
-                            @QueryParam("minionType") String minionType,
-                            @QueryParam("user") String user,
-                            @QueryParam("token") String token,
-                            @QueryParam("sudo") String sudo) {
+                            @QueryParam("minionType") String minionType) {
+        Job job = spawn.getJob(jobId);
+        if (job == null) {
+            return Response.status(Response.Status.NOT_FOUND).header("topic", "No Job").build();
+        }
+
         try {
-            Job updatedJob = requestHandler.updateMinionType(jobId, minionType, user, token, sudo);
-            return Response.ok("{\"id\":\"" + updatedJob.getId() + "\",\"updated\":\"true\"}").build();
+            requestHandler.updateMinionType(job, minionType);
+            log.info("[job/minionUpdate][id={}] successful.", jobId);
+            return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
         } catch (Exception e) {
-            log.error("[job/minionUpdate][user={}][id={}] Internal error: {}", user, jobId, e.getMessage(), e);
+            log.error("[job/minionUpdate][id={}] Internal error: {}", jobId, e.getMessage(), e);
             return buildServerError(e);
         }
     }

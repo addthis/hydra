@@ -50,7 +50,7 @@ public interface JobRequestHandler {
      * @throws Exception                       If any other error occurred, typically an internal one
      *                                         (500 response code)
      */
-    Job updateMinionType(String jobId, String minionType, String user, String token, String sudo) throws Exception;
+    void updateMinionType(Job job, String minionType) throws Exception;
 
     /**
      * Kicks the specified job if the right parameters are set. (THIS IS A LEGACY METHOD!)
