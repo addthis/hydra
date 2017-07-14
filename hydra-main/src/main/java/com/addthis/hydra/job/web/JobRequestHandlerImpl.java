@@ -13,11 +13,15 @@
  */
 package com.addthis.hydra.job.web;
 
+import javax.ws.rs.core.Response;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.kv.KVPair;
@@ -28,10 +32,14 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
+import com.addthis.hydra.job.JobState;
+import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
+import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.JobTask;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -117,21 +125,71 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job updateMinionType(Job job,
+    public Job updateMinionType(String jobId,
                                 String minionType,
                                 String username,
                                 String token,
                                 String sudo) throws Exception{
-        String id = job.getId();
-        checkArgument(job != null, "Job %s does not exist", id);
+        Job job = spawn.getJob(jobId);
+        checkArgument(job != null, "Job %s does not exist", jobId);
+        String originalMinionType = job.getMinionType();
+
         if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
-            log.warn("User {} (sudo = {}) had insufficient privileges to modify job {}", username,
-                     (sudo != null), id);
-            throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + id);
+            throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + jobId);
         }
+
+        if (job.getState() != JobState.IDLE) {
+            throw new RuntimeException("Job must be in idle state. Update abort.");
+        }
+
+        job.setEnabled(false);
+
+        if (isJobOnMinionType(job, minionType) == false) {
+            throw new RuntimeException("Not all tasks with target minion type. Update abort.");
+        }
+
         job.setMinionType(minionType);
+
+        // after change check
+        if(isJobOnMinionType(job, minionType) == false) {
+            job.setMinionType(originalMinionType);
+            throw new RuntimeException("Not all tasks with target minion type. Update reverted.");
+        }
+
+        job.setEnabled(true);
+
         spawn.updateJob(job);
         return job;
+    }
+
+    private boolean isJobOnMinionType(Job job, String minionType) {
+        boolean isValidMinionType = true;
+        // make a valid host set
+        Set<String> hostsWithTargetMinionType = new HashSet<String>();
+        List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
+        for (HostState hostState : hostStates) {
+            hostsWithTargetMinionType.add(hostState.getHostUuid());
+        }
+
+        for (JobTask jobTask : job.getCopyOfTasks()) {
+            if (!hostsWithTargetMinionType.contains(jobTask.getHostUUID())) {
+                isValidMinionType = false;
+            }
+            List<JobTaskReplica> replicas = jobTask.getReplicas();
+            for (JobTaskReplica replica : replicas) {
+                if (!hostsWithTargetMinionType.contains(replica.getHostUUID())) {
+                    isValidMinionType = false;
+                }
+            }
+
+        }
+
+        if (isValidMinionType == false) {
+            log.warn("Not all tasks of job {} has the target minion type. Update abort.", job.getId());
+            return false;
+        } else {
+            return true;
+        }
     }
 
     private void requireValidCommandParam(String command) throws IllegalArgumentException {

@@ -784,43 +784,21 @@ public class JobsResource implements Closeable {
      * @param user     username for authentication
      * @param token    users current token for authentication
      * @param sudo     optional sudo token. Currently unused by this endpoint.
-     * @param defaults If true then preserve legacy behavior of assigning defaults.
-     *                 This parameter is temporary is will be removed from the API shortly.
-     *                 The legacy behavior will no longer be supported.
      */
     @GET
     @Path("/updateMinionType")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response updateMinionType(@QueryParam("jobid") String id,
+    public Response updateMinionType(@QueryParam("jobId") String jobId,
                             @QueryParam("minionType") String minionType,
                             @QueryParam("user") String user,
                             @QueryParam("token") String token,
-                            @QueryParam("sudo") String sudo,
-                            @DefaultValue("true") @QueryParam("defaults") boolean defaults) {
-        Job job = spawn.getJob(id);
-        // check current minion type of each task
-        boolean isDontAutoBalanceMe = job.getDontAutoBalanceMe();
-        job.setDontAutoBalanceMe(true);
-        Set<String> hostsWithTargetMinionType = new HashSet<String>();
-        List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
-        for (HostState hostState : hostStates) {
-            hostsWithTargetMinionType.add(hostState.getHostUuid());
-        }
-        for (JobTask jobTask : job.getCopyOfTasks()) {
-            if (!hostsWithTargetMinionType.contains(jobTask.getHostUUID())) {
-                return Response.notModified("Not all tasks run on hosts with minion type " + minionType
-                                            + ", update abort.").build();
-            }
-        }
-
+                            @QueryParam("sudo") String sudo) {
         try {
-            Job updatedJob = requestHandler.updateMinionType(job, minionType, user, token, sudo);
+            Job updatedJob = requestHandler.updateMinionType(jobId, minionType, user, token, sudo);
             return Response.ok("{\"id\":\"" + updatedJob.getId() + "\",\"updated\":\"true\"}").build();
         } catch (Exception e) {
-            log.error("[job/minionUpdate][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
+            log.error("[job/minionUpdate][user={}][id={}] Internal error: {}", user, jobId, e.getMessage(), e);
             return buildServerError(e);
-        } finally {
-            job.setDontAutoBalanceMe(isDontAutoBalanceMe);
         }
     }
 
