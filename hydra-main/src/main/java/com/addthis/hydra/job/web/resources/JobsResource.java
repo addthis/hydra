@@ -36,7 +36,6 @@ import java.net.URI;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -779,26 +778,35 @@ public class JobsResource implements Closeable {
     }
 
     /**
-     * @param jobId    job ID
+     *
+     * @param jobId         job id
      * @param minionType    new minion type
+     * @param user          username for authentication
+     * @param token         users current token for authentication and job write permissions
+     * @param sudo          sudo token, if any, for job write permissions
+     * @return
      */
     @GET
     @Path("/updateMinionType")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response updateMinionType(@QueryParam("jobId") String jobId,
-                            @QueryParam("minionType") String minionType) {
-        Job job = spawn.getJob(jobId);
-        if (job == null) {
-            return Response.status(Response.Status.NOT_FOUND).header("topic", "No Job").build();
-        }
-
+    public Response updateMinionType(@QueryParam("job") String jobId,
+                                     @QueryParam("minionType") String minionType,
+                                     @QueryParam("user") String user,
+                                     @QueryParam("token") String token,
+                                     @QueryParam("sudo") String sudo) {
         try {
-            requestHandler.updateMinionType(job, minionType);
-            log.info("[job/minionUpdate][id={}] successful.", jobId);
-            return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
+            Job job = requestHandler.updateMinionType(jobId, minionType, user, token, sudo);
+            if (job == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("Job " + jobId + " does not exist").build();
+            }
+            return Response.ok("Job " + jobId + " minion type is updated to " + minionType).build();
+        } catch (IllegalArgumentException e) {
+            log.warn("[job/updateMinionType][user={}][job={}] Bad request: {}", user, jobId, e.getMessage(), e);
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (InsufficientPrivilegesException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (Exception e) {
-            log.error("[job/minionUpdate][id={}] Internal error: {}", jobId, e.getMessage(), e);
-            return buildServerError(e);
+            log.error("[job/updateMinionType][user={}][job={}] Internal error: {}", user, jobId, e.getMessage(), e);
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 

@@ -39,18 +39,19 @@ public interface JobRequestHandler {
     Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo, boolean defaults) throws Exception;
 
     /**
-     * Update the minion type for a job. To update, All tasks need to be currently on hosts with this minion type.
+     * Updates the minion type for a job.
      *
-     * @param jobid job id
-     * @param minionType new minion type
-     * @param user the user who made the request
-     * @return the created/update job
-     * @throws IllegalArgumentException        If any parameter is invalid (400 response code)
-     * @throws InsufficientPrivilegesException If insufficient privileges are available (401 response code)
-     * @throws Exception                       If any other error occurred, typically an internal one
-     *                                         (500 response code)
+     * The job must be idle and all tasks and their replicas must be already on the required minion type.
+     *
+     * @param jobId         job id
+     * @param minionType    new minion type
+     * @param username      the user who made the request
+     * @return job object with the new minion type or null if job is not found
+     * @throws IllegalArgumentException         If any prerequisite for minion type update is not met
+     * @throws InsufficientPrivilegesException  Bad user credentials or insufficient privileges for update
+     * @throws Exception                        Any internal error updating the job
      */
-    void updateMinionType(Job job, String minionType) throws Exception;
+    Job updateMinionType(String jobId, String minionType, String username, String token, String sudo) throws Exception;
 
     /**
      * Kicks the specified job if the right parameters are set. (THIS IS A LEGACY METHOD!)
