@@ -47,8 +47,8 @@ public interface JobRequestHandler {
      * @param minionType    new minion type
      * @param username      the user who made the request
      * @return job object with the new minion type or null if job is not found
-     * @throws IllegalArgumentException         If any prerequisite for minion type update is not met
      * @throws InsufficientPrivilegesException  Bad user credentials or insufficient privileges for update
+     * @throws IllegalArgumentException         If any prerequisite for minion type update is not met
      * @throws Exception                        Any internal error updating the job
      */
     Job updateMinionType(String jobId, String minionType, String username, String token, String sudo) throws Exception;

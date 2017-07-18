@@ -779,7 +779,7 @@ public class JobsResource implements Closeable {
 
     /**
      *
-     * @param jobId         job id
+     * @param job           job id
      * @param minionType    new minion type
      * @param user          username for authentication
      * @param token         users current token for authentication and job write permissions
@@ -799,11 +799,11 @@ public class JobsResource implements Closeable {
                 return Response.status(Response.Status.NOT_FOUND).entity("Job " + jobId + " does not exist").build();
             }
             return Response.ok("Job " + jobId + " minion type is updated to " + minionType).build();
+        } catch (InsufficientPrivilegesException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (IllegalArgumentException e) {
             log.warn("[job/updateMinionType][user={}][job={}] Bad request: {}", user, jobId, e.getMessage(), e);
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        } catch (InsufficientPrivilegesException e) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error("[job/updateMinionType][user={}][job={}] Internal error: {}", user, jobId, e.getMessage(), e);
             return Response.serverError().entity(e.getMessage()).build();

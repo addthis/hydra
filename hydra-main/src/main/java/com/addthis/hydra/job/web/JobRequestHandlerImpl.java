@@ -140,7 +140,8 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             if (job != null) {
                 checkJobWritePrivileges(job, username, token, sudo);
                 checkMinionTypeUpdatePrerequisite(job, job.getState() == JobState.IDLE, "Job is not idle");
-                checkMinionTypeUpdatePrerequisite(job, isJobOnMinionType(job, minionType), "All tasks and replicas are not on " + minionType);
+                checkMinionTypeUpdatePrerequisite(job, isJobOnMinionType(job, minionType),
+                                                  "Not all tasks and replicas are on " + minionType);
                 job.setMinionType(minionType);
                 spawn.updateJob(job);
             }
@@ -155,7 +156,6 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     private boolean isJobOnMinionType(Job job, String minionType) {
-        boolean isValidMinionType = true;
         // make a valid host set
         Set<String> hostsWithTargetMinionType = new HashSet<String>();
         List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
@@ -163,6 +163,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             hostsWithTargetMinionType.add(hostState.getHostUuid());
         }
 
+        // check tasks and their replicas
         for (JobTask jobTask : job.getCopyOfTasks()) {
             if (!hostsWithTargetMinionType.contains(jobTask.getHostUUID())) {
                 return false;
