@@ -163,11 +163,12 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             hostsWithTargetMinionType.add(hostState.getHostUuid());
         }
 
-        // check tasks and their replicas
+        // check tasks
         for (JobTask jobTask : job.getCopyOfTasks()) {
             if (!hostsWithTargetMinionType.contains(jobTask.getHostUUID())) {
                 return false;
             }
+            // check their replicas
             List<JobTaskReplica> replicas = jobTask.getReplicas();
             for (JobTaskReplica replica : replicas) {
                 if (!hostsWithTargetMinionType.contains(replica.getHostUUID())) {
