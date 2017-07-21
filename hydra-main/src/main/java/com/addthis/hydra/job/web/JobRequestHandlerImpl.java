@@ -156,12 +156,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     private boolean isJobOnMinionType(Job job, String minionType) {
-        // make a valid host set
-        Set<String> hostsWithTargetMinionType = new HashSet<String>();
-        List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
-        for (HostState hostState : hostStates) {
-            hostsWithTargetMinionType.add(hostState.getHostUuid());
-        }
+        Set<String> hostsWithTargetMinionType = getHostsWithTargetMninionType(minionType);
 
         // check tasks
         for (JobTask jobTask : job.getCopyOfTasks()) {
@@ -178,6 +173,18 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
 
         }
         return true;
+    }
+
+    private Set<String> getHostsWithTargetMninionType(String minionType) {
+        Set<String> set = new HashSet<String>();
+        if (spawn.hostManager == null) { // for unit tests
+            return set;
+        }
+        List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
+        for (HostState hostState : hostStates) {
+            set.add(hostState.getHostUuid());
+        }
+        return set;
     }
 
     private void requireValidCommandParam(String command) throws IllegalArgumentException {

@@ -21,6 +21,7 @@ import com.addthis.basis.util.LessStrings;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alias.AliasManager;
@@ -50,6 +51,7 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -91,6 +93,59 @@ public class JobRequestHandlerImplTest {
         impl = new JobRequestHandlerImpl(spawn);
         kv = new KVPairs();
     }
+
+    @Test
+    public void updateMinionType() throws Exception {
+        Job job = new Job();
+        job.setState(JobState.IDLE);
+        job.setMinionType("oldMinion");
+        when(spawn.getJob("job_id")).thenReturn(job);
+
+        impl.updateMinionType("job_id","newMinion", username, token, sudo);
+        verify(spawn, times(1)).updateJob(job);
+        assertSame(job.getMinionType(), "newMinion");
+    }
+
+    @Test
+    public void updateMinionType_notOnTargetType() throws Exception {
+        Job job = new Job();
+        job.setState(JobState.IDLE);
+        job.setMinionType("oldMinion");
+        JobTask task = new JobTask();
+        job.addTask(task); // this task is not on the empty host list
+        when(spawn.getJob("job_id")).thenReturn(job);
+
+        try {
+            impl.updateMinionType("job_id","newMinion", username, token, sudo);
+        } catch (IllegalArgumentException e) {
+            // Expected
+        }
+        verify(spawn, times(0)).updateJob(job);
+        assertSame(job.getMinionType(), "oldMinion");
+    }
+
+    @Test
+    public void updateMinionType_jobNotIdle() throws Exception {
+        Job job = new Job();
+        job.setMinionType("oldMinion");
+        when(spawn.getJob("job_id")).thenReturn(job);
+
+        for (JobState state : JobState.values()) {
+            job.setState(state);
+            if(state == JobState.IDLE) {
+                continue;
+            } else {
+                try {
+                    impl.updateMinionType("job_id", "newMinion", username, token, sudo);
+                } catch (IllegalArgumentException e) {
+                    // Excepted
+                }
+                assertSame(job.getMinionType(), "oldMinion");
+            }
+            verify(spawn, times(0)).updateJob(job);
+        }
+    }
+
 
     @Test
     public void createJob() throws Exception {
