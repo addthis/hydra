@@ -15,9 +15,11 @@ package com.addthis.hydra.job.web;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.kv.KVPair;
@@ -28,9 +30,13 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
+import com.addthis.hydra.job.JobState;
+import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.auth.User;
+import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.Spawn;
 
 import com.google.common.base.Splitter;
@@ -57,10 +63,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     @Override
     public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo, boolean defaults)
             throws Exception {
-        User user = spawn.getPermissionsManager().authenticate(username, token);
-        if (user == null) {
-            throw new InsufficientPrivilegesException(username, "invalid credentials provided");
-        }
+        User user = checkUserCredentials(username, token);
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig;
@@ -83,11 +86,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
-            if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
-                log.warn("User {} (sudo = {}) had insufficient privileges to modify job {}", username,
-                         (sudo != null), id);
-                throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + id);
-            }
+            checkJobWritePrivileges(job, username, token, sudo);
             if (config == null) {
                 configMayHaveChanged = false;
                 config = spawn.getJobConfig(id);
@@ -114,6 +113,77 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             spawn.submitConfigUpdate(job.getId(), username, kv.getValue("commit"));
         }
         return job;
+    }
+
+    private User checkUserCredentials(String username, String token) {
+        User user = spawn.getPermissionsManager().authenticate(username, token);
+        if (user == null) {
+            throw new InsufficientPrivilegesException(username, "invalid credentials provided");
+        }
+        return user;
+    }
+
+    private void checkJobWritePrivileges(Job job, String username, String token, String sudo) {
+        if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
+            log.warn("User {} (sudo = {}) had insufficient privileges to modify job {}", username, sudo != null, job.getId());
+            throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + job.getId());
+        }
+    }
+
+    @Override
+    public Job updateMinionType(String jobId, String minionType, String username, String token, String sudo)
+            throws Exception {
+        checkUserCredentials(username, token);
+        spawn.acquireJobLock();
+        try {
+            Job job = spawn.getJob(jobId);
+            if (job != null) {
+                checkJobWritePrivileges(job, username, token, sudo);
+                checkMinionTypeUpdatePrerequisite(job, job.getState() == JobState.IDLE, "Job is not idle");
+                checkMinionTypeUpdatePrerequisite(job, isJobOnMinionType(job, minionType),
+                                                  "Not all tasks and replicas are on " + minionType);
+                job.setMinionType(minionType);
+                spawn.updateJob(job);
+            }
+            return job;
+        } finally {
+            spawn.releaseJobLock();
+        }
+    }
+
+    private void checkMinionTypeUpdatePrerequisite(Job job, boolean condition, String errorMessage) {
+        checkArgument(condition, "Cannot update minion type of job " + job.getId() + ": " + errorMessage);
+    }
+
+    private boolean isJobOnMinionType(Job job, String minionType) {
+        Set<String> hostsWithTargetMinionType = getHostsWithTargetMninionType(minionType);
+
+        // check tasks
+        for (JobTask jobTask : job.getCopyOfTasks()) {
+            if (!hostsWithTargetMinionType.contains(jobTask.getHostUUID())) {
+                return false;
+            }
+            // check their replicas
+            List<JobTaskReplica> replicas = jobTask.getReplicas();
+            for (JobTaskReplica replica : replicas) {
+                if (!hostsWithTargetMinionType.contains(replica.getHostUUID())) {
+                    return false;
+                }
+            }
+
+        }
+        return true;
+    }
+
+    private Set<String> getHostsWithTargetMninionType(String minionType) {
+        if (spawn.hostManager == null) {
+            // for unit tests
+            return Collections.emptySet();
+        }
+        return spawn.hostManager.listHostStatus(minionType)
+                                .stream()
+                                .map(HostState::getHostUuid)
+                                .collect(Collectors.toSet());
     }
 
     private void requireValidCommandParam(String command) throws IllegalArgumentException {

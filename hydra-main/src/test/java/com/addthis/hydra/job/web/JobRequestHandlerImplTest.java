@@ -21,6 +21,7 @@ import com.addthis.basis.util.LessStrings;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alias.AliasManager;
@@ -91,6 +92,49 @@ public class JobRequestHandlerImplTest {
         impl = new JobRequestHandlerImpl(spawn);
         kv = new KVPairs();
     }
+
+    @Test
+    public void updateMinionType() throws Exception {
+        Job job = new Job();
+        job.setState(JobState.IDLE);
+        job.setMinionType("oldMinion");
+        when(spawn.getJob("job_id")).thenReturn(job);
+
+        impl.updateMinionType("job_id","newMinion", username, token, sudo);
+
+        verify(spawn).updateJob(job);
+        assertEquals("newMinion", job.getMinionType());
+    }
+
+    @Test
+    public void updateMinionType_notOnTargetType() throws Exception {
+        Job job = new Job();
+        job.setState(JobState.IDLE);
+        job.setMinionType("oldMinion");
+        JobTask task = new JobTask();
+        job.addTask(task); // this task is not on the empty host list
+        when(spawn.getJob("job_id")).thenReturn(job);
+
+        try {
+            impl.updateMinionType("job_id","newMinion", username, token, sudo);
+            fail("IllegalArgumentException expected but not thrown");
+        } catch (IllegalArgumentException e) {
+            // Expected
+        }
+        verify(spawn, never()).updateJob(job);
+        assertEquals("oldMinion", job.getMinionType());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void updateMinionType_jobNotIdle() throws Exception {
+        Job job = new Job();
+        job.setState(JobState.RUNNING);
+        job.setMinionType("oldMinion");
+        when(spawn.getJob("job_id")).thenReturn(job);
+
+        impl.updateMinionType("job_id", "newMinion", username, token, sudo);
+    }
+
 
     @Test
     public void createJob() throws Exception {

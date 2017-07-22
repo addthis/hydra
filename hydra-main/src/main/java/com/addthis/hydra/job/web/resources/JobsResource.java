@@ -78,7 +78,6 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -775,6 +774,39 @@ public class JobsResource implements Closeable {
         } catch (Exception e) {
             log.error("[job/save][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
             return buildServerError(e);
+        }
+    }
+
+    /**
+     *
+     * @param jobId         job id
+     * @param minionType    new minion type
+     * @param user          username for authentication
+     * @param token         users current token for authentication and job write permissions
+     * @param sudo          sudo token, if any, for job write permissions
+     * @return
+     */
+    @GET
+    @Path("/updateMinionType")
+    public Response updateMinionType(@QueryParam("job") String jobId,
+                                     @QueryParam("minionType") String minionType,
+                                     @QueryParam("user") String user,
+                                     @QueryParam("token") String token,
+                                     @QueryParam("sudo") String sudo) {
+        try {
+            Job job = requestHandler.updateMinionType(jobId, minionType, user, token, sudo);
+            if (job == null) {
+                return Response.status(Response.Status.NOT_FOUND).entity("Job " + jobId + " does not exist").build();
+            }
+            return Response.ok("Job " + jobId + " minion type is updated to " + minionType).build();
+        } catch (InsufficientPrivilegesException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (IllegalArgumentException e) {
+            log.warn("[job/updateMinionType][user={}][job={}] Bad request: {}", user, jobId, e.getMessage(), e);
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error("[job/updateMinionType][user={}][job={}] Internal error: {}", user, jobId, e.getMessage(), e);
+            return Response.serverError().entity(e.getMessage()).build();
         }
     }
 
