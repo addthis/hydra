@@ -51,7 +51,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -102,8 +101,9 @@ public class JobRequestHandlerImplTest {
         when(spawn.getJob("job_id")).thenReturn(job);
 
         impl.updateMinionType("job_id","newMinion", username, token, sudo);
-        verify(spawn, times(1)).updateJob(job);
-        assertSame(job.getMinionType(), "newMinion");
+
+        verify(spawn).updateJob(job);
+        assertEquals("newMinion", job.getMinionType());
     }
 
     @Test
@@ -117,33 +117,22 @@ public class JobRequestHandlerImplTest {
 
         try {
             impl.updateMinionType("job_id","newMinion", username, token, sudo);
+            fail("IllegalArgumentException expected but not thrown");
         } catch (IllegalArgumentException e) {
             // Expected
         }
-        verify(spawn, times(0)).updateJob(job);
-        assertSame(job.getMinionType(), "oldMinion");
+        verify(spawn, never()).updateJob(job);
+        assertEquals("oldMinion", job.getMinionType());
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void updateMinionType_jobNotIdle() throws Exception {
         Job job = new Job();
+        job.setState(JobState.RUNNING);
         job.setMinionType("oldMinion");
         when(spawn.getJob("job_id")).thenReturn(job);
 
-        for (JobState state : JobState.values()) {
-            job.setState(state);
-            if(state == JobState.IDLE) {
-                continue;
-            } else {
-                try {
-                    impl.updateMinionType("job_id", "newMinion", username, token, sudo);
-                } catch (IllegalArgumentException e) {
-                    // Excepted
-                }
-                assertSame(job.getMinionType(), "oldMinion");
-            }
-            verify(spawn, times(0)).updateJob(job);
-        }
+        impl.updateMinionType("job_id", "newMinion", username, token, sudo);
     }
 
 

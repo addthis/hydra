@@ -15,7 +15,7 @@ package com.addthis.hydra.job.web;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -176,15 +176,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     private Set<String> getHostsWithTargetMninionType(String minionType) {
-        Set<String> set = new HashSet<String>();
-        if (spawn.hostManager == null) { // for unit tests
-            return set;
+        if (spawn.hostManager == null) {
+            // for unit tests
+            return Collections.emptySet();
         }
-        List<HostState> hostStates = spawn.hostManager.listHostStatus(minionType);
-        for (HostState hostState : hostStates) {
-            set.add(hostState.getHostUuid());
-        }
-        return set;
+        return spawn.hostManager.listHostStatus(minionType)
+                                .stream()
+                                .map(HostState::getHostUuid)
+                                .collect(Collectors.toSet());
     }
 
     private void requireValidCommandParam(String command) throws IllegalArgumentException {

@@ -779,7 +779,7 @@ public class JobsResource implements Closeable {
 
     /**
      *
-     * @param jobId           job id
+     * @param jobId         job id
      * @param minionType    new minion type
      * @param user          username for authentication
      * @param token         users current token for authentication and job write permissions
