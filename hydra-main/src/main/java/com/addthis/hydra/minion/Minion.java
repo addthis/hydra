@@ -83,7 +83,6 @@ import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -92,6 +91,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
@@ -191,6 +191,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     String user;
     String path;
     TaskRunner runner;
+    /** Map of job_id/task_number -> JobTask */
     final ConcurrentMap<String, JobTask> tasks = new ConcurrentHashMap<>();
     final Object jmsxmitlock = new Object();
     final AtomicLong diskTotal = new AtomicLong(0);
@@ -484,9 +485,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 }
             }
         } else {
-            JobTask job = tasks.get(msgKey.toString());
-            if (job != null) {
-                match.add(job);
+            JobTask task = tasks.get(msgKey.toString());
+            if (task != null) {
+                match.add(task);
             }
         }
         return match;

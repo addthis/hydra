@@ -43,14 +43,14 @@ public class CommandTaskRevert extends AbstractJobMessage {
         this.skipMove = skipMove;
     }
 
-    /*
+    /**
      * return revisions back to pull. 0 == most recent.
      */
     public int getRevision() {
         return revision;
     }
 
-    /*
+    /**
      * return time of backup to pull
      */
     public long getTime() {
@@ -66,7 +66,7 @@ public class CommandTaskRevert extends AbstractJobMessage {
     }
 
 
-    /* Whether to skip the mv gold live step and just rerun the replicate/backup */
+    /** Whether to skip the mv gold live step and just rerun the replicate/backup */
     public boolean getSkipMove() {
         return skipMove;
     }
