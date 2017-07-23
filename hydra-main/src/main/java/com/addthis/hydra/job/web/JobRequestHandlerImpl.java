@@ -144,6 +144,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                                                   "Not all tasks and replicas are on " + minionType);
                 job.setMinionType(minionType);
                 spawn.updateJob(job);
+                log.info("User {} updated job {} minion type to {}", username, jobId, minionType);
             }
             return job;
         } finally {
