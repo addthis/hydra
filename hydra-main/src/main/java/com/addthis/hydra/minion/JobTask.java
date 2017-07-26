@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.function.Function;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
@@ -35,7 +35,11 @@ import com.addthis.basis.util.SimpleExec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.*;
+import com.addthis.hydra.job.BackupWorkItem;
+import com.addthis.hydra.job.JobTaskErrorCode;
+import com.addthis.hydra.job.JobTaskState;
+import com.addthis.hydra.job.ReplicateWorkItem;
+import com.addthis.hydra.job.RunTaskWorkItem;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.HourlyBackup;
@@ -657,6 +661,18 @@ public class JobTask implements Codable {
                 log.warn("[revert] unrecognized backup type {}", type);
                 return false;
             }
+            String[] backups = findLocalBackups(true);
+            if (backups == null || backups.length == 0) {
+                String delDir = new File(minion.rootDir + "/" + id + "/" + node).getAbsolutePath();
+                try {
+                    execCommandReturnStdOut("rm -rf " + delDir + "/*");
+                } catch (InterruptedException | IOException ex) {
+                    log.error("" + ex);
+                }
+                log.warn("[revert] fail, there are no local backups of type for {} and remove {} directory", getName(), delDir);
+                sendEndStatus(0);
+                return false;
+            }
             String backupName;
             if (revision < 0) {
                 backupName = getBackupByTime(time, type);
@@ -708,17 +724,6 @@ public class JobTask implements Codable {
     }
 
     /**
-     * Get all complete backups, ordered from most recent to earliest.
-     *
-     * @return A list of backup names
-     */
-    public List<String> getBackupsOrdered() {
-        List<String> backups = new ArrayList<>(Arrays.asList(findLocalBackups(true)));
-        ScheduledBackupType.sortBackupsByTime(backups);
-        return backups;
-    }
-
-    /**
      * Fetch the name of the backup directory for this task, n revisions back
      *
      * @param revision How far to go back -- 0 for latest stable version, 1 for the next oldest, etc.
@@ -749,6 +754,17 @@ public class JobTask implements Codable {
             return null;
         }
         return backups.get(offset);
+    }
+
+    /**
+     * Get all complete backups, ordered from most recent to earliest.
+     *
+     * @return A list of backup names
+     */
+    public List<String> getBackupsOrdered() {
+        List<String> backups = new ArrayList<>(Arrays.asList(findLocalBackups(true)));
+        ScheduledBackupType.sortBackupsByTime(backups);
+        return backups;
     }
 
     private void require(boolean test, String msg) throws Exception {
@@ -900,7 +916,7 @@ public class JobTask implements Codable {
             File configDir = getConfigDir();
             LessFiles.initDirectory(configDir);
             // create shell wrapper
-            replicateSH = new File(configDir, "replicate.sh");
+            replicateSH = new File(configDir, ".sh");
             replicateRun = new File(configDir, "replicate.run");
             replicateDone = new File(configDir, "replicate.done");
             replicatePid = new File(configDir, "replicate.pid");
