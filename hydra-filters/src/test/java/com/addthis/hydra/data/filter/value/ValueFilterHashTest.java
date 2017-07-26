@@ -29,4 +29,13 @@ public class ValueFilterHashTest {
         ValueObject vo = valueFilterHash.filter(ValueFactory.create("128.0.0.1"));
         assertEquals("9c678c09e0163cb9f0bdaf0363047ac5b549704e", vo.toString());
     }
+
+    @Test
+    public void testFilterValue_murmur() throws Exception {
+        ValueFilterHash valueFilterHash = new ValueFilterHash();
+        valueFilterHash.setAbs(true);
+        valueFilterHash.setType(5);
+        ValueObject vo = valueFilterHash.filter(ValueFactory.create("128.0.0.1"));
+        assertEquals("4807169084346605144", vo.toString());
+    }
 }
