@@ -36,7 +36,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public class HostState implements HostMessage {
 
     @JsonProperty private String host;
-    @JsonProperty private String ad;
+    @JsonProperty private String ad; // availability domain
     @JsonProperty private int port;
     @JsonProperty private String uuid;
     @JsonProperty private String user;
