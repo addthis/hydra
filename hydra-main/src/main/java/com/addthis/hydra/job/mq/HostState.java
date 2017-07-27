@@ -36,6 +36,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public class HostState implements HostMessage {
 
     @JsonProperty private String host;
+    @JsonProperty private String ad;
     @JsonProperty private int port;
     @JsonProperty private String uuid;
     @JsonProperty private String user;
@@ -214,6 +215,7 @@ public class HostState implements HostMessage {
                 .add("uuid", getHostUuid())
                 .add("last-update-time", getLastUpdateTime())
                 .add("host", getHost())
+                .add("ad", getAd())
                 .add("port", getPort())
                 .add("group", getGroup())
                 .add("time", getTime())
@@ -265,8 +267,16 @@ public class HostState implements HostMessage {
         return host;
     }
 
+    public String getAd() {
+        return ad;
+    }
+
     public void setHost(String host) {
         this.host = host;
+    }
+
+    public void setAd(String ad) {
+        this.ad = ad;
     }
 
     public int getPort() {
