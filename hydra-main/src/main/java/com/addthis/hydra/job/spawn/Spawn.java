@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.util.Queue;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -145,6 +146,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mchange.v2.collection.MapEntry;
 import com.yammer.metrics.Metrics;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -988,7 +990,7 @@ public class Spawn implements Codable, AutoCloseable {
             newReplicas = new ArrayList<>(currentReplicas);
         }
         if (replicaHostsToAdd != null) {
-            newReplicas.addAll(replicateTask(task, replicaHostsToAdd));
+            newReplicas.addAll(replicateTask(task, adReorder(replicaHostsToAdd, task)));
         }
         if (!isNewTask(task)) {
             while (newReplicas.size() > desiredNumberOfReplicas) {
@@ -1005,6 +1007,44 @@ public class Spawn implements Codable, AutoCloseable {
             }
         }
         return newReplicas;
+    }
+
+    // reorder the list such that different ADs take turns
+    private List<String> adReorder(List<String> replicaHosts, JobTask task) {
+        List<String> alternated = new ArrayList<>();
+        String taskAd = hostManager.getHostState(task.getHostUUID()).getAd();
+
+        Map<String, Queue<String>> map = new HashMap<>();
+        for (String replicaHost : replicaHosts) {
+            String ad = hostManager.getHostState(replicaHost).getAd();
+            if(!map.containsKey(ad)) {
+                map.put(ad, new LinkedList<String>());
+            }
+            map.get(ad).add(replicaHost);
+        }
+        
+        // put task AD at last turn, so that other hosts always have higher priority
+        Queue<String> taskAdQueue = map.get(taskAd);
+        if(taskAdQueue != null) {
+            map.remove(taskAd);
+        }
+
+        while(map.size() > 0 || taskAdQueue.size() > 0) {
+            Iterator<Map.Entry<String, Queue<String>>> iter = map.entrySet().iterator();
+            while (iter.hasNext()) {
+                Map.Entry<String, Queue<String>> entry = iter.next();
+                if (entry.getValue().size() == 0) {
+                    iter.remove();
+                    continue;
+                }
+                alternated.add(entry.getValue().poll());
+            }
+            if(taskAdQueue.size() > 0) {
+                alternated.add(taskAdQueue.poll());
+            }
+        }
+
+        return alternated;
     }
 
     /**
