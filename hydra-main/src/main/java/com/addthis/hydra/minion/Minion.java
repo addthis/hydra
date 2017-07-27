@@ -369,7 +369,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     }
 
     static String getMyAd() {
-        return null; // replace it with whatever cluster api
+        return "AD_number"; // replace it with whatever cluster api call
     }
 
     void disconnectFromMQ() {
