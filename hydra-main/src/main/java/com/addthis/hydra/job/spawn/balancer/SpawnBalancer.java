@@ -726,7 +726,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     private class HostCandidateIterator {
         List<PriorityQueue<HostAndScore>> orderedHeaps = new ArrayList<>();
-        int indexOfNextHeap = 0;
+        PriorityQueue<HostAndScore> currentRound = new PriorityQueue<>();
 
         HostCandidateIterator (Map<String, Double> scoreMap, JobTask task) {
             Map<String, PriorityQueue<HostAndScore>> scoreHeapPerAd = new HashMap<>();
@@ -762,15 +762,24 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
 
         HostState getNext() {
-            indexOfNextHeap %= orderedHeaps.size();
-            PriorityQueue<HostAndScore> nextHeap = orderedHeaps.get(indexOfNextHeap++);
-            if (nextHeap.size() == 0) {
-                return getNext();
+            if (currentRound.size() == 0) {
+                currentRound = getCurrentRound();
             }
-            HostAndScore nextHostAndScore = nextHeap.poll();
+            HostAndScore nextHostAndScore = currentRound.poll();
             // add to the end of the heap, by adding 1 to its score
-            nextHeap.add(new HostAndScore(nextHostAndScore.host, nextHostAndScore.score + 1));
             return nextHostAndScore.host;
+        }
+
+        PriorityQueue<HostAndScore> getCurrentRound() {
+            PriorityQueue<HostAndScore> currentRound = new PriorityQueue<>();
+            for (PriorityQueue<HostAndScore> heap : orderedHeaps) {
+                if (heap.size() == 0) continue;
+                HostAndScore hs = heap.poll(); // pick the highest from each heap
+                currentRound.add(hs);
+                // move to the end of the heap; reuse after all hosts have been seleted
+                heap.add(new HostAndScore(hs.host, hs.score + 1));
+            }
+            return currentRound;
         }
     }
 
