@@ -104,7 +104,6 @@ class JobTaskItemByHostMap extends HashMap<String, Set<JobTaskItem>> {
         return new ArrayList<>(rv);
     }
 
-
     public Iterator<String> getHostIterator(boolean smallFirst) {
         if (hostsSorted == null) {
             generateHostsSorted();
@@ -114,6 +113,22 @@ class JobTaskItemByHostMap extends HashMap<String, Set<JobTaskItem>> {
             Collections.reverse(copy);
         }
         return copy.iterator();
+    }
+
+    public Iterator<String> getHostIteratorInAd(boolean smallFirst, String availibilityDomain) {
+        if (hostsSorted == null) {
+            generateHostsSorted();
+        }
+        List<String> retList = new ArrayList<>();
+        for (String host : hostsSorted) {
+            if (spawnBalancer.spawn.hostManager.getHostState(host).getAvailabilityDomain().equals(availibilityDomain)) {
+                retList.add(host);
+            }
+        }
+        if (!smallFirst) {
+            Collections.reverse(retList);
+        }
+        return retList.iterator();
     }
 
     private boolean hasCapacity(HashMap<String, Integer> map, String key, int max) {
