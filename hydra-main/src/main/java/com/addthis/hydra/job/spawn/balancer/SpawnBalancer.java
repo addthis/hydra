@@ -661,8 +661,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 List<HostState> hostsSorted = new ArrayList<>(hosts);
                 Collections.sort(hostsSorted, hostStateScoreComparator);
                 HostState hostToBalance = hostsSorted.get(getWeightedElementIndex(hostsSorted.size(), weight));
+                String ad = hostToBalance.getAvailabilityDomain();
                 return getAssignmentsToBalanceHost(hostToBalance,
-                                                   hostManager.listHostStatus(hostToBalance.getMinionTypes()));
+                                                   hostManager.listHostStatusInAd(hostToBalance.getMinionTypes(), ad));
             case JOB:
                 List<Job> autobalanceJobs = getJobsToAutobalance(hosts);
                 if ((autobalanceJobs == null) || autobalanceJobs.isEmpty()) {
