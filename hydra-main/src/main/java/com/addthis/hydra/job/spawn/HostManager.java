@@ -102,6 +102,12 @@ public class HostManager {
                 collect(Collectors.toList());
     }
 
+    public List<HostState> listHostStatusForHostFail(@Nullable String minionType, String availabilityDomain) {
+        List<HostState> hostStatesInAd = listHostStatusInAd(minionType, availabilityDomain);
+        // if a whole AD is down, make other ADs available
+        return hostStatesInAd.size() > 0 ? hostStatesInAd : listHostStatus(minionType);
+    }
+
     public List<HostState> getLiveHosts(@Nullable String minionType) {
         List<HostState> allHosts = listHostStatus(minionType);
         List<HostState> rv = new ArrayList<>(allHosts.size());
