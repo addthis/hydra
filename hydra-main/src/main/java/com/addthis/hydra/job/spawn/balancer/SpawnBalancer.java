@@ -706,43 +706,71 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         int replicaCount = job.getReplicas();
         Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
-        PriorityQueue<HostAndScore> scoreHeap = new PriorityQueue<>(1, hostAndScoreComparator);
-        for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
-            scoreHeap.add(new HostAndScore(hostManager.getHostState(entry.getKey()), entry.getValue()));
-        }
-        Map<String, Integer> allocationMap = new HashMap<>();
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
         for (JobTask task : tasks) {
+            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(scoreMap, task);
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
             List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
             // Add new replicas as long as the task needs them & there are remaining hosts
-            for (int i = 0; i < (replicaCount - numExistingReplicas); i++) {
-                for (HostAndScore hostAndScore : scoreHeap) {
-                    HostState candidateHost = hostAndScore.host;
-                    if ((candidateHost == null) || !candidateHost.canMirrorTasks()) {
-                        continue;
-                    }
-                    int currentCount;
-                    if (allocationMap.containsKey(candidateHost.getHostUuid())) {
-                        currentCount = allocationMap.get(candidateHost.getHostUuid());
-                    } else {
-                        currentCount = 0;
-                    }
-
-                    if (okToPutReplicaOnHost(candidateHost, task)) {
-                        hostIDsToAdd.add(candidateHost.getHostUuid());
-                        scoreHeap.remove(hostAndScore);
-                        scoreHeap.add(new HostAndScore(candidateHost, hostAndScore.score + 1));
-                        allocationMap.put(candidateHost.getHostUuid(), currentCount + 1);
-                        break;
-                    }
-                }
+            while (hostIDsToAdd.size() + numExistingReplicas < replicaCount) {
+                HostState candidateHost = hostCandidateIterator.getNext();
+                hostIDsToAdd.add(candidateHost.getHostUuid());
             }
             if (!hostIDsToAdd.isEmpty()) {
                 rv.put(task.getTaskID(), hostIDsToAdd);
             }
         }
         return rv;
+    }
+
+    private class HostCandidateIterator {
+        List<PriorityQueue<HostAndScore>> orderedHeaps = new ArrayList<>();
+        int indexOfNextHeap = 0;
+
+        HostCandidateIterator (Map<String, Double> scoreMap, JobTask task) {
+            Map<String, PriorityQueue<HostAndScore>> scoreHeapPerAd = new HashMap<>();
+            for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
+                HostState hostState = hostManager.getHostState(entry.getKey());
+                if (!okToPutReplicaOnHost(hostState, task)) continue;
+                if (!hostState.canMirrorTasks()) continue;
+                String ad = hostState.getAvailabilityDomain();
+                Double score = entry.getValue();
+                PriorityQueue<HostAndScore> scoreHeap = scoreHeapPerAd.getOrDefault(
+                        ad, new PriorityQueue<>(1, hostAndScoreComparator));
+                scoreHeap.add(new HostAndScore(hostState, score));
+            }
+
+            // put task host AD and replica host AD to the end
+            PriorityQueue<HostAndScore> taskAdHeap =
+                    scoreHeapPerAd.getOrDefault(task.getHostUUID(), new PriorityQueue<HostAndScore>());
+            scoreHeapPerAd.remove(task.getHostUUID());
+            List<JobTaskReplica> replicas = task.getReplicas();
+            List<PriorityQueue<HostAndScore>> replicaHeaps = new ArrayList<>();
+            for (JobTaskReplica replica : replicas) {
+                PriorityQueue<HostAndScore> replicaHeap =
+                        scoreHeapPerAd.getOrDefault(replica.getHostUUID(), new PriorityQueue<HostAndScore>());
+                replicaHeaps.add(replicaHeap);
+                scoreHeapPerAd.remove(replica.getHostUUID());
+            }
+
+            for (Map.Entry<String, PriorityQueue<HostAndScore>> entry : scoreHeapPerAd.entrySet()) {
+                orderedHeaps.add(entry.getValue());
+            }
+            orderedHeaps.add(taskAdHeap);
+            orderedHeaps.addAll(replicaHeaps);
+        }
+
+        HostState getNext() {
+            indexOfNextHeap %= orderedHeaps.size();
+            PriorityQueue<HostAndScore> nextHeap = orderedHeaps.get(indexOfNextHeap++);
+            if (nextHeap.size() == 0) {
+                return getNext();
+            }
+            HostAndScore nextHostAndScore = nextHeap.poll();
+            // add to the end of the heap, by adding 1 to its score
+            nextHeap.add(new HostAndScore(nextHostAndScore.host, nextHostAndScore.score + 1));
+            return nextHostAndScore.host;
+        }
     }
 
     /**
