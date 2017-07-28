@@ -241,7 +241,7 @@ public class HostFailWorker {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
                 String ad = spawn.hostManager.getHostState(failedHostUuid).getAvailabilityDomain();
-                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatusInAd(null, ad), failedHostUuid);
+                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatusForHostFail(null, ad), failedHostUuid);
             } else {
                 HostState host = spawn.hostManager.getHostState(failedHostUuid);
                 if (host == null) {
@@ -274,7 +274,7 @@ public class HostFailWorker {
                     markHostDead(failedHostUuid);
                     String ad = spawn.hostManager.getHostState(failedHostUuid).getAvailabilityDomain();
                     spawn.getSpawnBalancer().fixTasksForFailedHost(
-                            spawn.hostManager.listHostStatusInAd(host.getMinionTypes(), ad), failedHostUuid);
+                            spawn.hostManager.listHostStatusForHostFail(host.getMinionTypes(), ad), failedHostUuid);
                 }
             }
         }
