@@ -215,7 +215,7 @@ public class HostState implements HostMessage {
                 .add("uuid", getHostUuid())
                 .add("last-update-time", getLastUpdateTime())
                 .add("host", getHost())
-                .add("ad", getAvailabilityDomain())
+                .add("availability-domain", getAvailabilityDomain())
                 .add("port", getPort())
                 .add("group", getGroup())
                 .add("time", getTime())
