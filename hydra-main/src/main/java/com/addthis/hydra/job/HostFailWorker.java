@@ -240,7 +240,8 @@ public class HostFailWorker {
             if (failState == FailState.FAILING_FS_DEAD) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
-                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatus(null), failedHostUuid);
+                String ad = spawn.hostManager.getHostState(failedHostUuid).getAvailabilityDomain();
+                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatusInAd(null, ad), failedHostUuid);
             } else {
                 HostState host = spawn.hostManager.getHostState(failedHostUuid);
                 if (host == null) {
@@ -271,8 +272,9 @@ public class HostFailWorker {
                 if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
+                    String ad = spawn.hostManager.getHostState(failedHostUuid).getAvailabilityDomain();
                     spawn.getSpawnBalancer().fixTasksForFailedHost(
-                            spawn.hostManager.listHostStatus(host.getMinionTypes()), failedHostUuid);
+                            spawn.hostManager.listHostStatusInAd(host.getMinionTypes(), ad), failedHostUuid);
                 }
             }
         }
