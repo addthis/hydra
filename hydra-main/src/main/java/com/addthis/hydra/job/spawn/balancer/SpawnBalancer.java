@@ -1341,7 +1341,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
         Collection<JobKey> alreadyMoved = new HashSet<>();
-        Iterator<String> otherHosts = tasksByHost.getHostIterator(true);
+        String currentAd = spawn.hostManager.getHostState(pushHost).getAvailabilityDomain();
+        Iterator<String> otherHosts = tasksByHost.getHostIteratorInAd(true, currentAd);
         while (otherHosts.hasNext() && (rv.size() < numToMove)) {
             String pullHost = otherHosts.next();
             if (pushHost.equals(pullHost)) {
@@ -1389,7 +1390,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                  String pullHost) {
         MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
         Collection<JobKey> alreadyMoved = new HashSet<>();
-        Iterator<String> otherHosts = tasksByHost.getHostIterator(false);
+        String currentAd = spawn.hostManager.getHostState(pullHost).getAvailabilityDomain();
+        Iterator<String> otherHosts = tasksByHost.getHostIteratorInAd(true, currentAd);
         if (isExtremeHost(pullHost, true, true)) {
             return rv;
         }
