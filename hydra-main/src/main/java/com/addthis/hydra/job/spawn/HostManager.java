@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.mq.HostState;
 
@@ -86,6 +87,19 @@ public class HostManager {
             }
             return allMinions;
         }
+    }
+
+    /**
+     * List all hosts belonging to a particular minion type.
+     *
+     * @param minionType         The minion type to find. If null, return all hosts.
+     * @param availibilityDomain The minion type to find. If null, return all hosts.
+     * @return A list of hoststates
+     */
+    public List<HostState> listHostStatusInAd(@Nullable String minionType, String availabilityDomain) {
+        return listHostStatus(minionType).stream().
+                filter(hostState -> hostState.getAvailabilityDomain().equals(availabilityDomain)).
+                collect(Collectors.toList());
     }
 
     public List<HostState> getLiveHosts(@Nullable String minionType) {
