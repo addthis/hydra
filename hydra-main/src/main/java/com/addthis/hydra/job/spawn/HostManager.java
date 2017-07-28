@@ -90,10 +90,10 @@ public class HostManager {
     }
 
     /**
-     * List all hosts belonging to a particular minion type.
+     * List all hosts belonging to a particular minion type, within an availability domain
      *
      * @param minionType         The minion type to find. If null, return all hosts.
-     * @param availibilityDomain The minion type to find. If null, return all hosts.
+     * @param availibilityDomain The avalibity domain
      * @return A list of hoststates
      */
     public List<HostState> listHostStatusInAd(@Nullable String minionType, String availabilityDomain) {
