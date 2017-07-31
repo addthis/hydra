@@ -916,7 +916,7 @@ public class JobTask implements Codable {
             File configDir = getConfigDir();
             LessFiles.initDirectory(configDir);
             // create shell wrapper
-            replicateSH = new File(configDir, ".sh");
+            replicateSH = new File(configDir, "replicate.sh");
             replicateRun = new File(configDir, "replicate.run");
             replicateDone = new File(configDir, "replicate.done");
             replicatePid = new File(configDir, "replicate.pid");
