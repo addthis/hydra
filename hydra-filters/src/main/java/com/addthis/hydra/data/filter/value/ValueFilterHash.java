@@ -24,11 +24,6 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
-import com.google.common.base.Charsets;
-import com.google.common.hash.HashCode;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
-
 import org.apache.commons.codec.binary.Hex;
 
 /**
@@ -104,11 +99,6 @@ public class ValueFilterHash extends AbstractValueFilter {
                 } catch (NoSuchAlgorithmException e) {
                     // ignore
                 }
-            case 5:
-                HashFunction hashAlgorithm = Hashing.murmur3_128();
-                HashCode hashCode = hashAlgorithm.newHasher().putString(sv, Charsets.UTF_8).hash();
-                hash = hashCode.asLong();
-                break;
             default:
                 throw new RuntimeException("Unknown hash type: " + type);
         }
