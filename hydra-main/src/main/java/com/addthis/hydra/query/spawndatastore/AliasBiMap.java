@@ -76,7 +76,8 @@ public class AliasBiMap {
         alias2jobs = new HashMap<>();
         job2alias = new HashMap<>();
         /* The interval to refresh cached alias values */
-        long cacheRefresh = Parameter.longValue("alias.bimap.refresh", 10000);
+//        long cacheRefresh = Parameter.longValue("alias.bimap.refresh", 10000);
+        long cacheRefresh = Parameter.longValue("alias.bimap.refresh", 20000);
         /* The expiration period for cache values. Off by default, but useful for testing. */
         long cacheExpire = Parameter.longValue("alias.bimap.expire", -1);
         /* The max size of the alias cache */
