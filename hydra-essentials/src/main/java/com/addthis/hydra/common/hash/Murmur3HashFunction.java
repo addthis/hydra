@@ -15,7 +15,7 @@ package com.addthis.hydra.common.hash;
 
 import com.google.common.hash.Hashing;
 
-final class Murmur3HashFunction implements StringAndByteHashFunction {
+public final class Murmur3HashFunction implements StringAndByteHashFunction {
 
     @Override public int hash(String input) {
         return Hashing.murmur3_32().hashUnencodedChars(input).asInt();
