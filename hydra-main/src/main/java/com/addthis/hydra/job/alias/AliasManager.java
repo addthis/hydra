@@ -30,4 +30,6 @@ public interface AliasManager {
 
     String getLikelyAlias(String jobid);
 
+    void putAlias(String alias, List<String> jobs);
+
 }

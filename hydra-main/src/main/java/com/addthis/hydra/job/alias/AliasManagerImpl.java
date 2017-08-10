@@ -58,7 +58,6 @@ public class AliasManagerImpl implements AliasManager {
     public final ObjectMapper mapper;
     private final ReentrantLock mapLock;
 
-    @VisibleForTesting
     public AliasManagerImpl() throws Exception{
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();   // added
         this.mapLock = new ReentrantLock();
@@ -67,9 +66,7 @@ public class AliasManagerImpl implements AliasManager {
         this.job2alias = new HashMap<>();
     }
 
-
     public AliasManagerImpl(SpawnDataStore spawnDataStore) {
-//        this.aliasBiMap = new AliasBiMap(spawnDataStore);
 //        aliasBiMap.loadCurrentValues();
         this.spawnDataStore = spawnDataStore;   // added
         this.mapLock = new ReentrantLock();
@@ -240,10 +237,12 @@ public class AliasManagerImpl implements AliasManager {
             List<String> jobs = ac.getJobs(alias);
             if(jobs == null ) {
                 System.out.println("jobs is null");
+                return;
             }
 
             if(jobs.size() == 0) {
                 System.out.println("jobs size is 0");
+                return;
             }
 
             System.out.println("jobs after remove alias " + alias + " = " + jobs);
