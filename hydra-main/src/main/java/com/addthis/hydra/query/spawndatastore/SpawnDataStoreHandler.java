@@ -80,16 +80,16 @@ public class SpawnDataStoreHandler implements AutoCloseable {
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         this.queryConfigWatcher = new QueryConfigWatcher(spawnDataStore);
         this.aliasCache = new AliasCache();
-//        this.aliasCache.loadCurrentValues();
+        this.aliasCache.loadCurrentValues();
     }
 
     @Override public void close() {
         spawnDataStore.close();
     }
 
-    public AliasCache getAliasCache() {
-        return aliasCache;
-    }
+//    public AliasCache getAliasCache() {
+//        return aliasCache;
+//    }
 
     public void validateJobForQuery(String job) {
         if (!queryConfigWatcher.safeToQuery(job)) {
@@ -97,10 +97,6 @@ public class SpawnDataStoreHandler implements AutoCloseable {
         }
     }
 
-//    Query master does't need the two maps
-//    it can just rely on the cache which refresh the values by loading from the spawn data store.
-    // todo: get jobs from cache
-    // todo: old
     public List<String> expandAlias(String job) throws ExecutionException {
         List<String> possibleJobs = aliasCache.getJobs(job);
         if ((possibleJobs != null) && !possibleJobs.isEmpty()) {

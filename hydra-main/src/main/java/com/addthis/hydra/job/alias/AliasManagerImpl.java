@@ -33,6 +33,7 @@ import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.query.spawndatastore.AliasCache;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -43,36 +44,34 @@ import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class AliasManagerImpl implements AliasManager {
-
     private static final Logger log = LoggerFactory.getLogger(AliasManagerImpl.class);
-
-    //private AliasBiMap aliasBiMap;
     private Map<String, String> aliases;
-
-    public static final String ALIAS_PATH = "/query/alias";
     /* This SpawnDataStore must be the same type (zookeeper/priam) between Spawn and Mqmaster. This should
          * be guaranteed by the implementation of DataStoreUtil. */
+    public static final String ALIAS_PATH = "/query/alias";
     private final SpawnDataStore spawnDataStore;
     private final HashMap<String, List<String>> alias2jobs;
     private final HashMap<String, String> job2alias;
-    public final ObjectMapper mapper;
+    private final ObjectMapper mapper;
     private final ReentrantLock mapLock;
+    private final AliasCache ac;
 
     public AliasManagerImpl() throws Exception{
-        this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();   // added
+        this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         this.mapLock = new ReentrantLock();
         this.mapper = new ObjectMapper();
         this.alias2jobs = new HashMap<>();
         this.job2alias = new HashMap<>();
+        this.ac = new AliasCache();
     }
 
-    public AliasManagerImpl(SpawnDataStore spawnDataStore) {
-//        aliasBiMap.loadCurrentValues();
-        this.spawnDataStore = spawnDataStore;   // added
+    public AliasManagerImpl(SpawnDataStore spawnDataStore) throws Exception {
+        this.spawnDataStore = spawnDataStore;
         this.mapLock = new ReentrantLock();
         this.mapper = new ObjectMapper();
         this.alias2jobs = new HashMap<>();
         this.job2alias = new HashMap<>();
+        this.ac = new AliasCache();
     }
 
     /**
@@ -91,7 +90,6 @@ public class AliasManagerImpl implements AliasManager {
         return alias2Jobs;
     }
 
-    // getJobs
     public List<String> aliasToJobs(String alias) {
         return getJobs(alias);
     }
@@ -109,7 +107,6 @@ public class AliasManagerImpl implements AliasManager {
         }
     }
 
-    // --------------------------------------------------
     public void putAlias(String alias, List<String> jobs) {
         mapLock.lock();
         try {
@@ -140,22 +137,20 @@ public class AliasManagerImpl implements AliasManager {
         } finally {
             mapLock.unlock();
         }
-
     }
 
     /**
-     * Refresh an alias based on the latest cached value
+     * Refresh an alias based on datastore
      *
      * @param alias The alias to refresh
      */
     private void refreshAlias(String alias) {
         try {
-            String data = this.spawnDataStore.getChild(ALIAS_PATH, alias);
-            updateAlias(alias, data);
+            updateAlias(alias, this.spawnDataStore.getChild(ALIAS_PATH, alias));
         } catch (ExecutionException e) {
             log.warn("Failed to refresh alias: {}", alias, e);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("",e);
         }
     }
 
@@ -166,10 +161,10 @@ public class AliasManagerImpl implements AliasManager {
      * @return String The data that was updated (so the cache can be updated)
      */
     @Nullable private String updateAlias(String alias, @Nullable String data) {
-        if (alias == null) {
+        if (Strings.isNullOrEmpty(alias)) {
             return data;
         }
-        if ((data == null) || data.isEmpty()) {
+        if (Strings.isNullOrEmpty(data)) {
             deleteAlias(alias);
             return data;
         }
@@ -188,7 +183,8 @@ public class AliasManagerImpl implements AliasManager {
         return data;
     }
 
-    @VisibleForTesting public List<String> decodeAliases(@Nonnull Object data) {
+    @VisibleForTesting
+    protected List<String> decodeAliases(@Nonnull Object data) {
         try {
             return mapper.readValue(data.toString(), new TypeReference<List<String>>() {});
         } catch (IOException e) {
@@ -202,7 +198,6 @@ public class AliasManagerImpl implements AliasManager {
      *
      * @param alias The alias to check
      */
-
     public void deleteAlias(String alias) {
         mapLock.lock();
         try {
@@ -222,33 +217,14 @@ public class AliasManagerImpl implements AliasManager {
         spawnDataStore.deleteChild(ALIAS_PATH, alias);
 
         try {
-            String sJobsAll = spawnDataStore.getChild(ALIAS_PATH, alias);
-            System.out.println("sJobs from datastore for " + alias + " = " +  sJobsAll);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // todo: delete cache since refresh is initiated when query
-        AliasCache ac = null;
-        try {
-            ac = new AliasCache();
             ac.deleteAlias(alias);
-
             List<String> jobs = ac.getJobs(alias);
-            if(jobs == null ) {
-                System.out.println("jobs is null");
+            if(jobs == null || jobs.size() == 0 ) {
+                log.error("There is no jobs for alias {}", alias);
                 return;
             }
-
-            if(jobs.size() == 0) {
-                System.out.println("jobs size is 0");
-                return;
-            }
-
-            System.out.println("jobs after remove alias " + alias + " = " + jobs);
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ExecutionException e) {
+            log.error("",e);
         }
     }
 

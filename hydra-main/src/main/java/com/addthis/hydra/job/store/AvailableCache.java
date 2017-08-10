@@ -32,6 +32,8 @@ import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import org.slf4j.Logger;
+
 /**
  * A cache implementation that never blocks unless there is no data for a given ID. Stale values are refreshed asynchronously
  * and the old value is returned in the mean time.
@@ -39,6 +41,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * @param <T> The class that will be stored in the cache
  */
 public abstract class AvailableCache<T> implements AutoCloseable {
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(AvailableCache.class);
 
     /* A LoadingCache used to save fetched objects */
     private final LoadingCache<String, Optional<T>> loadingCache;
@@ -69,19 +72,16 @@ public abstract class AvailableCache<T> implements AutoCloseable {
         if (fetchThreads <= 0) {
             fetchThreads = 2;
         }
-
+        cacheBuilder.removalListener(new RemovalListener<Optional<T>, Optional<T>>() {
+            @Override
+            public void onRemoval(RemovalNotification<Optional<T>, Optional<T>> notification) {
+                log.info("alias {} and its job {} removed", notification.getKey(), notification.getValue());
+            }
+        });
         executor = new ThreadPoolExecutor(
                 fetchThreads, fetchThreads, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("avail-cache-%d").setDaemon(true).build());
         //noinspection unchecked
-
-        cacheBuilder.removalListener(new RemovalListener<Optional<T>, Optional<T>>() {
-            @Override
-            public void onRemoval(RemovalNotification<Optional<T>, Optional<T>> notification) {
-                System.out.println("<" + notification.getKey() + ", " + notification.getValue() + "> has been removed!");
-                loadingCache.asMap().get(notification.getKey());
-            }
-        });
 
         this.loadingCache = cacheBuilder.build(new CacheLoader<String, Optional<T>>() {
             /**
