@@ -500,7 +500,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 if ((job != null) && (task != null) && isInMovableState(task)
                     // Only add non-null tasks that are either idle or queued
                     && (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(
-                        host.getHostUuid()))) // Only add tasks that are supposed to live on the specified host.
+                        hostId))) // Only add tasks that are supposed to live on the specified host.
                 {
                     if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
                         // obeyDontAutobalanceMe is set to false when spawn is doing a filesystem-okay host failure.
@@ -1026,7 +1026,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         List<HostState> sortedHosts = sortHostsByDiskSpace(hosts);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
-
         HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         if ((failState == HostFailWorker.FailState.FAILING_FS_OKAY) || isExtremeHost(hostID, true, true) ||
             (host.getAvailDiskBytes() < config.getMinFreeDiskSpaceToRecieveNewTasks())) {
@@ -1039,8 +1038,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             log.info("[spawn.balancer] {} categorized as underloaded host; looking for tasks to pull onto it", hostID);
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
-            // FIXME: pushTasksOntoHost needs to take a moveLimit parameter
-            // rv.addAll(pushTasksOntoHost(host, heavyHosts));
+            rv.addAll(pushTasksOntoHost(host, heavyHosts, true, config.getTasksMovedFullRebalance(), true));
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
             log.info("[spawn.balance] {} categorized as overworked host; looking for tasks to push off it", hostID);
@@ -1403,15 +1401,39 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts) {
+    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts,
+                                                          boolean limitBytes, int moveLimit,
+                                                          boolean obeyDontAutobalanceMe) {
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
-        for (HostState heavyHost : heavyHosts) {
-            double byteLimitFactor =
-                    1 - ((double) moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
-            moveAssignments.addAll(pushTasksOffHost(heavyHost, Collections.singletonList(host), true, byteLimitFactor,
-                                                    config.getTasksMovedFullRebalance(), true));
+        List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
+        moveAssignments.addAll(rv);
+
+        double byteLimitFactor = 1 - ((double) moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
+        long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
+
+        if(moveAssignments.size() <= moveLimit && canReceiveNewTasks(host)) {
+            List<HostState> lightHostList = new ArrayList<>();
+            lightHostList.add(host);
+            for (HostState heavyHost : heavyHosts) {
+                for (JobTask task : findTasksToMove(heavyHost, obeyDontAutobalanceMe)) {
+                    long taskTrueSize = getTaskTrueSize(task);
+                    if (limitBytes && (taskTrueSize > byteLimit)) {
+                        continue;
+                    }
+                    JobTaskMoveAssignment assignment = moveTask(task, heavyHost.getHostUuid(), lightHostList);
+                    if (assignment != null && assignment.getTargetUUID() != null) {
+                        markRecentlyReplicatedTo(assignment.getTargetUUID());
+                        moveAssignments.add(assignment);
+                        byteLimit -= taskTrueSize;
+                        break;
+                    }
+                }
+                if (moveAssignments.size() >= moveLimit || !canReceiveNewTasks(host)) {
+                    break;
+                }
+
+            }
         }
-        moveAssignments.addAll(purgeMisplacedTasks(host, 1));
         return moveAssignments;
     }
 

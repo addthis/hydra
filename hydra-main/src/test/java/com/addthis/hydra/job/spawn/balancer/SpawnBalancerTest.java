@@ -335,10 +335,12 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         List<JobTaskMoveAssignment> assignments = bal.getAssignmentsToBalanceHost(heavyHost, hosts);
         long bytesMoved = 0;
         for (JobTaskMoveAssignment assignment : assignments) {
+            bytesMoved += bal.getTaskTrueSize(spawn.getTask(assignment.getJobKey()));
             assertTrue("shouldn't move gargantuan task", !assignment.getJobKey().getJobUuid().equals(gargantuanJob.getId()));
             assertTrue("shouldn't move to read-only host", !(assignment.getTargetUUID().equals(readOnlyHostUUID)));
         }
         assertTrue("should move something", !assignments.isEmpty());
+        assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
     }
 
     @Test
@@ -504,6 +506,58 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         assertEquals("dependency graph should have two nodes", 2, spawn.getJobDependencies().getNodes().size());
     }
 
+    @Test
+    public void underutilizedHostRebalanceTest() throws Exception {
+        // Suppose we have one host with under-utilized disk and other hosts with overloaded disks.
+        // Should move some tasks from heavy to light, but not too much.
+
+        String heavyHost1UUID = "heavy1";
+        HostState heavyHost1 = installHostStateWithUUID(heavyHost1UUID, spawn, true);
+        Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 80_000_000_000L, 0);
+        Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 850_000_000L, 0);
+        Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 820_000_000L, 0);
+        heavyHost1.setStopped(simulateJobKeys(gargantuanJob, movableJob1, movableJob2));
+        heavyHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        heavyHost1.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
+
+        String heavyHost2UUID = "heavy2";
+        HostState heavyHost2 = installHostStateWithUUID(heavyHost2UUID, spawn, true);
+        Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 0);
+        Job movableJob4 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 850_000_000L, 0);
+        heavyHost2.setStopped(simulateJobKeys(movableJob3, movableJob4));
+        heavyHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        heavyHost2.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
+
+        String lightHostUUID = "light";
+        HostState lightHost = installHostStateWithUUID(lightHostUUID, spawn, true);
+        lightHost.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        lightHost.setUsed(new HostCapacity(10, 10, 10, 200_000_0000L));
+
+        String readOnlyHostUUID = "readOnlyHost";
+        HostState readOnlyHost = installHostStateWithUUID(readOnlyHostUUID, spawn, true, true, 0, "default");
+        readOnlyHost.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 200_000_000L));
+
+        List<HostState> hosts = Arrays.asList(heavyHost1, heavyHost2, lightHost, readOnlyHost);
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
+        hostManager.updateHostState(heavyHost1);
+        hostManager.updateHostState(heavyHost2);
+        hostManager.updateHostState(lightHost);
+        hostManager.updateHostState(readOnlyHost);
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
+        List<JobTaskMoveAssignment> assignments = bal.getAssignmentsToBalanceHost(lightHost, hosts);
+        long bytesMoved = 0;
+
+        for (JobTaskMoveAssignment assignment : assignments) {
+            bytesMoved += bal.getTaskTrueSize(spawn.getTask(assignment.getJobKey()));
+            assertTrue("shouldn't move gargantuan task",
+                       !assignment.getJobKey().getJobUuid().equals(gargantuanJob.getId()));
+            assertTrue("shouldn't move from read-only host", !(assignment.getSourceUUID().equals(readOnlyHostUUID)));
+        }
+        assertTrue("should move something", !assignments.isEmpty());
+        assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
+    }
+
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
 
         Job job = spawn.createJob("fsm", numTasks, hosts, DEFAULT_MINION_TYPE, "foo", false);
@@ -574,6 +628,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         newHostState.setUp(isUp);
         newHostState.setAvailableTaskSlots(availableSlots);
         newHostState.setMinionTypes(minionType);
+        newHostState.setDiskReadOnly(readOnly);
         hostManager.updateHostState(newHostState);
         return newHostState;
     }
