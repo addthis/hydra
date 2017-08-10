@@ -31,10 +31,10 @@ public class ValueFilterHashTest {
     }
 
     @Test
-    public void testFilterValue_murmur3() throws Exception {
+    public void testFilterValue_Murmur3_Direct() throws Exception {
         ValueFilterHash valueFilterHash = new ValueFilterHash();
         valueFilterHash.setAbs(true);
-        valueFilterHash.setType(1);
+        valueFilterHash.setType(5);
         ValueObject vo = valueFilterHash.filter(ValueFactory.create("128.0.0.1"));
         assertEquals("1407168586", vo.toString());
     }
