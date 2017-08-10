@@ -427,7 +427,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
 
         for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
-            if (moveAssignments.size() > moveLimit) {
+            if (moveAssignments.size() >= moveLimit) {
                 break;
             }
             long taskTrueSize = getTaskTrueSize(task);
@@ -1028,7 +1028,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         List<HostState> sortedHosts = sortHostsByDiskSpace(hosts);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
-        numAlleviateHosts = sortedHosts.size() - 1;
         HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         if ((failState == HostFailWorker.FailState.FAILING_FS_OKAY) || isExtremeHost(hostID, true, true) ||
             (host.getAvailDiskBytes() < config.getMinFreeDiskSpaceToRecieveNewTasks())) {
