@@ -25,6 +25,8 @@ import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -67,17 +69,27 @@ public abstract class AvailableCache<T> implements AutoCloseable {
         if (fetchThreads <= 0) {
             fetchThreads = 2;
         }
+
         executor = new ThreadPoolExecutor(
                 fetchThreads, fetchThreads, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("avail-cache-%d").setDaemon(true).build());
         //noinspection unchecked
+
+        cacheBuilder.removalListener(new RemovalListener<Optional<T>, Optional<T>>() {
+            @Override
+            public void onRemoval(RemovalNotification<Optional<T>, Optional<T>> notification) {
+                System.out.println("<" + notification.getKey() + ", " + notification.getValue() + "> has been removed!");
+                loadingCache.asMap().get(notification.getKey());
+            }
+        });
+
         this.loadingCache = cacheBuilder.build(new CacheLoader<String, Optional<T>>() {
             /**
              * If refreshAfterWrite is enabled, this method is called after returning the old value.
              * The new value will be inserted into the cache when the load() operation completes.
              */
             @Override
-            public ListenableFuture<Optional<T>> reload(final String key, Optional<T> oldValue) {
+            public ListenableFuture<Optional<T>> reload(final String key, Optional<T> oldValue) throws Exception {
                 ListenableFutureTask<Optional<T>> task = ListenableFutureTask.create(() -> load(key));
                 executor.execute(task);
                 return task;
@@ -88,6 +100,10 @@ public abstract class AvailableCache<T> implements AutoCloseable {
                 return Optional.fromNullable(fetchValue(key));
             }
         });
+    }
+
+    public LoadingCache<String, Optional<T>> getLoadingCache() {
+        return loadingCache;
     }
 
     /**
@@ -116,6 +132,10 @@ public abstract class AvailableCache<T> implements AutoCloseable {
 
     public void clear() {
         loadingCache.invalidateAll();
+    }
+
+    public void cleanUp() {
+        loadingCache.cleanUp();
     }
 
     @Override public void close() throws Exception {

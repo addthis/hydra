@@ -26,4 +26,8 @@ public interface AliasManager {
 
     List<String> aliasToJobs(String alias);
 
+    List<String> getJobs(String alias);
+
+    String getLikelyAlias(String jobid);
+
 }

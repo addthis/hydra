@@ -30,8 +30,11 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-public class SpawnDataStoreHandler implements AutoCloseable {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+public class SpawnDataStoreHandler implements AutoCloseable {
+    private static final Logger log = LoggerFactory.getLogger(SpawnDataStoreHandler.class);
     /**
      * A ZooKeeper/Priam backed data structure that keeps track of
      * the Hydra jobs in the cluster.  We are specifically
@@ -57,7 +60,7 @@ public class SpawnDataStoreHandler implements AutoCloseable {
      * A ZooKeeper backed data structure that maintains a
      * bi-directional mapping of job aliases to job IDs
      */
-    private final AliasBiMap aliasBiMap;
+    private final AliasCache aliasCache;
 
     /**
      * a cache of job configuration data, used to reduce load placed on ZK server with high volume queries
@@ -76,12 +79,16 @@ public class SpawnDataStoreHandler implements AutoCloseable {
         spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         this.queryConfigWatcher = new QueryConfigWatcher(spawnDataStore);
-        this.aliasBiMap = new AliasBiMap(spawnDataStore);
-        this.aliasBiMap.loadCurrentValues();
+        this.aliasCache = new AliasCache();
+//        this.aliasCache.loadCurrentValues();
     }
 
     @Override public void close() {
         spawnDataStore.close();
+    }
+
+    public AliasCache getAliasCache() {
+        return aliasCache;
     }
 
     public void validateJobForQuery(String job) {
@@ -90,16 +97,20 @@ public class SpawnDataStoreHandler implements AutoCloseable {
         }
     }
 
-    public List<String> expandAlias(String job) {
-        List<String> possibleJobs = aliasBiMap.getJobs(job);
+//    Query master does't need the two maps
+//    it can just rely on the cache which refresh the values by loading from the spawn data store.
+    // todo: get jobs from cache
+    // todo: old
+    public List<String> expandAlias(String job) throws ExecutionException {
+        List<String> possibleJobs = aliasCache.getJobs(job);
         if ((possibleJobs != null) && !possibleJobs.isEmpty()) {
             return possibleJobs;
         }
         return Collections.singletonList(job);
     }
 
-    public String resolveAlias(String job) {
-        List<String> possibleJobs = aliasBiMap.getJobs(job);
+    public String resolveAlias(String job) throws ExecutionException {
+        List<String> possibleJobs = aliasCache.getJobs(job);
         if ((possibleJobs != null) && !possibleJobs.isEmpty()) {
             return possibleJobs.get(0);
         }

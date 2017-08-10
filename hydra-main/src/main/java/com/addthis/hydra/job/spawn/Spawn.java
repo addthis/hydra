@@ -1352,12 +1352,15 @@ public class Spawn implements Codable, AutoCloseable {
             }
             // take action on trigger changes (like # replicas)
             if ((oldjob != job) && reviseReplicas) {
+
                 int oldReplicaCount = oldjob.getReplicas();
                 int newReplicaCount = job.getReplicas();
+
                 checkArgument((oldReplicaCount == newReplicaCount) || (job.getState() == JobState.IDLE) ||
                               (job.getState() == JobState.DEGRADED), "job must be IDLE or DEGRADED to change replicas");
                 checkArgument(newReplicaCount < hostManager.monitored.size(),
                               "replication factor must be < # live hosts");
+
                 rebalanceReplicas(job);
             }
             queueJobTaskUpdateEvent(job);

@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.query.spawndatastore.AliasBiMap;
+import com.addthis.hydra.job.alias.AliasManagerImpl;
 
 import com.google.common.collect.Lists;
 
@@ -50,7 +50,7 @@ public class DataStoreUtil {
     /* A list of datastore paths with values that should be cutover */
     private static final List<String> pathsToImport = Arrays.asList(SPAWN_QUEUE_PATH, SPAWN_BALANCE_PARAM_PATH, SPAWN_HOST_FAIL_WORKER_PATH);
     /* A list of datastore parent nodes with children that should be cutover */
-    private static final List<String> parentsToImport = Arrays.asList(SPAWN_COMMON_COMMAND_PATH, SPAWN_COMMON_MACRO_PATH, SPAWN_JOB_CONFIG_PATH, AliasBiMap.ALIAS_PATH, SPAWN_COMMON_ALERT_PATH);
+    private static final List<String> parentsToImport = Arrays.asList(SPAWN_COMMON_COMMAND_PATH, SPAWN_COMMON_MACRO_PATH, SPAWN_JOB_CONFIG_PATH, AliasManagerImpl.ALIAS_PATH, SPAWN_COMMON_ALERT_PATH);
     /* A list of nodes beneath each job node */
     private static final List<String> jobParametersToImport = Arrays.asList("config", "queryconfig", "tasks", "alerts");
     /* A list of properties of certain job nodes that should be imported as flat values rather than children -- necessary for certain kafka broker info */
