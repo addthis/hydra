@@ -24,6 +24,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.common.hash.Murmur3HashFunction;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
+import com.addthis.hydra.common.hash.StringAndByteHashFunction;
 
 import org.apache.commons.codec.binary.Hex;
 
@@ -101,7 +102,7 @@ public class ValueFilterHash extends AbstractValueFilter {
                     // ignore
                 }
             case 5:
-                Murmur3HashFunction mmh = new Murmur3HashFunction();
+                StringAndByteHashFunction mmh = new Murmur3HashFunction();
                 hash = mmh.hash(sv);
                 break;
             default:
