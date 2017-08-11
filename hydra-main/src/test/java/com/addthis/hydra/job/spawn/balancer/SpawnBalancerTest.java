@@ -419,7 +419,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
     }
 
-    @Test
+
+        @Test
     public void dontDoPointlessMovesTest() throws Exception {
         // Suppose we have a cluster that is essentially balanced. Rebalancing it shouldn't do anything.
         int numHosts = 3;
