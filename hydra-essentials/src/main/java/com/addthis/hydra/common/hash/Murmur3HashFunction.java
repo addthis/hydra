@@ -15,7 +15,21 @@ package com.addthis.hydra.common.hash;
 
 import com.google.common.hash.Hashing;
 
-final class Murmur3HashFunction implements StringAndByteHashFunction {
+public final class Murmur3HashFunction implements StringAndByteHashFunction {
+
+    private Murmur3HashFunction() {}
+
+    private static class HolderClass {
+        private static final Murmur3HashFunction instance = new Murmur3HashFunction();
+    }
+
+    public static Murmur3HashFunction getInstance() {
+        return HolderClass.instance;
+    }
+
+    public static int getHash(String input) {
+        return Hashing.murmur3_32().hashUnencodedChars(input).asInt();
+    }
 
     @Override public int hash(String input) {
         return Hashing.murmur3_32().hashUnencodedChars(input).asInt();

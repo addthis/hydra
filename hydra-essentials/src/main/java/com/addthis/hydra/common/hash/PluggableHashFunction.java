@@ -26,7 +26,7 @@ public class PluggableHashFunction {
     private static final StringAndByteHashFunction hasher;
 
     static {
-        StringAndByteHashFunction hashFunction = new Murmur3HashFunction();
+        StringAndByteHashFunction hashFunction = Murmur3HashFunction.getInstance();
         try {
             PluginMap hashFunctions = PluginRegistry.defaultRegistry().asMap().get("hash function");
             Class<?> defaultHashFunctionClass = hashFunctions.defaultSugar();

@@ -22,6 +22,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.common.hash.Murmur3HashFunction;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
 import org.apache.commons.codec.binary.Hex;
@@ -99,6 +100,9 @@ public class ValueFilterHash extends AbstractValueFilter {
                 } catch (NoSuchAlgorithmException e) {
                     // ignore
                 }
+            case 5:
+                hash = Murmur3HashFunction.getInstance().getHash(sv);
+                break;
             default:
                 throw new RuntimeException("Unknown hash type: " + type);
         }
