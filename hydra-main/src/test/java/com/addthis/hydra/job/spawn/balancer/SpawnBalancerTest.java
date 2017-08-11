@@ -370,12 +370,10 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState readOnlyHost = installHostStateWithUUID(readOnlyHostUUID, spawn, true, true, 0, "default");
         readOnlyHost.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 200_000_000L));
-
-        List<HostState> hostsForOverUtilizedTest = Arrays.asList(heavyHost1, lightHost1, lightHost2, readOnlyHost);
+List<HostState> hostsForOverUtilizedTest = Arrays.asList(heavyHost1, lightHost1, lightHost2, readOnlyHost);
         List<HostState> hostsForUnderUtilizedTest = Arrays.asList(heavyHost1, heavyHost2, lightHost1, readOnlyHost);
 
-        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
-        hostManager.updateHostState(heavyHost1);
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);        hostManager.updateHostState(heavyHost1);
         hostManager.updateHostState(heavyHost2);
         hostManager.updateHostState(lightHost1);
         hostManager.updateHostState(lightHost2);
@@ -419,7 +417,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
     }
 
-    @Test
+
+        @Test
     public void dontDoPointlessMovesTest() throws Exception {
         // Suppose we have a cluster that is essentially balanced. Rebalancing it shouldn't do anything.
         int numHosts = 3;
