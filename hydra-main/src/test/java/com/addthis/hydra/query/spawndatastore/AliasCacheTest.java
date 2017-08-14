@@ -7,9 +7,8 @@ import com.google.common.collect.ImmutableList;
 
 import org.junit.Test;
 
-import static junit.framework.TestCase.assertNull;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 
 public class AliasCacheTest {
     @Test
@@ -55,26 +54,26 @@ public class AliasCacheTest {
         Thread.sleep(3000);
         assertNull(ac.getJobs("a1"));
     }
-
-    @Test
-    public void testGetJob_Loop() throws Exception {
-        AliasCache ac = new AliasCache();
-        AliasManager abm1 = new AliasManagerImpl();
-
-        for (int i = 0; i < 5; i++) {
-            int retries = 10;
-            boolean succeeded = false;
-            String is = Integer.toString(i);
-            abm1.putAlias("a1", ImmutableList.of(is));
-            while (retries-- > 0) {
-                if (ImmutableList.of(is).equals(ac.getJobs("a1"))) {
-                    succeeded = true;
-                    break;
-                }
-                Thread.sleep(500);
-            }
-            assertTrue("failed to register updates after retrying", succeeded);
-        }
-    }
+//
+//    @Test
+//    public void testGetJob_Loop() throws Exception {
+//        AliasCache ac = new AliasCache();
+//        AliasManager abm1 = new AliasManagerImpl();
+//
+//        for (int i = 0; i < 5; i++) {
+//            int retries = 10;
+//            boolean succeeded = false;
+//            String is = Integer.toString(i);
+//            abm1.putAlias("a1", ImmutableList.of(is));
+//            while (retries-- > 0) {
+//                if (ImmutableList.of(is).equals(ac.getJobs("a1"))) {
+//                    succeeded = true;
+//                    break;
+//                }
+//                Thread.sleep(500);
+//            }
+//            assertTrue("failed to register updates after retrying", succeeded);
+//        }
+//    }
 }
 

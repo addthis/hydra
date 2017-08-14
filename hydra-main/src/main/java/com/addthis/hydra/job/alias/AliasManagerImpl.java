@@ -216,16 +216,7 @@ public class AliasManagerImpl implements AliasManager {
         }
         spawnDataStore.deleteChild(ALIAS_PATH, alias);
 
-        try {
-            ac.deleteAlias(alias);
-            List<String> jobs = ac.getJobs(alias);
-            if(jobs == null || jobs.size() == 0 ) {
-                log.error("There is no jobs for alias {}", alias);
-                return;
-            }
-        } catch (ExecutionException e) {
-            log.error("",e);
-        }
+        ac.deleteAlias(alias);
     }
 
     /**
