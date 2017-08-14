@@ -325,6 +325,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         lightHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         lightHost1.setUsed(new HostCapacity(10, 10, 10, 200_000_0000L));
 
+
         String lightHost2UUID = "light2";
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
         lightHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
@@ -360,6 +361,10 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         assertTrue("should move something", !assignments.isEmpty());
         assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
 
+
+        // Clear recently balanced hosts
+        bal.clearRecentlyRebalancedHosts();
+
         // Suppose we have one host with under-utilized disk and other hosts with overloaded disks.
         // Should move some tasks from heavy to light, but not too much.
         // Test that rebalance moved tasks on to a light host from heavy hosts
@@ -374,6 +379,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         }
         assertTrue("should move something", !assignments.isEmpty());
         assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
+
     }
 
     @Test

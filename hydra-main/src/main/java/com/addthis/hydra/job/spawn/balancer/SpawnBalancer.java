@@ -423,7 +423,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
         moveAssignments.addAll(rv);
 
-        long byteLimit = (long) ((byteLimitFactor * config.getBytesMovedFullRebalance()) - moveAssignments.getBytesUsed());
+        long byteLimit = getAvailableBytes(byteLimitFactor, moveAssignments.getBytesUsed());
         List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
 
         for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
@@ -1034,13 +1034,13 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // Host disk is overloaded
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
-            rv.addAll(pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true));
+            rv.addAll(pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(),true));
         } else if (isExtremeHost(hostID, true, false)) {
             // Host disk is underloaded
             log.info("[spawn.balancer] {} categorized as underloaded host; looking for tasks to pull onto it", hostID);
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
-            rv.addAll(pushTasksOntoHost(host, heavyHosts, true, 1, config.getTasksMovedFullRebalance(), true));
+            rv.addAll(pushTasksOntoHost(host, heavyHosts, true, true));
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
             log.info("[spawn.balance] {} categorized as overworked host; looking for tasks to push off it", hostID);
@@ -1403,16 +1403,19 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts,
-                                                          boolean limitBytes, double byteLimitFactor, int moveLimit,
-                                                          boolean obeyDontAutobalanceMe) {
+    private long getAvailableBytes(double byteLimitFactor, long bytesUsed) {
+        return (long) ((byteLimitFactor * config.getBytesMovedFullRebalance()) - bytesUsed);
+    }
 
+    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts,
+                                                          boolean limitBytes,
+                                                          boolean obeyDontAutobalanceMe) {
+        int moveLimit = config.getTasksMovedFullRebalance();
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
         moveAssignments.addAll(rv);
 
-        // Available bytes after purgeMisplacedTasks movements
-        long byteLimit = (long) ((byteLimitFactor * config.getBytesMovedFullRebalance()) - moveAssignments.getBytesUsed());
+        long byteLimit = getAvailableBytes(1, moveAssignments.getBytesUsed());
 
         List<HostState> lightHostList = new ArrayList<>();
         lightHostList.add(host);

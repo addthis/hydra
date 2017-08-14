@@ -14,6 +14,7 @@
 package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.spawn.Spawn;
@@ -35,6 +36,12 @@ class MoveAssignmentList extends ArrayList<JobTaskMoveAssignment> {
     public boolean add(JobTaskMoveAssignment assignment) {
         bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
         return super.add(assignment);
+    }
+
+    public void addAll(List<JobTaskMoveAssignment> assignments){
+        for(JobTaskMoveAssignment assignment: assignments) {
+            add(assignment);
+        }
     }
 
     public long getBytesUsed() {
