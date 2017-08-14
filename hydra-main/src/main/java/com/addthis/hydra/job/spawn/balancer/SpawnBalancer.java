@@ -421,9 +421,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                          boolean obeyDontAutobalanceMe) {
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
-        moveAssignments.addAll(rv);
 
-        long byteLimit = getAvailableBytes(byteLimitFactor, moveAssignments.getBytesUsed());
+        long byteLimit = (long) byteLimitFactor * config.getBytesMovedFullRebalance();
         List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
 
         for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
@@ -1040,7 +1039,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             log.info("[spawn.balancer] {} categorized as underloaded host; looking for tasks to pull onto it", hostID);
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
-            rv.addAll(pushTasksOntoHost(host, heavyHosts, true, true));
+            rv.addAll(pushTasksOntoHost(host, heavyHosts));
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
             log.info("[spawn.balance] {} categorized as overworked host; looking for tasks to push off it", hostID);
@@ -1403,42 +1402,27 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    private long getAvailableBytes(double byteLimitFactor, long bytesUsed) {
-        return (long) ((byteLimitFactor * config.getBytesMovedFullRebalance()) - bytesUsed);
-    }
-
-    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts,
-                                                          boolean limitBytes,
-                                                          boolean obeyDontAutobalanceMe) {
+    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts) {
         int moveLimit = config.getTasksMovedFullRebalance();
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
-        moveAssignments.addAll(rv);
-
-        long byteLimit = getAvailableBytes(1, moveAssignments.getBytesUsed());
 
         List<HostState> lightHostList = new ArrayList<>();
         lightHostList.add(host);
 
+        double byteLimitFactor = 1;
+
         for (HostState heavyHost : heavyHosts) {
-            if (moveAssignments.size() >= moveLimit || !canReceiveNewTasks(host)) {
+            if (moveAssignments.size() >= moveLimit || !canReceiveNewTasks(host) || moveAssignments.getBytesUsed() >= config.getBytesMovedFullRebalance()) {
                 break;
             }
-            for (JobTask task : findTasksToMove(heavyHost, obeyDontAutobalanceMe)) {
-                long taskTrueSize = getTaskTrueSize(task);
-                if (limitBytes && (taskTrueSize > byteLimit)) {
-                    continue;
-                }
-                JobTaskMoveAssignment assignment = moveTask(task, heavyHost.getHostUuid(), lightHostList);
-                if (assignment != null && assignment.getTargetUUID() != null) {
-                    markRecentlyReplicatedTo(assignment.getTargetUUID());
-                    moveAssignments.add(assignment);
-                    byteLimit -= taskTrueSize;
-                    break;
-                }
-            }
+            moveAssignments.addAll(pushTasksOffHost(heavyHost, lightHostList, true, byteLimitFactor, 1, true));
+            // Update byteLimitFactor with available byte limit
+            byteLimitFactor = 1 - (moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
         }
-        return moveAssignments;
+
+        rv.addAll(moveAssignments);
+        return rv;
     }
 
     /* For each active job, ensure that the given host has a fair share of tasks from that job */
