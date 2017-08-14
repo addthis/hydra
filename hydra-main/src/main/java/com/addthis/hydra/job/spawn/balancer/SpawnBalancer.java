@@ -444,7 +444,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 byteLimit -= taskTrueSize;
             }
         }
-        return moveAssignments;
+        rv.addAll(moveAssignments);
+        return rv;
     }
 
     /* Look through a hoststate to find tasks that don't correspond to an actual job or are on the wrong host */
