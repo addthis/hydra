@@ -44,9 +44,8 @@ public class AliasCache {
         spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         mapCache = new AvailableCache<List<String>>(DEFAULT_REFRESH_INTERVAL, DEFAULT_CACHE_EXPIRE, DEFAULT_CACHE_SIZE, 2) {
             @Override public List<String> fetchValue(String alias) {
-                String jobs;
                 try {
-                    jobs = spawnDataStore.getChild(ALIAS_PATH, alias);
+                    String jobs = spawnDataStore.getChild(ALIAS_PATH, alias);
                     if(Strings.isNullOrEmpty(jobs)) {
                         log.error("There is no jobs for alias {}", alias);
                         return null;
