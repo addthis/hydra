@@ -3,7 +3,6 @@ package com.addthis.hydra.query.spawndatastore;
 import java.io.IOException;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -62,17 +61,7 @@ public class AliasCache {
     }
 
     public void loadCurrentValues() throws IOException {
-        Map<String, String> aliases = spawnDataStore.getAllChildren(ALIAS_PATH);
-        if ((aliases == null) || aliases.isEmpty()) {
-            log.warn("No aliases found, unless this is on first cluster startup something is probably wrong");
-            return;
-        }
-        mapCache.clear();
-        ObjectMapper mapper = new ObjectMapper();
-        for (Map.Entry<String, String> aliasEntry : aliases.entrySet()) {
-            List<String> jobs = mapper.readValue(aliasEntry.getValue(), new TypeReference<List<String>>() {});
-            mapCache.put(aliasEntry.getKey(), jobs);
-        }
+        mapCache.getLoadingCache();
     }
 
     private void maybeInitMaintenance() {
