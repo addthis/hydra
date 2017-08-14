@@ -128,8 +128,7 @@ export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dje.m
 export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource \
 -Dmeshy.stream.prefetch=true -Dmeshy.senders=1 -Dcom.addthis.hydra.query.MeshQueryWorker.bindAddress=5101 \
 -Dcom.addthis.hydra.query.MeshQueryWorker.root=${HYDRA_LOCAL_DIR} \
--Dcom.addthis.hydra.query.MeshQueryWorker.peers=localhost:5100 \
--agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+-Dcom.addthis.hydra.query.MeshQueryWorker.peers=localhost:5100"
 
 export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local \
 -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 \
@@ -144,7 +143,7 @@ export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspa
 -Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.keyManagerPassword=$HYDRA_LOCAL_DIR/cert/keystore.password \
 -Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.keyStorePath=$HYDRA_LOCAL_DIR/cert/keystore.jks \
 -Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.defaultSSL=false \
--agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006"
+-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
 
 export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dmeshy.autoMesh=false -Dmeshy.throttleLog=true \
 -Dmeshy.buffers.enable=true -Dmeshy.stream.maxopen=10000"

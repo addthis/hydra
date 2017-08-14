@@ -56,7 +56,6 @@ public class AliasManagerImpl implements AliasManager {
     private final ReentrantLock mapLock;
     private final AliasCache ac;
 
-    @VisibleForTesting
     public AliasManagerImpl() throws Exception{
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         this.mapLock = new ReentrantLock();
