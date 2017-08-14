@@ -34,8 +34,6 @@ public class AliasCacheTest {
         abm2.putAlias("a2", ImmutableList.of("j21", "j22"));
 
         AliasCache ac = new AliasCache();
-        assertEquals(ImmutableList.of("j11", "j12"), ac.getJobs("a1"));
-        assertEquals(ImmutableList.of("j21", "j22"), ac.getJobs("a2"));
 
         abm1.putAlias("a1", ImmutableList.of("j110", "j120"));
         Thread.sleep(3000);
@@ -67,6 +65,8 @@ public class AliasCacheTest {
             String is = Integer.toString(i);
             abm1.putAlias("a1", ImmutableList.of(is));
             while (retries-- > 0) {
+                System.out.println("retries = " + retries + ", ImmutableList.of(is) = " + ImmutableList.of(is) + ", ac.getJobw(a1) = " + ac.getJobs("a1"));
+
                 if (ImmutableList.of(is).equals(ac.getJobs("a1"))) {
                     succeeded = true;
                     break;

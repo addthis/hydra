@@ -87,10 +87,6 @@ public class SpawnDataStoreHandler implements AutoCloseable {
         spawnDataStore.close();
     }
 
-//    public AliasCache getAliasCache() {
-//        return aliasCache;
-//    }
-
     public void validateJobForQuery(String job) {
         if (!queryConfigWatcher.safeToQuery(job)) {
             throw new QueryException("job is not safe to query (are queries enabled for this job in spawn?): " + job);

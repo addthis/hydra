@@ -75,7 +75,7 @@ public abstract class AvailableCache<T> implements AutoCloseable {
         cacheBuilder.removalListener(new RemovalListener<Optional<T>, Optional<T>>() {
             @Override
             public void onRemoval(RemovalNotification<Optional<T>, Optional<T>> notification) {
-                log.info("alias {} and its job {} removed", notification.getKey(), notification.getValue());
+                log.info("alias {} and its job {} removed from cache", notification.getKey(), notification.getValue());
             }
         });
         executor = new ThreadPoolExecutor(

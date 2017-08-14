@@ -1,7 +1,5 @@
 package com.addthis.hydra.query.spawndatastore;
 
-import javax.annotation.Nullable;
-
 import java.io.IOException;
 
 import java.util.List;
@@ -45,29 +43,18 @@ public class AliasCache {
     public AliasCache() throws Exception {
         spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         mapCache = new AvailableCache<List<String>>(DEFAULT_REFRESH_INTERVAL, DEFAULT_CACHE_EXPIRE, DEFAULT_CACHE_SIZE, 2) {
-            @Override public List<String> fetchValue(String id) {
-                String child;
+            @Override public List<String> fetchValue(String alias) {
+                String jobs;
                 try {
-                    child = spawnDataStore.getChild(ALIAS_PATH, id);
-                    if(Strings.isNullOrEmpty(child)) {
+                    jobs = spawnDataStore.getChild(ALIAS_PATH, alias);
+                    if(Strings.isNullOrEmpty(jobs)) {
+                        log.error("There is no jobs for alias {}", alias);
                         return null;
+                    } else {
+                        return new ObjectMapper().readValue(jobs, new TypeReference<List<String>>() {});
                     }
                 } catch (Exception e) {
-                    log.error("Error occurred while getting alias {} from Spawn datastore", id, e);
-                    return null;
-                }
-
-                try {
-                    String sJobs = getJobsFromDatastore(id, child);
-                    ObjectMapper mapper = new ObjectMapper();
-                    if(Strings.isNullOrEmpty(sJobs)) {
-                        log.error("There is no jobs for alias {}", id);
-                        return null;
-                    }
-                    List<String> jobs = mapper.readValue(sJobs, new TypeReference<List<String>>() {});
-                    return jobs;
-                } catch (Exception e) {
-                    log.error("Error occurred while fetching alias: {}", id, e);
+                    log.error("Error occurred while getting alias {} from Spawn datastore", alias, e);
                     return null;
                 }
             }
@@ -98,32 +85,13 @@ public class AliasCache {
         }
     }
 
-    /**
-     * thread pool for cache maintenance runs. Should only need one thread.
-     */
     private final ScheduledExecutorService aliasCacheMaintainer = MoreExecutors.getExitingScheduledExecutorService(
             new ScheduledThreadPoolExecutor(1, new ThreadFactoryBuilder().setNameFormat("aliasCacheMaintainer=%d").build()));
 
     public List<String> getJobs(String alias) throws ExecutionException {
         List<String> jobs = mapCache.get(alias);
         if(jobs == null || jobs.size() == 0) {
-            log.error("There is no job(s) for alias " + alias);
-            return null;
-        }
-        return jobs;
-    }
-
-    @Nullable protected String getJobsFromDatastore(String alias, @Nullable String data) throws Exception {
-        if (Strings.isNullOrEmpty(alias)) {
-            return data;
-        }
-        if (Strings.isNullOrEmpty(data)) {
-            mapCache.remove(alias);
-            return data;
-        }
-        String jobs = spawnDataStore.getChild(ALIAS_PATH, alias);
-        if(Strings.isNullOrEmpty(jobs)) {
-            log.error("There is no alias {} in datastore", alias);
+            log.error("There is no job for alias {} ", alias);
             return null;
         }
         return jobs;
@@ -131,9 +99,5 @@ public class AliasCache {
 
    public void deleteAlias(String alias) {
         mapCache.remove(alias);
-    }
-
-    public AvailableCache<List<String>> getMapCache() {
-        return mapCache;
     }
 }

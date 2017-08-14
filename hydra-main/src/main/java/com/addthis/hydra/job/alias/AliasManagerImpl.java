@@ -56,6 +56,7 @@ public class AliasManagerImpl implements AliasManager {
     private final ReentrantLock mapLock;
     private final AliasCache ac;
 
+    @VisibleForTesting
     public AliasManagerImpl() throws Exception{
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         this.mapLock = new ReentrantLock();
@@ -79,9 +80,7 @@ public class AliasManagerImpl implements AliasManager {
      */
     public Map<String, List<String>> getAliases() {
         aliases = spawnDataStore.getAllChildren(ALIAS_PATH);
-
         Map<String, List<String>> alias2Jobs = new HashMap<>();
-
         for (Map.Entry<String, String> aliasEntry : aliases.entrySet()) {
             String key = aliasEntry.getKey();
             List<String> jobs = decodeAliases(aliasEntry.getValue());
@@ -215,7 +214,6 @@ public class AliasManagerImpl implements AliasManager {
             mapLock.unlock();
         }
         spawnDataStore.deleteChild(ALIAS_PATH, alias);
-
         ac.deleteAlias(alias);
     }
 
