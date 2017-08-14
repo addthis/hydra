@@ -5,6 +5,7 @@ import com.addthis.hydra.job.alias.AliasManagerImpl;
 
 import com.google.common.collect.ImmutableList;
 
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -75,6 +76,13 @@ public class AliasCacheTest {
             }
             assertTrue("failed to register updates after retrying", succeeded);
         }
+    }
+
+    @After
+    public void cleanUp() throws Exception {
+        AliasManager abm1 = new AliasManagerImpl();
+        abm1.deleteAlias("a1");
+        abm1.deleteAlias("a2");
     }
 }
 

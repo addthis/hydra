@@ -4,6 +4,7 @@ import com.addthis.hydra.job.alias.AliasManagerImpl;
 
 import com.google.common.collect.ImmutableList;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,5 +52,11 @@ public class SpawnDataStoreHandlerTest {
         abm1.putAlias("a1", ImmutableList.of("j110", "j120"));
         Thread.sleep(3000);
         assertEquals("j110", spawnDataStoreHandler.resolveAlias("a1"));
+    }
+
+    @After
+    public void cleanUp() {
+        abm1.deleteAlias("a1");
+        abm1.deleteAlias("a2");
     }
 }
