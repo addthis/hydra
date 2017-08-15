@@ -50,9 +50,8 @@ public class AliasManagerImpl implements AliasManager {
          * be guaranteed by the implementation of DataStoreUtil. */
     public static final String ALIAS_PATH = "/query/alias";
     private final SpawnDataStore spawnDataStore;
-    
-    private final HashMap<String, List<String>> alias2jobs;
-    private final HashMap<String, String> job2alias;
+    private final Map<String, List<String>> alias2jobs;
+    private final Map<String, String> job2alias;
     private final ObjectMapper mapper;
     private final ReentrantLock mapLock;
     private final AliasCache ac;
@@ -162,7 +161,7 @@ public class AliasManagerImpl implements AliasManager {
      */
     @Nullable private String updateAlias(String alias, @Nullable String jobs) throws Exception {
         if (Strings.isNullOrEmpty(alias)) {
-            log.warn("Ignoring alias since alias {} is null or empty ", alias);
+            log.warn("Ignoring alias {} since it is null or empty ", alias);
             return jobs;
         }
         if (Strings.isNullOrEmpty(jobs)) {
@@ -199,7 +198,7 @@ public class AliasManagerImpl implements AliasManager {
     public void deleteAlias(String alias) throws Exception {
         spawnDataStore.deleteChild(ALIAS_PATH, alias);
         if( !Strings.isNullOrEmpty(spawnDataStore.getChild(ALIAS_PATH, alias))) {
-            log.error("Couldn't delete alias from spawn datastore for alias {}", alias);
+            log.error("Fail to delete alias {} from spawn datastore", alias);
             return;
         }
         mapLock.lock();
