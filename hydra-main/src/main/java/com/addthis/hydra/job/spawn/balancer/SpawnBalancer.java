@@ -1417,9 +1417,16 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             if (moveAssignments.size() >= moveLimit || !canReceiveNewTasks(host) || moveAssignments.getBytesUsed() >= config.getBytesMovedFullRebalance()) {
                 break;
             }
-            moveAssignments.addAll(pushTasksOffHost(heavyHost, lightHostList, true, byteLimitFactor, 1, true));
-            // Update byteLimitFactor with available byte limit
-            byteLimitFactor = 1 - (moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
+            List<JobTaskMoveAssignment> assignments = pushTasksOffHost(heavyHost, lightHostList,true, byteLimitFactor, 10, true);
+
+            // Don't add tasks from the same job which were on different hosts
+            for(JobTaskMoveAssignment assignment : assignments) {
+                if(!moveAssignments.contains(assignment.getJobKey())) {
+                    moveAssignments.add(assignment);
+                    // Update byteLimitFactor with available byte limit
+                    byteLimitFactor = 1 - (moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
+                }
+            }
         }
 
         rv.addAll(moveAssignments);

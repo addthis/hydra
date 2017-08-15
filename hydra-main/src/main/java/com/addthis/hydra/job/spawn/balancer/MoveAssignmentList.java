@@ -14,9 +14,9 @@
 package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import com.addthis.hydra.job.JobTaskMoveAssignment;
+import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
 
 class MoveAssignmentList extends ArrayList<JobTaskMoveAssignment> {
@@ -38,10 +38,13 @@ class MoveAssignmentList extends ArrayList<JobTaskMoveAssignment> {
         return super.add(assignment);
     }
 
-    public void addAll(List<JobTaskMoveAssignment> assignments){
-        for(JobTaskMoveAssignment assignment: assignments) {
-            add(assignment);
+    public boolean contains(JobKey jobKey) {
+        for (JobTaskMoveAssignment assignment : this) {
+            if(assignment.getJobKey().getJobUuid().equals(jobKey.getJobUuid())) {
+                return true;
+            }
         }
+        return false;
     }
 
     public long getBytesUsed() {

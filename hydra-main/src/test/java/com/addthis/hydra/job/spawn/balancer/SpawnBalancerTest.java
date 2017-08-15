@@ -306,17 +306,28 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String heavyHost1UUID = "heavy1";
         HostState heavyHost1 = installHostStateWithUUID(heavyHost1UUID, spawn, true);
         Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 80_000_000_000L, 0);
-        Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 850_000_000L, 0);
-        Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 820_000_000L, 0);
-        heavyHost1.setStopped(simulateJobKeys(gargantuanJob, movableJob1, movableJob2));
-        heavyHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
-        heavyHost1.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
+        Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 820_000_000L, 0);
+        heavyHost1.setStopped(simulateJobKeys(gargantuanJob, movableJob1));
 
         String heavyHost2UUID = "heavy2";
         HostState heavyHost2 = installHostStateWithUUID(heavyHost2UUID, spawn, true);
-        Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 0);
-        Job movableJob4 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 850_000_000L, 0);
-        heavyHost2.setStopped(simulateJobKeys(movableJob3, movableJob4));
+        Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 0);
+        Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 850_000_000L, 0);
+        heavyHost2.setStopped(simulateJobKeys(movableJob2, movableJob3));
+
+        Job movableJob4 = createSpawnJob(spawn, 2, Arrays.asList(heavyHost1UUID, heavyHost2UUID), now, 850_000_000L, 0);
+        // Add job keys for tasks of movableJob1 to the task's assigned host
+        List<JobTask> jobTasks = movableJob4.getCopyOfTasks();
+        Integer i = 0;
+        for(JobTask jobTask : jobTasks) {
+            JobKey[] jobKeys = hostManager.getHostState(jobTask.getHostUUID()).getStopped();
+            JobKey[] newKeys = Arrays.copyOf(jobKeys, jobKeys.length + 1);
+            newKeys[jobKeys.length] = new JobKey(jobTask.getJobUUID(), i++);
+            hostManager.getHostState(jobTask.getHostUUID()).setStopped(newKeys);
+        }
+
+        heavyHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        heavyHost1.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
         heavyHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         heavyHost2.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
 
@@ -324,7 +335,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
         lightHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         lightHost1.setUsed(new HostCapacity(10, 10, 10, 200_000_0000L));
-
 
         String lightHost2UUID = "light2";
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
@@ -335,7 +345,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState readOnlyHost = installHostStateWithUUID(readOnlyHostUUID, spawn, true, true, 0, "default");
         readOnlyHost.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 200_000_000L));
-
 
         List<HostState> hostsForOverUtilizedTest = Arrays.asList(heavyHost1, lightHost1, lightHost2, readOnlyHost);
         List<HostState> hostsForUnderUtilizedTest = Arrays.asList(heavyHost1, heavyHost2, lightHost1, readOnlyHost);
@@ -361,7 +370,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         assertTrue("should move something", !assignments.isEmpty());
         assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
 
-
         // Clear recently balanced hosts
         bal.clearRecentlyRebalancedHosts();
 
@@ -379,7 +387,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         }
         assertTrue("should move something", !assignments.isEmpty());
         assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
-
     }
 
     @Test
