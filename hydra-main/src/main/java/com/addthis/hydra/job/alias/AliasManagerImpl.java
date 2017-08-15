@@ -18,7 +18,6 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import java.io.IOException;
-import java.io.StringWriter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -110,7 +109,6 @@ public class AliasManagerImpl implements AliasManager {
         try {
             alias2jobs.put(alias, jobs);
             job2alias.put(jobs.get(0), alias);
-            StringWriter sw = new StringWriter();
             spawnDataStore.putAsChild(ALIAS_PATH, alias, mapper.writeValueAsString(jobs));
         } catch (Exception e) {
             log.warn("failed to put alias: {}", alias, e);
