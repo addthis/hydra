@@ -66,8 +66,6 @@ public class AliasCacheTest {
             String is = Integer.toString(i);
             abm1.putAlias("a1", ImmutableList.of(is));
             while (retries-- > 0) {
-                System.out.println("retries = " + retries + ", ImmutableList.of(is) = " + ImmutableList.of(is) + ", ac.getJobw(a1) = " + ac.getJobs("a1"));
-
                 if (ImmutableList.of(is).equals(ac.getJobs("a1"))) {
                     succeeded = true;
                     break;

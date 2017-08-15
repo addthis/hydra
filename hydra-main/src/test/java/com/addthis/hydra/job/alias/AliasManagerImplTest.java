@@ -10,6 +10,23 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class AliasManagerImplTest {
+
+//    @Test
+//    public void testTemp() throws Exception {
+//        String ALIAS_PATH = "/query/alias";
+//        SpawnDataStore spawnDataStore  =  DataStoreUtil.makeCanonicalSpawnDataStore();
+//
+//        AliasManager abm = new AliasManagerImpl();
+//        abm.putAlias("a1", ImmutableList.of("j1", "j2"));
+//
+//        //String sJob = spawnDataStore.getChild(ALIAS_PATH, "a1");
+//        if(!Strings.isNullOrEmpty(spawnDataStore.getChild(ALIAS_PATH, "a1"))) {
+//            System.out.println("sJob = " + spawnDataStore.getChild(ALIAS_PATH, "a1"));
+//        } else {
+//            System.out.println("sJob = null or empty");
+//        }
+//    }
+
     @Test
     public void testConstruction() throws Exception {
         AliasManager abm = new AliasManagerImpl();

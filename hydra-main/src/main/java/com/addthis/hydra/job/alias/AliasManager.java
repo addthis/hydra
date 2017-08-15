@@ -22,7 +22,7 @@ public interface AliasManager {
 
     void addAlias(String alias, List<String> jobs);
 
-    void deleteAlias(String alias);
+    void deleteAlias(String alias) throws Exception;
 
     List<String> aliasToJobs(String alias);
 

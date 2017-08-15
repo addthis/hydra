@@ -55,7 +55,7 @@ public class SpawnDataStoreHandlerTest {
     }
 
     @After
-    public void cleanUp() {
+    public void cleanUp() throws Exception {
         abm1.deleteAlias("a1");
         abm1.deleteAlias("a2");
     }

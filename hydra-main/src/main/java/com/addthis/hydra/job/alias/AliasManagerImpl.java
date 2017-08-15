@@ -50,6 +50,7 @@ public class AliasManagerImpl implements AliasManager {
          * be guaranteed by the implementation of DataStoreUtil. */
     public static final String ALIAS_PATH = "/query/alias";
     private final SpawnDataStore spawnDataStore;
+    
     private final HashMap<String, List<String>> alias2jobs;
     private final HashMap<String, String> job2alias;
     private final ObjectMapper mapper;
@@ -111,8 +112,7 @@ public class AliasManagerImpl implements AliasManager {
             alias2jobs.put(alias, jobs);
             job2alias.put(jobs.get(0), alias);
             StringWriter sw = new StringWriter();
-            mapper.writeValue(sw, jobs);
-            spawnDataStore.putAsChild(ALIAS_PATH, alias, sw.toString());
+            spawnDataStore.putAsChild(ALIAS_PATH, alias, mapper.writeValueAsString(jobs));
         } catch (Exception e) {
             log.warn("failed to put alias: {}", alias, e);
             throw Throwables.propagate(e);
@@ -146,45 +146,45 @@ public class AliasManagerImpl implements AliasManager {
         try {
             updateAlias(alias, this.spawnDataStore.getChild(ALIAS_PATH, alias));
         } catch (ExecutionException e) {
-            log.warn("Failed to refresh alias: {}", alias, e);
+            log.error("Failed to refresh alias: {}", alias, e);
         } catch (Exception e) {
-            log.error("",e);
+            log.error("Unexpected error while refreshing alias {}", alias, e);
         }
     }
 
     /**
-     * Load the jobIds for a particular alias from the SpawnDataStore
+     * If jobs is available, update jobs in two maps based on the given alias
+     * Otherwise, delete the job for a given alias from two maps
      *
      * @param alias The alias key to check
-     * @return String The data that was updated (so the cache can be updated)
+     * @param jobs  The jobs to be updated for alias key
+     * @return String The job that was updated
      */
-    @Nullable private String updateAlias(String alias, @Nullable String data) {
+    @Nullable private String updateAlias(String alias, @Nullable String jobs) throws Exception {
         if (Strings.isNullOrEmpty(alias)) {
-            return data;
+            log.warn("Ignoring alias since alias {} is null or empty ", alias);
+            return jobs;
         }
-        if (Strings.isNullOrEmpty(data)) {
+        if (Strings.isNullOrEmpty(jobs)) {
+            log.warn("Ignoring alias {} since there are no jobs and delete alias from two maps", alias);
             deleteAlias(alias);
-            return data;
+            return jobs;
         }
-        List<String> jobs = decodeAliases(data);
-        if (jobs.isEmpty()) {
-            log.warn("no jobs for alias {}, ignoring {}", alias, alias);
-            return data;
-        }
+        List<String> jobList = decodeAliases(jobs);
         mapLock.lock();
         try {
-            alias2jobs.put(alias, jobs);
-            job2alias.put(jobs.get(0), alias);
+            alias2jobs.put(alias, jobList);
+            job2alias.put(jobList.get(0), alias);
         } finally {
             mapLock.unlock();
         }
-        return data;
+        return jobs;
     }
 
     @VisibleForTesting
-    protected List<String> decodeAliases(@Nonnull Object data) {
+    protected List<String> decodeAliases(@Nonnull String data) {
         try {
-            return mapper.readValue(data.toString(), new TypeReference<List<String>>() {});
+            return mapper.readValue(data, new TypeReference<List<String>>() {});
         } catch (IOException e) {
             log.warn("Failed to decode data", e);
             return new ArrayList<>(0);
@@ -196,7 +196,12 @@ public class AliasManagerImpl implements AliasManager {
      *
      * @param alias The alias to check
      */
-    public void deleteAlias(String alias) {
+    public void deleteAlias(String alias) throws Exception {
+        spawnDataStore.deleteChild(ALIAS_PATH, alias);
+        if( !Strings.isNullOrEmpty(spawnDataStore.getChild(ALIAS_PATH, alias))) {
+            log.error("Couldn't delete alias from spawn datastore for alias {}", alias);
+            return;
+        }
         mapLock.lock();
         try {
             List<String> jobs = alias2jobs.get(alias);
@@ -212,7 +217,6 @@ public class AliasManagerImpl implements AliasManager {
         } finally {
             mapLock.unlock();
         }
-        spawnDataStore.deleteChild(ALIAS_PATH, alias);
         ac.deleteAlias(alias);
     }
 
