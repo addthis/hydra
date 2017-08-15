@@ -16,14 +16,10 @@ package com.addthis.hydra.common.hash;
 import com.google.common.hash.Hashing;
 
 public final class Murmur3HashFunction implements StringAndByteHashFunction {
-    private Murmur3HashFunction() {}
-
-    private static class HolderClass {
-        private static final Murmur3HashFunction instance = new Murmur3HashFunction();
-    }
+    private static final Murmur3HashFunction INSTANCE = new Murmur3HashFunction();
 
     public static Murmur3HashFunction getInstance() {
-        return HolderClass.instance;
+        return INSTANCE;
     }
 
     public static int getHash(String input) {
