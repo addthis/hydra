@@ -101,7 +101,7 @@ public class ValueFilterHash extends AbstractValueFilter {
                     // ignore
                 }
             case 5:
-                hash = Murmur3HashFunction.getInstance().getHash(sv);
+                hash = Murmur3HashFunction.getInstance().hash(sv);
                 break;
             default:
                 throw new RuntimeException("Unknown hash type: " + type);

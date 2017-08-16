@@ -22,14 +22,6 @@ public final class Murmur3HashFunction implements StringAndByteHashFunction {
         return INSTANCE;
     }
 
-    public static int getHash(String input) {
-        return Hashing.murmur3_32().hashUnencodedChars(input).asInt();
-    }
-
-    public static int getHash(byte[] input) {
-        return Hashing.murmur3_32().hashBytes(input).asInt();
-    }
-
     @Override public int hash(String input) {
         return Hashing.murmur3_32().hashUnencodedChars(input).asInt();
     }
