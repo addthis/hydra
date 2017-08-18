@@ -22,6 +22,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.common.hash.Murmur3HashFunction;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
 import org.apache.commons.codec.binary.Hex;
@@ -37,6 +38,7 @@ import org.apache.commons.codec.binary.Hex;
  * <li>"2" uses the CUID hash method.</li>
  * <li>"3" uses SHA hashing.</li>
  * <li>"4" uses SHA-1 hashing.</li>
+ * <li>"5" uses Murmur3 hashing.</>
  * </ul>
  * </p>
  * <p/>
@@ -99,6 +101,9 @@ public class ValueFilterHash extends AbstractValueFilter {
                 } catch (NoSuchAlgorithmException e) {
                     // ignore
                 }
+            case 5:
+                hash = Murmur3HashFunction.getInstance().hash(sv);
+                break;
             default:
                 throw new RuntimeException("Unknown hash type: " + type);
         }
