@@ -38,6 +38,7 @@ import org.apache.commons.codec.binary.Hex;
  * <li>"2" uses the CUID hash method.</li>
  * <li>"3" uses SHA hashing.</li>
  * <li>"4" uses SHA-1 hashing.</li>
+ * <li>"5" uses Murmur3 hashing.</>
  * </ul>
  * </p>
  * <p/>
