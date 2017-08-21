@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.minion.Zone;
 
 import org.apache.curator.framework.CuratorFramework;
 
@@ -93,19 +94,18 @@ public class HostManager {
      * List all hosts belonging to a particular minion type, within an availability domain
      *
      * @param minionType         The minion type to find. If null, return all hosts.
-     * @param availibilityDomain The avalibity domain
+     * @param zone The minion's zone information
      * @return A list of hoststates
      */
-    public List<HostState> listHostStatusInAd(@Nullable String minionType, String availabilityDomain) {
+    public  List<HostState> listHostStatusByZone(@Nullable String minionType, Zone zone) {
         return listHostStatus(minionType).stream().
-                filter(hostState -> hostState.getAvailabilityDomain().equals(availabilityDomain)).
-                collect(Collectors.toList());
+                filter(hostState -> hostState.getZone().equals(zone)).
+                                                 collect(Collectors.toList());
     }
 
-    public List<HostState> listHostStatusForHostFail(@Nullable String minionType, String availabilityDomain) {
-        List<HostState> hostStatesInAd = listHostStatusInAd(minionType, availabilityDomain);
-        // if a whole AD is down, make other ADs available
-        return hostStatesInAd.size() > 0 ? hostStatesInAd : listHostStatus(minionType);
+    public  List<HostState> listHostStatusForHostFail(@Nullable String minionType, Zone zone) {
+        List<HostState> hostStatesInZone = listHostStatusByZone(minionType, zone);
+        return hostStatesInZone.size() > 0? hostStatesInZone : listHostStatus(minionType);
     }
 
     public List<HostState> getLiveHosts(@Nullable String minionType) {

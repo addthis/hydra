@@ -31,6 +31,7 @@ import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
+import com.addthis.hydra.minion.Zone;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -240,8 +241,8 @@ public class HostFailWorker {
             if (failState == FailState.FAILING_FS_DEAD) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
-                String ad = spawn.hostManager.getHostState(failedHostUuid).getAvailabilityDomain();
-                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatusForHostFail(null, ad), failedHostUuid);
+                Zone zone = spawn.hostManager.getHostState(failedHostUuid).getZone();
+                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatusForHostFail(null, zone), failedHostUuid);
             } else {
                 HostState host = spawn.hostManager.getHostState(failedHostUuid);
                 if (host == null) {
@@ -251,7 +252,7 @@ public class HostFailWorker {
                 }
                 boolean diskFull = (failState == FailState.DISK_FULL);
                 if (!diskFull && spawn.getSystemManager().isQuiesced()) {
-                    // If filesystem is okay, don't do any moves while spawn is quiesced.
+                    // If filesystem is okay, don't do any moves while spawn is quiesced.s
                     return;
                 }
                 int taskMovingMax = diskFull ? maxMovingTasksDiskFull : maxMovingTasks;
@@ -272,9 +273,9 @@ public class HostFailWorker {
                 if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
-                    String ad = spawn.hostManager.getHostState(failedHostUuid).getAvailabilityDomain();
+                    Zone zone = spawn.hostManager.getHostState(failedHostUuid).getZone();
                     spawn.getSpawnBalancer().fixTasksForFailedHost(
-                            spawn.hostManager.listHostStatusForHostFail(host.getMinionTypes(), ad), failedHostUuid);
+                            spawn.hostManager.listHostStatusForHostFail(host.getMinionTypes(), zone), failedHostUuid);
                 }
             }
         }

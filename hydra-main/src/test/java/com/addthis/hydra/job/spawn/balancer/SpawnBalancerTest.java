@@ -40,6 +40,7 @@ import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnMQ;
+import com.addthis.hydra.minion.Zone;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
@@ -159,15 +160,23 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState fullHost = installHostStateWithUUID(fullHostID, spawn, true);
         fullHost.setUsed(new HostCapacity(0, 0, 0, 9998));
         fullHost.setMax(new HostCapacity(0, 0, 0, 10_000));
+        fullHost.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
+
         int numLightHosts = 9;
         ArrayList<String> hostIDs = new ArrayList<>(numLightHosts + 1);
         hostIDs.add(fullHostID);
+
+        String[] zoneIDs = {"zoneID = a", "zoneID = b", "zoneID = c"};
+        String suffix = ", rackID = \"\", machineID = \"\"";
+
         for (int i = 0; i < numLightHosts; i++) {
             String hostID = "light" + i;
             hostIDs.add(hostID);
             HostState lightHost = installHostStateWithUUID(hostID, spawn, true);
             lightHost.setUsed(new HostCapacity(0, 0, 0, 20_000_000_000L));
             lightHost.setMax(new HostCapacity(0, 0, 0, 100_000_000_000L));
+
+            lightHost.setZone(Configs.decodeObject(Zone.class, zoneIDs[i%zoneIDs.length] + suffix));
         }
         Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
         job.setReplicas(1);
@@ -179,6 +188,16 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             usedHosts.addAll(targets);
         }
         assertTrue("should use many light hosts", numLightHosts > .75 * usedHosts.size());
+
+        // Check that replicas are not assigned to hosts in the same zone
+        for(JobTask task : job.getCopyOfTasks()) {
+            List<String> replicaAssignments = assignments.get(task.getTaskID());
+            for(String replicaAssignment : replicaAssignments) {
+                HostState taskHost = hostManager.getHostState(task.getHostUUID());
+                HostState replicaHost = hostManager.getHostState(replicaAssignment);
+                assertTrue("should not assign replica in the same zone", !taskHost.getZone().equals(replicaHost.getZone()));
+            }
+        }
     }
 
     @Test
@@ -593,6 +612,29 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         addTask = moveAssignmentList.add(new JobTaskMoveAssignment(new JobKey("job1", 0), "srcHost", "destHost", true, false));
         assertTrue("should not add replica", !addTask);
     }
+//    @Test
+//    public void testHostCandidateIterator() throws Exception {
+//        String minionUUID1 = "minion1";
+//        HostState minionHost1 = installHostStateWithUUID(minionUUID1, spawn, true);
+//        minionHost1.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
+//
+//        String minionUUID2 = "minion2";
+//        HostState minionHost2 = installHostStateWithUUID(minionUUID2, spawn, true);
+//        minionHost2.setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
+//
+//        String minionUUID3 = "minion3";
+//        HostState minionHost3 = installHostStateWithUUID(minionUUID3, spawn, true);
+//        minionHost3.setZone(Configs.decodeObject(Zone.class, "zoneID = c, rackID = \"\", machineID = \"\""));
+//
+//        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
+//        hostManager.updateHostState(minionHost1);
+//        hostManager.updateHostState(minionHost2);
+//        hostManager.updateHostState(minionHost3);
+//        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
+//
+//        HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager, spawn.getSpawnBalancer(), );
+//
+//    }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
         Job job = spawn.createJob("fsm", numTasks, hosts, DEFAULT_MINION_TYPE, "foo", false);
