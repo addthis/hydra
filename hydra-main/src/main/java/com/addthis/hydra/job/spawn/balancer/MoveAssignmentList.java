@@ -14,12 +14,13 @@
 package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.addthis.hydra.job.JobTaskMoveAssignment;
-import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
 
-class MoveAssignmentList extends ArrayList<JobTaskMoveAssignment> {
+class MoveAssignmentList {
+    private List<JobTaskMoveAssignment> moveAssignmentList;
     private static final long serialVersionUID = -563719566151798849L;
 
     private final Spawn spawn;
@@ -30,21 +31,39 @@ class MoveAssignmentList extends ArrayList<JobTaskMoveAssignment> {
     public MoveAssignmentList(Spawn spawn, SpawnBalancerTaskSizer taskSizer) {
         this.spawn = spawn;
         this.taskSizer = taskSizer;
+        this.moveAssignmentList = new ArrayList<>();
     }
 
-    @Override
-    public boolean add(JobTaskMoveAssignment assignment) {
-        bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
-        return super.add(assignment);
+    public int size() {
+        return this.moveAssignmentList.size();
     }
 
-    public boolean contains(JobKey jobKey) {
-        for (JobTaskMoveAssignment assignment : this) {
-            if(assignment.getJobKey().getJobUuid().equals(jobKey.getJobUuid())) {
+    public boolean isEmpty() {
+        return this.moveAssignmentList.isEmpty();
+    }
+
+    /**
+     * Returns <tt>true</tt> if the list contains a move assignment
+     * to move any task associated with the specified job.
+     * @param jobID JobID
+     * @return <tt>true</tt> if the list contains an assignment moving any of the job's tasks
+     */
+    public boolean containsJob(String jobID) {
+        for (JobTaskMoveAssignment assignment : this.moveAssignmentList) {
+            if(assignment.getJobKey().getJobUuid().equals(jobID)) {
                 return true;
             }
         }
         return false;
+    }
+
+    public List<JobTaskMoveAssignment> getList() {
+        return this.moveAssignmentList;
+    }
+
+    public boolean add(JobTaskMoveAssignment assignment) {
+        bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
+        return this.moveAssignmentList.add(assignment);
     }
 
     public long getBytesUsed() {
