@@ -215,6 +215,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
 
     Histogram activeTaskHistogram;
 
+    private Zone zone;
+
     @VisibleForTesting
     public Minion(CuratorFramework zkClient) {
         this.zkClient = zkClient;
@@ -234,11 +236,18 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
+        try {
+            zone = Configs.newDefault(Zone.class);
+        } catch (Exception e) {
+
+        }
     }
 
     @JsonCreator
     private Minion(@JsonProperty("dataDir") File rootDir,
-                   @Nullable @JsonProperty("queueType") String queueType) throws Exception {
+                   @Nullable @JsonProperty("queueType") String queueType,
+                    @JsonProperty("zone") Zone zone) throws Exception {
+        this.zone = zone;
         this.rootDir = rootDir;
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
@@ -298,6 +307,10 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             log.error("Exception during startup", ex);
         }
     }
+
+    public Zone getZone() { return zone; }
+
+    public void setZone(Zone zone) { this.zone = zone; }
 
     public File getRootDir() {
         return rootDir;
@@ -604,6 +617,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     private HostState createHostState() {
         long time = System.currentTimeMillis();
         HostState status = new HostState(uuid);
+        status.setZone(zone);
         status.setHost(myHost);
         status.setAvailabilityDomain(myAvailabilityDomain);
         status.setPort(getJettyPort());

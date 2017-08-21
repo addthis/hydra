@@ -55,6 +55,7 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.minion.Zone;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -582,7 +583,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param task          The task that might be replicated to that host
      * @return True if it is okay to put a replica on the host
      */
-    private boolean okToPutReplicaOnHost(HostState hostCandidate, JobTask task) {
+     boolean okToPutReplicaOnHost(HostState hostCandidate, JobTask task) {
         Job job;
         String hostId;
         if ((hostCandidate == null) || ((hostId = hostCandidate.getHostUuid()) == null) ||
@@ -654,7 +655,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 HostState hostToBalance = hostsSorted.get(getWeightedElementIndex(hostsSorted.size(), weight));
                 String ad = hostToBalance.getAvailabilityDomain();
                 return getAssignmentsToBalanceHost(hostToBalance,
-                                                   hostManager.listHostStatusInAd(hostToBalance.getMinionTypes(), ad));
+                                                   hostManager.listHostStatusByZone(hostToBalance.getMinionTypes(), hostToBalance.getZone()));
             case JOB:
                 List<Job> autobalanceJobs = getJobsToAutobalance(hosts);
                 if ((autobalanceJobs == null) || autobalanceJobs.isEmpty()) {
@@ -698,9 +699,15 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         int replicaCount = job.getReplicas();
         Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
+        PriorityQueue<HostAndScore> scoreHeap = new PriorityQueue<>(1, hostAndScoreComparator);
+        for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
+            scoreHeap.add(new HostAndScore(hostManager.getHostState(entry.getKey()), entry.getValue()));
+        }
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
         for (JobTask task : tasks) {
-            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(scoreMap, task);
+
+            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager, spawn.getSpawnBalancer(), hostAndScoreComparator);
+            hostCandidateIterator.generateHostCandidateIterator(scoreMap, task);
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
             List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
             // Add new replicas as long as the task needs them & there are remaining hosts
@@ -715,64 +722,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    private class HostCandidateIterator {
-        List<PriorityQueue<HostAndScore>> orderedHeaps = new ArrayList<>();
-        PriorityQueue<HostAndScore> currentRound = new PriorityQueue<>();
-
-        HostCandidateIterator (Map<String, Double> scoreMap, JobTask task) {
-            Map<String, PriorityQueue<HostAndScore>> scoreHeapPerAd = new HashMap<>();
-            for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
-                HostState hostState = hostManager.getHostState(entry.getKey());
-                if (!okToPutReplicaOnHost(hostState, task)) continue;
-                if (!hostState.canMirrorTasks()) continue;
-                String ad = hostState.getAvailabilityDomain();
-                Double score = entry.getValue();
-                PriorityQueue<HostAndScore> scoreHeap = scoreHeapPerAd.getOrDefault(
-                        ad, new PriorityQueue<>(1, hostAndScoreComparator));
-                scoreHeap.add(new HostAndScore(hostState, score));
-            }
-
-            // put task host AD and replica host AD to the end
-            PriorityQueue<HostAndScore> taskAdHeap =
-                    scoreHeapPerAd.getOrDefault(task.getHostUUID(), new PriorityQueue<HostAndScore>());
-            scoreHeapPerAd.remove(task.getHostUUID());
-            List<JobTaskReplica> replicas = task.getReplicas();
-            List<PriorityQueue<HostAndScore>> replicaHeaps = new ArrayList<>();
-            for (JobTaskReplica replica : replicas) {
-                PriorityQueue<HostAndScore> replicaHeap =
-                        scoreHeapPerAd.getOrDefault(replica.getHostUUID(), new PriorityQueue<HostAndScore>());
-                replicaHeaps.add(replicaHeap);
-                scoreHeapPerAd.remove(replica.getHostUUID());
-            }
-
-            for (Map.Entry<String, PriorityQueue<HostAndScore>> entry : scoreHeapPerAd.entrySet()) {
-                orderedHeaps.add(entry.getValue());
-            }
-            orderedHeaps.add(taskAdHeap);
-            orderedHeaps.addAll(replicaHeaps);
-        }
-
-        HostState getNext() {
-            if (currentRound.size() == 0) {
-                currentRound = getCurrentRound();
-            }
-            HostAndScore nextHostAndScore = currentRound.poll();
-            // add to the end of the heap, by adding 1 to its score
-            return nextHostAndScore.host;
-        }
-
-        PriorityQueue<HostAndScore> getCurrentRound() {
-            PriorityQueue<HostAndScore> currentRound = new PriorityQueue<>();
-            for (PriorityQueue<HostAndScore> heap : orderedHeaps) {
-                if (heap.size() == 0) continue;
-                HostAndScore hs = heap.poll(); // pick the highest from each heap
-                currentRound.add(hs);
-                // move to the end of the heap; reuse after all hosts have been seleted
-                heap.add(new HostAndScore(hs.host, hs.score + 1));
-            }
-            return currentRound;
-        }
-    }
 
     /**
      * Count the number of tasks per host for a single job, then add in a small factor for how heavily weighted each
@@ -1340,8 +1289,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
         Collection<JobKey> alreadyMoved = new HashSet<>();
-        String currentAd = spawn.hostManager.getHostState(pushHost).getAvailabilityDomain();
-        Iterator<String> otherHosts = tasksByHost.getHostIteratorInAd(true, currentAd);
+
+        Zone zone = spawn.hostManager.getHostState(pushHost).getZone();
+        Iterator<String> otherHosts = tasksByHost.getHostIteratorInZone(true, zone);
+
         while (otherHosts.hasNext() && (rv.size() < numToMove)) {
             String pullHost = otherHosts.next();
             if (pushHost.equals(pullHost)) {
@@ -1389,8 +1340,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                  String pullHost) {
         MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
         Collection<JobKey> alreadyMoved = new HashSet<>();
-        String currentAd = spawn.hostManager.getHostState(pullHost).getAvailabilityDomain();
-        Iterator<String> otherHosts = tasksByHost.getHostIteratorInAd(true, currentAd);
+
+        Zone zone = spawn.hostManager.getHostState(pullHost).getZone();
+        Iterator<String> otherHosts = tasksByHost.getHostIteratorInZone(true, zone);
+
         if (isExtremeHost(pullHost, true, true)) {
             return rv;
         }
