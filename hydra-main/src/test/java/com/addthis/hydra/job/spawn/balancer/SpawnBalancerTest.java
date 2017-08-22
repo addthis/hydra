@@ -119,7 +119,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             nextHost.setUp(true);
             hosts.add(nextHost);
         }
-        bal.markRecentlyReplicatedTo("id4");
+        bal.markRecentlyReplicatedTo(Arrays.asList(new JobTaskMoveAssignment(new JobKey(), "", "id4", false, false)));
         hosts = bal.sortHostsByDiskSpace(hosts);
         assertEquals("should get lightest host first", "id0", hosts.get(0).getHostUuid());
         assertEquals("should get heaviest host second to last", "id" + (numHosts - 1), hosts.get(numHosts - 2).getHostUuid());

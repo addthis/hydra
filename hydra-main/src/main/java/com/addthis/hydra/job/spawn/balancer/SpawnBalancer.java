@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -408,7 +409,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     public List<JobTaskMoveAssignment> pushTasksOffHostForFilesystemOkayFailure(HostState host, int moveLimit) {
         List<HostState> hosts = hostManager.listHostStatus(null);
-        return pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
+        List<JobTaskMoveAssignment> moveAssignments = pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
+        markRecentlyReplicatedTo(moveAssignments);
+        return  moveAssignments;
     }
 
     /* Push/pull the tasks on a host to balance its disk, obeying an overall limit on the number of tasks/bytes to
@@ -434,7 +437,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // because either the assignment is null or the target host
             // for the assignment is null
             if (assignment != null && assignment.getTargetUUID() != null) {
-                markRecentlyReplicatedTo(assignment.getTargetUUID());
                 moveAssignments.add(assignment);
                 byteLimit -= taskTrueSize;
             }
@@ -553,9 +555,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     @VisibleForTesting
-    protected void markRecentlyReplicatedTo(String hostId) {
-        if (hostId != null) {
-            recentlyReplicatedToHosts.put(hostId, true);
+    protected void markRecentlyReplicatedTo(List<JobTaskMoveAssignment> moveAssignments) {
+        if (moveAssignments != null) {
+            moveAssignments.stream()
+                           .filter(assignment -> assignment.getTargetUUID() != null)
+                           .map(assignment -> assignment.getTargetUUID())
+                           .forEach(targetHostUUID -> recentlyReplicatedToHosts.put(targetHostUUID, true));
         }
     }
 
@@ -1033,13 +1038,17 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // Host disk is overloaded
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
-            rv.addAll(pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true));
+            List<JobTaskMoveAssignment> moveAssignments = pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true);
+            markRecentlyReplicatedTo(moveAssignments);
+            rv.addAll(moveAssignments);
         } else if (isExtremeHost(hostID, true, false)) {
             // Host disk is underloaded
             log.info("[spawn.balancer] {} categorized as underloaded host; looking for tasks to pull onto it", hostID);
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
-            rv.addAll(pushTasksOntoHost(host, heavyHosts));
+            List<JobTaskMoveAssignment> moveAssignments = pushTasksOntoHost(host, heavyHosts);
+            markRecentlyReplicatedTo(moveAssignments);
+            rv.addAll(moveAssignments);
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
             log.info("[spawn.balance] {} categorized as overworked host; looking for tasks to push off it", hostID);

@@ -45,16 +45,14 @@ class MoveAssignmentList {
     /**
      * Returns <tt>true</tt> if the list contains a move assignment
      * to move any task associated with the specified job.
-     * @param jobID JobID
+     * @param jobId JobID
      * @return <tt>true</tt> if the list contains an assignment moving any of the job's tasks
      */
-    public boolean containsJob(String jobID) {
-        for (JobTaskMoveAssignment assignment : this.moveAssignmentList) {
-            if(assignment.getJobKey().getJobUuid().equals(jobID)) {
-                return true;
-            }
+    public boolean containsJob(String jobId) {
+        if (jobId == null) {
+            return false;
         }
-        return false;
+        return moveAssignmentList.stream().anyMatch(assignment -> jobId.equals(assignment.getJobKey().getJobUuid()));
     }
 
     public List<JobTaskMoveAssignment> getList() {
