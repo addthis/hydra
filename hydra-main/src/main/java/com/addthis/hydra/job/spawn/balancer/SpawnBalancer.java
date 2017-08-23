@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -547,10 +548,24 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
             return null;
         }
+
+        // Get all zones where this task has a replica
+        List<Zone> replicaZones = task.getAllReplicas().stream()
+                                      .map(jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone())
+                                      .distinct()
+                                      .collect(Collectors.toList());
+
         while (hostStateIterator.hasNext()) {
             HostState next = hostStateIterator.next();
             String nextId = next.getHostUuid();
+
+            Zone z = hostManager.getHostState(taskHost).getZone();
+            Zone nz = next.getZone();
+
             if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && next.canMirrorTasks() &&
+                // 'next' host is in a zone without a replica for this task OR 'next' host is in the same zone as this task
+                // This restriction on task movement ensures that replica assignments remain AD-aware
+                (!replicaZones.contains(next.getZone()) || hostManager.getHostState(taskHost).getZone().equals(next.getZone())) &&
                 okToPutReplicaOnHost(next, task)) {
                 hostStateIterator.remove();
                 otherHosts.add(next);
@@ -662,7 +677,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 List<HostState> hostsSorted = new ArrayList<>(hosts);
                 Collections.sort(hostsSorted, hostStateScoreComparator);
                 HostState hostToBalance = hostsSorted.get(getWeightedElementIndex(hostsSorted.size(), weight));
-                String ad = hostToBalance.getAvailabilityDomain();
                 return getAssignmentsToBalanceHost(hostToBalance,
                                                    hostManager.listHostStatusByZone(hostToBalance.getMinionTypes(), hostToBalance.getZone()));
             case JOB:
