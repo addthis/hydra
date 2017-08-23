@@ -18,13 +18,14 @@ public class HostCandidateIterator {
     PriorityQueue<HostAndScore> currentRound;
     private static HostManager hostManager;
     private static SpawnBalancer balancer;
-    private static Comparator<HostAndScore> hostAndScoreComparator;
+    private static Comparator comparator;
 
-    HostCandidateIterator(HostManager hostManager, SpawnBalancer spawnBalancer, Comparator<HostAndScore> hostAndScoreComparator) {
+    HostCandidateIterator(HostManager hostManager, SpawnBalancer spawnBalancer, Comparator comparator) {
         this.hostManager = hostManager;
         this.balancer = spawnBalancer;
-        this.hostAndScoreComparator = hostAndScoreComparator;
-        currentRound = new PriorityQueue<>(hostAndScoreComparator);
+        this.comparator = comparator;
+
+        currentRound = new PriorityQueue<>(comparator);
         orderedHeaps = new ArrayList<>();
     }
 
@@ -38,13 +39,13 @@ public class HostCandidateIterator {
             Zone zone = hostState.getZone();
             Double score = entry.getValue();
             PriorityQueue<HostAndScore> scoreHeap = scoreHeapByZone.getOrDefault(
-                    zone, new PriorityQueue<>(1, hostAndScoreComparator));
+                    zone, new PriorityQueue<>(1, comparator));
             scoreHeap.add(new HostAndScore(hostState, score));
             scoreHeapByZone.putIfAbsent(zone, scoreHeap);
         }
 
         PriorityQueue<HostAndScore> taskHeapByZone =
-                scoreHeapByZone.getOrDefault(hostManager.getHostState(task.getHostUUID()).getZone(), new PriorityQueue<>(hostAndScoreComparator));
+                scoreHeapByZone.getOrDefault(hostManager.getHostState(task.getHostUUID()).getZone(), new PriorityQueue<>(comparator));
 
         if(scoreHeapByZone.get(hostManager.getHostState(task.getHostUUID()).getZone()) != null) {
             scoreHeapByZone.remove(hostManager.getHostState(task.getHostUUID()).getZone());
@@ -53,7 +54,7 @@ public class HostCandidateIterator {
         List<PriorityQueue<HostAndScore>> replicaHeaps = new ArrayList<>();
         for (JobTaskReplica replica : replicas) {
             PriorityQueue<HostAndScore> replicaHeap =
-                    scoreHeapByZone.getOrDefault(hostManager.getHostState(replica.getHostUUID()).getZone(), new PriorityQueue<>(hostAndScoreComparator));
+                    scoreHeapByZone.getOrDefault(hostManager.getHostState(replica.getHostUUID()).getZone(), new PriorityQueue<>(comparator));
             replicaHeaps.add(replicaHeap);
             scoreHeapByZone.remove(hostManager.getHostState(replica.getHostUUID()).getZone());
         }
@@ -76,7 +77,7 @@ public class HostCandidateIterator {
 
     public PriorityQueue<HostAndScore> getCurrentRound() {
         // Should you use a NEW currentRound Priority queue???
-        currentRound = new PriorityQueue<>(hostAndScoreComparator);
+        currentRound = new PriorityQueue<>(comparator);
         for (PriorityQueue<HostAndScore> heap : orderedHeaps) {
             if (heap.size() == 0) continue;
             HostAndScore hs = heap.poll(); // pick the highest from each heap

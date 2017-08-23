@@ -330,6 +330,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         heavyHost1.setStopped(simulateJobKeys(gargantuanJob, movableJob1, movableJob2));
         heavyHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         heavyHost1.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
+        heavyHost1.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
 
         String heavyHost2UUID = "heavy2";
         HostState heavyHost2 = installHostStateWithUUID(heavyHost2UUID, spawn, true);
@@ -338,22 +339,25 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         heavyHost2.setStopped(simulateJobKeys(movableJob3, movableJob4));
         heavyHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         heavyHost2.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
+        heavyHost2.setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
 
         String lightHost1UUID = "light1";
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
         lightHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         lightHost1.setUsed(new HostCapacity(10, 10, 10, 200_000_0000L));
+        lightHost1.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
 
         String lightHost2UUID = "light2";
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
         lightHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         lightHost2.setUsed(new HostCapacity(10, 10, 10, 200_000_000L));
+        lightHost2.setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
 
         String readOnlyHostUUID = "readOnlyHost";
         HostState readOnlyHost = installHostStateWithUUID(readOnlyHostUUID, spawn, true, true, 0, "default");
         readOnlyHost.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 200_000_000L));
-
+        readOnlyHost.setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
 
         List<HostState> hostsForOverUtilizedTest = Arrays.asList(heavyHost1, lightHost1, lightHost2, readOnlyHost);
         List<HostState> hostsForUnderUtilizedTest = Arrays.asList(heavyHost1, heavyHost2, lightHost1, readOnlyHost);
