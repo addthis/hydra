@@ -211,6 +211,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     Channel channel;
     private CuratorFramework zkClient;
     private ZkGroupMembership minionGroupMembership;
+    private HostLocationInitializer hostLocationInitializer;
 
     Histogram activeTaskHistogram;
 
@@ -236,8 +237,10 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
 
     @JsonCreator
     private Minion(@JsonProperty("dataDir") File rootDir,
-                   @Nullable @JsonProperty("queueType") String queueType) throws Exception {
+                   @Nullable @JsonProperty("queueType") String queueType,
+                   @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
         this.rootDir = rootDir;
+        this.hostLocationInitializer = hostLocationInitializer;
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
         liveEverywhereMarkerFile = new File(rootDir, "liveeverywhere.marker");
@@ -614,6 +617,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         }
         status.setUsed(new HostCapacity(0, 0, 0, diskTotal.get() - diskFree.get()));
         status.setMax(new HostCapacity(0, 0, 0, diskTotal.get()));
+        status.setHostLocation(hostLocationInitializer.getHostLocation());
         LinkedList<JobKey> running = new LinkedList<>();
         LinkedList<JobKey> replicating = new LinkedList<>();
         LinkedList<JobKey> backingUp = new LinkedList<>();
