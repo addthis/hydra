@@ -559,9 +559,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             HostState next = hostStateIterator.next();
             String nextId = next.getHostUuid();
 
-            Zone z = hostManager.getHostState(taskHost).getZone();
-            Zone nz = next.getZone();
-
             if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && next.canMirrorTasks() &&
                 // 'next' host is in a zone without a replica for this task OR 'next' host is in the same zone as this task
                 // This restriction on task movement ensures that replica assignments remain AD-aware
@@ -1301,62 +1298,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     }
 
-    /* Pull tasks off the given host and move them elsewhere, obeying the maxPerHost and maxBytesToMove limits */
-    private MoveAssignmentList moveTasksOffHost(JobTaskItemByHostMap tasksByHost,
-                                                int maxPerHost,
-                                                int numToMove,
-                                                long maxBytesToMove,
-                                                String pushHost) {
-        if (log.isDebugEnabled()) {
-            log.debug("received move assignment maxPerHost:{} numToMove:{} pushHost:{}", maxPerHost, numToMove,
-                      pushHost);
-        }
-        MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
-        Collection<JobKey> alreadyMoved = new HashSet<>();
 
-        Zone zone = spawn.hostManager.getHostState(pushHost).getZone();
-        Iterator<String> otherHosts = tasksByHost.getHostIteratorInZone(true, zone);
-
-        while (otherHosts.hasNext() && (rv.size() < numToMove)) {
-            String pullHost = otherHosts.next();
-            if (pushHost.equals(pullHost)) {
-                continue;
-            }
-            HostState pullHostState = hostManager.getHostState(pullHost);
-            Iterator<JobTaskItem> itemIterator = new ArrayList<>(tasksByHost.get(pushHost)).iterator();
-            while (itemIterator.hasNext() && (rv.size() < numToMove) &&
-                   (tasksByHost.get(pullHost).size() < maxPerHost)) {
-                JobTaskItem nextTaskItem = itemIterator.next();
-                long trueSizeBytes = taskSizer.estimateTrueSize(nextTaskItem.getTask());
-                JobKey jobKey = nextTaskItem.getTask().getJobKey();
-                Job job = spawn.getJob(jobKey);
-                if ((job == null) || !pullHostState.getMinionTypes().contains(job.getMinionType())) {
-                    continue;
-                }
-                // Reject the move if the target host is heavily loaded, already has a copy of the task, or the task
-                // is too large
-                if (isExtremeHost(pullHost, true, true) || pullHostState.hasLive(jobKey) ||
-                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove))) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Unable to move task to host {} fullDisk={} alreadyLive={} byteCount={}>{} {}",
-                                  pullHost, isExtremeHost(pullHost, true, true), pullHostState.hasLive(jobKey),
-                                  trueSizeBytes, maxBytesToMove, trueSizeBytes > maxBytesToMove);
-                    }
-                    continue;
-                }
-                if (!alreadyMoved.contains(jobKey) && (pullHost != null) &&
-                    tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false,
-                                                     false));
-                    alreadyMoved.add(nextTaskItem.getTask().getJobKey());
-                    maxBytesToMove -= trueSizeBytes;
-                }
-            }
-        }
-        return rv;
-    }
-
-    /* Push tasks onto the given host, obeying the maxPerHost and maxBytesToMove limits */
     private MoveAssignmentList moveTasksOntoHost(JobTaskItemByHostMap tasksByHost,
                                                  int maxPerHost,
                                                  int numToMove,
@@ -1364,9 +1306,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                  String pullHost) {
         MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
         Collection<JobKey> alreadyMoved = new HashSet<>();
-
-        Zone zone = spawn.hostManager.getHostState(pullHost).getZone();
-        Iterator<String> otherHosts = tasksByHost.getHostIteratorInZone(true, zone);
+        Iterator<String> otherHosts = tasksByHost.getHostIterator(true);
 
         if (isExtremeHost(pullHost, true, true)) {
             return rv;
@@ -1398,10 +1338,25 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove))) {
                     continue;
                 }
-                if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false));
-                    alreadyMoved.add(item.getTask().getJobKey());
-                    maxBytesToMove -= trueSizeBytes;
+
+                // Get all distinct zones where this task has a replica
+                List<Zone> replicaZones = item.getTask()
+                                              .getAllReplicas()
+                                              .stream()
+                                              .map(jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone())
+                                              .distinct()
+                                              .collect(Collectors.toList());
+
+                Zone taskCurrentZone = hostManager.getHostState(item.getTask().getHostUUID()).getZone();
+
+                // Move the task only if the task does not have a replica in pullHost's zone
+                // OR the task is moving within it's current zone
+                if ((!replicaZones.contains(pullHostState.getZone()) || taskCurrentZone.equals(pullHostState.getZone()))) {
+                    if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
+                        rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false));
+                        alreadyMoved.add(item.getTask().getJobKey());
+                        maxBytesToMove -= trueSizeBytes;
+                    }
                 }
                 if (rv.size() >= numToMove) {
                     break;
@@ -1410,6 +1365,76 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         return rv;
     }
+
+    /* Pull tasks off the given host and move them elsewhere, obeying the maxPerHost and maxBytesToMove limits */
+
+    private MoveAssignmentList moveTasksOffHost(JobTaskItemByHostMap tasksByHost,
+                                                int maxPerHost,
+                                                int numToMove,
+                                                long maxBytesToMove,
+                                                String pushHost) {
+        if (log.isDebugEnabled()) {
+            log.debug("received move assignment maxPerHost:{} numToMove:{} pushHost:{}", maxPerHost, numToMove,
+                      pushHost);
+        }
+        MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
+        Collection<JobKey> alreadyMoved = new HashSet<>();
+        Iterator<String> otherHosts = tasksByHost.getHostIterator(true);
+
+        while (otherHosts.hasNext() && (rv.size() < numToMove)) {
+            String pullHost = otherHosts.next();
+            if (pushHost.equals(pullHost)) {
+                continue;
+            }
+            HostState pullHostState = hostManager.getHostState(pullHost);
+            Iterator<JobTaskItem> itemIterator = new ArrayList<>(tasksByHost.get(pushHost)).iterator();
+            while (itemIterator.hasNext() && (rv.size() < numToMove) &&
+                   (tasksByHost.get(pullHost).size() < maxPerHost)) {
+                JobTaskItem nextTaskItem = itemIterator.next();
+                long trueSizeBytes = taskSizer.estimateTrueSize(nextTaskItem.getTask());
+                JobKey jobKey = nextTaskItem.getTask().getJobKey();
+                Job job = spawn.getJob(jobKey);
+                if ((job == null) || !pullHostState.getMinionTypes().contains(job.getMinionType())) {
+                    continue;
+                }
+                // Reject the move if the target host is heavily loaded, already has a copy of the task, or the task
+                // is too large
+                if (isExtremeHost(pullHost, true, true) || pullHostState.hasLive(jobKey) ||
+                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove))) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Unable to move task to host {} fullDisk={} alreadyLive={} byteCount={}>{} {}",
+                                  pullHost, isExtremeHost(pullHost, true, true), pullHostState.hasLive(jobKey),
+                                  trueSizeBytes, maxBytesToMove, trueSizeBytes > maxBytesToMove);
+                    }
+                    continue;
+                }
+
+                // Get all distinct zones where this task has a replica
+                List<Zone> replicaZones = nextTaskItem.getTask()
+                                                      .getAllReplicas()
+                                                      .stream()
+                                                      .map(jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone())
+                                                      .distinct()
+                                                      .collect(Collectors.toList());
+
+                Zone taskCurrentZone = hostManager.getHostState(nextTaskItem.getTask().getHostUUID()).getZone();
+
+                // Move the task only if the task does not have a replica in pullHost's zone
+                // OR the task is moving within it's current zone
+                if ((!replicaZones.contains(pullHostState.getZone()) || taskCurrentZone.equals(pullHostState.getZone()))) {
+                    if (!alreadyMoved.contains(jobKey) && (pullHost != null) &&
+                        tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
+                        rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false,
+                                                         false));
+                        alreadyMoved.add(nextTaskItem.getTask().getJobKey());
+                        maxBytesToMove -= trueSizeBytes;
+                    }
+                }
+            }
+        }
+        return rv;
+    }
+    /* Push tasks onto the given host, obeying the maxPerHost and maxBytesToMove limits */
 
     /* Count the number of tasks that live on each host */
     private JobTaskItemByHostMap generateTaskCountByHost(List<HostState> hosts, Iterable<JobTask> tasks) {

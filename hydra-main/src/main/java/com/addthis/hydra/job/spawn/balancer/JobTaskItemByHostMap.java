@@ -24,7 +24,6 @@ import java.util.Set;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.minion.Zone;
 
 /**
  * A class for maintaining a count of live/replica tasks by host
@@ -116,22 +115,6 @@ class JobTaskItemByHostMap extends HashMap<String, Set<JobTaskItem>> {
         return copy.iterator();
     }
 
-    public Iterator<String> getHostIteratorInAd(boolean smallFirst, String availibilityDomain) {
-        if (hostsSorted == null) {
-            generateHostsSorted();
-        }
-        List<String> retList = new ArrayList<>();
-        for (String host : hostsSorted) {
-            if (spawnBalancer.spawn.hostManager.getHostState(host).getAvailabilityDomain().equals(availibilityDomain)) {
-                retList.add(host);
-            }
-        }
-        if (!smallFirst) {
-            Collections.reverse(retList);
-        }
-        return retList.iterator();
-    }
-
     private boolean hasCapacity(HashMap<String, Integer> map, String key, int max) {
         return !map.containsKey(key) || (map.get(key) < max);
     }
@@ -142,22 +125,6 @@ class JobTaskItemByHostMap extends HashMap<String, Set<JobTaskItem>> {
         } else {
             map.put(key, 1);
         }
-    }
-
-    public Iterator<String> getHostIteratorInZone(boolean smallFirst, Zone zone) {
-        if (hostsSorted == null) {
-            generateHostsSorted();
-        }
-        List<String> retList = new ArrayList<>();
-        for (String host : hostsSorted) {
-            if (spawnBalancer.spawn.hostManager.getHostState(host).getZone().equals(zone)) {
-                retList.add(host);
-            }
-        }
-        if (!smallFirst) {
-            Collections.reverse(retList);
-        }
-        return retList.iterator();
     }
 
     @Override
