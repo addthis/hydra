@@ -1,20 +1,32 @@
 package com.addthis.hydra.minion;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * holds physical location info of a minion. The info can be useful to decide where the replicas should be put, e.g.
  * replicas should be spread across different datacenters as much as possible, to minimize the risk of data loss
  */
+
 public class HostLocation {
+    private static final Logger log = LoggerFactory.getLogger(Minion.class);
+
     private String dataCenter;
     private String rack;
     private String physicalHost; // a physical host can have many VMs
-    private String hostname;
 
-    public HostLocation(String dataCenter, String rack, String physicalHost, String hostname) {
+    @JsonCreator
+    HostLocation(@JsonProperty("dataCenter") String dataCenter,
+                 @JsonProperty("rack") String rack,
+                 @JsonProperty("physicalHost") String physicalHost) {
         this.dataCenter = dataCenter;
         this.rack = rack;
         this.physicalHost = physicalHost;
-        this.hostname = hostname;
+
+        log.info("datacenter = {}, rack ={}, physicalHost = {}", dataCenter, rack, physicalHost);
     }
 
     public String getDataCenter() {
@@ -41,11 +53,4 @@ public class HostLocation {
         this.physicalHost = physicalHost;
     }
 
-    public String getHostname() {
-        return hostname;
-    }
-
-    public void setHostname(String hostname) {
-        this.hostname = hostname;
-    }
 }
