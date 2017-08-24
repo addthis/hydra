@@ -189,7 +189,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         }
         assertTrue("should use many light hosts", numLightHosts > .75 * usedHosts.size());
 
-        // Check that replicas are not assigned to hosts in the same zone
+        // Check that task and replicas are not assigned to hosts in the same zone
+        // TODO: replicas should be assigned to the zone with the fewest number of replicas and not fail to allocate a replica
         for(JobTask task : job.getCopyOfTasks()) {
             List<String> replicaAssignments = assignments.get(task.getTaskID());
             for(String replicaAssignment : replicaAssignments) {
@@ -256,9 +257,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String firstHostUUID = "first";
         String secondHostUUID = "second";
         String thirdHostUUID = "third";
-        installHostStateWithUUID(firstHostUUID, spawn, true);
-        installHostStateWithUUID(secondHostUUID, spawn, true);
-        installHostStateWithUUID(thirdHostUUID, spawn, true);
+        installHostStateWithUUID(firstHostUUID, spawn, true).setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
+        installHostStateWithUUID(secondHostUUID, spawn, true).setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
+        installHostStateWithUUID(thirdHostUUID, spawn, true).setZone(Configs.decodeObject(Zone.class, "zoneID = c, rackID = \"\", machineID = \"\""));
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         int numTasks = 15;
         Job job = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(firstHostUUID, secondHostUUID, thirdHostUUID), now, 1, 0);
@@ -275,8 +276,12 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String lightHost1UUID = "light1";
         String lightHost2UUID = "light2";
         HostState heavyHost = installHostStateWithUUID(heavyHostUUID, spawn, true);
+        heavyHost.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
+        lightHost1.setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
+        lightHost2.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
+
         List<HostState> hosts = Arrays.asList(heavyHost, lightHost1, lightHost2);
         Job smallJob = createJobAndUpdateHosts(spawn, 6, Arrays.asList(heavyHostUUID), now, 1000, 0);
         List<JobTaskMoveAssignment> assignments = bal.getAssignmentsForJobReallocation(smallJob, -1, hosts);
@@ -288,9 +293,11 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         Collections.sort(assignedHosts);
         assertArrayEquals("should move two tasks to each host",
                 new String[]{lightHost1UUID, lightHost1UUID, lightHost2UUID, lightHost2UUID}, assignedHosts.toArray());
+
         Job job2 = createJobAndUpdateHosts(spawn, 6, Arrays.asList(heavyHostUUID, lightHost1UUID, lightHost2UUID), now, 1000, 0);
         String brandNewHostUUID = "brandnew";
         HostState brandNewHost = installHostStateWithUUID(brandNewHostUUID, spawn, true);
+        brandNewHost.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
         List<HostState> newHosts = Arrays.asList(heavyHost, lightHost1, lightHost2, brandNewHost);
         bal.updateAggregateStatistics(newHosts);
         List<JobTaskMoveAssignment> assignments2 = bal.getAssignmentsForJobReallocation(job2, -1, newHosts);
@@ -323,7 +330,10 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String heavyHostUUID = "heavy";
         String lightHostUUID = "light";
         HostState heavyHost = installHostStateWithUUID(heavyHostUUID, spawn, true);
+        heavyHost.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
         HostState lightHost = installHostStateWithUUID(lightHostUUID, spawn, true);
+        lightHost.setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
+
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         int numTasks = 3;
         Job job1 = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(heavyHostUUID), now, 1, 0);
@@ -439,6 +449,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
                        !assignment.getJobKey().getJobUuid().equals(gargantuanJob.getId()));
             assertTrue("shouldn't move from read-only host", !(assignment.getSourceUUID().equals(readOnlyHostUUID)));
         }
+
         assertTrue("should move something", !assignments.isEmpty());
         assertTrue("should not move too much", bytesMoved <= bal.getConfig().getBytesMovedFullRebalance());
     }
@@ -450,10 +461,17 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         int numHosts = 3;
         List<HostState> hosts = new ArrayList<>(numHosts);
         List<String> hostNames = new ArrayList<>(numHosts);
+
+        String[] zoneIDs = {"zoneID = a", "zoneID = b", "zoneID = c"};
+        String suffix = ", rackID = \"\", machineID = \"\"";
+
         for (int i = 0; i < numHosts; i++) {
             String hostName = "host" + i;
             hostNames.add(hostName);
-            hosts.add(installHostStateWithUUID(hostName, spawn, true));
+            HostState host = installHostStateWithUUID(hostName, spawn, true);
+            host.setZone(Configs.decodeObject(Zone.class, zoneIDs[i%zoneIDs.length] + suffix));
+            hosts.add(host);
+
         }
         Job job1 = createJobAndUpdateHosts(spawn, numHosts, hostNames, now, 1000, 0);
         Job job2 = createJobAndUpdateHosts(spawn, numHosts - 1, hostNames, now, 1000, 0);
@@ -517,13 +535,18 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         bal.getConfig().setAllowSameHostReplica(true);
         ArrayList<String> hosts = new ArrayList<>();
+        String[] zoneIDs = {"zoneID = a", "zoneID = b", "zoneID = c"};
+        String suffix = ", rackID = \"\", machineID = \"\"";
         for (int i = 0; i < 8; i++) {
-            installHostStateWithUUID("h" + i, spawn, true);
+            installHostStateWithUUID("h" + i, spawn, true)
+                    .setZone(Configs.decodeObject(Zone.class, zoneIDs[i%zoneIDs.length] + suffix));
             hosts.add("h" + i);
         }
         Job myJob = createJobAndUpdateHosts(spawn, 20, hosts, JitterClock.globalTime(), 2000L, 0);
-        installHostStateWithUUID("hNEW1", spawn, true);
-        installHostStateWithUUID("hNEW2", spawn, true);
+        installHostStateWithUUID("hNEW1", spawn, true)
+                .setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
+        installHostStateWithUUID("hNEW2", spawn, true)
+                .setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
         int tries = 50;
         while (spawn.listAvailableHostIds().size() < 10 && tries-- > 0) {
             // Takes a little while for the new hosts to show up as available
