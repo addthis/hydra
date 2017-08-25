@@ -175,28 +175,25 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             HostState lightHost = installHostStateWithUUID(hostID, spawn, true);
             lightHost.setUsed(new HostCapacity(0, 0, 0, 20_000_000_000L));
             lightHost.setMax(new HostCapacity(0, 0, 0, 100_000_000_000L));
-
             lightHost.setZone(Configs.decodeObject(Zone.class, zoneIDs[i%zoneIDs.length] + suffix));
         }
+
+        int numReplicas = 5;
         Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
-        job.setReplicas(1);
+        job.setReplicas(numReplicas);
         Map<Integer, List<String>> assignments = bal.getAssignmentsForNewReplicas(job);
         HashSet<String> usedHosts = new HashSet<>(numLightHosts);
         for (List<String> targets : assignments.values()) {
-            assertEquals("should make one replica per task", 1, targets.size());
+            assertEquals("should make one replica per task", numReplicas, targets.size());
             assertTrue("should not put replicas on full host", !targets.contains(fullHostID));
             usedHosts.addAll(targets);
         }
         assertTrue("should use many light hosts", numLightHosts > .75 * usedHosts.size());
 
-        // Check that task and replicas are not assigned to hosts in the same zone
-        // TODO: replicas should be assigned to the zone with the fewest number of replicas and not fail to allocate a replica
         for(JobTask task : job.getCopyOfTasks()) {
             List<String> replicaAssignments = assignments.get(task.getTaskID());
             for(String replicaAssignment : replicaAssignments) {
-                HostState taskHost = hostManager.getHostState(task.getHostUUID());
-                HostState replicaHost = hostManager.getHostState(replicaAssignment);
-                assertTrue("should not assign replica in the same zone", !taskHost.getZone().equals(replicaHost.getZone()));
+                assertTrue("should not put replica on the same host as the task", !task.getHostUUID().equals(replicaAssignment));
             }
         }
     }

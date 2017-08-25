@@ -549,21 +549,28 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             return null;
         }
 
-        // Get all zones where this task has a replica
-        List<Zone> replicaZones = task.getAllReplicas().stream()
-                                      .map(jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone())
-                                      .distinct()
-                                      .collect(Collectors.toList());
+        Map<Zone, Long> replicasByZone = task.getAllReplicas()
+                                             .stream()
+                                             .collect(Collectors.groupingBy(jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone(),
+                                                                            Collectors.counting()));
+
+        Zone minReplicaZone = replicasByZone.isEmpty()? null :
+                              Collections.min(replicasByZone.entrySet(), Comparator.comparingLong(Map.Entry::getValue)).getKey();
 
         while (hostStateIterator.hasNext()) {
             HostState next = hostStateIterator.next();
             String nextId = next.getHostUuid();
 
             if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && next.canMirrorTasks() &&
-                // 'next' host is in a zone without a replica for this task OR 'next' host is in the same zone as this task
+                okToPutReplicaOnHost(next, task) &&
+                // 'next' host is in the same zone as this task OR
+                // this task has no replicas OR
+                // 'next' host is in a zone with min number of replicas for this task
                 // This restriction on task movement ensures that replica assignments remain AD-aware
-                (!replicaZones.contains(next.getZone()) || hostManager.getHostState(taskHost).getZone().equals(next.getZone())) &&
-                okToPutReplicaOnHost(next, task)) {
+                //(!replicaZones.contains(next.getZone()) || hostManager.getHostState(taskHost).getZone().equals(next.getZone()))) {
+                (hostManager.getHostState(taskHost).getZone().equals(next.getZone()) ||
+                 minReplicaZone == null ||
+                next.getZone().equals(minReplicaZone))) {
                 hostStateIterator.remove();
                 otherHosts.add(next);
                 return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false);
