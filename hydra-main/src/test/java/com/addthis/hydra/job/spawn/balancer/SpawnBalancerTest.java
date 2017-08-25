@@ -153,28 +153,25 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             HostState lightHost = installHostStateWithUUID(hostID, spawn, true);
             lightHost.setUsed(new HostCapacity(0, 0, 0, 20_000_000_000L));
             lightHost.setMax(new HostCapacity(0, 0, 0, 100_000_000_000L));
-
             lightHost.setZone(Configs.decodeObject(Zone.class, zoneIDs[i%zoneIDs.length] + suffix));
         }
+
+        int numReplicas = 5;
         Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
-        job.setReplicas(1);
+        job.setReplicas(numReplicas);
         Map<Integer, List<String>> assignments = bal.getAssignmentsForNewReplicas(job);
         HashSet<String> usedHosts = new HashSet<>(numLightHosts);
         for (List<String> targets : assignments.values()) {
-            assertEquals("should make one replica per task", 1, targets.size());
+            assertEquals("should make one replica per task", numReplicas, targets.size());
             assertTrue("should not put replicas on full host", !targets.contains(fullHostID));
             usedHosts.addAll(targets);
         }
         assertTrue("should use many light hosts", numLightHosts > .75 * usedHosts.size());
 
-        // Check that task and replicas are not assigned to hosts in the same zone
-        // TODO: replicas should be assigned to the zone with the fewest number of replicas and not fail to allocate a replica
         for(JobTask task : job.getCopyOfTasks()) {
             List<String> replicaAssignments = assignments.get(task.getTaskID());
             for(String replicaAssignment : replicaAssignments) {
-                HostState taskHost = hostManager.getHostState(task.getHostUUID());
-                HostState replicaHost = hostManager.getHostState(replicaAssignment);
-                assertTrue("should not assign replica in the same zone", !taskHost.getZone().equals(replicaHost.getZone()));
+                assertTrue("should not put replica on the same host as the task", !task.getHostUUID().equals(replicaAssignment));
             }
         }
     }
@@ -338,7 +335,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String heavyHost1UUID = "heavy1";
         HostState heavyHost1 = installHostStateWithUUID(heavyHost1UUID, spawn, true);
         Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 80_000_000_000L, 0);
-        Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 850_000_000L, 0);
+        Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 850_000_000L, 2);
         Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 820_000_000L, 0);
         heavyHost1.setStopped(simulateJobKeys(gargantuanJob, movableJob1, movableJob2));
         heavyHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
@@ -347,7 +344,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
         String heavyHost2UUID = "heavy2";
         HostState heavyHost2 = installHostStateWithUUID(heavyHost2UUID, spawn, true);
-        Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 0);
+        Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 5);
         Job movableJob4 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 850_000_000L, 0);
         heavyHost2.setStopped(simulateJobKeys(movableJob3, movableJob4));
         heavyHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
@@ -376,6 +373,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         List<HostState> hostsForUnderUtilizedTest = Arrays.asList(heavyHost1, heavyHost2, lightHost1, readOnlyHost);
 
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
+        spawn.rebalanceReplicas(movableJob1);
+        spawn.rebalanceReplicas(movableJob3);
         hostManager.updateHostState(heavyHost1);
         hostManager.updateHostState(heavyHost2);
         hostManager.updateHostState(lightHost1);

@@ -24,7 +24,6 @@ public class HostCandidateIterator {
         this.hostManager = hostManager;
         this.balancer = spawnBalancer;
         this.comparator = comparator;
-
         currentRound = new PriorityQueue<>(comparator);
         orderedHeaps = new ArrayList<>();
     }
