@@ -12,8 +12,6 @@ import org.slf4j.LoggerFactory;
  */
 
 public class HostLocation {
-    private static final Logger log = LoggerFactory.getLogger(Minion.class);
-
     private String dataCenter;
     private String rack;
     private String physicalHost; // a physical host can have many VMs
@@ -25,8 +23,10 @@ public class HostLocation {
         this.dataCenter = dataCenter;
         this.rack = rack;
         this.physicalHost = physicalHost;
+    }
 
-        log.info("datacenter = {}, rack ={}, physicalHost = {}", dataCenter, rack, physicalHost);
+    public static HostLocation forHost(String hostname) {
+        return new HostLocation("Unknown", "Unknown", hostname);
     }
 
     public String getDataCenter() {
@@ -53,4 +53,7 @@ public class HostLocation {
         this.physicalHost = physicalHost;
     }
 
+    public String toString() {
+        return "dataCenter=" + dataCenter + ", rack=" + rack + ", physicalHost=" + physicalHost;
+    }
 }

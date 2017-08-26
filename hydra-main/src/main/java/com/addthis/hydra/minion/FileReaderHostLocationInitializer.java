@@ -15,7 +15,7 @@ public class FileReaderHostLocationInitializer extends HostLocationInitializer{
 
     @JsonCreator
     public FileReaderHostLocationInitializer() {
-        file = new File(System.getProperty("host.location.file","hostlocation"));
+        file = new File(System.getProperty("hostlocation.file","hostlocation.conf"));
         log.info("Using FileReaderHostLocationInitializer. Reading from {}", file.getName());
         if (!file.exists()) {
             log.warn("File {} does not exist", file.getName());
@@ -24,9 +24,9 @@ public class FileReaderHostLocationInitializer extends HostLocationInitializer{
 
     @Override
     HostLocation getHostLocation() {
-        String dataCenter = "none";
-        String rack = "none";
-        String physicalHost = "none";
+        String dataCenter = "Unknown";
+        String rack = "Unknown";
+        String physicalHost = "Unknown";
         try {
             Config config = ConfigFactory.parseFile(file);
             if (config.hasPath("dataCenter")) {

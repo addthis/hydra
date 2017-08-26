@@ -240,7 +240,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                    @Nullable @JsonProperty("queueType") String queueType,
                    @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
         this.rootDir = rootDir;
-        this.hostLocation = hostLocationInitializer == null ? null : hostLocationInitializer.getHostLocation();
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
         liveEverywhereMarkerFile = new File(rootDir, "liveeverywhere.marker");
@@ -248,6 +247,13 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             myHost = localHost;
         } else {
             myHost = InetAddress.getLocalHost().getHostAddress();
+        }
+        if (hostLocationInitializer == null) {
+            log.warn("No HostLocationInitializer type specified, using default");
+            hostLocation = HostLocation.forHost(myHost);
+        } else {
+            hostLocation = hostLocationInitializer.getHostLocation();
+            log.info("Host location is: {}", hostLocation.toString());
         }
         user = new SimpleExec("whoami").join().stdoutString().trim();
         path = rootDir.getAbsolutePath();

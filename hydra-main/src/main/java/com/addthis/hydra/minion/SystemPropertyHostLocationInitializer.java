@@ -1,5 +1,7 @@
 package com.addthis.hydra.minion;
 
+import com.addthis.basis.util.Parameter;
+
 import org.codehaus.jackson.annotate.JsonCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,9 +16,9 @@ class SystemPropertyHostLocationInitializer extends HostLocationInitializer{
     }
 
     @Override HostLocation getHostLocation() {
-        String dataCenter = System.getProperty("host.location.datacenter","none");
-        String rack = System.getProperty("host.location.rack","none");
-        String physicalHost = System.getProperty("host.physicalhost", "none");
+        String dataCenter = Parameter.value("hostlocation.datacenter", "Unknown");
+        String rack = Parameter.value("hostlocation.rack","Unknown");
+        String physicalHost = Parameter.value("hostlocation.physicalhost", "Unknown");
 
         return new HostLocation(dataCenter, rack, physicalHost);
     }

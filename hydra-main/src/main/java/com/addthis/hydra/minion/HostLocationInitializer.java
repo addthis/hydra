@@ -1,12 +1,12 @@
 package com.addthis.hydra.minion;
 
-import java.io.Closeable;
-import java.io.IOException;
+// import org.codehaus.jackson.map.annotate.JsonDeserialize;
 
-abstract class HostLocationInitializer implements Closeable{
+/**
+ * Provides the method to get host location
+ */
+// @JsonDeserialize(as = SystemPropertyHostLocationInitializer.class)
+abstract class HostLocationInitializer {
 
     abstract HostLocation getHostLocation();
-
-    @Override
-    public void close() throws IOException {}
 }
