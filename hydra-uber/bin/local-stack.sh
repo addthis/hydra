@@ -132,9 +132,7 @@ export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.ad
 
 export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local \
 -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 \
--Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0 -Dbatch.brokerAddresses=localhost \
--Dminion.hostlocation.datacenter=dc1 -Dminion.hostlocation.rack=rack1 -Dminion.hostlocation.physicalhost=physicalhost1" # test DI 1
-#-Dhost.location.file=${HOME}/hostlocation.conf"
+-Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0 -Dbatch.brokerAddresses=localhost"
 
 export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspawn.queryhost=localhost -Dspawn.status.interval=6000 \
 -Dspawn.chore.interval=3000 -Dhttp.post.max=327680  -Dspawn.polltime=10000 -Dspawnbalance.min.disk.percent.avail.replicas=0.01 \

@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * holds physical location info of a minion. The info can be useful to decide where the replicas should be put, e.g.
+ * Holds physical location info of a minion. The info can be useful to decide where the replicas should be put, e.g.
  * replicas should be spread across different datacenters as much as possible, to minimize the risk of data loss
  */
 
