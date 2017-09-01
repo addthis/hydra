@@ -99,7 +99,30 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         LessFiles.deleteDir(new File(tmpRoot));
         spawn.close();
     }
-    
+
+    @Test
+    public void  testPurgeMisplacedTasks() throws Exception {
+        // purgeMisplacedTasks should delete orphaned tasks from non-existent jobs
+        // pruneTaskReassignments should not ignore delete task
+
+        HostState host = installHostStateWithUUID("host", spawn, true);
+        HostState otherHost = installHostStateWithUUID("otherHost", spawn, true);
+        Job job = createSpawnJob(spawn, 1, Arrays.asList("host"), now, 80_000_000_000L, 0);
+        host.setStopped(simulateJobKeys(job));
+        host.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        host.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
+        hostManager.updateHostState(host);
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
+
+        // Delete the job
+        spawn.deleteJob(job.getId());
+
+        String rebalanceMessage = spawn.rebalanceHost("host").toString();
+        String optimizedDirs = rebalanceMessage.substring(rebalanceMessage.indexOf("JobTaskMoveAssignment"));
+        assertTrue("should not fail to delete orphan task", !optimizedDirs.isEmpty());
+    }
+
     @Test
     public void saveLoadConfig() {
         SpawnBalancerConfig config = new SpawnBalancerConfig();
@@ -567,7 +590,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
-
         Job job = spawn.createJob("fsm", numTasks, hosts, DEFAULT_MINION_TYPE, "foo", false);
         job.setReplicas(numReplicas);
         for (JobTask task : job.getCopyOfTasks()) {

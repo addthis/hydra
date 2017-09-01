@@ -1506,6 +1506,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         Map<String, Boolean> snapshot = new HashMap<>(recentlyBalancedHosts.asMap());
         for (JobTaskMoveAssignment assignment : candidateAssignments) {
             String newHostID = assignment.getTargetUUID();
+            if(assignment.delete()) {
+                rv.add(assignment);
+            }
             if (newHostID == null) {
                 continue;
             }
