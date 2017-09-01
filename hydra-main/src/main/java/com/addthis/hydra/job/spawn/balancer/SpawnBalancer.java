@@ -1044,7 +1044,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
             List<JobTaskMoveAssignment> moveAssignments = pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true);
-            markRecentlyReplicatedTo(moveAssignments);
             rv.addAll(moveAssignments);
         } else if (isExtremeHost(hostID, true, false)) {
             // Host disk is underloaded
@@ -1052,7 +1051,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
             List<JobTaskMoveAssignment> moveAssignments = pushTasksOntoHost(host, heavyHosts);
-            markRecentlyReplicatedTo(moveAssignments);
             rv.addAll(moveAssignments);
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
