@@ -52,7 +52,10 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import static com.addthis.hydra.job.IJob.DEFAULT_MINION_TYPE;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 @Category(SlowTest.class)
 public class SpawnBalancerTest extends ZkCodecStartUtil {
@@ -550,6 +553,17 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         downstreamJob.setParameters(Arrays.asList(new JobParameter("param", sourceJob.getId(), "DEFAULT")));
         spawn.updateJob(downstreamJob);
         assertEquals("dependency graph should have two nodes", 2, spawn.getJobDependencies().getNodes().size());
+    }
+
+    @Test
+    public  void moveAssignmentListTest() throws Exception {
+        MoveAssignmentList moveAssignmentList = new MoveAssignmentList(spawn, new SpawnBalancerTaskSizer(spawn, hostManager));
+        // Add a live task
+        boolean addTask = moveAssignmentList.add(new JobTaskMoveAssignment(new JobKey("job1", 0), "srcHost", "destHost", false, false));
+        assertTrue("should add live", addTask);
+        // Try to add a replica of the live task
+        addTask = moveAssignmentList.add(new JobTaskMoveAssignment(new JobKey("job1", 0), "srcHost", "destHost", true, false));
+        assertTrue("should not add replica", !addTask);
     }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {

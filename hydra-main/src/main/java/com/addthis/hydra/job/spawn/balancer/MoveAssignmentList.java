@@ -15,8 +15,10 @@ package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.JobTaskMoveAssignment;
+import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
 
 class MoveAssignmentList {
@@ -42,26 +44,27 @@ class MoveAssignmentList {
         return this.moveAssignmentList.isEmpty();
     }
 
-    /**
-     * Returns <tt>true</tt> if the list contains a move assignment
-     * to move any task associated with the specified job.
-     * @param jobId JobID
-     * @return <tt>true</tt> if the list contains an assignment moving any of the job's tasks
-     */
-    public boolean containsJob(String jobId) {
-        if (jobId == null) {
-            return false;
-        }
-        return moveAssignmentList.stream().anyMatch(assignment -> jobId.equals(assignment.getJobKey().getJobUuid()));
-    }
-
     public List<JobTaskMoveAssignment> getList() {
         return this.moveAssignmentList;
     }
 
+    /**
+     * Add the given JobTaskMoveAssignment to the moveAssignmentList
+     * if the assignment does not move a replica of the same task to the same target host
+     * @param assignment JobTaskMoveAssignment to be added to the moveAssignmentList
+     * @return <tt>true</tt> if this JobTaskMoveAssignment was added to the moveAssignmentList
+     */
     public boolean add(JobTaskMoveAssignment assignment) {
-        bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
-        return this.moveAssignmentList.add(assignment);
+        List<JobKey> jobKeysToTargetHost = moveAssignmentList.stream()
+                          .filter(moveAssignment -> moveAssignment.getTargetUUID().equals(assignment.getTargetUUID()))
+                          .map(moveAssignment -> moveAssignment.getJobKey())
+                          .collect(Collectors.toList());
+
+        if(!jobKeysToTargetHost.contains(assignment.getJobKey())) {
+            bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
+            return this.moveAssignmentList.add(assignment);
+        }
+        return false;
     }
 
     public long getBytesUsed() {
