@@ -118,9 +118,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         // Delete the job
         spawn.deleteJob(job.getId());
 
-        String rebalanceMessage = spawn.rebalanceHost("host").toString();
-        String optimizedDirs = rebalanceMessage.substring(rebalanceMessage.indexOf("JobTaskMoveAssignment"));
-        assertTrue("should not fail to delete orphan task", !optimizedDirs.isEmpty());
+        int optimizedDirsIndex = spawn.rebalanceHost("host").toString().indexOf("JobTaskMoveAssignment");
+        assertTrue("should not fail to delete orphan task", optimizedDirsIndex != -1);
     }
 
     @Test
