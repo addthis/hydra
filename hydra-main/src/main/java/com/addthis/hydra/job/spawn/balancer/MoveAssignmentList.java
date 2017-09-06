@@ -15,10 +15,8 @@ package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.JobTaskMoveAssignment;
-import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
 
 class MoveAssignmentList {
@@ -55,14 +53,16 @@ class MoveAssignmentList {
      * @return <tt>true</tt> if this JobTaskMoveAssignment was added to the moveAssignmentList
      */
     public boolean add(JobTaskMoveAssignment assignment) {
-        List<JobKey> jobKeysToTargetHost = moveAssignmentList.stream()
-                          .filter(moveAssignment -> moveAssignment.getTargetUUID().equals(assignment.getTargetUUID()))
-                          .map(moveAssignment -> moveAssignment.getJobKey())
-                          .collect(Collectors.toList());
+        // Check if moveAssignmentList contains an assignment that moves a replica of the task to the same target host
+        boolean isJobKeyPresent = this.moveAssignmentList.stream()
+                                                         .anyMatch(moveAssignment ->
+                                                                           moveAssignment.getJobKey().equals(assignment.getJobKey()) &&
+                                                                           moveAssignment.getTargetUUID().equals(assignment.getTargetUUID()));
 
-        if(!jobKeysToTargetHost.contains(assignment.getJobKey())) {
+        if(!isJobKeyPresent) {
             bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
-            return this.moveAssignmentList.add(assignment);
+            this.moveAssignmentList.add(assignment);
+            return true;
         }
         return false;
     }

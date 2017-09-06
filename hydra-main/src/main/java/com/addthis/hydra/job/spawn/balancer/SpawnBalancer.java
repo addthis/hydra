@@ -1416,6 +1416,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
+    /**
+     * Pushes one task from each heavyHost on to the lightHost
+     * @param host lightHost to receive tasks
+     * @param heavyHosts list of heavyHosts
+     * @return list of valid JobTaskMoveAssignment(s)
+     */
     private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Collection<HostState> heavyHosts) {
         int moveLimit = config.getTasksMovedFullRebalance();
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
@@ -1506,10 +1512,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         Map<String, Boolean> snapshot = new HashMap<>(recentlyBalancedHosts.asMap());
         for (JobTaskMoveAssignment assignment : candidateAssignments) {
             String newHostID = assignment.getTargetUUID();
-            if(assignment.delete()) {
-                rv.add(assignment);
-            }
-            if (newHostID == null) {
+            if (newHostID == null && !assignment.delete()) {
                 continue;
             }
             JobKey jobKey = assignment.getJobKey();
