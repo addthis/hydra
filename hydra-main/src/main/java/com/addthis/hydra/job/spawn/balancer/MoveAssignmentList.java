@@ -55,9 +55,9 @@ class MoveAssignmentList {
     public boolean add(JobTaskMoveAssignment assignment) {
         // Check if moveAssignmentList contains an assignment that moves a replica of the task to the same target host
         boolean isJobKeyPresent = this.moveAssignmentList.stream()
-                                                         .anyMatch(moveAssignment ->
-                                                                           moveAssignment.getJobKey().equals(assignment.getJobKey()) &&
-                                                                           moveAssignment.getTargetUUID().equals(assignment.getTargetUUID()));
+                                                         .anyMatch(moveAssignment -> moveAssignment.getJobKey().equals(assignment.getJobKey()) &&
+                                                                                     moveAssignment.getTargetUUID() != null &&
+                                                                                     moveAssignment.getTargetUUID().equals(assignment.getTargetUUID()));
 
         if(!isJobKeyPresent) {
             bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
