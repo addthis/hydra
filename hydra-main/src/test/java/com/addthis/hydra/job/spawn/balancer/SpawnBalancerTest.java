@@ -493,7 +493,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         bal.getConfig().setAllowSameHostReplica(true);
         ArrayList<String> hosts = new ArrayList<>();
-        String[] zoneIDs = {"zoneID = a", "zoneID = b", "zoneID = c"};
+        String[] zoneIDs = {"zoneID = a", "zoneID = b"};
         String suffix = ", rackID = \"\", machineID = \"\"";
         for (int i = 0; i < 8; i++) {
             installHostStateWithUUID("h" + i, spawn, true)
@@ -587,30 +587,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         spawn.updateJob(downstreamJob);
         assertEquals("dependency graph should have two nodes", 2, spawn.getJobDependencies().getNodes().size());
     }
-
-//    @Test
-//    public void testHostCandidateIterator() throws Exception {
-//        String minionUUID1 = "minion1";
-//        HostState minionHost1 = installHostStateWithUUID(minionUUID1, spawn, true);
-//        minionHost1.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
-//
-//        String minionUUID2 = "minion2";
-//        HostState minionHost2 = installHostStateWithUUID(minionUUID2, spawn, true);
-//        minionHost2.setZone(Configs.decodeObject(Zone.class, "zoneID = b, rackID = \"\", machineID = \"\""));
-//
-//        String minionUUID3 = "minion3";
-//        HostState minionHost3 = installHostStateWithUUID(minionUUID3, spawn, true);
-//        minionHost3.setZone(Configs.decodeObject(Zone.class, "zoneID = c, rackID = \"\", machineID = \"\""));
-//
-//        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
-//        hostManager.updateHostState(minionHost1);
-//        hostManager.updateHostState(minionHost2);
-//        hostManager.updateHostState(minionHost3);
-//        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
-//
-//        HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager, spawn.getSpawnBalancer(), );
-//
-//    }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
 
