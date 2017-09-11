@@ -534,7 +534,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         bal.getConfig().setAllowSameHostReplica(true);
         ArrayList<String> hosts = new ArrayList<>();
-        String[] zoneIDs = {"zoneID = a", "zoneID = b", "zoneID = c"};
+        String[] zoneIDs = {"zoneID = a", "zoneID = b"};
         String suffix = ", rackID = \"\", machineID = \"\"";
         for (int i = 0; i < 8; i++) {
             installHostStateWithUUID("h" + i, spawn, true)
