@@ -278,7 +278,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             if (liveEverywhereMarkerFile.createNewFile()) {
                 log.info("cutover to live-everywhere tasks");
             }
-            writeState();
+            writeState(false);
             if (!Strings.isNullOrEmpty(queueType)) {
                 runner = new TaskRunner(this);
                 runner.start();
@@ -421,7 +421,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         } finally {
             minionStateLock.unlock();
         }
-        writeState();
+        writeState(true);
     }
 
     void kickNextJob() throws Exception {
@@ -462,7 +462,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                             log.warn("[kick] exception while trying to kick {}", task.getName(), ex);
                             task.sendEndStatus(JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR);
                         }
-                        writeState();
+                        writeState(true);
                         return;
                     }
                 } finally {
@@ -581,10 +581,10 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         }
     }
 
-    void writeState() {
+    void writeState(boolean append) {
         minionStateLock.lock();
         try {
-            LessFiles.write(stateFile, LessBytes.toBytes(CodecJSON.encodeString(this)), false);
+            LessFiles.write(stateFile, LessBytes.toBytes(CodecJSON.encodeString(this)), append);
         } catch (IOException io) {
             log.warn("Error writing minion state to disk: ", io);
             /* assume disk failure: set diskReadOnly=true and exit */
@@ -797,7 +797,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         log.info("[task.new] restore {}/{} root={}", task.id, task.node, task.taskRoot);
         tasks.put(task.getJobKey().toString(), task);
         task.initializeFileVariables();
-        writeState();
+        writeState(true);
         return task;
     }
 
@@ -842,7 +842,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 minionGroupMembership.removeFromGroup("/minion/up", getUUID());
                 zkClient.close();
             }
-            writeState();
+            writeState(true);
         }
     }
 }

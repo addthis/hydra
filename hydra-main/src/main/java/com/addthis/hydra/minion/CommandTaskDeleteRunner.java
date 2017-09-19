@@ -43,7 +43,7 @@ class CommandTaskDeleteRunner implements Runnable {
                 task.setDeleted(true);
                 minion.tasks.remove(task.getJobKey().toString());
                 log.warn("[task.delete] {} terminated={}", task.getJobKey(), terminated);
-                minion.writeState();
+                minion.writeState(true);
             }
             File taskDirFile = new File(minion.rootDir + "/" + delete.getJobUuid() + (delete.getNodeID() != null ? "/" + delete.getNodeID() : ""));
             if (taskDirFile.exists() && taskDirFile.isDirectory()) {
@@ -52,6 +52,5 @@ class CommandTaskDeleteRunner implements Runnable {
         } finally {
             minion.minionStateLock.unlock();
         }
-
     }
 }

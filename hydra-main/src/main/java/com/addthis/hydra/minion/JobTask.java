@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.function.Function;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
@@ -35,7 +35,11 @@ import com.addthis.basis.util.SimpleExec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.*;
+import com.addthis.hydra.job.BackupWorkItem;
+import com.addthis.hydra.job.JobTaskErrorCode;
+import com.addthis.hydra.job.JobTaskState;
+import com.addthis.hydra.job.ReplicateWorkItem;
+import com.addthis.hydra.job.RunTaskWorkItem;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.HourlyBackup;
@@ -446,7 +450,7 @@ public class JobTask implements Codable {
                 }
             }
         }
-        minion.writeState();
+        minion.writeState(true);
         return copyCommands;
     }
 
@@ -1255,7 +1259,7 @@ public class JobTask implements Codable {
         return result;
     }
 
-    private void resetStartTime() {
+    protected void resetStartTime() {
         if (isRunning()) {
             startTime = 0;
         } else if (isReplicating()) {
@@ -1263,7 +1267,7 @@ public class JobTask implements Codable {
         } else if (isBackingUp()) {
             backupStartTime = 0;
         }
-        minion.writeState();
+        minion.writeState(true);
     }
 
     public File getLiveDir() {

@@ -60,7 +60,13 @@ class TaskRunner extends Thread {
                 minion.channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
             } catch (InterruptedException ex) {
                 log.warn("Interrupted while processing task messages");
-                minion.shutdown();
+                try {
+                    minion.close();
+                } catch (Exception e) {
+                    log.error("Minion close throws an exception", e);
+                } finally {
+                    minion.shutdown();
+                }
             } catch (ShutdownSignalException shutdownException) {
                 log.warn("Received unexpected shutdown exception from rabbitMQ", shutdownException);
                 try {
@@ -80,7 +86,13 @@ class TaskRunner extends Thread {
                 if (!(ex instanceof ExecException)) {
                     log.error("Error nacking message", ex);
                 }
-                minion.shutdown();
+                try {
+                    minion.close();
+                } catch (Exception e) {
+                    log.error("Minion close throws an exception", e);
+                } finally {
+                    minion.shutdown();
+                }
             }
         }
     }
