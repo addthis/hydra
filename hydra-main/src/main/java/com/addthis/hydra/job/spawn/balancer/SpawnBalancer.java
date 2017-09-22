@@ -413,11 +413,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     private List<JobTaskMoveAssignment> getMoveAssignments(HostState host, Collection<HostState> otherHosts,
-                                                           boolean limitBytes, double byteLimitFactor,
+                                                           boolean limitBytes, long byteLimit,
                                                            int moveLimit,
                                                            boolean obeyDontAutobalanceMe) {
         List<JobTaskMoveAssignment> moveAssignments = new ArrayList<>();
-        long byteLimit = (long) byteLimitFactor * config.getBytesMovedFullRebalance();
 
         List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
 
@@ -450,7 +449,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                          double byteLimitFactor,
                                                          int moveLimit,
                                                          boolean obeyDontAutobalanceMe) {
-        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host, otherHosts, limitBytes, byteLimitFactor, moveLimit, obeyDontAutobalanceMe);
+        long byteLimit = (long) byteLimitFactor * config.getBytesMovedFullRebalance();
+        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host, otherHosts, limitBytes, byteLimit, moveLimit, obeyDontAutobalanceMe);
         markRecentlyReplicatedTo(moveAssignments);
         moveAssignments.addAll(purgeMisplacedTasks(host, moveLimit));
         return moveAssignments;
@@ -1427,17 +1427,19 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
 
         List<HostState> lightHostList = Arrays.asList(host);
-        double byteLimitFactor = 1;
+        // byteLimitFactor = 1
+        long byteLimit = config.getBytesMovedFullRebalance();
 
         for (HostState heavyHost : heavyHosts) {
             List<JobTaskMoveAssignment> assignments =
-                    getMoveAssignments(heavyHost, lightHostList, true, byteLimitFactor, moveLimit, true);
+                    getMoveAssignments(heavyHost, lightHostList, true, byteLimit, moveLimit, true);
 
+            // Add only one assignment from this heavyHost
             for (JobTaskMoveAssignment assignment : assignments) {
                 // Add the assignment only if it does not move replicas of the same task to the same target host
                 if (moveAssignments.add(assignment)) {
-                    // Update byteLimitFactor with available byte limit
-                    byteLimitFactor = 1 - (moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
+                    // Update byteLimit with available byte limit
+                    byteLimit -= moveAssignments.getBytesUsed();
                     markRecentlyReplicatedTo(Arrays.asList(assignment));
                     break;
                 }
@@ -1512,7 +1514,13 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         Map<String, Boolean> snapshot = new HashMap<>(recentlyBalancedHosts.asMap());
         for (JobTaskMoveAssignment assignment : candidateAssignments) {
             String newHostID = assignment.getTargetUUID();
-            if (newHostID == null && !assignment.delete()) {
+            // Task should be deleted
+            if(assignment.delete()) {
+                rv.add(assignment);
+                continue;
+            }
+            // Target host is null, assignment cannot be executed
+            if (newHostID == null) {
                 continue;
             }
             JobKey jobKey = assignment.getJobKey();

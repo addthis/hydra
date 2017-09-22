@@ -21,7 +21,6 @@ import com.addthis.hydra.job.spawn.Spawn;
 
 class MoveAssignmentList {
     private List<JobTaskMoveAssignment> moveAssignmentList;
-    private static final long serialVersionUID = -563719566151798849L;
 
     private final Spawn spawn;
     private final SpawnBalancerTaskSizer taskSizer;
