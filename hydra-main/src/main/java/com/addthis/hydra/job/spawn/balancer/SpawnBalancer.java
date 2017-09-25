@@ -1517,32 +1517,32 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // Task should be deleted
             if(assignment.delete()) {
                 rv.add(assignment);
-                continue;
+            } else {
+                // Target host is null, assignment cannot be executed
+                if (newHostID == null) {
+                    continue;
+                }
+                JobKey jobKey = assignment.getJobKey();
+                String jobID = (jobKey == null) ? null : jobKey.getJobUuid();
+                if (isExtremeHost(newHostID, true, true)) {
+                    log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                             "because it is already heavily loaded", jobID, newHostID);
+                    continue;
+                }
+                HostState newHost = hostManager.getHostState(newHostID);
+                if ((newHost == null) || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost)) {
+                    log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                             "because it cannot receive the new task", jobID, newHostID);
+                    continue;
+                }
+                if (snapshot.containsKey(newHostID)) {
+                    log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                             "because it already received a different task recently", jobID, newHostID);
+                    continue;
+                }
+                rv.add(assignment);
+                recentlyBalancedHosts.put(newHostID, true);
             }
-            // Target host is null, assignment cannot be executed
-            if (newHostID == null) {
-                continue;
-            }
-            JobKey jobKey = assignment.getJobKey();
-            String jobID = (jobKey == null) ? null : jobKey.getJobUuid();
-            if (isExtremeHost(newHostID, true, true)) {
-                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
-                         "because it is already heavily loaded", jobID, newHostID);
-                continue;
-            }
-            HostState newHost = hostManager.getHostState(newHostID);
-            if ((newHost == null) || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost)) {
-                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
-                         "because it cannot receive the new task", jobID, newHostID);
-                continue;
-            }
-            if (snapshot.containsKey(newHostID)) {
-                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
-                         "because it already received a different task recently", jobID, newHostID);
-                continue;
-            }
-            rv.add(assignment);
-            recentlyBalancedHosts.put(newHostID, true);
         }
         return rv;
     }
