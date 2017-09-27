@@ -409,7 +409,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     public List<JobTaskMoveAssignment> pushTasksOffHostForFilesystemOkayFailure(HostState host, int moveLimit) {
         List<HostState> hosts = hostManager.listHostStatus(null);
-        return pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
+        return pushTasksOffHost(host, hosts, false, moveLimit, false);
     }
 
     private List<JobTaskMoveAssignment> getMoveAssignments(HostState host, Collection<HostState> otherHosts,
@@ -446,11 +446,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private List<JobTaskMoveAssignment> pushTasksOffHost(HostState host,
                                                          Collection<HostState> otherHosts,
                                                          boolean limitBytes,
-                                                         double byteLimitFactor,
                                                          int moveLimit,
                                                          boolean obeyDontAutobalanceMe) {
-        long byteLimit = (long) byteLimitFactor * config.getBytesMovedFullRebalance();
-        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host, otherHosts, limitBytes, byteLimit, moveLimit, obeyDontAutobalanceMe);
+        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host, otherHosts, limitBytes, config.getBytesMovedFullRebalance(), moveLimit, obeyDontAutobalanceMe);
         markRecentlyReplicatedTo(moveAssignments);
         moveAssignments.addAll(purgeMisplacedTasks(host, moveLimit));
         return moveAssignments;
@@ -1045,7 +1043,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // Host disk is overloaded
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
-            List<JobTaskMoveAssignment> moveAssignments = pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true);
+            List<JobTaskMoveAssignment> moveAssignments = pushTasksOffHost(host, lightHosts, true, config.getTasksMovedFullRebalance(), true);
             rv.addAll(moveAssignments);
         } else if (isExtremeHost(hostID, true, false)) {
             // Host disk is underloaded
