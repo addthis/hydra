@@ -1237,7 +1237,6 @@ public class Spawn implements Codable, AutoCloseable {
                     TaskMover tm = new TaskMover(this, hostManager, key, targetHostID, sourceHostID);
                     if (tm.execute()) {
                         hostsAlreadyMovingTasks.add(task.getHostUUID());
-                        jobsNeedingUpdate.add(task.getJobUUID());
                         executedAssignments.add(assignment);
                     }
                 }
