@@ -15,7 +15,11 @@ npm install webpack -g
  - continually build on file changes with `webpack -d --watch`
 
 ### Production
- - build the assets with `webpack -p`
+ - As of Oct. 2017, you don't have to build for production.
+ - This will be done when you execute deploy.py script.
+ - That is, every change under hydra-web directory will be built when you run deploy script.
+ - NOTE: Please install webpack on the machine in which the execution of deploy script takes place. 
+  
 
 ## Where do built files go?
 To keep existing deploy scripts working, all assets are built to 
