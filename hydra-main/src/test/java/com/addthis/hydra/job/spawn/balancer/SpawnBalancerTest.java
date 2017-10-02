@@ -380,6 +380,11 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         hostManager.updateHostState(lightHost1);
         hostManager.updateHostState(lightHost2);
         hostManager.updateHostState(readOnlyHost);
+        int tries = 50;
+        while (spawn.listAvailableHostIds().size() < 5 && tries-- > 0) {
+            // Takes a little while for the new hosts to show up as available
+            Thread.sleep(100);
+        }
         bal.updateAggregateStatistics(hostManager.listHostStatus(null));
 
         // Suppose we have one host with full disk and another with mostly empty disk.
