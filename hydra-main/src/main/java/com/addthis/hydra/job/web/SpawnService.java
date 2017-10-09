@@ -68,6 +68,9 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.prometheus.client.hotspot.DefaultExports;
+import io.prometheus.jmx.JmxCollector;
+
 public class SpawnService {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
@@ -76,11 +79,14 @@ public class SpawnService {
     private static final String WEB_DIR = Parameter.value("spawn.web.dir", "web");
     private static final String INDEX_FILENAME = Parameter.value("spawn.index.file", "index.html");
     private static final int SPAWN_RESOURCE_MAX_AGE_SECONDS = Parameter.intValue("spawn.web.resource.maxAge", 60 * 60 * 24);
+    private static final String PROMETHEUS_CONFIG = Parameter.value("prometheus.metric.config",
+                                                                    "hydra/conf/prometheus.yaml");
 
     private final SpawnServiceConfiguration configuration;
 
     private final boolean sslEnabled;
     private final Server jetty;
+    private final Server server;
     private final SpawnConfig servlets;
     private final WebSocketManager webSocketManager;
     private final Closer resourceCloser;
@@ -90,6 +96,7 @@ public class SpawnService {
 
     public SpawnService(final Spawn spawn, SpawnServiceConfiguration configuration) throws Exception {
         this.jetty = new Server();
+        this.server = new Server(5000);
         this.configuration = configuration;
 
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
@@ -197,6 +204,15 @@ public class SpawnService {
         jetty.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
         jetty.setHandler(gzipHandler);
         jetty.start();
+
+        ServletContextHandler context = new ServletContextHandler();
+        context.setContextPath("/");
+        context.addServlet(new ServletHolder(new io.prometheus.client.exporter.MetricsServlet()), "/prometheus");
+        new JmxCollector(new File("/home/hydra/hydra/conf/prometheus.yaml")).register();
+        DefaultExports.initialize();
+
+        server.setHandler(context);
+        server.start();
 
         jetty.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
             @Override
