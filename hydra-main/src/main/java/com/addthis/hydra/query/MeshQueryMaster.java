@@ -62,6 +62,8 @@ import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
+import com.typesafe.config.ConfigFactory;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.slf4j.Logger;
@@ -110,7 +112,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         this.tracker = tracker;
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
-        server = new Server(Parameter.intValue("hydra.prometheus.mqmaster.port", 9997));
+        server = new Server(ConfigFactory.load().getInt("hydra.prometheus.mqmaster.port"));
         PrometheusServletCreator.create(server, new ServletContextHandler());
         server.start();
         cachey = new MeshFileRefCache(meshy);

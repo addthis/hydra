@@ -98,6 +98,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import com.typesafe.config.ConfigFactory;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
@@ -266,7 +267,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         jetty.setHandler(minionHandler);
         jetty.start();
         // prometheus
-        server = new Server(Parameter.intValue("hydra.prometheus.minion.port", 9999));
+        server = new Server(ConfigFactory.load().getInt("hydra.prometheus.minion.port"));
         PrometheusServletCreator.create(server, new ServletContextHandler());
         server.start();
 
