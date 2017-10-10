@@ -99,7 +99,6 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private final MeshyServer meshy;
 
     private final Server server;
-//    private final ServletContextHandler handler;
 
     /** Abstracts away spawndatastore-reliant functions */
     private final SpawnDataStoreHandler spawnDataStoreHandler;
@@ -115,8 +114,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
         server = new Server(Parameter.intValue("hydra.prometheus.mqmaster.port", 9997));
-        ServletContextHandler handler = new ServletContextHandler();
-        PrometheusServletCreator.create(server, handler);
+        PrometheusServletCreator.create(server, new ServletContextHandler());
         server.start();
         cachey = new MeshFileRefCache(meshy);
         worky = new WorkerTracker();
