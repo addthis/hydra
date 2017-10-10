@@ -86,7 +86,6 @@ public class SpawnService {
 
     private final boolean sslEnabled;
     private final Server jetty;
-    private final Server server;
     private final SpawnConfig servlets;
     private final WebSocketManager webSocketManager;
     private final Closer resourceCloser;
@@ -96,7 +95,6 @@ public class SpawnService {
 
     public SpawnService(final Spawn spawn, SpawnServiceConfiguration configuration) throws Exception {
         this.jetty = new Server();
-        this.server = new Server(5000);
         this.configuration = configuration;
 
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
@@ -199,20 +197,14 @@ public class SpawnService {
         handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
         handler.addServlet(sh, "/*");
 
+        handler.addServlet(new ServletHolder(new io.prometheus.client.exporter.MetricsServlet()), "/prometheus");
+        new JmxCollector(new File("/Users/kexin/hydra/prometheus.yaml")).register();
+        DefaultExports.initialize();
 
         //jetty stuff
         jetty.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
         jetty.setHandler(gzipHandler);
         jetty.start();
-
-        ServletContextHandler context = new ServletContextHandler();
-        context.setContextPath("/");
-        context.addServlet(new ServletHolder(new io.prometheus.client.exporter.MetricsServlet()), "/prometheus");
-        new JmxCollector(new File("/home/hydra/hydra/conf/prometheus.yaml")).register();
-        DefaultExports.initialize();
-
-        server.setHandler(context);
-        server.start();
 
         jetty.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
             @Override
