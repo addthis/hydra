@@ -82,6 +82,7 @@ import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
+import com.addthis.hydra.util.PrometheusServletCreator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -110,11 +111,17 @@ import org.apache.zookeeper.KeeperException;
 
 import org.eclipse.jetty.io.UncheckedIOException;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.prometheus.client.exporter.MetricsServlet;
+import io.prometheus.client.hotspot.DefaultExports;
+import io.prometheus.jmx.JmxCollector;
 
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
@@ -197,7 +204,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final AtomicLong diskTotal = new AtomicLong(0);
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
+    final Server server;
     final ServletHandler metricsHandler;
+    final ServletContextHandler handler;
     final MinionHandler minionHandler = new MinionHandler(this);
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
@@ -228,7 +237,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         user = null;
         path = null;
         jetty = null;
+        server = null;
         metricsHandler = null;
+        handler = null;
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
@@ -261,6 +272,12 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         jetty = new Server(webPort);
         jetty.setHandler(minionHandler);
         jetty.start();
+        // prometheus
+        server = new Server(9999);
+        handler = new ServletContextHandler();
+        PrometheusServletCreator.create(server, handler);
+        server.start();
+
         waitForJetty();
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
         sendStatusFailAfterRetriesCount = Metrics.newCounter(Minion.class,
