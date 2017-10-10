@@ -4,6 +4,9 @@ import java.io.File;
 
 import com.addthis.basis.util.Parameter;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -19,9 +22,7 @@ import io.prometheus.jmx.JmxCollector;
  */
 public class PrometheusServletCreator {
     private static final Logger log = LoggerFactory.getLogger(PrometheusServletCreator.class);
-    private static final String PROMETHEUS_CONFIG = Parameter.value("hydra.prometheus.config",
-                                                                    "hydra/prometheus.yaml");
-
+    private static final String PROMETHEUS_CONFIG = ConfigFactory.load().getString("hydra.prometheus.config");
     /**
      *
      * @param server    An existing jetty server.
@@ -42,6 +43,7 @@ public class PrometheusServletCreator {
         try {
             new JmxCollector(new File(PROMETHEUS_CONFIG)).register();
             DefaultExports.initialize();
+            log.info("Registered prometheus metrics based on rule file:", PROMETHEUS_CONFIG);
         } catch (Exception e) {
             log.warn("Prometheus collector not registerd: ", e);
         }
