@@ -113,15 +113,10 @@ import org.eclipse.jetty.io.UncheckedIOException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.prometheus.client.exporter.MetricsServlet;
-import io.prometheus.client.hotspot.DefaultExports;
-import io.prometheus.jmx.JmxCollector;
 
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
@@ -206,7 +201,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final Server jetty;
     final Server server;
     final ServletHandler metricsHandler;
-    final ServletContextHandler handler;
     final MinionHandler minionHandler = new MinionHandler(this);
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
@@ -239,7 +233,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         jetty = null;
         server = null;
         metricsHandler = null;
-        handler = null;
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
@@ -273,9 +266,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         jetty.setHandler(minionHandler);
         jetty.start();
         // prometheus
-        server = new Server(9999);
-        handler = new ServletContextHandler();
-        PrometheusServletCreator.create(server, handler);
+        server = new Server(Parameter.intValue("hydra.prometheus.minion.port", 9999));
+        PrometheusServletCreator.create(server, new ServletContextHandler());
         server.start();
 
         waitForJetty();
