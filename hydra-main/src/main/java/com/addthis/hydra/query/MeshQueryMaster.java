@@ -32,11 +32,9 @@ import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.LessStreams;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
-
-import io.prometheus.client.exporter.MetricsServlet;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
@@ -66,7 +64,6 @@ import com.google.common.primitives.Ints;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

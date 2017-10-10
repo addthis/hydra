@@ -83,7 +83,7 @@ class MinionHandler extends AbstractHandler {
             response.getWriter().write("ACK");
         } else if (target.startsWith("/metrics")) {
             minion.metricsHandler.handle(target, baseRequest, request, response);
-//        } else if (target.equals("/prometheus")) {
+//        } else if (target.equals("/prometheus")) { // not sure why not work without adding a new server
 //            minion.handler.handle(target, baseRequest, request, response);
 //            log.info("prometheus request handled");
         } else if (target.equals("/job.port")) {
