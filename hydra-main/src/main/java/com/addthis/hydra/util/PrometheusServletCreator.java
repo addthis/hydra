@@ -19,8 +19,8 @@ import io.prometheus.jmx.JmxCollector;
  */
 public class PrometheusServletCreator {
     private static final Logger log = LoggerFactory.getLogger(PrometheusServletCreator.class);
-    private static final String PROMETHEUS_CONFIG = Parameter.value("prometheus.metric.config",
-                                                                    "hydra/conf/prometheus.yaml");
+    private static final String PROMETHEUS_CONFIG = Parameter.value("hydra.prometheus.config",
+                                                                    "hydra/prometheus.yaml");
 
     /**
      *
@@ -34,15 +34,13 @@ public class PrometheusServletCreator {
         register();
     }
 
-
-
     /**
      *
      * register prometheus jmx collector
      */
     private static void register() {
         try {
-            new JmxCollector(new File("/Users/kexin/hydra/prometheus.yaml")).register();
+            new JmxCollector(new File(PROMETHEUS_CONFIG)).register();
             DefaultExports.initialize();
         } catch (Exception e) {
             log.warn("Prometheus collector not registerd: ", e);
