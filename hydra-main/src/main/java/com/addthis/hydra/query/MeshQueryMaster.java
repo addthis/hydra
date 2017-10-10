@@ -32,9 +32,11 @@ import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import com.addthis.basis.util.LessStreams;
 import com.addthis.basis.util.LessFiles;
+import com.addthis.basis.util.LessStreams;
 import com.addthis.basis.util.Parameter;
+
+import io.prometheus.client.exporter.MetricsServlet;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
@@ -48,6 +50,7 @@ import com.addthis.hydra.query.loadbalance.WorkerTracker;
 import com.addthis.hydra.query.spawndatastore.SpawnDataStoreHandler;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
+import com.addthis.hydra.util.PrometheusServletCreator;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
@@ -61,6 +64,9 @@ import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,6 +98,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     /** Primary Mesh server */
     private final MeshyServer meshy;
 
+    private final Server server;
+//    private final ServletContextHandler handler;
+
     /** Abstracts away spawndatastore-reliant functions */
     private final SpawnDataStoreHandler spawnDataStoreHandler;
 
@@ -105,6 +114,10 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         this.tracker = tracker;
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
+        server = new Server(Parameter.intValue("hydra.prometheus.mqmaster.port", 9997));
+        ServletContextHandler handler = new ServletContextHandler();
+        PrometheusServletCreator.create(server, handler);
+        server.start();
         cachey = new MeshFileRefCache(meshy);
         worky = new WorkerTracker();
         allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));

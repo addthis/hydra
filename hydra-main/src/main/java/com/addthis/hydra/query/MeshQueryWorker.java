@@ -28,6 +28,7 @@ import com.addthis.codec.config.Configs;
 import com.addthis.hydra.data.query.source.MeshQuerySource;
 import com.addthis.hydra.data.query.source.SearchRunner;
 import com.addthis.hydra.query.web.QueryServer;
+import com.addthis.hydra.util.PrometheusServletCreator;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.MeshyServerGroup;
 
@@ -123,6 +124,7 @@ public class MeshQueryWorker implements AutoCloseable {
         //Using a servlet as a handler requires a lot of boilerplate
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
         context.setContextPath("/");
+        PrometheusServletCreator.create(newHtmlServer, context);
         newHtmlServer.setHandler(context);
 
         //Actually create the servlet (from yammer metrics)
