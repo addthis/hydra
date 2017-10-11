@@ -21,6 +21,6 @@ log/
 hydra-auth/
 hydra-main/etc/
 hydra-main/log/
-hydra-main/web/spawn2/build
+hydra-main/web/spawn2/
 hydra-web/node_modules/
 .DS_Store
