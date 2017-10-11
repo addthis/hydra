@@ -84,8 +84,7 @@ class MinionHandler extends AbstractHandler {
         } else if (target.startsWith("/metrics")) {
             minion.metricsHandler.handle(target, baseRequest, request, response);
        } else if (target.equals("/prometheus")) {
-            minion.prometheusHandler.handle(target, baseRequest, request, response);
-            log.info("prometheus request handled");
+            minion.handler.handle(target, baseRequest, request, response);
         } else if (target.equals("/job.port")) {
             String job = kv.getValue("id");
             int taskID = kv.getIntValue("node", -1);

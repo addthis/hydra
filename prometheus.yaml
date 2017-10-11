@@ -1,9 +1,0 @@
----
-lowercaseOutputLabelNames: true
-lowercaseOutputName: true
-
-blackListObjectNames:
-- "metrics:type=*,name=jvm*"
-- "metrics:type=*,name=ch.qos.logback.core.Appender.all"
-
-

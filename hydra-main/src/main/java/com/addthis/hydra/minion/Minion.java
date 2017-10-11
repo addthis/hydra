@@ -199,7 +199,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final AtomicLong diskTotal = new AtomicLong(0);
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
-    final ServletContextHandler prometheusHandler = new ServletContextHandler();
+    final ServletContextHandler handler = new ServletContextHandler();
     final ServletHandler metricsHandler;
     final MinionHandler minionHandler = new MinionHandler(this);
     boolean diskReadOnly;
@@ -263,8 +263,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
 
-        PrometheusServletCreator.create(prometheusHandler);
-        prometheusHandler.start();
+        PrometheusServletCreator.create(handler);
+        handler.start();
         jetty.setHandler(minionHandler);
         jetty.start();
 
@@ -832,6 +832,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     @Override public void close() throws Exception {
         if (!shutdown.getAndSet(true)) {
             log.info("[minion] stopping");
+            handler.stop();
             jetty.stop();
             if (runner != null) {
                 runner.stopTaskRunner();

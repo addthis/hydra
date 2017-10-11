@@ -1,8 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.addthis.hydra.util;
-
-import java.io.File;
-
-import com.typesafe.config.ConfigFactory;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -19,7 +28,6 @@ import io.prometheus.jmx.JmxCollector;
  */
 public class PrometheusServletCreator {
     private static final Logger log = LoggerFactory.getLogger(PrometheusServletCreator.class);
-    private static final String PROMETHEUS_CONFIG = ConfigFactory.load().getString("hydra.prometheus.config");
 
     /**
      * Create and add prometheus metrics servlet and add it to an existing handler; register the JMX collector;
@@ -46,9 +54,9 @@ public class PrometheusServletCreator {
      */
     private static void register() {
         try {
-            new JmxCollector(new File(PROMETHEUS_CONFIG)).register();
+            new JmxCollector("").register();
             DefaultExports.initialize();
-            log.info("Registered prometheus metrics based on rule file:", PROMETHEUS_CONFIG);
+            log.info("Prometheus JmxCollector registered.");
         } catch (Exception e) {
             log.warn("Prometheus collector not registerd: ", e);
         }
