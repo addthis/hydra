@@ -98,7 +98,6 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.typesafe.config.ConfigFactory;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
@@ -200,7 +199,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final AtomicLong diskTotal = new AtomicLong(0);
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
-    final Server server;
+    final ServletContextHandler prometheusHandler = new ServletContextHandler();
     final ServletHandler metricsHandler;
     final MinionHandler minionHandler = new MinionHandler(this);
     boolean diskReadOnly;
@@ -232,7 +231,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         user = null;
         path = null;
         jetty = null;
-        server = null;
         metricsHandler = null;
         diskReadOnly = false;
         minionPid = -1;
@@ -264,12 +262,11 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         }
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
+
+        PrometheusServletCreator.create(prometheusHandler);
+        prometheusHandler.start();
         jetty.setHandler(minionHandler);
         jetty.start();
-        // prometheus
-        server = new Server(ConfigFactory.load().getInt("hydra.prometheus.minion.port"));
-        PrometheusServletCreator.create(server, new ServletContextHandler());
-        server.start();
 
         waitForJetty();
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
