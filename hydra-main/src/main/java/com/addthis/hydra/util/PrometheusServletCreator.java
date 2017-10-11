@@ -45,7 +45,7 @@ public class PrometheusServletCreator {
      * @param handler An existing ServletContextHandler.
      */
     public static void create(ServletContextHandler handler) {
-        handler.addServlet(new ServletHolder(new MetricsServlet()), "/prometheus");
+        handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
         register();
     }
 

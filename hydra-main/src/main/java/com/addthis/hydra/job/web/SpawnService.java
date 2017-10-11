@@ -190,7 +190,7 @@ public class SpawnService {
         ServletHolder sh = new ServletHolder(servletContainer);
 
         handler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
+        handler.addServlet(new ServletHolder(new MetricsServlet()), "/yammer_metrics");
         handler.addServlet(sh, "/*");
 
         PrometheusServletCreator.create(jetty, handler);

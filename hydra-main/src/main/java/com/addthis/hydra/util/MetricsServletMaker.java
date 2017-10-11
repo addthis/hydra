@@ -23,7 +23,7 @@ public class MetricsServletMaker {
     public static ServletHandler makeHandler() {
         ServletHandler metricsHandler = new ServletHandler();
         ServletHolder metricsHolder = new ServletHolder(new MetricsServlet());
-        metricsHandler.addServletWithMapping(metricsHolder, "/metrics/*");
+        metricsHandler.addServletWithMapping(metricsHolder, "/yammer_metrics/*");
         return metricsHandler;
     }
 }

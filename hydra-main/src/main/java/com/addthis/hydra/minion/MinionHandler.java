@@ -81,9 +81,9 @@ class MinionHandler extends AbstractHandler {
         }
         if (target.equals("/ping")) {
             response.getWriter().write("ACK");
-        } else if (target.startsWith("/metrics")) {
+        } else if (target.startsWith("/yammer_metrics")) {
             minion.metricsHandler.handle(target, baseRequest, request, response);
-       } else if (target.equals("/prometheus")) {
+       } else if (target.equals("/metrics")) {
             minion.handler.handle(target, baseRequest, request, response);
         } else if (target.equals("/job.port")) {
             String job = kv.getValue("id");
