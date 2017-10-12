@@ -14,12 +14,13 @@
 package com.addthis.hydra.job.spawn.balancer;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.spawn.Spawn;
 
-class MoveAssignmentList extends ArrayList<JobTaskMoveAssignment> {
-    private static final long serialVersionUID = -563719566151798849L;
+class MoveAssignmentList {
+    private List<JobTaskMoveAssignment> moveAssignmentList;
 
     private final Spawn spawn;
     private final SpawnBalancerTaskSizer taskSizer;
@@ -29,12 +30,40 @@ class MoveAssignmentList extends ArrayList<JobTaskMoveAssignment> {
     public MoveAssignmentList(Spawn spawn, SpawnBalancerTaskSizer taskSizer) {
         this.spawn = spawn;
         this.taskSizer = taskSizer;
+        this.moveAssignmentList = new ArrayList<>();
     }
 
-    @Override
+    public int size() {
+        return this.moveAssignmentList.size();
+    }
+
+    public boolean isEmpty() {
+        return this.moveAssignmentList.isEmpty();
+    }
+
+    public List<JobTaskMoveAssignment> getList() {
+        return this.moveAssignmentList;
+    }
+
+    /**
+     * Add the given JobTaskMoveAssignment to the moveAssignmentList
+     * if the assignment does not move a replica of the same task to the same target host
+     * @param assignment JobTaskMoveAssignment to be added to the moveAssignmentList
+     * @return <tt>true</tt> if this JobTaskMoveAssignment was added to the moveAssignmentList
+     */
     public boolean add(JobTaskMoveAssignment assignment) {
-        bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
-        return super.add(assignment);
+        // Check if moveAssignmentList contains an assignment that moves a replica of the task to the same target host
+        boolean isJobKeyPresent = this.moveAssignmentList.stream()
+                                                         .anyMatch(moveAssignment -> moveAssignment.getJobKey().equals(assignment.getJobKey()) &&
+                                                                                     moveAssignment.getTargetUUID() != null &&
+                                                                                     moveAssignment.getTargetUUID().equals(assignment.getTargetUUID()));
+
+        if(!isJobKeyPresent) {
+            bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
+            this.moveAssignmentList.add(assignment);
+            return true;
+        }
+        return false;
     }
 
     public long getBytesUsed() {
