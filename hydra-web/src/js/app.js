@@ -172,6 +172,8 @@ function(
                         app.loginDialog.close();
                     }
                     var token = response;
+                    console.log('@@@ TOKEN = ' + token)
+
                     if (!token) {
                         alertify.error("Authentication error");
                     } else {
