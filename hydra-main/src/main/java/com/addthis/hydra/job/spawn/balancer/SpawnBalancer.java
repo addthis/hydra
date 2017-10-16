@@ -743,7 +743,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
             List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
             // Add new replicas as long as the task needs them & there are remaining hosts
-            while (hostIDsToAdd.size() + numExistingReplicas < replicaCount) {
+            while (hostIDsToAdd.size() + numExistingReplicas < replicaCount && hostCandidateIterator.hasNextHost()) {
                 HostState candidateHost = hostCandidateIterator.getNext();
                 hostIDsToAdd.add(candidateHost.getHostUuid());
             }
