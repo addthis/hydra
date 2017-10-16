@@ -1508,7 +1508,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
         rv.addAll(moveAssignments.getList());
         return rv;
-    }
+}
 
     /* For each active job, ensure that the given host has a fair share of tasks from that job */
     private Collection<JobTaskMoveAssignment> balanceActiveJobsOnHost(HostState host, List<HostState> hosts) {
