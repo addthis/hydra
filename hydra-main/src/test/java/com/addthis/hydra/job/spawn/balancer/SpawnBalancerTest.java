@@ -289,7 +289,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         }
         Collections.sort(assignedHosts);
         assertArrayEquals("should move two tasks to each host",
-                new String[]{lightHost1UUID, lightHost1UUID, lightHost2UUID, lightHost2UUID}, assignedHosts.toArray());
+                          new String[]{lightHost1UUID, lightHost1UUID, lightHost2UUID, lightHost2UUID}, assignedHosts.toArray());
 
         Job job2 = createJobAndUpdateHosts(spawn, 6, Arrays.asList(heavyHostUUID, lightHost1UUID, lightHost2UUID), now, 1000, 0);
         String brandNewHostUUID = "brandnew";
@@ -404,7 +404,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         List<HostState> hostsForOverUtilizedTest = Arrays.asList(heavyHost1, lightHost1, lightHost2, readOnlyHost);
         List<HostState> hostsForUnderUtilizedTest = Arrays.asList(heavyHost1, heavyHost2, lightHost1, readOnlyHost);
 
-        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);        hostManager.updateHostState(heavyHost1);
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
+        hostManager.updateHostState(heavyHost1);
         hostManager.updateHostState(heavyHost2);
         hostManager.updateHostState(lightHost1);
         hostManager.updateHostState(lightHost2);
@@ -450,7 +451,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     }
 
 
-        @Test
+    @Test
     public void dontDoPointlessMovesTest() throws Exception {
         // Suppose we have a cluster that is essentially balanced. Rebalancing it shouldn't do anything.
         int numHosts = 3;
@@ -472,12 +473,12 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         Job job2 = createJobAndUpdateHosts(spawn, numHosts - 1, hostNames, now, 1000, 0);
         for (HostState host : hosts) {
             assertEquals("shouldn't move anything for " + host.getHostUuid(), 0,
-                    bal.getAssignmentsToBalanceHost(host, hosts).size());
+                         bal.getAssignmentsToBalanceHost(host, hosts).size());
         }
         assertEquals("shouldn't move anything for " + job1.getId(), 0,
-                bal.getAssignmentsForJobReallocation(job1, -1, hosts).size());
+                     bal.getAssignmentsForJobReallocation(job1, -1, hosts).size());
         assertEquals("shouldn't move anything for " + job2.getId(), 0,
-                bal.getAssignmentsForJobReallocation(job2, -1, hosts).size());
+                     bal.getAssignmentsForJobReallocation(job2, -1, hosts).size());
 
     }
 

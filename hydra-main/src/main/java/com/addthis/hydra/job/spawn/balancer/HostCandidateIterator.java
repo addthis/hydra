@@ -29,7 +29,7 @@ public class HostCandidateIterator {
     }
 
     public boolean hasNextHost() {
-        return !(currentRound.isEmpty() && getCurrentRound().isEmpty());
+        return !currentRound.isEmpty() || hasNextRound();
     }
 
     public void generateHostCandidateIterator (Map<String, Double> scoreMap,
@@ -78,9 +78,17 @@ public class HostCandidateIterator {
         return nextHostAndScore.host;
     }
 
+    private boolean hasNextRound() {
+        for(PriorityQueue<HostAndScore> heap : orderedHeaps) {
+            if(!heap.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public PriorityQueue<HostAndScore> getCurrentRound() {
-        // Should you use a NEW currentRound Priority queue???
-        //currentRound = new PriorityQueue<>(comparator);
+        PriorityQueue<HostAndScore> currentRound = new PriorityQueue<>(comparator);
         for (PriorityQueue<HostAndScore> heap : orderedHeaps) {
             if (heap.size() == 0) continue;
             HostAndScore hs = heap.poll(); // pick the highest from each heap
