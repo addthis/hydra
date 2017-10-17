@@ -211,10 +211,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     Channel channel;
     private CuratorFramework zkClient;
     private ZkGroupMembership minionGroupMembership;
+    private HostLocation hostLocation;
 
     Histogram activeTaskHistogram;
-
-    private Zone zone;
 
     @VisibleForTesting
     public Minion(CuratorFramework zkClient) {
@@ -234,18 +233,12 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
-        try {
-            zone = Configs.newDefault(Zone.class);
-        } catch (Exception e) {
-
-        }
     }
 
     @JsonCreator
     private Minion(@JsonProperty("dataDir") File rootDir,
                    @Nullable @JsonProperty("queueType") String queueType,
-                    @JsonProperty("zone") Zone zone) throws Exception {
-        this.zone = zone;
+                   @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
         this.rootDir = rootDir;
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
@@ -254,6 +247,13 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             myHost = localHost;
         } else {
             myHost = InetAddress.getLocalHost().getHostAddress();
+        }
+        if (hostLocationInitializer == null) {
+            log.warn("No HostLocationInitializer type specified, using default");
+            hostLocation = HostLocation.forHost(myHost);
+        } else {
+            hostLocation = hostLocationInitializer.getHostLocation();
+            log.info("Host location is: {}", hostLocation.toString());
         }
         user = new SimpleExec("whoami").join().stdoutString().trim();
         path = rootDir.getAbsolutePath();
@@ -304,10 +304,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             log.error("Exception during startup", ex);
         }
     }
-
-    public Zone getZone() { return zone; }
-
-    public void setZone(Zone zone) { this.zone = zone; }
 
     public File getRootDir() {
         return rootDir;
@@ -610,7 +606,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     private HostState createHostState() {
         long time = System.currentTimeMillis();
         HostState status = new HostState(uuid);
-        status.setZone(zone);
         status.setHost(myHost);
         status.setPort(getJettyPort());
         status.setGroup(group);
@@ -628,6 +623,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         }
         status.setUsed(new HostCapacity(0, 0, 0, diskTotal.get() - diskFree.get()));
         status.setMax(new HostCapacity(0, 0, 0, diskTotal.get()));
+        status.setHostLocation(hostLocation);
         LinkedList<JobKey> running = new LinkedList<>();
         LinkedList<JobKey> replicating = new LinkedList<>();
         LinkedList<JobKey> backingUp = new LinkedList<>();

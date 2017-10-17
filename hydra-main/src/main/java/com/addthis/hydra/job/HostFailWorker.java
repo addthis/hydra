@@ -29,9 +29,9 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
-import com.addthis.hydra.minion.Zone;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -241,8 +241,8 @@ public class HostFailWorker {
             if (failState == FailState.FAILING_FS_DEAD) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
-                Zone zone = spawn.hostManager.getHostState(failedHostUuid).getZone();
-                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatusForHostFail(null, zone), failedHostUuid);
+                HostLocation location = spawn.hostManager.getHostState(failedHostUuid).getHostLocation();
+                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatusForHostFail(null, location), failedHostUuid);
             } else {
                 HostState host = spawn.hostManager.getHostState(failedHostUuid);
                 if (host == null) {
@@ -273,9 +273,9 @@ public class HostFailWorker {
                 if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
-                    Zone zone = spawn.hostManager.getHostState(failedHostUuid).getZone();
+                    HostLocation location = spawn.hostManager.getHostState(failedHostUuid).getHostLocation();
                     spawn.getSpawnBalancer().fixTasksForFailedHost(
-                            spawn.hostManager.listHostStatusForHostFail(host.getMinionTypes(), zone), failedHostUuid);
+                            spawn.hostManager.listHostStatusForHostFail(host.getMinionTypes(), location), failedHostUuid);
                 }
             }
         }

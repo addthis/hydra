@@ -11,7 +11,7 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.HostManager;
-import com.addthis.hydra.minion.Zone;
+import com.addthis.hydra.minion.HostLocation;
 
 public class HostCandidateIterator {
     List<PriorityQueue<HostAndScore>> orderedHeaps;
@@ -34,39 +34,39 @@ public class HostCandidateIterator {
 
     public void generateHostCandidateIterator (Map<String, Double> scoreMap,
                                                JobTask task) {
-        Map<Zone, PriorityQueue<HostAndScore>> scoreHeapByZone = new HashMap<>();
+        Map<HostLocation, PriorityQueue<HostAndScore>> scoreHeapByLocation = new HashMap<>();
         for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
             HostState hostState = hostManager.getHostState(entry.getKey());
             if(!(balancer.okToPutReplicaOnHost(hostState, task) && hostState.canMirrorTasks())) {
                 continue;
             }
-            Zone zone = hostState.getZone();
+            HostLocation location = hostState.getHostLocation();
             Double score = entry.getValue();
-            PriorityQueue<HostAndScore> scoreHeap = scoreHeapByZone.getOrDefault(
-                    zone, new PriorityQueue<>(1, comparator));
+            PriorityQueue<HostAndScore> scoreHeap = scoreHeapByLocation.getOrDefault(
+                    location, new PriorityQueue<>(1, comparator));
             scoreHeap.add(new HostAndScore(hostState, score));
-            scoreHeapByZone.putIfAbsent(zone, scoreHeap);
+            scoreHeapByLocation.putIfAbsent(location, scoreHeap);
         }
 
-        PriorityQueue<HostAndScore> taskHeapByZone =
-                scoreHeapByZone.getOrDefault(hostManager.getHostState(task.getHostUUID()).getZone(), new PriorityQueue<>(comparator));
+        PriorityQueue<HostAndScore> taskHeapByLocation =
+                scoreHeapByLocation.getOrDefault(hostManager.getHostState(task.getHostUUID()).getHostLocation(), new PriorityQueue<>(comparator));
 
-        if(scoreHeapByZone.get(hostManager.getHostState(task.getHostUUID()).getZone()) != null) {
-            scoreHeapByZone.remove(hostManager.getHostState(task.getHostUUID()).getZone());
+        if(scoreHeapByLocation.get(hostManager.getHostState(task.getHostUUID()).getHostLocation()) != null) {
+            scoreHeapByLocation.remove(hostManager.getHostState(task.getHostUUID()).getHostLocation());
         }
         List<JobTaskReplica> replicas = task.getReplicas();
         List<PriorityQueue<HostAndScore>> replicaHeaps = new ArrayList<>();
         for (JobTaskReplica replica : replicas) {
             PriorityQueue<HostAndScore> replicaHeap =
-                    scoreHeapByZone.getOrDefault(hostManager.getHostState(replica.getHostUUID()).getZone(), new PriorityQueue<>(comparator));
+                    scoreHeapByLocation.getOrDefault(hostManager.getHostState(replica.getHostUUID()).getHostLocation(), new PriorityQueue<>(comparator));
             replicaHeaps.add(replicaHeap);
-            scoreHeapByZone.remove(hostManager.getHostState(replica.getHostUUID()).getZone());
+            scoreHeapByLocation.remove(hostManager.getHostState(replica.getHostUUID()).getHostLocation());
         }
 
-        for (Map.Entry<Zone, PriorityQueue<HostAndScore>> entry : scoreHeapByZone.entrySet()) {
+        for (Map.Entry<HostLocation, PriorityQueue<HostAndScore>> entry : scoreHeapByLocation.entrySet()) {
             orderedHeaps.add(entry.getValue());
         }
-        orderedHeaps.add(taskHeapByZone);
+        orderedHeaps.add(taskHeapByLocation);
         orderedHeaps.addAll(replicaHeaps);
     }
 

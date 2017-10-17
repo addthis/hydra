@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.minion.Zone;
+import com.addthis.hydra.minion.HostLocation;
 
 import org.apache.curator.framework.CuratorFramework;
 
@@ -94,17 +94,17 @@ public class HostManager {
      * List all hosts belonging to a particular minion type, within an availability domain
      *
      * @param minionType         The minion type to find. If null, return all hosts.
-     * @param zone The minion's zone information
+     * @param location The minion's zone information
      * @return A list of hoststates
      */
-    public  List<HostState> listHostStatusByZone(@Nullable String minionType, Zone zone) {
+    public  List<HostState> listHostStatusByZone(@Nullable String minionType, HostLocation location) {
         return listHostStatus(minionType).stream().
-                filter(hostState -> hostState.getZone().equals(zone)).
+                filter(hostState -> hostState.getHostLocation().equals(location)).
                                                  collect(Collectors.toList());
     }
 
-    public  List<HostState> listHostStatusForHostFail(@Nullable String minionType, Zone zone) {
-        List<HostState> hostStatesInZone = listHostStatusByZone(minionType, zone);
+    public  List<HostState> listHostStatusForHostFail(@Nullable String minionType, HostLocation location) {
+        List<HostState> hostStatesInZone = listHostStatusByZone(minionType, location);
         return hostStatesInZone.size() > 0? hostStatesInZone : listHostStatus(minionType);
     }
 

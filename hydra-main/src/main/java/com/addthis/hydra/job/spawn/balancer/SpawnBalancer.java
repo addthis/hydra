@@ -57,7 +57,7 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.minion.Zone;
+import com.addthis.hydra.minion.HostLocation;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -549,14 +549,14 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             return null;
         }
 
-        Map<Zone, Long> replicasByZone = task.getAllReplicas()
-                                             .stream()
-                                             .collect(Collectors.groupingBy(
-                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone(),
+        Map<HostLocation, Long> replicasByZone = task.getAllReplicas()
+                                                     .stream()
+                                                     .collect(Collectors.groupingBy(
+                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getHostLocation(),
                                                      Collectors.counting()));
 
         Long minReplicas = replicasByZone.isEmpty()? 0L : Collections.min(replicasByZone.values());
-        List<Zone> minReplicaZones = replicasByZone.entrySet()
+        List<HostLocation> minReplicaZones = replicasByZone.entrySet()
                                                    .stream()
                                                    .filter(entry -> entry.getValue() == minReplicas)
                                                    .map(entry -> entry.getKey())
@@ -573,9 +573,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 // this task has no replicas OR
                 // 'next' host is in a zone with min number of replicas for this task
                 // This restriction on task movement ensures that replica assignments remain AD-aware
-                (hostManager.getHostState(taskHost).getZone().equals(next.getZone()) ||
+                (hostManager.getHostState(taskHost).getHostLocation().equals(next.getHostLocation()) ||
                  task.getAllReplicas().isEmpty() ||
-                 minReplicaZones.contains(next.getZone()))) {
+                 minReplicaZones.contains(next.getHostLocation()))) {
                 hostStateIterator.remove();
                 otherHosts.add(next);
                 return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false);
@@ -687,7 +687,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 Collections.sort(hostsSorted, hostStateScoreComparator);
                 HostState hostToBalance = hostsSorted.get(getWeightedElementIndex(hostsSorted.size(), weight));
                 return getAssignmentsToBalanceHost(hostToBalance,
-                                                   hostManager.listHostStatusByZone(hostToBalance.getMinionTypes(), hostToBalance.getZone()));
+                                                   hostManager.listHostStatusByZone(hostToBalance.getMinionTypes(), hostToBalance.getHostLocation()));
             case JOB:
                 List<Job> autobalanceJobs = getJobsToAutobalance(hosts);
                 if ((autobalanceJobs == null) || autobalanceJobs.isEmpty()) {
@@ -1351,25 +1351,25 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     continue;
                 }
 
-                Zone taskCurrentZone = hostManager.getHostState(item.getTask().getHostUUID()).getZone();
-                Map<Zone, Long> replicasByZone = item.getTask()
+                HostLocation taskCurrentZone = hostManager.getHostState(item.getTask().getHostUUID()).getHostLocation();
+                Map<HostLocation, Long> replicasByZone = item.getTask()
                                                              .getAllReplicas()
                                                              .stream()
                                                              .collect(Collectors.groupingBy(
-                                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone(),
+                                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getHostLocation(),
                                                                      Collectors.counting()));
 
                 Long minReplicas = replicasByZone.isEmpty()? 0L : Collections.min(replicasByZone.values());
-                List<Zone> minReplicaZones = replicasByZone.entrySet()
+                List<HostLocation> minReplicaZones = replicasByZone.entrySet()
                                                            .stream()
                                                            .filter(entry -> entry.getValue() == minReplicas)
                                                            .map(entry -> entry.getKey())
                                                            .distinct()
                                                            .collect(Collectors.toList());
 
-                if (taskCurrentZone.equals(pullHostState.getZone()) ||
+                if (taskCurrentZone.equals(pullHostState.getHostLocation()) ||
                     item.getTask().getAllReplicas().isEmpty() ||
-                    minReplicaZones.contains(pullHostState.getZone())) {
+                    minReplicaZones.contains(pullHostState.getHostLocation())) {
                     if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
                         rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false));
                         alreadyMoved.add(item.getTask().getJobKey());
@@ -1427,26 +1427,26 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     continue;
                 }
 
-                Zone taskCurrentZone = hostManager.getHostState(nextTaskItem.getTask().getHostUUID()).getZone();
+                HostLocation taskCurrentZone = hostManager.getHostState(nextTaskItem.getTask().getHostUUID()).getHostLocation();
 
-                Map<Zone, Long> replicasByZone = nextTaskItem.getTask()
+                Map<HostLocation, Long> replicasByZone = nextTaskItem.getTask()
                                                              .getAllReplicas()
                                                              .stream()
                                                              .collect(Collectors.groupingBy(
-                                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getZone(),
+                                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getHostLocation(),
                                                                      Collectors.counting()));
 
                 Long minReplicas = replicasByZone.isEmpty()? 0L : Collections.min(replicasByZone.values());
-                List<Zone> minReplicaZones = replicasByZone.entrySet()
+                List<HostLocation> minReplicaZones = replicasByZone.entrySet()
                                                            .stream()
                                                            .filter(entry -> entry.getValue() == minReplicas)
                                                            .map(entry -> entry.getKey())
                                                            .distinct()
                                                            .collect(Collectors.toList());
 
-                if (taskCurrentZone.equals(pullHostState.getZone()) ||
+                if (taskCurrentZone.equals(pullHostState.getHostLocation()) ||
                     nextTaskItem.getTask().getAllReplicas().isEmpty() ||
-                    minReplicaZones.contains(pullHostState.getZone())) {
+                    minReplicaZones.contains(pullHostState.getHostLocation())) {
                     if (!alreadyMoved.contains(jobKey) && (pullHost != null) &&
                         tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
                         rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false,

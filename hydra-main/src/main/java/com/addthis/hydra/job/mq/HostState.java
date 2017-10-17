@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import com.addthis.hydra.minion.Zone;
+import com.addthis.hydra.minion.HostLocation;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
@@ -69,7 +69,7 @@ public class HostState implements HostMessage {
     @JsonProperty private boolean disabled;
     @JsonProperty private double meanActiveTasks;
     @JsonProperty private String minionTypes;
-    @JsonProperty private Zone zone;
+    @JsonProperty private HostLocation hostLocation;
 
     // Do not encode this derived, internal, non-typesafe field
     private HashMap<String, Integer> jobTaskCountMap;
@@ -85,10 +85,6 @@ public class HostState implements HostMessage {
     public String getHostUuid() {
         return uuid;
     }
-
-    public Zone getZone() { return zone; }
-
-    public void setZone(Zone zone) { this.zone = zone; }
 
     public void setUuid(String uuid) {
         this.uuid = uuid;
@@ -237,7 +233,6 @@ public class HostState implements HostMessage {
                 .add("up", isUp())
                 .add("dead", isDead())
                 .add("diskReadOnly", isDiskReadOnly())
-                .add("zone", getZone())
                 .toString();
     }
 
@@ -484,5 +479,13 @@ public class HostState implements HostMessage {
 
     public void setMaxTaskSlots(int maxTaskSlots) {
         this.maxTaskSlots = maxTaskSlots;
+    }
+
+    public HostLocation getHostLocation() {
+        return hostLocation;
+    }
+
+    public void setHostLocation(HostLocation hostLocation) {
+        this.hostLocation = hostLocation;
     }
 }
