@@ -37,8 +37,9 @@ public class HostCandidateIterator {
         Map<Zone, PriorityQueue<HostAndScore>> scoreHeapByZone = new HashMap<>();
         for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
             HostState hostState = hostManager.getHostState(entry.getKey());
-            if (!balancer.okToPutReplicaOnHost(hostState, task)) continue;
-            if (!hostState.canMirrorTasks()) continue;
+            if(!(balancer.okToPutReplicaOnHost(hostState, task) && hostState.canMirrorTasks())) {
+                continue;
+            }
             Zone zone = hostState.getZone();
             Double score = entry.getValue();
             PriorityQueue<HostAndScore> scoreHeap = scoreHeapByZone.getOrDefault(
@@ -90,7 +91,9 @@ public class HostCandidateIterator {
     public PriorityQueue<HostAndScore> getCurrentRound() {
         PriorityQueue<HostAndScore> currentRound = new PriorityQueue<>(comparator);
         for (PriorityQueue<HostAndScore> heap : orderedHeaps) {
-            if (heap.size() == 0) continue;
+            if (heap.size() == 0) {
+                continue;
+            }
             HostAndScore hs = heap.poll(); // pick the highest from each heap
             currentRound.add(hs);
             // move to the end of the heap; reuse after all hosts have been selected
@@ -98,5 +101,4 @@ public class HostCandidateIterator {
         }
         return currentRound;
     }
-
 }

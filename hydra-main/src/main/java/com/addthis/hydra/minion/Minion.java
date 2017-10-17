@@ -187,7 +187,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final File stateFile;
     final File liveEverywhereMarkerFile;
     final String myHost;
-    final String myAvailabilityDomain;
     long startTime;
     String user;
     String path;
@@ -228,7 +227,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         stateFile = null;
         liveEverywhereMarkerFile = null;
         myHost = null;
-        myAvailabilityDomain = null;
         user = null;
         path = null;
         jetty = null;
@@ -257,7 +255,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         } else {
             myHost = InetAddress.getLocalHost().getHostAddress();
         }
-        myAvailabilityDomain = getMyAvailabilityDomain();
         user = new SimpleExec("whoami").join().stdoutString().trim();
         path = rootDir.getAbsolutePath();
         diskTotal.set(rootDir.getTotalSpace());
@@ -379,10 +376,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
 
     static void shutdown() {
         Shutdown.exit(1);
-    }
-
-    static String getMyAvailabilityDomain() {
-        return "AD_number"; // replace it with whatever cluster api call
     }
 
     void disconnectFromMQ() {
@@ -619,7 +612,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         HostState status = new HostState(uuid);
         status.setZone(zone);
         status.setHost(myHost);
-        status.setAvailabilityDomain(myAvailabilityDomain);
         status.setPort(getJettyPort());
         status.setGroup(group);
         status.setTime(time);
