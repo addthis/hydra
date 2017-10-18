@@ -28,16 +28,11 @@ public class HostCandidateIterator {
         orderedHeaps = new ArrayList<>();
     }
 
-    public boolean hasNextHost() {
-        return !currentRound.isEmpty() || hasNextRound();
-    }
-
-    public void generateHostCandidateIterator (Map<String, Double> scoreMap,
-                                               JobTask task) {
+    public void generateHostCandidateIterator (Map<String, Double> scoreMap, JobTask task) {
         Map<HostLocation, PriorityQueue<HostAndScore>> scoreHeapByLocation = new HashMap<>();
         for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
             HostState hostState = hostManager.getHostState(entry.getKey());
-            if(!(balancer.okToPutReplicaOnHost(hostState, task) && hostState.canMirrorTasks())) {
+            if(hostState == null || !(balancer.okToPutReplicaOnHost(hostState, task) && hostState.canMirrorTasks())) {
                 continue;
             }
             HostLocation location = hostState.getHostLocation();
@@ -45,29 +40,10 @@ public class HostCandidateIterator {
             PriorityQueue<HostAndScore> scoreHeap = scoreHeapByLocation.getOrDefault(
                     location, new PriorityQueue<>(1, comparator));
             scoreHeap.add(new HostAndScore(hostState, score));
-            scoreHeapByLocation.putIfAbsent(location, scoreHeap);
+            // Should replace with updated heap if a mapping already exists
+            scoreHeapByLocation.put(location, scoreHeap);
         }
-
-        PriorityQueue<HostAndScore> taskHeapByLocation =
-                scoreHeapByLocation.getOrDefault(hostManager.getHostState(task.getHostUUID()).getHostLocation(), new PriorityQueue<>(comparator));
-
-        if(scoreHeapByLocation.get(hostManager.getHostState(task.getHostUUID()).getHostLocation()) != null) {
-            scoreHeapByLocation.remove(hostManager.getHostState(task.getHostUUID()).getHostLocation());
-        }
-        List<JobTaskReplica> replicas = task.getReplicas();
-        List<PriorityQueue<HostAndScore>> replicaHeaps = new ArrayList<>();
-        for (JobTaskReplica replica : replicas) {
-            PriorityQueue<HostAndScore> replicaHeap =
-                    scoreHeapByLocation.getOrDefault(hostManager.getHostState(replica.getHostUUID()).getHostLocation(), new PriorityQueue<>(comparator));
-            replicaHeaps.add(replicaHeap);
-            scoreHeapByLocation.remove(hostManager.getHostState(replica.getHostUUID()).getHostLocation());
-        }
-
-        for (Map.Entry<HostLocation, PriorityQueue<HostAndScore>> entry : scoreHeapByLocation.entrySet()) {
-            orderedHeaps.add(entry.getValue());
-        }
-        orderedHeaps.add(taskHeapByLocation);
-        orderedHeaps.addAll(replicaHeaps);
+        orderedHeaps.addAll(scoreHeapByLocation.values());
     }
 
     public HostState getNext() {
@@ -77,6 +53,10 @@ public class HostCandidateIterator {
         HostAndScore nextHostAndScore = currentRound.poll();
         // add to the end of the heap, by adding 1 to its score
         return nextHostAndScore.host;
+    }
+
+    public boolean hasNextHost() {
+        return !currentRound.isEmpty() || hasNextRound();
     }
 
     private boolean hasNextRound() {

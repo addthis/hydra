@@ -731,13 +731,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         int replicaCount = job.getReplicas();
         Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
-        PriorityQueue<HostAndScore> scoreHeap = new PriorityQueue<>(1, hostAndScoreComparator);
-        for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
-            scoreHeap.add(new HostAndScore(hostManager.getHostState(entry.getKey()), entry.getValue()));
-        }
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
         for (JobTask task : tasks) {
-
             HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager, spawn.getSpawnBalancer(), hostAndScoreComparator);
             hostCandidateIterator.generateHostCandidateIterator(scoreMap, task);
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
@@ -753,8 +748,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         return rv;
     }
-
-
+    
     /**
      * Count the number of tasks per host for a single job, then add in a small factor for how heavily weighted each
      * host's disk is
