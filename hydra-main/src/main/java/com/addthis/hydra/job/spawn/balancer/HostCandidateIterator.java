@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 import com.addthis.hydra.job.JobTask;
-import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.minion.HostLocation;
@@ -32,7 +31,8 @@ public class HostCandidateIterator {
         Map<HostLocation, PriorityQueue<HostAndScore>> scoreHeapByLocation = new HashMap<>();
         for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
             HostState hostState = hostManager.getHostState(entry.getKey());
-            if(hostState == null || !(balancer.okToPutReplicaOnHost(hostState, task) && hostState.canMirrorTasks())) {
+            if(hostState == null ||
+               !(balancer.okToPutReplicaOnHost(hostState, task) && hostState.canMirrorTasks())) {
                 continue;
             }
             HostLocation location = hostState.getHostLocation();
@@ -43,15 +43,15 @@ public class HostCandidateIterator {
             // Should replace with updated heap if a mapping already exists
             scoreHeapByLocation.put(location, scoreHeap);
         }
+
         orderedHeaps.addAll(scoreHeapByLocation.values());
     }
 
     public HostState getNext() {
-        if (currentRound.size() == 0) {
+        if (currentRound.isEmpty()) {
             currentRound = getCurrentRound();
         }
         HostAndScore nextHostAndScore = currentRound.poll();
-        // add to the end of the heap, by adding 1 to its score
         return nextHostAndScore.host;
     }
 
@@ -71,13 +71,12 @@ public class HostCandidateIterator {
     public PriorityQueue<HostAndScore> getCurrentRound() {
         PriorityQueue<HostAndScore> currentRound = new PriorityQueue<>(comparator);
         for (PriorityQueue<HostAndScore> heap : orderedHeaps) {
-            if (heap.size() == 0) {
-                continue;
+            if (!heap.isEmpty()) {
+                HostAndScore hs = heap.poll(); // pick the highest from each heap
+                currentRound.add(hs);
+                // move to the end of the heap; reuse after all hosts have been selected
+                heap.add(new HostAndScore(hs.host, hs.score + 1));
             }
-            HostAndScore hs = heap.poll(); // pick the highest from each heap
-            currentRound.add(hs);
-            // move to the end of the heap; reuse after all hosts have been selected
-            heap.add(new HostAndScore(hs.host, hs.score + 1));
         }
         return currentRound;
     }
