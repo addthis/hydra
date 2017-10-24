@@ -90,7 +90,8 @@ public class HostCandidateIterator {
                 scoreHeap.add(new HostAndScore(hostAndScore.host, hostAndScore.score + 1));
                 scoreHeapByLocation.put(location, scoreHeap);
                 // moving this location to the end of the list
-                hostLocations = arrangeHostLocations()
+                hostLocations.remove(location);
+                hostLocations.add(location);
                 break;
             }
         }
