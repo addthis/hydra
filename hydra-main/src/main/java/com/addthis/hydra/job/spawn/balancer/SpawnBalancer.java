@@ -564,7 +564,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return null;
     }
 
-     List<HostLocation> getMinReplicaZones(JobTask task) {
+     private List<HostLocation> getMinReplicaZones(JobTask task) {
         Map<HostLocation, Long> replicasByHostLocation = task.getAllReplicas()
                                                              .stream()
                                                              .collect(Collectors.groupingBy(
@@ -759,7 +759,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
             // Add new replicas as long as the task needs them & there are remaining hosts
             while (hostIDsToAdd.size() + numExistingReplicas < replicaCount && hostCandidateIterator.hasNextHost()) {
-                HostState candidateHost = hostCandidateIterator.getNext();
+                HostState candidateHost = hostCandidateIterator.getNextHost();
                 hostIDsToAdd.add(candidateHost.getHostUuid());
             }
             if (!hostIDsToAdd.isEmpty()) {

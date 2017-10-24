@@ -60,17 +60,21 @@ public class HostCandidateIterator {
      */
     private List<HostLocation> arrangeHostLocations(JobTask task) {
         List<HostLocation> hostLocationList = new ArrayList<>(scoreHeapByLocation.keySet());
-        Collection<HostLocation> replicaLocations = task.getAllReplicas()
-                                                        .stream()
-                                                        .map(jobTaskReplica ->
-                                                                     hostManager.getHostState(jobTaskReplica.getHostUUID())
-                                                                                .getHostLocation())
-                                                        .distinct().collect(Collectors.toList());
+        Map<HostLocation, Long> replicasByHostLocation = task.getAllReplicas()
+                                                             .stream()
+                                                             .collect(Collectors.groupingBy(
+                                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getHostLocation(),
+                                                                     Collectors.counting()));
+        List<HostLocation> sortedList = replicasByHostLocation.entrySet()
+                                                              .stream()
+                                                              .sorted(Comparator.comparingLong(entry -> entry.getValue()))
+                                                              .map(entry-> entry.getKey())
+                                                              .collect(Collectors.toList());
         // Move task and replica locations to the end of the list
         HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
         hostLocationList.remove(taskLocation);
-        hostLocationList.removeAll(replicaLocations);
-        hostLocationList.addAll(replicaLocations);
+        hostLocationList.removeAll(sortedList);
+        hostLocationList.addAll(sortedList);
         hostLocationList.add(taskLocation);
         return hostLocationList;
     }
@@ -79,7 +83,7 @@ public class HostCandidateIterator {
      * Return a host chosen in order of zone preference or <tt>null</tt> if no host exists
      * @return
      */
-    public HostState getNext() {
+    public HostState getNextHost() {
         HostState nextHost = null;
         for(HostLocation location : hostLocations) {
             PriorityQueue<HostAndScore> scoreHeap = scoreHeapByLocation.get(location);
