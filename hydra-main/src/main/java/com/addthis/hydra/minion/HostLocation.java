@@ -53,6 +53,22 @@ public class HostLocation {
         this.physicalHost = physicalHost;
     }
 
+    @Override
+    public int hashCode() {
+        return this.toString().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || obj.getClass() != getClass()) {
+            return false;
+        }
+        HostLocation location = (HostLocation) obj;
+        return location.getDataCenter().equals(this.dataCenter) &&
+               location.getRack().equals(this.rack) &&
+               location.getPhysicalHost().equals(this.physicalHost);
+    }
+
     public String toString() {
         return "dataCenter=" + dataCenter + ", rack=" + rack + ", physicalHost=" + physicalHost;
     }
