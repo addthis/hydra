@@ -92,12 +92,15 @@ public class HostCandidateIterator {
             if(scoreHeap != null && !scoreHeap.isEmpty()) {
                 HostAndScore hostAndScore = scoreHeap.poll();
                 nextHost = hostAndScore.host;
+                if(scoreHeap.isEmpty()) {
+                    // Move this location to the end of the list
+                    // At this point all hosts from this location have been chosen once
+                    hostLocations.remove(location);
+                    hostLocations.add(location);
+                }
                 // Add 1 to the host's score and move to the end of the queue
                 scoreHeap.add(new HostAndScore(hostAndScore.host, hostAndScore.score + 1));
                 scoreHeapByLocation.put(location, scoreHeap);
-                // moving this location to the end of the list
-                hostLocations.remove(location);
-                hostLocations.add(location);
                 break;
             }
         }

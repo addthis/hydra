@@ -18,6 +18,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -366,6 +368,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 0);
         Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 850_000_000L, 0);
         heavyHost2.setStopped(simulateJobKeys(movableJob2, movableJob3));
+        heavyHost2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
 
         Job movableJob4 = createSpawnJob(spawn, 2, Arrays.asList(heavyHost1UUID, heavyHost2UUID), now, 850_000_000L, 0);
         // Add job keys for tasks of movableJob1 to the task's assigned host
@@ -382,7 +385,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         heavyHost1.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
         heavyHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         heavyHost2.setUsed(new HostCapacity(10, 10, 10, 90_900_000_000L));
-        heavyHost2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
 
         String lightHost1UUID = "light1";
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
@@ -635,6 +637,44 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         // Try to add a replica of the live task
         addTask = moveAssignmentList.add(new JobTaskMoveAssignment(new JobKey("job1", 0), "srcHost", "destHost", true, false));
         assertTrue("should not add replica", !addTask);
+    }
+
+    @Test
+    public void generateHostCandidateIteratorTest() throws Exception {
+        String hostId1 = "hostId1";
+        HostState hostState1 = installHostStateWithUUID(hostId1, spawn, true);
+        hostState1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        String hostId2 = "hostId2";
+        HostState hostState2 = installHostStateWithUUID(hostId2, spawn, true);
+        hostState2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+        String hostId3 = "hostId3";
+        HostState hostState3 = installHostStateWithUUID(hostId3, spawn, true);
+        hostState3.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        String hostId4 = "hostId4";
+        HostState hostState4 = installHostStateWithUUID(hostId4, spawn, true);
+        hostState4.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        Job job = createSpawnJob(spawn, 1, Arrays.asList(hostId1), now, 80_000_000L, 0);
+        hostState1.setStopped(simulateJobKeys(job));
+
+        Map<String, Double> scoreMap = new HashMap<>();
+        scoreMap.put("hostId1", 0.2d);
+        scoreMap.put("hostId2", 0.5d);
+        scoreMap.put("hostId3", 0.5d);
+        scoreMap.put("hostId4", 0.3d);
+
+        Comparator<HostAndScore> hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
+        for(JobTask task : job.getCopyOfTasks()) {
+            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(hostManager,
+                                                                                    bal, hostAndScoreComparator);
+            hostCandidateIterator.generateHostCandidateIterator(scoreMap, task);
+            assertTrue("Host candidate iterator should have hosts", hostCandidateIterator.hasNextHost());
+            assertTrue("Should choose HostLocation with no replicas first",
+                       hostCandidateIterator.getNextHost().getHostUuid().equals("hostId2"));
+            assertTrue("Should choose Host with lower score next",
+                       hostCandidateIterator.getNextHost().getHostUuid().equals("hostId4"));
+            assertTrue("Should choose Host without task next",
+                       hostCandidateIterator.getNextHost().getHostUuid().equals("hostId3"));
+        }
     }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
