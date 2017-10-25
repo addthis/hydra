@@ -1,13 +1,10 @@
 package com.addthis.hydra.job.spawn.balancer;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.JobTask;
@@ -59,7 +56,12 @@ public class HostCandidateIterator {
      * @return
      */
     private List<HostLocation> arrangeHostLocations(JobTask task) {
-        List<HostLocation> hostLocationList = new ArrayList<>(scoreHeapByLocation.keySet());
+        // Sort HostLocation(s) using Host score
+        List<HostLocation> hostLocationList = scoreHeapByLocation.entrySet()
+                                                                 .stream()
+                                                                 .sorted(Comparator.comparingDouble(entry -> entry.getValue().peek().score))
+                                                                 .map(entry -> entry.getKey())
+                                                                 .collect(Collectors.toList());
         Map<HostLocation, Long> replicasByHostLocation = task.getAllReplicas()
                                                              .stream()
                                                              .collect(Collectors.groupingBy(

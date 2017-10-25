@@ -28,6 +28,7 @@ import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
@@ -144,8 +145,10 @@ public class SpawnTest extends ZkCodecStartUtil {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             spawn.setSpawnMQ(Mockito.mock(SpawnMQImpl.class));
             HostState host0 = createHostState("host0");
+            host0.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
             spawn.hostManager.updateHostState(host0);
             HostState host1 = createHostState("host1");
+            host1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
             spawn.hostManager.updateHostState(host1);
             spawn.getJobCommandManager().putEntity("c", new JobCommand(), false);
             Job job = spawn.createJob("fsm", 3, Arrays.asList("host0"), "default", "c", false);
@@ -168,9 +171,10 @@ public class SpawnTest extends ZkCodecStartUtil {
             spawn.hostManager.updateHostState(host1);
             HostState host2 = createHostState("host2");
             host2.setStopped(new JobKey[]{new JobKey(job.getId(), 2)});
+            host2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
             spawn.hostManager.updateHostState(host2);
             // Wait for all hosts to be up due to time needed to pick up zk minion/up change. That matters because
-            // HostMnager.listHostStatus may set HostState.up to false depending on zk minion/up data, which may
+            // HostManager.listHostStatus may set HostState.up to false depending on zk minion/up data, which may
             // affect test results below
             boolean hostsAreUp = false;
             for (int i = 0; i < 10; i++) {
