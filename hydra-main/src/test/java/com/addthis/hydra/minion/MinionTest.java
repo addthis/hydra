@@ -15,15 +15,15 @@ package com.addthis.hydra.minion;
 
 import java.io.File;
 import java.io.IOException;
+
 import java.util.List;
 
 import com.addthis.basis.test.SlowTest;
-
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessFiles;
+
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.collect.ImmutableList;
@@ -57,14 +57,4 @@ public class MinionTest extends ZkCodecStartUtil {
         CodecJSON.decodeString(minion, LessBytes.toString(LessFiles.read(new File(stateFile))));
         CodecJSON.encodeString(minion);
     }
-
-//    @Test
-//    public void testHostState() throws Exception {
-//        Minion minion = new Minion(zkClient);
-//        //minion.setZone(Configs.decodeObject(Zone.class, "zoneID = a, rackID = \"\", machineID = \"\""));
-//        minion.sendHostStatus();
-//        HostState hostState = new HostState(minion.getUUID());
-//        hostState.setZone(minion.getZone());
-//        System.out.println(hostState.toString());
-//    }
 }
