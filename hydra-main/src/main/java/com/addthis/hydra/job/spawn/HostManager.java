@@ -98,14 +98,13 @@ public class HostManager {
      * @return A list of hoststates
      */
     public  List<HostState> listHostStatusByZone(@Nullable String minionType, HostLocation location) {
-        return listHostStatus(minionType).stream().
-                filter(hostState -> hostState.getHostLocation().equals(location)).
-                                                 collect(Collectors.toList());
-    }
-
-    public  List<HostState> listHostStatusForHostFail(@Nullable String minionType, HostLocation location) {
-        List<HostState> hostStatesInZone = listHostStatusByZone(minionType, location);
-        return hostStatesInZone.size() > 0? hostStatesInZone : listHostStatus(minionType);
+        List<HostState> hostStates = listHostStatus(minionType).stream()
+                                                               .filter(hostState -> hostState.getHostLocation().equals(location))
+                                                               .collect(Collectors.toList());
+        if(hostStates.isEmpty()) {
+            return listHostStatus(minionType);
+        }
+        return hostStates;
     }
 
     public List<HostState> getLiveHosts(@Nullable String minionType) {

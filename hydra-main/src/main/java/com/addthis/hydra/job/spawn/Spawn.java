@@ -1602,8 +1602,8 @@ public class Spawn implements Codable, AutoCloseable {
                     rv.add(match);
                 }
             }
-            rv.addAll(findOrphansForTask(task));
         }
+        rv.addAll(findOrphansForTask(task));
         return rv;
     }
 
