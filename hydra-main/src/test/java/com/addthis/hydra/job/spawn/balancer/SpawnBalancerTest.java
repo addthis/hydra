@@ -640,19 +640,22 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     }
 
     @Test
-    public void generateHostCandidateIteratorTest() throws Exception {
+    public void testHostCandidateIterator() throws Exception {
         String hostId1 = "hostId1";
         HostState hostState1 = installHostStateWithUUID(hostId1, spawn, true);
-        hostState1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        hostState1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = aa, physicalHost = aaa"));
         String hostId2 = "hostId2";
         HostState hostState2 = installHostStateWithUUID(hostId2, spawn, true);
-        hostState2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+        hostState2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = aa, physicalHost = aaa"));
         String hostId3 = "hostId3";
         HostState hostState3 = installHostStateWithUUID(hostId3, spawn, true);
-        hostState3.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        hostState3.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = aa, physicalHost = bbb"));
         String hostId4 = "hostId4";
         HostState hostState4 = installHostStateWithUUID(hostId4, spawn, true);
-        hostState4.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        hostState4.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = bb, physicalHost = aaa"));
+        String hostId5 = "hostId5";
+        HostState hostState5 = installHostStateWithUUID(hostId5, spawn, true);
+        hostState5.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = bb, physicalHost = aaa"));
         Job job = createSpawnJob(spawn, 1, Arrays.asList(hostId1), now, 80_000_000L, 0);
         hostState1.setStopped(simulateJobKeys(job));
 
@@ -661,6 +664,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         scoreMap.put("hostId2", 0.5d);
         scoreMap.put("hostId3", 0.5d);
         scoreMap.put("hostId4", 0.3d);
+        scoreMap.put("hostId5", 0.1d);
 
         Comparator<HostAndScore> hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
         for(JobTask task : job.getCopyOfTasks()) {
@@ -670,11 +674,14 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             assertTrue("Host candidate iterator should have hosts", hostCandidateIterator.hasNextHost());
             assertTrue("Should choose HostLocation with no replicas first",
                        hostCandidateIterator.getNextHost().getHostUuid().equals("hostId2"));
-            assertTrue("Should choose Host with lower score next",
+            assertTrue("Should choose Host with lower score on different rack next",
+                       hostCandidateIterator.getNextHost().getHostUuid().equals("hostId5"));
+            assertTrue("Should choose Host on different rack next",
                        hostCandidateIterator.getNextHost().getHostUuid().equals("hostId4"));
             assertTrue("Should choose Host without task next",
                        hostCandidateIterator.getNextHost().getHostUuid().equals("hostId3"));
         }
+
     }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {

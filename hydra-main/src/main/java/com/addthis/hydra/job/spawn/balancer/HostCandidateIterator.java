@@ -13,17 +13,20 @@ import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.minion.HostLocation;
 
 public class HostCandidateIterator {
-    private Map<HostLocation, PriorityQueue<HostAndScore>> scoreHeapByLocation;
     private static HostManager hostManager;
     private static SpawnBalancer balancer;
+
     private Comparator comparator;
     private List<HostLocation> hostLocations;
+    private Map<HostLocation, PriorityQueue<HostAndScore>> scoreHeapByLocation;
+    private int numHostsAccessed;
 
     HostCandidateIterator(HostManager hostManager, SpawnBalancer spawnBalancer, Comparator comparator) {
         this.hostManager = hostManager;
         this.balancer = spawnBalancer;
         this.comparator = comparator;
         scoreHeapByLocation = new HashMap<>();
+        numHostsAccessed = 0;
     }
 
     /**
@@ -57,11 +60,15 @@ public class HostCandidateIterator {
      */
     private List<HostLocation> arrangeHostLocations(JobTask task) {
         // Sort HostLocation(s) using Host score
+        Comparator<Map.Entry<HostLocation, PriorityQueue<HostAndScore>>> sortComparator;
+        sortComparator = Comparator.comparing(entry -> entry.getKey().compareTo(hostManager.getHostState(task.getHostUUID()).getHostLocation()));
+        sortComparator.thenComparingDouble(entry -> entry.getValue().peek().score);
         List<HostLocation> hostLocationList = scoreHeapByLocation.entrySet()
                                                                  .stream()
-                                                                 .sorted(Comparator.comparingDouble(entry -> entry.getValue().peek().score))
+                                                                 .sorted(sortComparator)
                                                                  .map(entry -> entry.getKey())
                                                                  .collect(Collectors.toList());
+
         Map<HostLocation, Long> replicasByHostLocation = task.getAllReplicas()
                                                              .stream()
                                                              .collect(Collectors.groupingBy(
@@ -74,8 +81,8 @@ public class HostCandidateIterator {
                                                               .collect(Collectors.toList());
         // Move task and replica locations to the end of the list
         HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
-        hostLocationList.remove(taskLocation);
         hostLocationList.removeAll(sortedList);
+        hostLocationList.remove(taskLocation);
         hostLocationList.addAll(sortedList);
         hostLocationList.add(taskLocation);
         return hostLocationList;
@@ -86,25 +93,25 @@ public class HostCandidateIterator {
      * @return
      */
     public HostState getNextHost() {
-        HostState nextHost = null;
         for(HostLocation location : hostLocations) {
             PriorityQueue<HostAndScore> scoreHeap = scoreHeapByLocation.get(location);
             if(scoreHeap != null && !scoreHeap.isEmpty()) {
                 HostAndScore hostAndScore = scoreHeap.poll();
-                nextHost = hostAndScore.host;
-                if(scoreHeap.isEmpty()) {
+                numHostsAccessed++;
+                if(scoreHeap.isEmpty() || numHostsAccessed == scoreHeap.size() + 1) {
                     // Move this location to the end of the list
                     // At this point all hosts from this location have been chosen once
                     hostLocations.remove(location);
                     hostLocations.add(location);
+                    numHostsAccessed = 0;
                 }
                 // Add 1 to the host's score and move to the end of the queue
                 scoreHeap.add(new HostAndScore(hostAndScore.host, hostAndScore.score + 1));
                 scoreHeapByLocation.put(location, scoreHeap);
-                break;
+                return hostAndScore.host;
             }
         }
-        return nextHost;
+        return null;
     }
 
     public boolean hasNextHost() {
