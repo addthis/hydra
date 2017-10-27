@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * replicas should be spread across different datacenters as much as possible, to minimize the risk of data loss
  */
 
-public class HostLocation implements Comparable<HostLocation> {
+public class HostLocation {
     private String dataCenter;
     private String rack;
     private String physicalHost; // a physical host can have many VMs
@@ -75,20 +75,26 @@ public class HostLocation implements Comparable<HostLocation> {
         return "dataCenter=" + dataCenter + ", rack=" + rack + ", physicalHost=" + physicalHost;
     }
 
-    private int compare(String str1, String str2) {
-        return str2.compareTo(str1);
-    }
-
-    @Override
-    public int compareTo(HostLocation o) {
-        if(this.getDataCenter().equals(o.getDataCenter())) {
-            if(this.getRack().equals(o.getRack())) {
-                return 1;
-            } else {
-                return 0;
-            }
+    /**
+     * Enforce an order when comparing HostLocations
+     * @param o
+     * @return
+     */
+    public int compare(HostLocation o) {
+        if (!this.getDataCenter().equals(o.getDataCenter())) {
+            // Different dataCenter
+            return -3;
         } else {
-            return -1;
+            if (!this.getRack().equals(o.getRack())) {
+                // Same dataCenter, different rack
+                return -2;
+            } else if (this.getPhysicalHost().equals(o.getPhysicalHost())) {
+                // dataCenter, rack and physicalHost are the same
+                return 0;
+            } else {
+                // Same dataCenter, same rack, different physicalHost
+                return -1;
+            }
         }
     }
 }

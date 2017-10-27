@@ -1,5 +1,6 @@
 package com.addthis.hydra.job.spawn.balancer;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -15,18 +16,16 @@ import com.addthis.hydra.minion.HostLocation;
 public class HostCandidateIterator {
     private static HostManager hostManager;
     private static SpawnBalancer balancer;
-
     private Comparator comparator;
-    private List<HostLocation> hostLocations;
     private Map<HostLocation, PriorityQueue<HostAndScore>> scoreHeapByLocation;
-    private int numHostsAccessed;
+    private List<HostState> orderedHosts;
 
     HostCandidateIterator(HostManager hostManager, SpawnBalancer spawnBalancer, Comparator comparator) {
         this.hostManager = hostManager;
         this.balancer = spawnBalancer;
         this.comparator = comparator;
         scoreHeapByLocation = new HashMap<>();
-        numHostsAccessed = 0;
+        orderedHosts = new ArrayList<>();
     }
 
     /**
@@ -49,7 +48,8 @@ public class HostCandidateIterator {
             // Should replace with updated heap if a mapping already exists
             scoreHeapByLocation.put(location, scoreHeap);
         }
-        hostLocations = arrangeHostLocations(task);
+        List<HostLocation> hostLocations = sortHostLocations(task);
+        orderedHosts = orderHostsByLocationAndScore(hostLocations);
     }
 
     /**
@@ -58,11 +58,11 @@ public class HostCandidateIterator {
      * @param task
      * @return
      */
-    private List<HostLocation> arrangeHostLocations(JobTask task) {
+    private List<HostLocation> sortHostLocations(JobTask task) {
         // Sort HostLocation(s) using Host score
         Comparator<Map.Entry<HostLocation, PriorityQueue<HostAndScore>>> sortComparator;
-        sortComparator = Comparator.comparing(entry -> entry.getKey().compareTo(hostManager.getHostState(task.getHostUUID()).getHostLocation()));
-        sortComparator.thenComparingDouble(entry -> entry.getValue().peek().score);
+        sortComparator = Comparator.comparingInt(entry -> entry.getKey().compare(hostManager.getHostState(task.getHostUUID()).getHostLocation()));
+        sortComparator = sortComparator.thenComparingDouble(entry -> entry.getValue().peek().score);
         List<HostLocation> hostLocationList = scoreHeapByLocation.entrySet()
                                                                  .stream()
                                                                  .sorted(sortComparator)
@@ -89,32 +89,33 @@ public class HostCandidateIterator {
     }
 
     /**
-     * Return a host chosen in order of zone preference or <tt>null</tt> if no host exists
+     * Arrange hosts in order of HostLocation preference, then score
+     * @param hostLocations
+     * @return
+     */
+    private List<HostState> orderHostsByLocationAndScore(List<HostLocation> hostLocations) {
+        List<HostState> hostStates = new ArrayList<>();
+        for(HostLocation location : hostLocations) {
+            PriorityQueue<HostAndScore> scoreHeap = scoreHeapByLocation.get(location);
+            while(scoreHeap != null && !scoreHeap.isEmpty()) {
+                hostStates.add(scoreHeap.poll().host);
+            }
+        }
+        return hostStates;
+    }
+
+    /**
+     * Return a host chosen in order of zone preference, then score
      * @return
      */
     public HostState getNextHost() {
-        for(HostLocation location : hostLocations) {
-            PriorityQueue<HostAndScore> scoreHeap = scoreHeapByLocation.get(location);
-            if(scoreHeap != null && !scoreHeap.isEmpty()) {
-                HostAndScore hostAndScore = scoreHeap.poll();
-                numHostsAccessed++;
-                if(scoreHeap.isEmpty() || numHostsAccessed == scoreHeap.size() + 1) {
-                    // Move this location to the end of the list
-                    // At this point all hosts from this location have been chosen once
-                    hostLocations.remove(location);
-                    hostLocations.add(location);
-                    numHostsAccessed = 0;
-                }
-                // Add 1 to the host's score and move to the end of the queue
-                scoreHeap.add(new HostAndScore(hostAndScore.host, hostAndScore.score + 1));
-                scoreHeapByLocation.put(location, scoreHeap);
-                return hostAndScore.host;
-            }
-        }
-        return null;
+        HostState nextHost = orderedHosts.get(0);
+        orderedHosts.remove(nextHost);
+        orderedHosts.add(nextHost);
+        return nextHost;
     }
 
     public boolean hasNextHost() {
-        return !scoreHeapByLocation.isEmpty();
+        return !orderedHosts.isEmpty();
     }
 }
