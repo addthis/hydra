@@ -128,7 +128,7 @@ public class MeshQueryWorker implements AutoCloseable {
         newHtmlServer.setHandler(context);
 
         //Actually create the servlet (from yammer metrics)
-        context.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
+        context.addServlet(new ServletHolder(new MetricsServlet()), "/yammer_metrics");
 
         Connector connector0 = newHtmlServer.getConnectors()[0];
         connector0.setMaxIdleTime(600000);
