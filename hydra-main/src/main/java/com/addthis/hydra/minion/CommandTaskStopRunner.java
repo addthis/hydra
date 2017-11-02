@@ -63,7 +63,7 @@ class CommandTaskStopRunner implements Runnable {
                 task.sendEndStatus(task.findLastJobStatus());
             }
         }
-        minion.writeState();
+        minion.writeState(true);
     }
 
 }

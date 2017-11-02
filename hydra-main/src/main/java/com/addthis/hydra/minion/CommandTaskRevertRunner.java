@@ -63,6 +63,6 @@ class CommandTaskRevertRunner implements Runnable {
                 log.warn("[task.revert] " + task.getJobKey() + " completed in " + (System.currentTimeMillis() - time) + "ms.");
             }
         }
-        minion.writeState();
+        minion.writeState(true);
     }
 }
