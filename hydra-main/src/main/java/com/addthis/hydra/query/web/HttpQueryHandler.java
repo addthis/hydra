@@ -284,6 +284,26 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write(q.getPaths()[0]);
                 break;
             }
+            case "/mqmaster/quiesce": {
+                log.trace("Received MeshQueryMaster quiesce request");
+                String quiesce = kv.getValue("quiesce");
+                switch (quiesce) {
+                    case "1":   meshQueryMaster.quiesceMqMaster(true);
+                        break;
+                    case "0":   meshQueryMaster.quiesceMqMaster(false);
+                        break;
+                    default:    writer.write("Bad request");
+                }
+                break;
+            }
+            case "/mqmaster/healthcheck": {
+                if(meshQueryMaster.getIsQuiesced().get()) {
+                    writer.write("0");
+                } else {
+                    writer.write("1");
+                }
+                break;
+            }
             default:
                 // forward to static file server
                 ctx.pipeline().addLast(staticFileHandler);
@@ -307,4 +327,5 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             ((Future<Void>) lastContentFuture).addListener(ChannelFutureListener.CLOSE);
         }
     }
+
 }

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.util.LessStreams;
@@ -101,8 +102,11 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private final WorkerTracker worky;
     private final DefaultTaskAllocators allocators;
 
+    private AtomicBoolean isQuiesced;
+
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
+        this.isQuiesced = new AtomicBoolean(false);
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
         cachey = new MeshFileRefCache(meshy);
@@ -124,6 +128,14 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         } else {
             spawnDataStoreHandler = null;
         }
+    }
+
+    public AtomicBoolean getIsQuiesced() {
+        return isQuiesced;
+    }
+
+    public void quiesceMqMaster(boolean quiesce) {
+        this.isQuiesced.set(quiesce);
     }
 
     public SpawnDataStoreHandler getSpawnDataStoreHandler() {
