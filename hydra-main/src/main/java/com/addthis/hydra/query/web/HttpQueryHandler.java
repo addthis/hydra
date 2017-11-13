@@ -284,9 +284,9 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write(q.getPaths()[0]);
                 break;
             }
-            case "/mqmaster/quiesce": {
+            case "/mqmaster/deactivate": {
                 log.trace("Received MeshQueryMaster quiesce request");
-                String quiesce = kv.getValue("quiesce");
+                String quiesce = kv.getValue("deactivate");
                 switch (quiesce) {
                     case "1":   meshQueryMaster.quiesceMqMaster(true);
                         break;
