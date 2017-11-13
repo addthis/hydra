@@ -102,11 +102,11 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private final WorkerTracker worky;
     private final DefaultTaskAllocators allocators;
 
-    private AtomicBoolean isQuiesced;
+    private AtomicBoolean isActive;
 
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
-        this.isQuiesced = new AtomicBoolean(false);
+        this.isActive = new AtomicBoolean(true);
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
         cachey = new MeshFileRefCache(meshy);
@@ -130,12 +130,12 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         }
     }
 
-    public AtomicBoolean getIsQuiesced() {
-        return isQuiesced;
+    public AtomicBoolean getIsActive() {
+        return isActive;
     }
 
-    public void quiesceMqMaster(boolean quiesce) {
-        this.isQuiesced.set(quiesce);
+    public void deactivateMqMaster(boolean deactivate) {
+        this.isActive.set(!deactivate);
     }
 
     public SpawnDataStoreHandler getSpawnDataStoreHandler() {
