@@ -294,6 +294,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                         break;
                     default:    writer.write("Bad request");
                 }
+                writer.write("1");
                 break;
             }
             case "/mqmaster/healthcheck": {
