@@ -299,7 +299,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/mqmaster/healthcheck": {
                 if(meshQueryMaster.getIsActive().get()) {
-                    writer.write("1");
+                    writer.write("[1]");
                 } else {
                     writer.write("0");
                 }
