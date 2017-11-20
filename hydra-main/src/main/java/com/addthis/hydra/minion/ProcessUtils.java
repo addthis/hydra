@@ -128,16 +128,22 @@ final class ProcessUtils {
             command.append("| grep -v " + excludeToken);
         }
         command.append("| cut -c -5");
+        Scanner scanner = null;
         try {
             SimpleExec exec = new SimpleExec(new String[]{"/bin/sh", "-c", command.toString()}).join();
             if (exec.exitCode() == 0) {
-                return new Scanner(exec.stdoutString()).nextInt();
+                scanner = new Scanner(exec.stdoutString());;
+                return scanner.nextInt();
             } else {
                 return null;
             }
         } catch (Exception e) {
             // No PID found
             return null;
+        } finally {
+            if(scanner != null) {
+                scanner.close();
+            }
         }
 
     }

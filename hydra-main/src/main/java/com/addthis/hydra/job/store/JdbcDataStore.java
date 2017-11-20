@@ -187,8 +187,8 @@ public abstract class JdbcDataStore<T> implements SpawnDataStore {
         }
         String command = sb.append(")").toString();
         Map<String, String> rv = new HashMap<>();
-        try (Connection conn = cpds.getConnection()) {
-            PreparedStatement preparedStatement = conn.prepareStatement(command);
+        try (Connection conn = cpds.getConnection();
+            PreparedStatement preparedStatement = conn.prepareStatement(command)) {
             // The first condition is that the child value is blankChildValue
             preparedStatement.setString(1, blankChildValue);
             int j = 2;

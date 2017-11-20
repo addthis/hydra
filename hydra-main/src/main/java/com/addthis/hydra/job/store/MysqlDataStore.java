@@ -53,11 +53,12 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
 
     @Override
     protected void runSetupDatabaseCommand(final String dbName, final String jdbcUrl, final Properties properties) throws SQLException {
-        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties)) {
+        String dbSetupCommand = String.format("CREATE DATABASE IF NOT EXISTS %s", dbName);
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties);
+            PreparedStatement preparedStatement = connection.prepareStatement(dbSetupCommand)) {
             // Create a connection that excludes the database from the jdbc url.
             // This is necessary to create the database in the event that it does not exist.
-            String dbSetupCommand = String.format("CREATE DATABASE IF NOT EXISTS %s", dbName);
-            connection.prepareStatement(dbSetupCommand).execute();
+            preparedStatement.execute();
         }
     }
 
@@ -66,15 +67,16 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
      */
     @Override
     protected void runSetupTableCommand() throws SQLException {
-        try (Connection connection = cpds.getConnection()) {
-            String tableSetupCommand = String.format("CREATE TABLE IF NOT EXISTS %s ( "
-                    + "%s INT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
-                    "%s VARCHAR(%d) NOT NULL, %s MEDIUMBLOB, %s VARCHAR(%d), " + // VARCHAR path, BLOB value, VARCHAR child
-                    "PRIMARY KEY (%s), UNIQUE KEY (%s,%s)) " + // Use id as primary key, enforce unique (path, child) combo
-                    "ENGINE=%s", // Use specified table type (MyISAM works best in practice)
-                    tableName, getIdKey(), getPathKey(), getMaxPathLength(), getValueKey(), getChildKey(),
-                    getMaxPathLength(), getIdKey(), getPathKey(), getChildKey(), tableType);
-            connection.prepareStatement(tableSetupCommand).execute();
+        String tableSetupCommand = String.format("CREATE TABLE IF NOT EXISTS %s ( "
+                + "%s INT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
+                "%s VARCHAR(%d) NOT NULL, %s MEDIUMBLOB, %s VARCHAR(%d), " + // VARCHAR path, BLOB value, VARCHAR child
+                "PRIMARY KEY (%s), UNIQUE KEY (%s,%s)) " + // Use id as primary key, enforce unique (path, child) combo
+                "ENGINE=%s", // Use specified table type (MyISAM works best in practice)
+                tableName, getIdKey(), getPathKey(), getMaxPathLength(), getValueKey(), getChildKey(),
+                getMaxPathLength(), getIdKey(), getPathKey(), getChildKey(), tableType);
+        try (Connection connection = cpds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(tableSetupCommand)) {
+             preparedStatement.execute();
         }
     }
 

@@ -179,35 +179,32 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
 
         log.trace("sending {}", file);
 
-        FileChannel fileChannel;
+        FileChannel fileChannel = null;
         try {
             fileChannel = FileChannel.open(file, StandardOpenOption.READ);
-        } catch (IOException fnfe) {
-            sendError(ctx, NOT_FOUND);
-            return;
-        }
-        long fileLength = fileChannel.size();
+            long fileLength = fileChannel.size();
 
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-        setContentLength(response, fileLength);
-        setContentTypeHeader(response, file);
-        try {
+            HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
+            setContentLength(response, fileLength);
+            setContentTypeHeader(response, file);
             setDateAndCacheHeaders(response, file);
+            if (isKeepAlive(request)) {
+                response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            }
+
+            // Write the initial line and the header.
+            ctx.write(response);
+
+            // Write the content.
+            ctx.write(new DefaultFileRegion(fileChannel, 0, fileLength));
         } catch (IOException ioex) {
-            fileChannel.close();
             sendError(ctx, NOT_FOUND);
             return;
+        } finally {
+            if(fileChannel != null) {
+                fileChannel.close();
+            }
         }
-        if (isKeepAlive(request)) {
-            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
-        }
-
-        // Write the initial line and the header.
-        ctx.write(response);
-
-        // Write the content.
-        ctx.write(new DefaultFileRegion(fileChannel, 0, fileLength));
-
         // Write the end marker
         ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 

@@ -100,21 +100,22 @@ public class GoogleDriveAuthentication {
      * Send an HTML formatted error message.
      */
     private static void sendErrorMessage(ChannelHandlerContext ctx, String message) throws IOException {
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.headers().set(CONTENT_TYPE, "text/html; charset=utf-8");
-        StringBuilderWriter writer = new StringBuilderWriter(50);
-        writer.append("<html><head><title>Hydra Query Master</title></head><body>");
-        writer.append("<h3>");
-        writer.append(message);
-        writer.append("</h3></body></html>");
-        ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
+        try (StringBuilderWriter writer = new StringBuilderWriter(50)) {
+            HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            response.headers().set(CONTENT_TYPE, "text/html; charset=utf-8");
+            writer.append("<html><head><title>Hydra Query Master</title></head><body>");
+            writer.append("<h3>");
+            writer.append(message);
+            writer.append("</h3></body></html>");
+            ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
                 CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
-        HttpContent content = new DefaultHttpContent(textResponse);
-        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, textResponse.readableBytes());
-        ctx.write(response);
-        ctx.write(content);
-        ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-        lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+            HttpContent content = new DefaultHttpContent(textResponse);
+            response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, textResponse.readableBytes());
+            ctx.write(response);
+            ctx.write(content);
+            ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+            lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+        }
     }
 
     /**

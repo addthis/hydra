@@ -16,13 +16,12 @@ package com.addthis.hydra.query.web;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-
 import java.util.Arrays;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
 import com.addthis.hydra.data.query.source.QuerySource;
@@ -40,7 +39,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.EventExecutor;
-
 import static com.addthis.hydra.query.web.HttpUtils.sendError;
 
 public final class HttpQueryCallHandler {
@@ -65,8 +63,10 @@ public final class HttpQueryCallHandler {
         if ((dir != null) && !job.endsWith(dir)) {
             String[] jobs = job.split(",");
             String[] dirs = dir.split(",");
-            job = Arrays.stream(jobs).flatMap(subJob ->  Arrays.stream(dirs).map(subDir -> subJob + '/' + subDir))
+            try (Stream<String> stream = Arrays.stream(jobs)) {
+                stream.flatMap(subJob ->  Arrays.stream(dirs).map(subDir -> subJob + '/' + subDir))
                         .collect(Collectors.joining(","));
+            }
         }
         String path = kv.getValue("path", kv.getValue("q", ""));
         Query query = new Query(job, new String[]{path}, new String[]{kv.getValue("ops"), kv.getValue("rops")});
