@@ -287,21 +287,26 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             case "/mqmaster/deactivate": {
                 log.trace("Received MeshQueryMaster deactivate request");
                 String shouldDeactivate = kv.getValue("deactivate");
+                boolean success;
                 switch (shouldDeactivate) {
-                    case "1":   meshQueryMaster.deactivateMqMaster(true);
+                    case "1":   success = meshQueryMaster.deactivateMqMaster(true);
                         break;
-                    case "0":   meshQueryMaster.deactivateMqMaster(false);
+                    case "0":   success = meshQueryMaster.deactivateMqMaster(false);
                         break;
-                    default:    writer.write("Bad request");
+                    default:  success = false;
                 }
-                writer.write("1");
+                if(success) {
+                    writer.write("[1]");
+                } else {
+                    writer.write("[0]");
+                }
                 break;
             }
             case "/mqmaster/healthcheck": {
                 if(meshQueryMaster.getIsActive().get()) {
                     writer.write("[1]");
                 } else {
-                    writer.write("0");
+                    writer.write("[0]");
                 }
                 break;
             }
