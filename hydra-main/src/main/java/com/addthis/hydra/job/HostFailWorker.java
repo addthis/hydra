@@ -252,7 +252,7 @@ public class HostFailWorker {
                 }
                 boolean diskFull = (failState == FailState.DISK_FULL);
                 if (!diskFull && spawn.getSystemManager().isQuiesced()) {
-                    // If filesystem is okay, don't do any moves while spawn is quiesced.s
+                    // If filesystem is okay, don't do any moves while spawn is quiesced.
                     return;
                 }
                 int taskMovingMax = diskFull ? maxMovingTasksDiskFull : maxMovingTasks;

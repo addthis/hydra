@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FileReaderHostLocationInitializer extends HostLocationInitializer{
-    private static final Logger log = LoggerFactory.getLogger(Minion.class);
+    private static final Logger log = LoggerFactory.getLogger(FileReaderHostLocationInitializer.class);
 
     private File file;
 
@@ -39,7 +39,7 @@ public class FileReaderHostLocationInitializer extends HostLocationInitializer{
                 physicalHost = config.getString("physicalHost");
             }
         } catch (Exception e) {
-            log.warn("error getting host location from {}: {}", file.getName(), e);
+            log.error("error getting host location from {}: {}", file.getName(), e);
         }
         return new HostLocation(dataCenter, rack, physicalHost);
     }

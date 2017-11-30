@@ -14,9 +14,9 @@ import org.slf4j.LoggerFactory;
  */
 
 public class HostLocation {
-    private String dataCenter;
-    private String rack;
-    private String physicalHost; // a physical host can have many VMs
+    private final String dataCenter;
+    private final String rack;
+    private final String physicalHost; // a physical host can have many VMs
 
     @JsonCreator
     HostLocation(@JsonProperty("dataCenter") String dataCenter,
@@ -35,24 +35,12 @@ public class HostLocation {
         return dataCenter;
     }
 
-    public void setDataCenter(String dataCenter) {
-        this.dataCenter = dataCenter;
-    }
-
     public String getRack() {
         return rack;
     }
 
-    public void setRack(String rack) {
-        this.rack = rack;
-    }
-
     public String getPhysicalHost() {
         return physicalHost;
-    }
-
-    public void setPhysicalHost(String physicalHost) {
-        this.physicalHost = physicalHost;
     }
 
     @Override
@@ -62,6 +50,9 @@ public class HostLocation {
 
     @Override
     public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
         if (obj == null || obj.getClass() != getClass()) {
             return false;
         }
@@ -80,20 +71,20 @@ public class HostLocation {
      * @param o
      * @return
      */
-    public int compare(HostLocation o) {
+    public int assignScoreByHostLocation(HostLocation o) {
         if (!this.getDataCenter().equals(o.getDataCenter())) {
             // Different dataCenter
-            return -3;
+            return 1;
         } else {
             if (!this.getRack().equals(o.getRack())) {
                 // Same dataCenter, different rack
-                return -2;
+                return 2;
             } else if (this.getPhysicalHost().equals(o.getPhysicalHost())) {
                 // dataCenter, rack and physicalHost are the same
-                return 0;
+                return 4;
             } else {
                 // Same dataCenter, same rack, different physicalHost
-                return -1;
+                return 3;
             }
         }
     }

@@ -16,7 +16,7 @@ import com.addthis.hydra.minion.HostLocation;
 public class HostCandidateIterator {
     private static HostManager hostManager;
     private static SpawnBalancer balancer;
-    private Comparator comparator;
+    private Comparator<HostAndScore> comparator;
     private Map<HostLocation, PriorityQueue<HostAndScore>> scoreHeapByLocation;
     private List<HostState> orderedHosts;
 
@@ -61,8 +61,9 @@ public class HostCandidateIterator {
     private List<HostLocation> sortHostLocations(JobTask task) {
         // Sort HostLocation(s) using Host score
         Comparator<Map.Entry<HostLocation, PriorityQueue<HostAndScore>>> sortComparator;
-        sortComparator = Comparator.comparingInt(entry -> entry.getKey().compare(hostManager.getHostState(task.getHostUUID()).getHostLocation()));
-        sortComparator = sortComparator.thenComparingDouble(entry -> entry.getValue().peek().score);
+        Comparator<Map.Entry<HostLocation, PriorityQueue<HostAndScore>>> scoreComparator;
+        scoreComparator = Comparator.comparingInt(entry -> entry.getKey().assignScoreByHostLocation(hostManager.getHostState(task.getHostUUID()).getHostLocation()));
+        sortComparator = scoreComparator.thenComparingDouble(entry -> entry.getValue().peek().score);
         List<HostLocation> hostLocationList = scoreHeapByLocation.entrySet()
                                                                  .stream()
                                                                  .sorted(sortComparator)
