@@ -80,7 +80,6 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
-import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.hydra.util.PrometheusServletCreator;
 
@@ -112,7 +111,6 @@ import org.apache.zookeeper.KeeperException;
 import org.eclipse.jetty.io.UncheckedIOException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -200,7 +198,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
     final ServletContextHandler handler = new ServletContextHandler();
-    final ServletHandler metricsHandler;
     final MinionHandler minionHandler = new MinionHandler(this);
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
@@ -231,7 +228,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         user = null;
         path = null;
         jetty = null;
-        metricsHandler = null;
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
@@ -264,9 +260,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         jetty = new Server(webPort);
 
         PrometheusServletCreator.create(handler);
-        handler.start();
         jetty.setHandler(minionHandler);
         jetty.start();
+        handler.start();
 
         waitForJetty();
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
@@ -275,7 +271,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                                                              "-JMXONLY");
         nonIdleIgnoredKicks = Metrics.newMeter(Minion.class, "nonIdleIgnoredKicks", "ignored-kick", TimeUnit.MINUTES);
         fileStatsTimer = Metrics.newTimer(Minion.class, "JobTask-byte-size-timer");
-        metricsHandler = MetricsServletMaker.makeHandler();
         activeTaskHistogram = Metrics.newHistogram(Minion.class, "activeTasks");
         new HostMetricUpdater(this);
         try {
