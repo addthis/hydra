@@ -50,7 +50,6 @@ import com.google.common.io.Files;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
-import com.yammer.metrics.reporting.MetricsServlet;
 
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
@@ -190,7 +189,6 @@ public class SpawnService {
         ServletHolder sh = new ServletHolder(servletContainer);
 
         handler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        handler.addServlet(new ServletHolder(new MetricsServlet()), "/yammer_metrics");
         handler.addServlet(sh, "/*");
 
         PrometheusServletCreator.create(jetty, handler);
