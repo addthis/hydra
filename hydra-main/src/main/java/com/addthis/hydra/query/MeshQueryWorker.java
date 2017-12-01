@@ -34,14 +34,10 @@ import com.addthis.meshy.MeshyServerGroup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.yammer.metrics.reporting.MetricsServlet;
 
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,9 +122,6 @@ public class MeshQueryWorker implements AutoCloseable {
         context.setContextPath("/");
         PrometheusServletCreator.create(newHtmlServer, context);
         newHtmlServer.setHandler(context);
-
-        //Actually create the servlet (from yammer metrics)
-        context.addServlet(new ServletHolder(new MetricsServlet()), "/yammer_metrics");
 
         Connector connector0 = newHtmlServer.getConnectors()[0];
         connector0.setMaxIdleTime(600000);
