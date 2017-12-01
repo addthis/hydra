@@ -13,6 +13,10 @@
  */
 package com.addthis.hydra.util;
 
+import java.io.File;
+
+import com.typesafe.config.ConfigFactory;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -28,6 +32,7 @@ import io.prometheus.jmx.JmxCollector;
  */
 public class PrometheusServletCreator {
     private static final Logger log = LoggerFactory.getLogger(PrometheusServletCreator.class);
+    private static final String PROMETHEUS_CONFIG = ConfigFactory.load().getString("hydra.prometheus.config");
 
     /**
      * Create and add prometheus metrics servlet and add it to an existing handler; register the JMX collector;
@@ -54,11 +59,18 @@ public class PrometheusServletCreator {
      */
     private static void register() {
         try {
-            new JmxCollector("").register();
+            File promConfig = new File(PROMETHEUS_CONFIG);
+            if(promConfig.exists()) {
+                new JmxCollector(promConfig).register();
+                log.info("Using prometheus config file: {}", PROMETHEUS_CONFIG);
+            } else {
+                new JmxCollector("").register();
+                log.warn("No prometheus config file found. Using prometheus default.");
+            }
             DefaultExports.initialize();
-            log.info("Prometheus JmxCollector registered.");
+            log.info("Prometheus collector registerd.");
         } catch (Exception e) {
-            log.warn("Prometheus collector not registerd: ", e);
+            log.error("Prometheus collector not registerd: ", e);
         }
 
     }
