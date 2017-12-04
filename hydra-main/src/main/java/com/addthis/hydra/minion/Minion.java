@@ -249,12 +249,11 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             myHost = InetAddress.getLocalHost().getHostAddress();
         }
         if (hostLocationInitializer == null) {
-            log.warn("No HostLocationInitializer type specified, using default");
-            hostLocation = HostLocation.forHost(myHost);
-        } else {
-            hostLocation = hostLocationInitializer.getHostLocation();
-            log.info("Host location is: {}", hostLocation.toString());
+            log.warn("No HostLocationInitializer type specified, using SystemPropertyHostLocationInitializer as default.");
+            hostLocationInitializer = new SystemPropertyHostLocationInitializer();
         }
+        hostLocation = hostLocationInitializer.getHostLocation();
+        log.info("Host location is: {}", hostLocation.toString());
         user = new SimpleExec("whoami").join().stdoutString().trim();
         path = rootDir.getAbsolutePath();
         diskTotal.set(rootDir.getTotalSpace());
