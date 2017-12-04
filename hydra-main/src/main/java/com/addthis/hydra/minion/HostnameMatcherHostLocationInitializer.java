@@ -25,18 +25,18 @@ import org.slf4j.LoggerFactory;
 public class HostnameMatcherHostLocationInitializer extends HostLocationInitializer{
     private static final Logger log = LoggerFactory.getLogger(HostnameMatcherHostLocationInitializer.class);
 
-    String hostname = Parameter.value("minion.localhost");
-
-    Pattern adMatcher = Pattern.compile(Parameter.value("adPattern", ".(ad*?)."));
-    Pattern rackMatcher = Pattern.compile(Parameter.value("rackPattern", ".(rack*?)."));
-    Pattern physicalHostMatcher = Pattern.compile(Parameter.value("physicalHostPattern", ".(physicalHost*?)."));
-
     @JsonCreator
     public HostnameMatcherHostLocationInitializer() {
         log.info("using HostnameMatcherHostLocationInitializer.");
     }
 
     @Override HostLocation getHostLocation() {
+
+        String hostname = Parameter.value("minion.localhost");
+
+        Pattern adMatcher = Pattern.compile(Parameter.value("adPattern", "(ad[0-9]+)"));
+        Pattern rackMatcher = Pattern.compile(Parameter.value("rackPattern", "(rack[0-9]+)"));
+        Pattern physicalHostMatcher = Pattern.compile(Parameter.value("physicalHostPattern", "(physicalHost[0-9]+)"));
         String ad = match(hostname, adMatcher);
         String rack = match(hostname, rackMatcher);
         String physicalHost = match(hostname, physicalHostMatcher);
