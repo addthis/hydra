@@ -16,6 +16,7 @@ package com.addthis.hydra.job.spawn.balancer;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -408,7 +409,36 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     public List<JobTaskMoveAssignment> pushTasksOffHostForFilesystemOkayFailure(HostState host, int moveLimit) {
         List<HostState> hosts = hostManager.listHostStatus(null);
-        return pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
+        return pushTasksOffHost(host, hosts, false, moveLimit, false);
+    }
+
+    private List<JobTaskMoveAssignment> getMoveAssignments(HostState host, Collection<HostState> otherHosts,
+                                                           boolean limitBytes, long byteLimit,
+                                                           int moveLimit,
+                                                           boolean obeyDontAutobalanceMe) {
+        List<JobTaskMoveAssignment> moveAssignments = new ArrayList<>();
+
+        List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
+
+        for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
+            long taskTrueSize = getTaskTrueSize(task);
+            if (limitBytes && (taskTrueSize > byteLimit)) {
+                continue;
+            }
+            JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
+            // we don't want to take up one of the limited rebalance slots
+            // with an assignment that we know has no chance of happening
+            // because either the assignment is null or the target host
+            // for the assignment is null
+            if (assignment != null && assignment.getTargetUUID() != null) {
+                moveAssignments.add(assignment);
+                byteLimit -= taskTrueSize;
+            }
+            if(moveAssignments.size() >= moveLimit) {
+                break;
+            }
+        }
+        return moveAssignments;
     }
 
     /* Push/pull the tasks on a host to balance its disk, obeying an overall limit on the number of tasks/bytes to
@@ -416,34 +446,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private List<JobTaskMoveAssignment> pushTasksOffHost(HostState host,
                                                          Collection<HostState> otherHosts,
                                                          boolean limitBytes,
-                                                         double byteLimitFactor,
                                                          int moveLimit,
                                                          boolean obeyDontAutobalanceMe) {
-        List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
-        if (rv.size() <= moveLimit) {
-            long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
-            List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
-            for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
-                long taskTrueSize = getTaskTrueSize(task);
-                if (limitBytes && (taskTrueSize > byteLimit)) {
-                    continue;
-                }
-                JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
-                // we don't want to take up one of the limited rebalance slots
-                // with an assignment that we know has no chance of happening
-                // because either the assignment is null or the target host
-                // for the assignment is null
-                if (assignment != null && assignment.getTargetUUID() != null) {
-                    markRecentlyReplicatedTo(assignment.getTargetUUID());
-                    rv.add(assignment);
-                    byteLimit -= taskTrueSize;
-                }
-                if (rv.size() >= moveLimit) {
-                    break;
-                }
-            }
-        }
-        return rv;
+        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host, otherHosts, limitBytes, config.getBytesMovedFullRebalance(), moveLimit, obeyDontAutobalanceMe);
+        markRecentlyReplicatedTo(moveAssignments);
+        moveAssignments.addAll(purgeMisplacedTasks(host, moveLimit));
+        return moveAssignments;
     }
 
     /* Look through a hoststate to find tasks that don't correspond to an actual job or are on the wrong host */
@@ -500,7 +508,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 if ((job != null) && (task != null) && isInMovableState(task)
                     // Only add non-null tasks that are either idle or queued
                     && (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(
-                        host.getHostUuid()))) // Only add tasks that are supposed to live on the specified host.
+                        hostId))) // Only add tasks that are supposed to live on the specified host.
                 {
                     if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
                         // obeyDontAutobalanceMe is set to false when spawn is doing a filesystem-okay host failure.
@@ -552,9 +560,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     @VisibleForTesting
-    protected void markRecentlyReplicatedTo(String hostId) {
-        if (hostId != null) {
-            recentlyReplicatedToHosts.put(hostId, true);
+    protected void markRecentlyReplicatedTo(List<JobTaskMoveAssignment> moveAssignments) {
+        if (moveAssignments != null) {
+            moveAssignments.stream()
+                           .filter(assignment -> assignment.getTargetUUID() != null)
+                           .map(assignment -> assignment.getTargetUUID())
+                           .forEach(targetHostUUID -> recentlyReplicatedToHosts.put(targetHostUUID, true));
         }
     }
 
@@ -999,7 +1010,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             if ((moves == null) || moves.isEmpty()) {
                 break;
             } else {
-                candidateAssignments.addAll(moves);
+                candidateAssignments.addAll(moves.getList());
             }
         }
         if (candidateAssignments.size() > maxTasksToMove) {
@@ -1026,21 +1037,21 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         List<HostState> sortedHosts = sortHostsByDiskSpace(hosts);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
-
         HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         if ((failState == HostFailWorker.FailState.FAILING_FS_OKAY) || isExtremeHost(hostID, true, true) ||
             (host.getAvailDiskBytes() < config.getMinFreeDiskSpaceToRecieveNewTasks())) {
             // Host disk is overloaded
             log.info("[spawn.balancer] {} categorized as overloaded host; looking for tasks to push off of it", hostID);
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
-            rv.addAll(pushTasksOffHost(host, lightHosts, true, 1, config.getTasksMovedFullRebalance(), true));
+            List<JobTaskMoveAssignment> moveAssignments = pushTasksOffHost(host, lightHosts, true, config.getTasksMovedFullRebalance(), true);
+            rv.addAll(moveAssignments);
         } else if (isExtremeHost(hostID, true, false)) {
             // Host disk is underloaded
             log.info("[spawn.balancer] {} categorized as underloaded host; looking for tasks to pull onto it", hostID);
             List<HostState> heavyHosts =
                     Lists.reverse(sortedHosts.subList(sortedHosts.size() - numAlleviateHosts, sortedHosts.size()));
-            // FIXME: pushTasksOntoHost needs to take a moveLimit parameter
-            // rv.addAll(pushTasksOntoHost(host, heavyHosts));
+            List<JobTaskMoveAssignment> moveAssignments = pushTasksOntoHost(host, heavyHosts);
+            rv.addAll(moveAssignments);
         } else if (isExtremeHost(hostID, false, true)) {
             // Host is overworked
             log.info("[spawn.balance] {} categorized as overworked host; looking for tasks to push off it", hostID);
@@ -1403,16 +1414,43 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         return rv;
     }
 
-    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Iterable<HostState> heavyHosts) {
+    /**
+     * Pushes one task from each heavyHost on to the lightHost
+     * @param host lightHost to receive tasks
+     * @param heavyHosts list of heavyHosts
+     * @return list of valid JobTaskMoveAssignment(s)
+     */
+    private List<JobTaskMoveAssignment> pushTasksOntoHost(HostState host, Collection<HostState> heavyHosts) {
+        int moveLimit = config.getTasksMovedFullRebalance();
         MoveAssignmentList moveAssignments = new MoveAssignmentList(spawn, taskSizer);
+
+        List<HostState> lightHostList = Arrays.asList(host);
+        // byteLimitFactor = 1
+        long byteLimit = config.getBytesMovedFullRebalance();
+
         for (HostState heavyHost : heavyHosts) {
-            double byteLimitFactor =
-                    1 - ((double) moveAssignments.getBytesUsed() / config.getBytesMovedFullRebalance());
-            moveAssignments.addAll(pushTasksOffHost(heavyHost, Collections.singletonList(host), true, byteLimitFactor,
-                                                    config.getTasksMovedFullRebalance(), true));
+            List<JobTaskMoveAssignment> assignments =
+                    getMoveAssignments(heavyHost, lightHostList, true, byteLimit, moveLimit, true);
+
+            // Add only one assignment from this heavyHost
+            for (JobTaskMoveAssignment assignment : assignments) {
+                // Add the assignment only if it does not move replicas of the same task to the same target host
+                if (moveAssignments.add(assignment)) {
+                    // Update byteLimit with available byte limit
+                    byteLimit -= moveAssignments.getBytesUsed();
+                    markRecentlyReplicatedTo(Arrays.asList(assignment));
+                    break;
+                }
+            }
+
+            if (moveAssignments.size() >= moveLimit) {
+                break;
+            }
         }
-        moveAssignments.addAll(purgeMisplacedTasks(host, 1));
-        return moveAssignments;
+
+        List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
+        rv.addAll(moveAssignments.getList());
+        return rv;
     }
 
     /* For each active job, ensure that the given host has a fair share of tasks from that job */
@@ -1449,7 +1487,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                                   :
                                                          moveTasksOntoHost(tasksByHost, maxPerHost, 1, totalBytesToMove,
                                                                            host.getHostUuid());
-                        rv.addAll(assignments);
+                        rv.addAll(assignments.getList());
                         totalTasksToMove -= assignments.size();
                         totalBytesToMove -= assignments.getBytesUsed();
                     } else {
@@ -1474,29 +1512,35 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         Map<String, Boolean> snapshot = new HashMap<>(recentlyBalancedHosts.asMap());
         for (JobTaskMoveAssignment assignment : candidateAssignments) {
             String newHostID = assignment.getTargetUUID();
-            if (newHostID == null) {
-                continue;
+            // Task should be deleted
+            if(assignment.delete()) {
+                rv.add(assignment);
+            } else {
+                // Target host is null, assignment cannot be executed
+                if (newHostID == null) {
+                    continue;
+                }
+                JobKey jobKey = assignment.getJobKey();
+                String jobID = (jobKey == null) ? null : jobKey.getJobUuid();
+                if (isExtremeHost(newHostID, true, true)) {
+                    log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                             "because it is already heavily loaded", jobID, newHostID);
+                    continue;
+                }
+                HostState newHost = hostManager.getHostState(newHostID);
+                if ((newHost == null) || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost)) {
+                    log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                             "because it cannot receive the new task", jobID, newHostID);
+                    continue;
+                }
+                if (snapshot.containsKey(newHostID)) {
+                    log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
+                             "because it already received a different task recently", jobID, newHostID);
+                    continue;
+                }
+                rv.add(assignment);
+                recentlyBalancedHosts.put(newHostID, true);
             }
-            JobKey jobKey = assignment.getJobKey();
-            String jobID = (jobKey == null) ? null : jobKey.getJobUuid();
-            if (isExtremeHost(newHostID, true, true)) {
-                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
-                         "because it is already heavily loaded", jobID, newHostID);
-                continue;
-            }
-            HostState newHost = hostManager.getHostState(newHostID);
-            if ((newHost == null) || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost)) {
-                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
-                         "because it cannot receive the new task", jobID, newHostID);
-                continue;
-            }
-            if (snapshot.containsKey(newHostID)) {
-                log.warn("[spawn.balancer] decided not to move task from job {} to host {} " +
-                         "because it already received a different task recently", jobID, newHostID);
-                continue;
-            }
-            rv.add(assignment);
-            recentlyBalancedHosts.put(newHostID, true);
         }
         return rv;
     }

@@ -261,6 +261,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         diskReadOnly = false;
         minionTaskDeleter = new MinionTaskDeleter();
         if (stateFile.exists()) {
+            if(stateFile.length() == 0) {
+                log.error("minion.state is empty when reading it");
+            }
             CodecJSON.decodeString(this, LessBytes.toString(LessFiles.read(stateFile)));
         } else {
             uuid = UUID.randomUUID().toString();
@@ -592,6 +595,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     void writeState() {
         minionStateLock.lock();
         try {
+            log.info("Writing {} to minion.state when the minion.state file size is {}", CodecJSON.encodeString(this), stateFile.exists() ? stateFile.length() : 0);
             LessFiles.write(stateFile, LessBytes.toBytes(CodecJSON.encodeString(this)), false);
         } catch (IOException io) {
             log.warn("Error writing minion state to disk: ", io);
