@@ -21,7 +21,7 @@ import org.codehaus.jackson.annotate.JsonCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FileReaderHostLocationInitializer extends HostLocationInitializer{
+public class FileReaderHostLocationInitializer implements HostLocationInitializer{
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
     private File file;
@@ -35,8 +35,7 @@ public class FileReaderHostLocationInitializer extends HostLocationInitializer{
         }
     }
 
-    @Override
-    HostLocation getHostLocation() {
+    public HostLocation getHostLocation() {
         String dataCenter = "Unknown";
         String rack = "Unknown";
         String physicalHost = "Unknown";

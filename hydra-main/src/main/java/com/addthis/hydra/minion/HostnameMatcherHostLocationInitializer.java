@@ -22,7 +22,7 @@ import org.codehaus.jackson.annotate.JsonCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HostnameMatcherHostLocationInitializer extends HostLocationInitializer{
+public class HostnameMatcherHostLocationInitializer implements HostLocationInitializer{
     private static final Logger log = LoggerFactory.getLogger(HostnameMatcherHostLocationInitializer.class);
 
     @JsonCreator
@@ -30,7 +30,7 @@ public class HostnameMatcherHostLocationInitializer extends HostLocationInitiali
         log.info("using HostnameMatcherHostLocationInitializer.");
     }
 
-    @Override HostLocation getHostLocation() {
+    public HostLocation getHostLocation() {
 
         String hostname = Parameter.value("minion.localhost");
 

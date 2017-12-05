@@ -19,7 +19,7 @@ import org.codehaus.jackson.annotate.JsonCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class SystemPropertyHostLocationInitializer extends HostLocationInitializer{
+class SystemPropertyHostLocationInitializer implements HostLocationInitializer{
 
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
@@ -28,7 +28,7 @@ class SystemPropertyHostLocationInitializer extends HostLocationInitializer{
         log.info("using SystemPropertyHostLocationInitializer");
     }
 
-    @Override HostLocation getHostLocation() {
+    public HostLocation getHostLocation() {
         String dataCenter = Parameter.value("hostlocation.datacenter", "Unknown");
         String rack = Parameter.value("hostlocation.rack","Unknown");
         String physicalHost = Parameter.value("hostlocation.physicalhost", "Unknown");
