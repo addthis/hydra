@@ -34,9 +34,9 @@
         </td>
     </tr>
     <tr class="row">
-        <td width="30%">Minion Type</td>
+        <td width="30%">Minion Type&nbsp;&nbsp;<button type="button" id="minionTypeRelease" class="btn btn-default" >Change</button></td>
         <td width="70%">
-            <input name="minionType" type='text' class="form-control trackable" style="margin:0px;" type="text" value="<%-job.minionType%>" <%-(_.isUndefined(job.id)? '' : 'disabled')%> ></input>
+            <input id="miniontypeinput" name="minionType" type='text' class="form-control trackable" style="margin:0px;" type="text" value="<%-job.minionType%>" <%-(_.isUndefined(job.id)? '' : 'disabled')%> ></input>
         </td>
     </tr>
     <tr class="row">

@@ -788,7 +788,7 @@ function(
                 diskUsed+=hostModel.get("diskUsed");
                 diskMax+=hostModel.get("diskMax");
                 if (!hostModel.get("dead")) {
-                	avail+=hostModel.get("availableTaskSlots");
+                    avail+=hostModel.get("availableTaskSlots");
                 }
             });
             if(diskMax>0){
@@ -1688,7 +1688,8 @@ function(
             "click #validateLink":"handleValidateClick",
             "click li.disabled > a":"handleDisabledTabClick",
             "click #cloneJobButton":"handleCloneClick",
-            "click #browseDataButton":"handleBrowseClick"
+            "click #browseDataButton":"handleBrowseClick",
+            "click #minionTypeRelease":"handleminionTypeReleaseClick",
         },
         initialize:function(options){
             options = options || {};
@@ -1873,6 +1874,46 @@ function(
         handleRevertJobButtonClick:function(event){
             event.preventDefault();
             app.router.trigger("route:showJobBackups",this.model.id);
+        },
+        handleminionTypeReleaseClick:function(event){
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            var self=this;
+            alertify.prompt("Enter New minionType:","",function(evt, str){
+                self.model.minionType=str;
+                self.handleminionTypeReleaseSave(event);
+            });
+            
+        },
+        handleminionTypeReleaseSave:function(event){
+            var parameters = {};
+            var miniontypeinput = this.$el.find("#miniontypeinput");
+            var newminiontype = this.model.minionType;
+            parameters["job"] = this.model.id;
+            parameters["minionType"] = newminiontype;
+            parameters["user"] = app.user.get("username");
+            parameters["token"] = app.user.get("token");
+            parameters["sudo"] = app.user.get("cansudo");
+            app.authQueryParameters(parameters);
+            $.ajax({
+                url: "/job/updateMinionType",
+                type: "GET",
+                data: parameters,
+                dataType: "json",
+                statusCode: {
+                    400: function(e) {
+                        alertify.error("Error: " + e.responseText);
+                    },
+                    500: function(e){
+                        alertify.error("Error: " + e.responseText);
+                    },
+                    200: function(){
+                        miniontypeinput.val(newminiontype);
+                        alertify.success("Success");
+                    }
+                }
+            });
+
         },
         handleSettingsChangePermissionClick:function(event){
             var parameters = {};
@@ -2136,7 +2177,7 @@ function(
             app.router.navigate("#alerts/create/" + this.model.id, {trigger: true});
         },
         handleViewAlertsButtonClick:function(event){
-        	app.router.navigate("#alertsFiltered/" + this.model.id, {trigger: true});
+            app.router.navigate("#alertsFiltered/" + this.model.id, {trigger: true});
         },
         handleEmailKeyUp:function(event){
             var input = $(event.currentTarget);
