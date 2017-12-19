@@ -1,12 +1,7 @@
 package com.addthis.hydra.minion;
 
-import java.util.Comparator;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Holds physical location info of a minion. The info can be useful to decide where the replicas should be put, e.g.
@@ -72,20 +67,19 @@ public class HostLocation {
      * @return
      */
     public int assignScoreByHostLocation(HostLocation o) {
-        if (!this.getDataCenter().equals(o.getDataCenter())) {
-            // Different dataCenter
-            return 1;
-        } else {
+        if (this.getDataCenter().equals(o.getDataCenter())) {
             if (!this.getRack().equals(o.getRack())) {
                 // Same dataCenter, different rack
-                return 2;
-            } else if (this.getPhysicalHost().equals(o.getPhysicalHost())) {
+                return 1;
+            }
+            if (this.getPhysicalHost().equals(o.getPhysicalHost())) {
                 // dataCenter, rack and physicalHost are the same
-                return 4;
-            } else {
-                // Same dataCenter, same rack, different physicalHost
                 return 3;
             }
+            // Same dataCenter, same rack, different physicalHost
+            return 2;
         }
+        // Different dataCenter
+        return 0;
     }
 }
