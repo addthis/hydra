@@ -19,7 +19,7 @@ public class HostLocation {
     private final String physicalHost; // a physical host can have many VMs
 
     @JsonCreator
-    HostLocation(@JsonProperty("dataCenter") String dataCenter,
+    public HostLocation(@JsonProperty("dataCenter") String dataCenter,
                  @JsonProperty("rack") String rack,
                  @JsonProperty("physicalHost") String physicalHost) {
         this.dataCenter = dataCenter;

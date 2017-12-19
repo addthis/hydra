@@ -40,6 +40,7 @@ public class HostCandidateIterator {
             polledHost = copyQueue.poll();
             HostLocation hostLocation = polledHost.host.getHostLocation();
             int score = 0;
+            // HostLocation further away from task and replica locations gets lower score
             for(HostLocation location : this.taskAndReplicaLocations) {
                 score += hostLocation.assignScoreByHostLocation(location);
             }

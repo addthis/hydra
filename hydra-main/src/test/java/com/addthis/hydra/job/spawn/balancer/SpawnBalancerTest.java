@@ -162,14 +162,13 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState fullHost = installHostStateWithUUID(fullHostID, spawn, true);
         fullHost.setUsed(new HostCapacity(0, 0, 0, 9998));
         fullHost.setMax(new HostCapacity(0, 0, 0, 10_000));
-        fullHost.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        fullHost.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
 
         int numLightHosts = 9;
         ArrayList<String> hostIDs = new ArrayList<>(numLightHosts + 1);
         hostIDs.add(fullHostID);
 
-        String[] dataCenterIds = {"dataCenter = a", "dataCenter = b", "dataCenter = c"};
-        String suffix = ", rack = \"\", physicalHost = \"\"";
+        String[] dataCenterIds = {"a", "b", "c"};
 
         for (int i = 0; i < numLightHosts; i++) {
             String hostID = "light" + i;
@@ -177,7 +176,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             HostState lightHost = installHostStateWithUUID(hostID, spawn, true);
             lightHost.setUsed(new HostCapacity(0, 0, 0, 20_000_000_000L));
             lightHost.setMax(new HostCapacity(0, 0, 0, 100_000_000_000L));
-            lightHost.setHostLocation(Configs.decodeObject(HostLocation.class, dataCenterIds[i % dataCenterIds.length] + suffix));
+            lightHost.setHostLocation(new HostLocation(dataCenterIds[i % dataCenterIds.length], "", ""));
         }
 
         int numReplicas = 5;
@@ -256,9 +255,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String firstHostUUID = "first";
         String secondHostUUID = "second";
         String thirdHostUUID = "third";
-        installHostStateWithUUID(firstHostUUID, spawn, true).setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
-        installHostStateWithUUID(secondHostUUID, spawn, true).setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
-        installHostStateWithUUID(thirdHostUUID, spawn, true).setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = c, rack = \"\", physicalHost = \"\""));
+        installHostStateWithUUID(firstHostUUID, spawn, true).setHostLocation(new HostLocation("a", "\"\"", "\"\""));
+        installHostStateWithUUID(secondHostUUID, spawn, true).setHostLocation(new HostLocation("b", "\"\"", "\"\""));
+        installHostStateWithUUID(thirdHostUUID, spawn, true).setHostLocation(new HostLocation("c", "\"\"", "\"\""));
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         int numTasks = 15;
         Job job = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(firstHostUUID, secondHostUUID, thirdHostUUID), now, 1, 0);
@@ -275,11 +274,11 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String lightHost1UUID = "light1";
         String lightHost2UUID = "light2";
         HostState heavyHost = installHostStateWithUUID(heavyHostUUID, spawn, true);
-        heavyHost.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        heavyHost.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
-        lightHost1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+        lightHost1.setHostLocation(new HostLocation("b", "\"\"", "\"\""));
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
-        lightHost2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = c, rack = \"\", physicalHost = \"\""));
+        lightHost2.setHostLocation(new HostLocation("c", "\"\"", "\"\""));
 
         List<HostState> hosts = Arrays.asList(heavyHost, lightHost1, lightHost2);
         Job smallJob = createJobAndUpdateHosts(spawn, 6, Arrays.asList(heavyHostUUID), now, 1000, 0);
@@ -296,7 +295,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         Job job2 = createJobAndUpdateHosts(spawn, 6, Arrays.asList(heavyHostUUID, lightHost1UUID, lightHost2UUID), now, 1000, 0);
         String brandNewHostUUID = "brandnew";
         HostState brandNewHost = installHostStateWithUUID(brandNewHostUUID, spawn, true);
-        brandNewHost.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        brandNewHost.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
         List<HostState> newHosts = Arrays.asList(heavyHost, lightHost1, lightHost2, brandNewHost);
         bal.updateAggregateStatistics(newHosts);
         List<JobTaskMoveAssignment> assignments2 = bal.getAssignmentsForJobReallocation(job2, -1, newHosts);
@@ -329,9 +328,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String heavyHostUUID = "heavy";
         String lightHostUUID = "light";
         HostState heavyHost = installHostStateWithUUID(heavyHostUUID, spawn, true);
-        heavyHost.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        heavyHost.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
         HostState lightHost = installHostStateWithUUID(lightHostUUID, spawn, true);
-        lightHost.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+        lightHost.setHostLocation(new HostLocation("b", "\"\"", "\"\""));
 
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         int numTasks = 3;
@@ -361,14 +360,14 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 80_000_000_000L, 0);
         Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 820_000_000L, 0);
         heavyHost1.setStopped(simulateJobKeys(gargantuanJob, movableJob1));
-        heavyHost1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        heavyHost1.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
 
         String heavyHost2UUID = "heavy2";
         HostState heavyHost2 = installHostStateWithUUID(heavyHost2UUID, spawn, true);
         Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 0);
         Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 850_000_000L, 0);
         heavyHost2.setStopped(simulateJobKeys(movableJob2, movableJob3));
-        heavyHost2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+        heavyHost2.setHostLocation(new HostLocation("b", "\"\"", "\"\""));
 
         Job movableJob4 = createSpawnJob(spawn, 2, Arrays.asList(heavyHost1UUID, heavyHost2UUID), now, 850_000_000L, 0);
         // Add job keys for tasks of movableJob1 to the task's assigned host
@@ -390,19 +389,19 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
         lightHost1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         lightHost1.setUsed(new HostCapacity(10, 10, 10, 200_000_0000L));
-        lightHost1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        lightHost1.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
 
         String lightHost2UUID = "light2";
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
         lightHost2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         lightHost2.setUsed(new HostCapacity(10, 10, 10, 200_000_000L));
-        lightHost2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+        lightHost2.setHostLocation(new HostLocation("b", "\"\"", "\"\""));
 
         String readOnlyHostUUID = "readOnlyHost";
         HostState readOnlyHost = installHostStateWithUUID(readOnlyHostUUID, spawn, true, true, 0, "default");
         readOnlyHost.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 200_000_000L));
-        readOnlyHost.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+        readOnlyHost.setHostLocation(new HostLocation("b", "\"\"", "\"\""));
         List<HostState> hostsForOverUtilizedTest = Arrays.asList(heavyHost1, lightHost1, lightHost2, readOnlyHost);
         List<HostState> hostsForUnderUtilizedTest = Arrays.asList(heavyHost1, heavyHost2, lightHost1, readOnlyHost);
 
@@ -460,14 +459,13 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         List<HostState> hosts = new ArrayList<>(numHosts);
         List<String> hostNames = new ArrayList<>(numHosts);
 
-        String[] dataCenterIds = {"dataCenter = a", "dataCenter = b", "dataCenter = c"};
-        String suffix = ", rack = \"\", physicalHost = \"\"";
+        String[] dataCenterIds = {"a", "b", "c"};
 
         for (int i = 0; i < numHosts; i++) {
             String hostName = "host" + i;
             hostNames.add(hostName);
             HostState host = installHostStateWithUUID(hostName, spawn, true);
-            host.setHostLocation(Configs.decodeObject(HostLocation.class, dataCenterIds[i%dataCenterIds.length] + suffix));
+            host.setHostLocation(new HostLocation(dataCenterIds[i%dataCenterIds.length], "", ""));
             hosts.add(host);
 
         }
@@ -512,11 +510,11 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void multipleMinionsPerHostReplicaTest() throws Exception {
         bal.getConfig().setAllowSameHostReplica(true);
         HostState host1m1 = installHostStateWithUUID("m1", spawn, true);
-        host1m1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        host1m1.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
         host1m1.setHost("h1");
         hostManager.updateHostState(host1m1);
         HostState host1m2 = installHostStateWithUUID("m2", spawn, true);
-        host1m2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+        host1m2.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
         host1m2.setHost("h1");
         hostManager.updateHostState(host1m2);
         Job job = createJobAndUpdateHosts(spawn, 1, Arrays.asList("m1", "m2"), now, 1000, 0);
@@ -535,18 +533,17 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         bal.getConfig().setAllowSameHostReplica(true);
         ArrayList<String> hosts = new ArrayList<>();
-        String[] dataCenterIds = {"dataCenter = a", "dataCenter = b"};
-        String suffix = ", rack = \"\", physicalHost = \"\"";
+        String[] dataCenterIds = {"a", "b"};
         for (int i = 0; i < 8; i++) {
             installHostStateWithUUID("h" + i, spawn, true)
-                    .setHostLocation(Configs.decodeObject(HostLocation.class, dataCenterIds[i%dataCenterIds.length] + suffix));
+                    .setHostLocation(new HostLocation(dataCenterIds[i%dataCenterIds.length], "", ""));
             hosts.add("h" + i);
         }
         Job myJob = createJobAndUpdateHosts(spawn, 20, hosts, JitterClock.globalTime(), 2000L, 0);
         installHostStateWithUUID("hNEW1", spawn, true)
-                .setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
+                .setHostLocation(new HostLocation("a", "\"\"", "\"\""));
         installHostStateWithUUID("hNEW2", spawn, true)
-                .setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = \"\", physicalHost = \"\""));
+                .setHostLocation(new HostLocation("b", "\"\"", "\"\""));
         int tries = 50;
         while (spawn.listAvailableHostIds().size() < 10 && tries-- > 0) {
             // Takes a little while for the new hosts to show up as available
@@ -645,22 +642,22 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void testHostCandidateIterator() throws Exception {
         String hostId1 = "hostId1";
         HostState hostState1 = installHostStateWithUUID(hostId1, spawn, true);
-        hostState1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = aa, physicalHost = aaa"));
+        hostState1.setHostLocation(new HostLocation("a", "aa", "aaa"));
         String hostId2 = "hostId2";
         HostState hostState2 = installHostStateWithUUID(hostId2, spawn, true);
-        hostState2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = b, rack = aa, physicalHost = aaa"));
+        hostState2.setHostLocation(new HostLocation("b", "aa", "aaa"));
         String hostId3 = "hostId3";
         HostState hostState3 = installHostStateWithUUID(hostId3, spawn, true);
-        hostState3.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = aa, physicalHost = bbb"));
+        hostState3.setHostLocation(new HostLocation("a", "aa", "bbb"));
         String hostId4 = "hostId4";
         HostState hostState4 = installHostStateWithUUID(hostId4, spawn, true);
-        hostState4.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = bb, physicalHost = aaa"));
+        hostState4.setHostLocation(new HostLocation("a", "bb", "aaa"));
         String hostId5 = "hostId5";
         HostState hostState5 = installHostStateWithUUID(hostId5, spawn, true);
-        hostState5.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = bb, physicalHost = aaa"));
+        hostState5.setHostLocation(new HostLocation("a", "bb", "aaa"));
         String hostId6 = "hostId6";
         HostState hostState6 = installHostStateWithUUID(hostId6, spawn, true);
-        hostState6.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = c, rack = bb, physicalHost = aaa"));
+        hostState6.setHostLocation(new HostLocation("c", "bb", "aaa"));
         Job job = createSpawnJob(spawn, 1, Arrays.asList(hostId1), now, 80_000_000L, 0);
         hostState1.setStopped(simulateJobKeys(job));
 
