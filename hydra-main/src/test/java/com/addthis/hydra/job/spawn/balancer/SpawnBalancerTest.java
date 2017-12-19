@@ -512,9 +512,11 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void multipleMinionsPerHostReplicaTest() throws Exception {
         bal.getConfig().setAllowSameHostReplica(true);
         HostState host1m1 = installHostStateWithUUID("m1", spawn, true);
+        host1m1.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
         host1m1.setHost("h1");
         hostManager.updateHostState(host1m1);
         HostState host1m2 = installHostStateWithUUID("m2", spawn, true);
+        host1m2.setHostLocation(Configs.decodeObject(HostLocation.class, "dataCenter = a, rack = \"\", physicalHost = \"\""));
         host1m2.setHost("h1");
         hostManager.updateHostState(host1m2);
         Job job = createJobAndUpdateHosts(spawn, 1, Arrays.asList("m1", "m2"), now, 1000, 0);
@@ -674,18 +676,18 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         for(JobTask task : job.getCopyOfTasks()) {
             HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(hostManager,
                                                                                     bal, hostAndScoreComparator);
-            hostCandidateIterator.generateHostCandidateIterator(scoreMap, task);
+            hostCandidateIterator.storeHostsByScore(scoreMap, task);
             assertTrue("Host candidate iterator should have hosts", hostCandidateIterator.hasNextHost());
-            assertTrue("Should choose HostLocation with min score and no replicas first",
+            assertTrue("Should choose HostLocation with min score and different datacenter",
                        hostCandidateIterator.getNextHost().getHostUuid().equals("hostId6"));
-            assertTrue("Should choose HostLocation with no replicas next",
+            assertTrue("Should choose HostLocation on different datacenter next",
                        hostCandidateIterator.getNextHost().getHostUuid().equals("hostId2"));
             assertTrue("Should choose Host with lower score on different rack next",
                        hostCandidateIterator.getNextHost().getHostUuid().equals("hostId5"));
-            assertTrue("Should choose Host on different rack next",
-                       hostCandidateIterator.getNextHost().getHostUuid().equals("hostId4"));
-            assertTrue("Should choose Host without task next",
+            assertTrue("Should choose Host on different physical host next",
                        hostCandidateIterator.getNextHost().getHostUuid().equals("hostId3"));
+            assertTrue("Should not choose Host in the same location if other hosts available",
+                       hostCandidateIterator.getNextHost().getHostUuid().equals("hostId6"));
         }
     }
 

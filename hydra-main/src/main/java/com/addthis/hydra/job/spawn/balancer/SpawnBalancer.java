@@ -754,7 +754,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
         for (JobTask task : tasks) {
             HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager, spawn.getSpawnBalancer(), hostAndScoreComparator);
-            hostCandidateIterator.generateHostCandidateIterator(scoreMap, task);
+            hostCandidateIterator.storeHostsByScore(scoreMap, task);
+//            hostCandidateIterator.generateHostCandidateIterator(scoreMap, task);
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
             List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
             // Add new replicas as long as the task needs them & there are remaining hosts
@@ -791,7 +792,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
             for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
                 if (host.isUp() && !host.isDead()) {
-                    double availDisk = 1 - host.getDiskUsedPercent();
+                    double availDisk = host.getDiskUsedPercent();
                     rv.put(host.getHostUuid(), addOrIncrement(rv.get(host.getHostUuid()), availDisk));
                 }
             }
