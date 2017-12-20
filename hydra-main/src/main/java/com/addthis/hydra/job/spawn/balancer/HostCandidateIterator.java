@@ -18,7 +18,15 @@ import com.addthis.hydra.minion.HostLocation;
 
 public class HostCandidateIterator {
 
-    private static final Comparator<HostAndScore> hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
+//    private static final Comparator<HostAndScore> hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
+
+    private static final Comparator<HostAndScore> hostAndScoreComparator = (h1, h2) -> {
+        int result = Double.compare(h1.score, h2.score);
+        if(result == 0) {
+            return h1.host.getHostUuid().compareTo(h2.host.getHostUuid());
+        }
+        return result;
+    };
 
     private final HostManager hostManager;
     private final SpawnBalancer balancer;
