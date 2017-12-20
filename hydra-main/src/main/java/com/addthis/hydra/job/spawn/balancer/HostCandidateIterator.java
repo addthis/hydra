@@ -66,11 +66,13 @@ public class HostCandidateIterator {
     /**
      * Return a host chosen in order of zone preference, then score
      */
-    public List<String> getNewReplicaHosts(int replicas, JobTask task, @Nullable String excludeHost) {
+    public List<String> getNewReplicaHosts(int replicas, JobTask task, @Nullable String excludeHostUuid) {
         Collection<HostLocation> locations = new HashSet<>();
         // get current host locations used by live/replicas
         for (String replicaHostId : task.getAllTaskHosts()) {
-            locations.add(hostManager.getHostState(replicaHostId).getHostLocation());
+            if (!replicaHostId.equals(excludeHostUuid)) {
+                locations.add(hostManager.getHostState(replicaHostId).getHostLocation());
+            }
         }
 
         List<String> chosenHostIds = new ArrayList<>(replicas);
@@ -89,7 +91,7 @@ public class HostCandidateIterator {
                     racks.add(hostLocation.getRack());
                     phys.add(hostLocation.getPhysicalHost());
                 }
-                boolean excluded = host.getHostUuid().equals(excludeHost);
+                boolean excluded = host.getHostUuid().equals(excludeHostUuid);
                 if (excluded || !(balancer.okToPutReplicaOnHost(host, task) && host.canMirrorTasks())) {
                     continue;
                 }
