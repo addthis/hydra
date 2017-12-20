@@ -677,7 +677,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         for(JobTask task : job.getCopyOfTasks()) {
             // Use a dummy value of 25 for taskScoreIncrement
             HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(hostManager,
-                                                                                    bal, job, 25);
+                                                                                    bal, job, bal.generateTaskCountHostScoreMap(job));
             List<String> hostIdsToAdd = hostCandidateIterator.getNewReplicaHosts(5, task);
             assertTrue("Host candidate iterator should have hosts", !hostIdsToAdd.isEmpty());
 

@@ -554,33 +554,13 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             String nextId = nextHost.getHostUuid();
 
             if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && nextHost.canMirrorTasks() &&
-                okToPutReplicaOnHost(nextHost, task) &&
-                isAvailabilityDomainAware(task, nextHost)) {
+                okToPutReplicaOnHost(nextHost, task)) {
                 hostStateIterator.remove();
                 otherHosts.add(nextHost);
                 return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false);
             }
         }
         return null;
-    }
-
-     private List<HostLocation> getMinReplicaZones(JobTask task) {
-        Map<HostLocation, Long> replicasByHostLocation = task.getAllReplicas()
-                                                             .stream()
-                                                             .collect(Collectors.groupingBy(
-                                                                     jobTaskReplica -> hostManager.getHostState(jobTaskReplica.getHostUUID()).getHostLocation(),
-                                                                     Collectors.counting()));
-        HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
-        replicasByHostLocation.put(taskLocation, replicasByHostLocation.getOrDefault(taskLocation, 0L) + 1);
-
-        Long minReplicaCount = replicasByHostLocation.isEmpty()? 0L : Collections.min(replicasByHostLocation.values());
-        List<HostLocation> minReplicaZones = replicasByHostLocation.entrySet()
-                                                                   .stream()
-                                                                   .filter(entry -> entry.getValue() == minReplicaCount)
-                                                                   .map(entry -> entry.getKey())
-                                                                   .distinct()
-                                                                   .collect(Collectors.toList());
-        return minReplicaZones;
     }
 
     @VisibleForTesting
@@ -646,27 +626,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     /**
-     *  Return <tt>true</tt> if placing a replica on nextHost is AD-aware
-     *  Replica placement is AD-aware if nextHost is in the same zone as this task OR
-     *  this task has no replicas OR
-     *  nextHost is in a zone with min number of replicas for this task
-     * @param task
-     * @param nextHost
-     * @return
-     */
-    private boolean isAvailabilityDomainAware(JobTask task, HostState nextHost) {
-        List<HostLocation> minReplicaZones = getMinReplicaZones(task);
-        String taskHost = task.getHostUUID();
-
-        if(hostManager.getHostState(taskHost).getHostLocation().equals(nextHost.getHostLocation()) ||
-           task.getAllReplicas().isEmpty() ||
-           minReplicaZones.contains(nextHost.getHostLocation())) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Decide if spawn is in a good state to perform an autobalance.
      *
      * @return True if it is okay to autobalance
@@ -707,7 +666,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 Collections.sort(hostsSorted, hostStateScoreComparator);
                 HostState hostToBalance = hostsSorted.get(getWeightedElementIndex(hostsSorted.size(), weight));
                 return getAssignmentsToBalanceHost(hostToBalance,
-                                                   hostManager.listHostStatusByZone(hostToBalance.getMinionTypes(), hostToBalance.getHostLocation()));
+                                                   hostManager.listHostStatus(hostToBalance.getMinionTypes()));
             case JOB:
                 List<Job> autobalanceJobs = getJobsToAutobalance(hosts);
                 if ((autobalanceJobs == null) || autobalanceJobs.isEmpty()) {
@@ -751,11 +710,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         int replicaCount = job.getReplicas();
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
+        Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
         for (JobTask task : tasks) {
             HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager,
                                                                                     spawn.getSpawnBalancer(),
                                                                                     job,
-                                                                                    config.getSiblingWeight());
+                                                                                    scoreMap);
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
             List<String> hostIDsToAdd = hostCandidateIterator.getNewReplicaHosts(replicaCount - numExistingReplicas, task);
             if (!hostIDsToAdd.isEmpty()) {
@@ -772,7 +732,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param job The job to count
      * @return A map describing how heavily a job is assigned to each of its hosts
      */
-     Map<String, Double> generateTaskCountHostScoreMap(IJob job) {
+    Map<String, Double> generateTaskCountHostScoreMap(IJob job) {
         Map<String, Double> rv = new HashMap<>();
         if (job != null) {
             List<JobTask> tasks = job.getCopyOfTasks();
@@ -1361,13 +1321,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     continue;
                 }
 
-                if(isAvailabilityDomainAware(item.getTask(), pullHostState)) {
-                    if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
-                        rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false));
-                        alreadyMoved.add(item.getTask().getJobKey());
-                        maxBytesToMove -= trueSizeBytes;
-                    }
+                if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
+                    rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false));
+                    alreadyMoved.add(item.getTask().getJobKey());
+                    maxBytesToMove -= trueSizeBytes;
                 }
+
                 if (rv.size() >= numToMove) {
                     break;
                 }
@@ -1419,14 +1378,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     continue;
                 }
 
-                if(isAvailabilityDomainAware(nextTaskItem.getTask(), pullHostState)) {
-                    if (!alreadyMoved.contains(jobKey) && (pullHost != null) &&
-                        tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
-                        rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false,
-                                                         false));
-                        alreadyMoved.add(nextTaskItem.getTask().getJobKey());
-                        maxBytesToMove -= trueSizeBytes;
-                    }
+                if (!alreadyMoved.contains(jobKey) && (pullHost != null) &&
+                    tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
+                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false,
+                                                     false));
+                    alreadyMoved.add(nextTaskItem.getTask().getJobKey());
+                    maxBytesToMove -= trueSizeBytes;
                 }
             }
         }

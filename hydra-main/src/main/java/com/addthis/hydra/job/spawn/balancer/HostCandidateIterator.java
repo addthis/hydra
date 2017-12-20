@@ -18,9 +18,6 @@ import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.minion.HostLocation;
 
 public class HostCandidateIterator {
-
-//    private static final Comparator<HostAndScore> hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
-
     private static final Comparator<HostAndScore> hostAndScoreComparator = (h1, h2) -> {
         int result = Double.compare(h1.score, h2.score);
         if(result == 0) {
@@ -36,18 +33,16 @@ public class HostCandidateIterator {
     // this will be memoized by getNewReplicaHosts, -1 is the "not set" value
     private int minScore = -1;
 
-
     public HostCandidateIterator(
             HostManager hostManager,
             SpawnBalancer balancer,
             IJob job,
-            int taskScoreIncrement) {
+            Map<String, Double> scoreMap) {
         this.hostManager = hostManager;
         this.balancer = balancer;
         this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
-        this.taskScoreIncrement = taskScoreIncrement;
+        this.taskScoreIncrement = balancer.getConfig().getSiblingWeight();
 
-        Map<String, Double> scoreMap = balancer.generateTaskCountHostScoreMap(job);
         for (JobTask task : job.getCopyOfTasks()) {
             for (String replicaHostId : task.getAllTaskHosts()) {
                 Double score = scoreMap.get(replicaHostId);

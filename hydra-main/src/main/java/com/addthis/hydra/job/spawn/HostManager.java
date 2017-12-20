@@ -90,23 +90,6 @@ public class HostManager {
         }
     }
 
-    /**
-     * List all hosts belonging to a particular minion type, within an availability domain
-     *
-     * @param minionType         The minion type to find. If null, return all hosts.
-     * @param location The minion's zone information
-     * @return A list of hoststates
-     */
-    public  List<HostState> listHostStatusByZone(@Nullable String minionType, HostLocation location) {
-        List<HostState> hostStates = listHostStatus(minionType).stream()
-                                                               .filter(hostState -> hostState.getHostLocation().equals(location))
-                                                               .collect(Collectors.toList());
-        if(hostStates.isEmpty()) {
-            return listHostStatus(minionType);
-        }
-        return hostStates;
-    }
-
     public List<HostState> getLiveHosts(@Nullable String minionType) {
         List<HostState> allHosts = listHostStatus(minionType);
         List<HostState> rv = new ArrayList<>(allHosts.size());
