@@ -5,45 +5,45 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.minion.HostLocation;
 
 public class HostCandidateIterator {
+
+    private static final Comparator<HostAndScore> hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
+
     private final HostManager hostManager;
     private final SpawnBalancer balancer;
     private final TreeSet<HostAndScore> sortedHosts;
-    // fixme: use spawnbalancerconfig and get value for this
-    private static final double TASK_SCORE_INCREMENT = 25;
+    private final int taskScoreIncrement;
 
-    // fixme: can we reduce # of parameters in constructor?
-    HostCandidateIterator(
+    public HostCandidateIterator(
             HostManager hostManager,
-            SpawnBalancer spawnBalancer,
-            Comparator<HostAndScore> comparator,
-            Job job,
-            Map<String, Double> scoreMap) {
+            SpawnBalancer balancer,
+            IJob job,
+            int taskScoreIncrement) {
         this.hostManager = hostManager;
-        this.balancer = spawnBalancer;
-        this.sortedHosts = new TreeSet<>(comparator);
-        Map<String, Double> scoreMapCopy = new HashMap<>(scoreMap);
-        // copy the score map, add 25 to each score per task/replica on a host
+        this.balancer = balancer;
+        this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
+        this.taskScoreIncrement = taskScoreIncrement;
+
+        Map<String, Double> scoreMap = balancer.generateTaskCountHostScoreMap(job);
         for (JobTask task : job.getCopyOfTasks()) {
             for (String replicaHostId : task.getAllTaskHosts()) {
-                Double score = scoreMapCopy.get(replicaHostId);
-                scoreMapCopy.put(replicaHostId, score + TASK_SCORE_INCREMENT);
+                Double score = scoreMap.get(replicaHostId);
+                scoreMap.put(replicaHostId, score + this.taskScoreIncrement);
             }
         }
         // create the sortedHosts priority queue which will be used for picking candidate hosts
-        for (Map.Entry<String, Double> entry : scoreMapCopy.entrySet()) {
+        for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
             HostState host = hostManager.getHostState(entry.getKey());
             if (host != null) {
                 this.sortedHosts.add(new HostAndScore(host, entry.getValue()));
@@ -54,21 +54,21 @@ public class HostCandidateIterator {
     /**
      * Return a host chosen in order of zone preference, then score
      */
-    public List<HostState> getNewReplicaHosts(int replicas, JobTask task, @Nullable HostState excludeHost) {
+    public List<String> getNewReplicaHosts(int replicas, JobTask task, @Nullable String excludeHost) {
         Collection<HostLocation> locations = new HashSet<>();
         // get current host locations used by live/replicas
         for (String replicaHostId : task.getAllTaskHosts()) {
             locations.add(hostManager.getHostState(replicaHostId).getHostLocation());
         }
 
-        List<HostState> chosenHosts = new ArrayList<>(replicas);
+        List<String> chosenHostIds = new ArrayList<>(replicas);
         // create each replica
         for (int i = 0; i < replicas; i++) {
             int minScoreSoFar = Integer.MAX_VALUE;
             HostAndScore bestHost = null;
             for (HostAndScore hostAndScore : sortedHosts) {
                 HostState host = hostAndScore.host;
-                boolean excluded = host.getHostUuid().equals(excludeHost.getHostUuid());
+                boolean excluded = host.getHostUuid().equals(excludeHost);
                 if (excluded || !(balancer.okToPutReplicaOnHost(host, task) && host.canMirrorTasks())) {
                     continue;
                 }
@@ -90,23 +90,19 @@ public class HostCandidateIterator {
             }
             if (bestHost != null) {
                 this.sortedHosts.remove(bestHost);
-                this.sortedHosts.add(new HostAndScore(bestHost.host, bestHost.score + TASK_SCORE_INCREMENT));
+                this.sortedHosts.add(new HostAndScore(bestHost.host, bestHost.score + this.taskScoreIncrement));
                 locations.add(bestHost.host.getHostLocation());
-                chosenHosts.add(bestHost.host);
+                chosenHostIds.add(bestHost.host.getHostUuid());
             }
         }
-        return chosenHosts;
+        return chosenHostIds;
     }
 
-    public List<HostState> getNewReplicaHosts(int replicas, JobTask task) {
+    public List<String> getNewReplicaHosts(int replicas, JobTask task) {
         return getNewReplicaHosts(replicas, task, null);
     }
 
-    public List<HostState> getNewReplicaHosts(JobTask task, @Nullable HostState excludeHost) {
+    public List<String> getNewReplicaHosts(JobTask task, @Nullable String excludeHost) {
         return getNewReplicaHosts(1, task, excludeHost);
-    }
-
-    public boolean hasNextHost() {
-        return !this.sortedHosts.isEmpty();
     }
 }

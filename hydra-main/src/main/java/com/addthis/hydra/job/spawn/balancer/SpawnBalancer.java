@@ -750,19 +750,14 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             return rv;
         }
         int replicaCount = job.getReplicas();
-        Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
         for (JobTask task : tasks) {
-            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager, spawn.getSpawnBalancer(), hostAndScoreComparator);
-            hostCandidateIterator.storeHostsByScore(scoreMap, task);
-//            hostCandidateIterator.generateHostCandidateIterator(scoreMap, task);
+            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager,
+                                                                                    spawn.getSpawnBalancer(),
+                                                                                    job,
+                                                                                    config.getSiblingWeight());
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
-            List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
-            // Add new replicas as long as the task needs them & there are remaining hosts
-            while (hostIDsToAdd.size() + numExistingReplicas < replicaCount && hostCandidateIterator.hasNextHost()) {
-                HostState candidateHost = hostCandidateIterator.getNextHost();
-                hostIDsToAdd.add(candidateHost.getHostUuid());
-            }
+            List<String> hostIDsToAdd = hostCandidateIterator.getNewReplicaHosts(replicaCount - numExistingReplicas, task);
             if (!hostIDsToAdd.isEmpty()) {
                 rv.put(task.getTaskID(), hostIDsToAdd);
             }
@@ -777,7 +772,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param job The job to count
      * @return A map describing how heavily a job is assigned to each of its hosts
      */
-    private Map<String, Double> generateTaskCountHostScoreMap(IJob job) {
+     Map<String, Double> generateTaskCountHostScoreMap(IJob job) {
         Map<String, Double> rv = new HashMap<>();
         if (job != null) {
             List<JobTask> tasks = job.getCopyOfTasks();
