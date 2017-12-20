@@ -18,8 +18,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -662,13 +660,19 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         Job job = createSpawnJob(spawn, 1, Arrays.asList(hostId1), now, 80_000_000L, 0);
         hostState1.setStopped(simulateJobKeys(job));
 
-        Map<String, Double> scoreMap = new HashMap<>();
-        scoreMap.put("hostId1", 0.2d);
-        scoreMap.put("hostId2", 0.5d);
-        scoreMap.put("hostId3", 0.5d);
-        scoreMap.put("hostId4", 0.3d);
-        scoreMap.put("hostId5", 0.1d);
-        scoreMap.put("hostId6", 0.2d);
+        hostState1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState3.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState4.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState5.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState6.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+
+        hostState1.setUsed(new HostCapacity(10, 10, 10, 200L));
+        hostState2.setUsed(new HostCapacity(10, 10, 10, 500L));
+        hostState3.setUsed(new HostCapacity(10, 10, 10, 500L));
+        hostState4.setUsed(new HostCapacity(10, 10, 10, 300L));
+        hostState5.setUsed(new HostCapacity(10, 10, 10, 100L));
+        hostState6.setUsed(new HostCapacity(10, 10, 10, 200L));
 
         for(JobTask task : job.getCopyOfTasks()) {
             // Use a dummy value of 25 for taskScoreIncrement
