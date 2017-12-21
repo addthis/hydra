@@ -37,7 +37,7 @@ public class HostCandidateIterator {
             HostManager hostManager,
             SpawnBalancer balancer,
             IJob job,
-            Map<String, Double> scoreMap) {
+            Map<HostState, Double> scoreMap) {
         this.hostManager = hostManager;
         this.balancer = balancer;
         this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
@@ -45,16 +45,14 @@ public class HostCandidateIterator {
 
         for (JobTask task : job.getCopyOfTasks()) {
             for (String replicaHostId : task.getAllTaskHosts()) {
-                Double score = scoreMap.get(replicaHostId);
-                scoreMap.put(replicaHostId, score + this.taskScoreIncrement);
+                HostState host = hostManager.getHostState(replicaHostId);
+                Double score = scoreMap.getOrDefault(host, 0d);
+                scoreMap.put(host, score + this.taskScoreIncrement);
             }
         }
         // create the sortedHosts priority queue which will be used for picking candidate hosts
-        for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
-            HostState host = hostManager.getHostState(entry.getKey());
-            if (host != null) {
-                this.sortedHosts.add(new HostAndScore(host, entry.getValue()));
-            }
+        for (Map.Entry<HostState, Double> entry : scoreMap.entrySet()) {
+            this.sortedHosts.add(new HostAndScore(entry.getKey(), entry.getValue()));
         }
     }
 

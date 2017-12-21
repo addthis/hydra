@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -57,7 +56,6 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.minion.HostLocation;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -542,23 +540,19 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     @Nullable private JobTaskMoveAssignment moveTask(JobTask task,
                                                      String fromHostId,
                                                      Collection<HostState> otherHosts) {
-        Iterator<HostState> hostStateIterator = otherHosts.iterator();
         String taskHost = task.getHostUUID();
-        boolean live = task.getHostUUID().equals(fromHostId);
+        boolean live = taskHost.equals(fromHostId);
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
             return null;
         }
 
-        while (hostStateIterator.hasNext()) {
-            HostState nextHost = hostStateIterator.next();
-            String nextId = nextHost.getHostUuid();
+        Map<HostState, Double> scoreMap = generateHostStateScoreMap(otherHosts, task.getJobUUID());
+        Job job = spawn.getJob(task.getJobUUID());
+        HostCandidateIterator iterator = new HostCandidateIterator(hostManager, this, job, scoreMap);
+        List<String> newHostList = iterator.getNewReplicaHosts(1, task, taskHost);
 
-            if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && nextHost.canMirrorTasks() &&
-                okToPutReplicaOnHost(nextHost, task)) {
-                hostStateIterator.remove();
-                otherHosts.add(nextHost);
-                return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false);
-            }
+        if(!newHostList.isEmpty()) {
+            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, newHostList.get(0), !live, false);
         }
         return null;
     }
@@ -710,7 +704,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         int replicaCount = job.getReplicas();
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
-        Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
+        Map<HostState, Double> scoreMap = generateTaskCountHostScoreMap(job);
         for (JobTask task : tasks) {
             HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager,
                                                                                     spawn.getSpawnBalancer(),
@@ -732,35 +726,29 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param job The job to count
      * @return A map describing how heavily a job is assigned to each of its hosts
      */
-    Map<String, Double> generateTaskCountHostScoreMap(IJob job) {
-        Map<String, Double> rv = new HashMap<>();
+    Map<HostState, Double> generateTaskCountHostScoreMap(IJob job) {
+        Map<HostState, Double> rv = new HashMap<>();
         if (job != null) {
             List<JobTask> tasks = job.getCopyOfTasks();
             for (JobTask task : tasks) {
-                rv.put(task.getHostUUID(), addOrIncrement(rv.get(task.getHostUUID()), 1d));
+                HostState host = hostManager.getHostState(task.getHostUUID());
+                rv.put(host, rv.getOrDefault(host, 0d) + 1d);
                 if (task.getReplicas() == null) {
                     continue;
                 }
                 for (JobTaskReplica replica : task.getReplicas()) {
-                    rv.put(replica.getHostUUID(), addOrIncrement(rv.get(replica.getHostUUID()), 1d));
+                    HostState replicaHost = hostManager.getHostState(replica.getHostUUID());
+                    rv.put(replicaHost, rv.getOrDefault(replicaHost, 0d) + 1d);
                 }
             }
             for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
                 if (host.isUp() && !host.isDead()) {
                     double availDisk = host.getDiskUsedPercent();
-                    rv.put(host.getHostUuid(), addOrIncrement(rv.get(host.getHostUuid()), availDisk));
+                    rv.put(host, rv.getOrDefault(host, 0d) + availDisk);
                 }
             }
         }
         return rv;
-    }
-
-    private static double addOrIncrement(Double currentValue, Double value) {
-        if (currentValue != null) {
-            return currentValue + value;
-        } else {
-            return value;
-        }
     }
 
     public void requestJobSizeUpdate(String jobId, int taskId) {
