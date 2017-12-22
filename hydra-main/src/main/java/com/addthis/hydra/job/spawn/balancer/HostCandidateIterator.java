@@ -43,11 +43,13 @@ public class HostCandidateIterator {
         this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
         this.taskScoreIncrement = balancer.getConfig().getSiblingWeight();
 
-        for (JobTask task : job.getCopyOfTasks()) {
-            for (String replicaHostId : task.getAllTaskHosts()) {
-                HostState host = hostManager.getHostState(replicaHostId);
-                Double score = scoreMap.getOrDefault(host, 0d);
-                scoreMap.put(host, score + this.taskScoreIncrement);
+        if(job != null) {
+            for (JobTask task : job.getCopyOfTasks()) {
+                for (String replicaHostId : task.getAllTaskHosts()) {
+                    HostState host = hostManager.getHostState(replicaHostId);
+                    Double score = scoreMap.getOrDefault(host, 0d);
+                    scoreMap.put(host, score + this.taskScoreIncrement);
+                }
             }
         }
         // create the sortedHosts priority queue which will be used for picking candidate hosts
@@ -59,11 +61,11 @@ public class HostCandidateIterator {
     /**
      * Return a host chosen in order of zone preference, then score
      */
-    public List<String> getNewReplicaHosts(int replicas, JobTask task, @Nullable String excludeHostUuid) {
+    public List<String> getNewReplicaHosts(int replicas, JobTask task, @Nullable String excludeHostUuid, boolean isReplica) {
         Collection<HostLocation> locations = new HashSet<>();
         // get current host locations used by live/replicas
         for (String replicaHostId : task.getAllTaskHosts()) {
-            if (!replicaHostId.equals(excludeHostUuid)) {
+            if (replicaHostId != null && !replicaHostId.equals(excludeHostUuid)) {
                 locations.add(hostManager.getHostState(replicaHostId).getHostLocation());
             }
         }
@@ -85,7 +87,7 @@ public class HostCandidateIterator {
                     phys.add(hostLocation.getPhysicalHost());
                 }
                 boolean excluded = host.getHostUuid().equals(excludeHostUuid);
-                if (excluded || !(balancer.okToPutReplicaOnHost(host, task) && host.canMirrorTasks())) {
+                if (excluded || !host.canMirrorTasks() || (isReplica && !balancer.okToPutReplicaOnHost(host, task))) {
                     continue;
                 }
                 HostLocation hostLocation = host.getHostLocation();
@@ -116,14 +118,14 @@ public class HostCandidateIterator {
     }
 
     public List<String> getNewReplicaHosts(int replicas, JobTask task) {
-        return this.getNewReplicaHosts(replicas, task, null);
+        return this.getNewReplicaHosts(replicas, task, null, true);
     }
 
     /**
      * Get new replica host for a rebalancing task
      */
     public List<String> getNewReplicaHosts(JobTask task, @Nullable String excludeHost) {
-        return this.getNewReplicaHosts(1, task, excludeHost);
+        return this.getNewReplicaHosts(1, task, excludeHost, true);
     }
 
     /**

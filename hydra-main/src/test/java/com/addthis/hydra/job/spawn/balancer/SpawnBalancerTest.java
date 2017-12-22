@@ -108,7 +108,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         // pruneTaskReassignments should not ignore delete task
 
         HostState host = installHostStateWithUUID("host", spawn, true);
+        host.setHostLocation(new HostLocation("", "", ""));
         HostState otherHost = installHostStateWithUUID("otherHost", spawn, true);
+        otherHost.setHostLocation(new HostLocation("", "", ""));
         Job job = createSpawnJob(spawn, 1, Arrays.asList("host"), now, 80_000_000_000L, 0);
         host.setStopped(simulateJobKeys(job));
         host.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
@@ -211,19 +213,24 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
         String readOnlyHostID = "read_only_host";
         HostState readOnlyHost = installHostStateWithUUID(readOnlyHostID, spawn, true, false, 0, "default");
+        readOnlyHost.setHostLocation(new HostLocation("", "", ""));
 
         String downHostID = "down_host";
         HostState downHost = installHostStateWithUUID(downHostID, spawn, false);
+        downHost.setHostLocation(new HostLocation("", "", ""));
 
         String deadHostID = "dead_host";
         HostState deadHost = installHostStateWithUUID(deadHostID, spawn, false);
         deadHost.setDead(true);
+        deadHost.setHostLocation(new HostLocation("", "", ""));
 
         String emptyHostID = "empty_host";
         HostState emptyHost = installHostStateWithUUID(emptyHostID, spawn, true);
+        emptyHost.setHostLocation(new HostLocation("", "", ""));
 
         String oneOldOneNewHostID = "1old1new";
         HostState oldNewHost = installHostStateWithUUID(oneOldOneNewHostID, spawn, true);
+        oldNewHost.setHostLocation(new HostLocation("", "", ""));
 
         Job oldJob = createSpawnJob(spawn, 1, Arrays.asList(oneOldOneNewHostID), 0l, 1, 0);
         Job newJob1 = createSpawnJob(spawn, 1, Arrays.asList(oneOldOneNewHostID), now, 1, 0);
@@ -231,6 +238,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
         String twoNewHostID = "2new";
         HostState twoNewHost = installHostStateWithUUID(twoNewHostID, spawn, true);
+        twoNewHost.setHostLocation(new HostLocation("", "", ""));
         Job newJob2 = createSpawnJob(spawn, 1, Arrays.asList(twoNewHostID), now, 1, 0);
         Job newJob3 = createSpawnJob(spawn, 1, Arrays.asList(twoNewHostID), now, 1, 0);
         twoNewHost.setStopped(simulateJobKeys(newJob2, newJob3));
@@ -312,6 +320,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState heavyHost = installHostStateWithUUID(heavyHostUUID, spawn, true);
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
+        heavyHost.setHostLocation(new HostLocation("", "", ""));
+        lightHost1.setHostLocation(new HostLocation("", "", ""));
+        lightHost2.setHostLocation(new HostLocation("", "", ""));
         Job weightJob = createJobAndUpdateHosts(spawn, 10, Arrays.asList(heavyHostUUID), now, 1000, 0);
         bal.updateAggregateStatistics(hostManager.listHostStatus(null));
         Job otherJob = createJobAndUpdateHosts(spawn, 5, Arrays.asList(heavyHostUUID, lightHost1UUID, lightHost2UUID), now, 500, 0);
@@ -356,17 +367,17 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void diskSpaceBalancingTest() throws Exception {
         String heavyHost1UUID = "heavy1";
         HostState heavyHost1 = installHostStateWithUUID(heavyHost1UUID, spawn, true);
+        heavyHost1.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
         Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 80_000_000_000L, 0);
         Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost1UUID), now, 820_000_000L, 0);
         heavyHost1.setStopped(simulateJobKeys(gargantuanJob, movableJob1));
-        heavyHost1.setHostLocation(new HostLocation("a", "\"\"", "\"\""));
 
         String heavyHost2UUID = "heavy2";
         HostState heavyHost2 = installHostStateWithUUID(heavyHost2UUID, spawn, true);
+        heavyHost2.setHostLocation(new HostLocation("b", "\"\"", "\"\""));
         Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 820_000_000L, 0);
         Job movableJob3 = createSpawnJob(spawn, 1, Arrays.asList(heavyHost2UUID), now, 850_000_000L, 0);
         heavyHost2.setStopped(simulateJobKeys(movableJob2, movableJob3));
-        heavyHost2.setHostLocation(new HostLocation("b", "\"\"", "\"\""));
 
         Job movableJob4 = createSpawnJob(spawn, 2, Arrays.asList(heavyHost1UUID, heavyHost2UUID), now, 850_000_000L, 0);
         // Add job keys for tasks of movableJob1 to the task's assigned host
@@ -594,7 +605,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         List<String> hosts = Arrays.asList("h1", "h2", "h3");
         for (String host : hosts)
         {
-            installHostStateWithUUID(host, spawn, true);
+            installHostStateWithUUID(host, spawn, true).setHostLocation(new HostLocation("", "", ""));
         }
         spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
         Job job = spawn.createJob("fsm", 3, hosts, "default", "a", false);
@@ -617,8 +628,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
     @Test
     public void jobDependencyTest() throws Exception {
-        installHostStateWithUUID("a", spawn, true);
-        installHostStateWithUUID("b", spawn, true);
+        installHostStateWithUUID("a", spawn, true).setHostLocation(new HostLocation("", "", ""));
+        installHostStateWithUUID("b", spawn, true).setHostLocation(new HostLocation("", "", ""));
         Job sourceJob = createSpawnJob(spawn, 1, Arrays.asList("a", "b"), 1l, 1l, 0);
         Job downstreamJob = createSpawnJob(spawn, 1, Arrays.asList("a", "b"), 1l, 1l, 0);
         downstreamJob.setParameters(Arrays.asList(new JobParameter("param", sourceJob.getId(), "DEFAULT")));

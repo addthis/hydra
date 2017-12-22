@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -333,33 +332,25 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         if ((tasks == null) || tasks.isEmpty()) {
             return new HashMap<>();
         }
-        // Make a heap of hosts based on the storedHostScores, from lightest to heaviest.
-        PriorityQueue<HostAndScore> hostScores =
-                new PriorityQueue<>(1 + storedHostScores.size(), hostAndScoreComparator);
-        for (Map.Entry<HostState, Double> hostStateDoubleEntry : storedHostScores.entrySet()) {
-            if (canReceiveNewTasks(hostStateDoubleEntry.getKey())) {
-                hostScores.add(new HostAndScore(hostStateDoubleEntry.getKey(), hostStateDoubleEntry.getValue()));
-            }
-        }
-        if (hostScores.isEmpty()) {
-            log.warn("[spawn.balancer] found no hosts eligible to receive new tasks");
-            throw new RuntimeException("no eligible hosts for new task");
-        }
-        // Make a list of hosts as big as the list of tasks. This list may repeat hosts if it is necessary to do so.
-        Collection<String> hostsToAssign = new ArrayList<>(tasks.size());
+
+        // At this stage that the list is not empty
+        // All tasks are from the same job
+        Job job = spawn.getJob(tasks.get(0).getJobUUID());
+        HostCandidateIterator iterator = new HostCandidateIterator(hostManager, this, job, storedHostScores);
+        List<String> hostsToAssign = new ArrayList<>(tasks.size());
         for (JobTask task : tasks) {
-            if (task == null) {
+            if(task == null) {
                 continue;
             }
-            // Pick the lightest host.
-            HostAndScore h = hostScores.poll();
-            HostState host = h.host;
-            hostsToAssign.add(host.getHostUuid());
-            // Then moderately weight that host in the heap so we won't pick it again immediately.
-            hostScores.add(new HostAndScore(host, h.score + config.getSiblingWeight()));
-            // Lightly weight that host in storedHostScores so we won't pick the same hosts over and over if we call
-            // this method repeatedly
-            storedHostScores.put(host, h.score + config.getActiveTaskWeight());
+            List<String> targetHostList = iterator.getNewReplicaHosts(1, task, null, false);
+            if(targetHostList.isEmpty()) {
+                log.warn("[spawn.balancer] found no hosts eligible to receive new tasks");
+                throw new RuntimeException("no eligible hosts for new task");
+            }
+            String targetHost = targetHostList.get(0);
+            hostsToAssign.add(targetHost);
+            storedHostScores.put(hostManager.getHostState(targetHost),
+                                 storedHostScores.getOrDefault(targetHost, 0d) + config.getActiveTaskWeight());
         }
         return pairTasksAndHosts(tasks, hostsToAssign);
     }
@@ -418,14 +409,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                            boolean obeyDontAutobalanceMe) {
         List<JobTaskMoveAssignment> moveAssignments = new ArrayList<>();
 
-        List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
-
         for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
             long taskTrueSize = getTaskTrueSize(task);
             if (limitBytes && (taskTrueSize > byteLimit)) {
                 continue;
             }
-            JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
+            JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), otherHosts);
             // we don't want to take up one of the limited rebalance slots
             // with an assignment that we know has no chance of happening
             // because either the assignment is null or the target host
@@ -549,7 +538,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         Map<HostState, Double> scoreMap = generateHostStateScoreMap(otherHosts, task.getJobUUID());
         Job job = spawn.getJob(task.getJobUUID());
         HostCandidateIterator iterator = new HostCandidateIterator(hostManager, this, job, scoreMap);
-        List<String> newHostList = iterator.getNewReplicaHosts(1, task, taskHost);
+        List<String> newHostList = iterator.getNewReplicaHosts(1, task, taskHost, true);
 
         if(!newHostList.isEmpty()) {
             return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, newHostList.get(0), !live, false);

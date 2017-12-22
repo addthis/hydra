@@ -33,6 +33,7 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.balancer.SpawnBalancerConfig;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.collect.ImmutableList;
@@ -79,6 +80,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
         host.getUsed().setDisk(0);
         host.setUp(true);
         host.setDead(false);
+        host.setHostLocation(new HostLocation("", "", ""));
     }
 
     @Test
