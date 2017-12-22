@@ -1,31 +1,44 @@
 package com.addthis.hydra.job.spawn.balancer;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.IJob;
+import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.HostManager;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.minion.HostLocation;
+import com.addthis.hydra.util.WithScore;
 
 public class HostCandidateIterator {
+    private static final Comparator<WithScore<JobTask>> taskComparator =
+            Collections.reverseOrder(Comparator.comparingDouble(t -> t.score));
+    // note: this complex comparator is necessary because maps need comparators that are consistend with equals
     private static final Comparator<HostAndScore> hostAndScoreComparator = (h1, h2) -> {
         int result = Double.compare(h1.score, h2.score);
-        if(result == 0) {
+        if (result == 0) {
             return h1.host.getHostUuid().compareTo(h2.host.getHostUuid());
         }
         return result;
     };
 
+    // because we need to get tasks given a job key we need spawn...
+    private final Spawn spawn;
     private final HostManager hostManager;
     private final SpawnBalancer balancer;
     private final TreeSet<HostAndScore> sortedHosts;
@@ -34,10 +47,12 @@ public class HostCandidateIterator {
     private int minScore = -1;
 
     public HostCandidateIterator(
+            Spawn spawn,
             HostManager hostManager,
             SpawnBalancer balancer,
             IJob job,
             Map<HostState, Double> scoreMap) {
+        this.spawn = spawn;
         this.hostManager = hostManager;
         this.balancer = balancer;
         this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
@@ -117,6 +132,66 @@ public class HostCandidateIterator {
         return chosenHostIds;
     }
 
+    // fixme: minAdScore should be a thing that comes from an enum that is calculated by spawn or hostmanager
+    @SuppressWarnings("FloatingPointEquality") public @Nonnull Collection<JobTask> getTasksToMove(
+            String fromHostUuid,
+            String toHostUuid,
+            int numTasks,
+            int minAdScore,
+            boolean obeyDontAutobalanceMe) {
+
+        // loop through all tasks
+        // cache the numScore lowest scores that can validly move
+        // this is hard
+        // we can store in a TaskAndScore type thing in a sorted list...
+        // or... PriorityQueue with the same - it is free to look at the first/last element
+        // if we find numScore that have minscore and can validly move, just return them immediately
+
+        PriorityQueue<WithScore<JobTask>> sortedTasks = new PriorityQueue<>(numTasks, taskComparator);
+        HostState fromHost = hostManager.getHostState(fromHostUuid);
+        HostLocation fromHostLocation = fromHost.getHostLocation();
+        HostLocation toHostLocation = hostManager.getHostState(toHostUuid).getHostLocation();
+        for (JobKey jobKey : fromHost.allJobKeys()) {
+            // todo: add all checks from findTasksToMove here
+            JobTask task = spawn.getTask(jobKey);
+            Job job = spawn.getJob(jobKey);
+
+            // note some of these checks include:
+            // - Only add non-null tasks that are either idle or queued
+            // - Only add tasks that are supposed to live on the fromHost.
+            if ((job != null) && (task != null) && SpawnBalancer.isInMovableState(task) &&
+                (fromHostUuid.equals(task.getHostUUID()) || task.hasReplicaOnHost(fromHostUuid))) {
+                if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
+                    // obeyDontAutobalanceMe is set to false when spawn is doing a filesystem-okay host failure.
+                    // In this case, spawn needs to move the task even if the job owner specified no swapping,
+                    // because the box is likely to be ailing/scheduled for decommission.
+                    // All rebalancing actions use obeyDontAutobalanceMe=true and will conform to the job owner's
+                    // wishes.
+                    continue;
+                }
+                // todo:
+                // valid means: has at least one copy in the minimum level of ad awareness
+                // also passes all normal checks
+
+                double taskScore = this.calculateTaskScore(fromHostLocation, toHostLocation, task);
+                double highestScore = sortedTasks.peek().score;
+                if (sortedTasks.isEmpty() || (highestScore > taskScore)) {
+                    // add to queue if it's empty or this task has a lower score than the task with the largest score
+                    sortedTasks.add(new WithScore<>(task, (double) taskScore));
+                } else if ((sortedTasks.size() == numTasks) && (highestScore == (double) minAdScore)) {
+                    // exit loop and return tasks if we have enough tasks and the largest score equals the min score
+                    break;
+                }
+                if (sortedTasks.size() > numTasks) {
+                    // remove largest score after pushing on a lower score
+                    sortedTasks.poll();
+                }
+            }
+        }
+        // this could contain 0 - numTasks tasks.
+        return sortedTasks.stream().map(WithScore::getElement).collect(Collectors.toList());
+    }
+
     public List<String> getNewReplicaHosts(int replicas, JobTask task) {
         return this.getNewReplicaHosts(replicas, task, null, true);
     }
@@ -148,5 +223,26 @@ public class HostCandidateIterator {
             multiplier = 0;
         }
         this.minScore = multiplier * numHosts;
+    }
+
+    /**
+     * Calculate the availability-domain-score of a task moving from one host to another.
+     * A lower score is a better move to make, because it most distant.
+     */
+    private double calculateTaskScore(HostLocation fromHostLocation, HostLocation toHostLocation, JobTask task) {
+        // exclude fromHostLocation
+        // compare task locations with toHostLocation
+        int score = 0;
+        int numTasks = 0;
+        for (String hostUuid : task.getAllTaskHosts()) {
+            HostLocation taskHostLocation = hostManager.getHostState(hostUuid).getHostLocation();
+            if (!taskHostLocation.equals(fromHostLocation)) {
+                score += toHostLocation.assignScoreByHostLocation(taskHostLocation);
+                numTasks++;
+            }
+        }
+        // normalize score between jobs with different numbers of tasks
+        // the -1 is for the excluded fromHostLocation
+        return (double) score / (double) numTasks;
     }
 }
