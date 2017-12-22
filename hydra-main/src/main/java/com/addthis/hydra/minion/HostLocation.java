@@ -1,5 +1,7 @@
 package com.addthis.hydra.minion;
 
+import com.addthis.hydra.job.spawn.HostLocationSummary;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -36,6 +38,17 @@ public class HostLocation {
 
     public String getPhysicalHost() {
         return physicalHost;
+    }
+
+    public String getPriorityAd(HostLocationSummary.HostLocationPriorityLevel hlpl) {
+        if (hlpl == HostLocationSummary.HostLocationPriorityLevel.DATACENTER) {
+            return this.getDataCenter();
+        } else if (hlpl == HostLocationSummary.HostLocationPriorityLevel.RACK) {
+            return this.getRack();
+        } else {
+            // HOST or NONE or anything else
+            return this.getPhysicalHost();
+        }
     }
 
     @Override
