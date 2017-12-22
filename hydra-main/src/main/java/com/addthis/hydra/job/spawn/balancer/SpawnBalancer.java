@@ -111,7 +111,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private final Cache<String, Boolean> recentlyBalancedHosts;
     private final Cache<String, Boolean> recentlyReplicatedToHosts;
     private final SpawnBalancerTaskSizer taskSizer;
-    private final Comparator<HostAndScore> hostAndScoreComparator;
     private final Comparator<HostState> hostStateScoreComparator;
     private final Comparator<Job> jobAverageTaskSizeComparator;
     private final Comparator<HostState> hostStateReplicationSuitabilityComparator;
@@ -146,7 +145,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         recentlyReplicatedToHosts = CacheBuilder.newBuilder().expireAfterWrite(
                 Parameter.intValue("spawnbalance.host.replicate.interval.mins", 15), TimeUnit.MINUTES
         ).build();
-        hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
         hostStateScoreComparator = Comparator.comparingDouble(hostState -> this.getHostScoreCached(hostState.getHostUuid()));
         jobAverageTaskSizeComparator = (job, job1) -> {
             if ((job == null) || (job1 == null)) {
@@ -336,7 +334,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         // At this stage that the list is not empty
         // All tasks are from the same job
         Job job = spawn.getJob(tasks.get(0).getJobUUID());
-        HostCandidateIterator iterator = new HostCandidateIterator(hostManager, this, job, storedHostScores);
+        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job, storedHostScores);
         List<String> hostsToAssign = new ArrayList<>(tasks.size());
         for (JobTask task : tasks) {
             if(task == null) {
@@ -537,7 +535,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
         Map<HostState, Double> scoreMap = generateHostStateScoreMap(otherHosts, task.getJobUUID());
         Job job = spawn.getJob(task.getJobUUID());
-        HostCandidateIterator iterator = new HostCandidateIterator(hostManager, this, job, scoreMap);
+        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job, scoreMap);
         List<String> newHostList = iterator.getNewReplicaHosts(1, task, taskHost, true);
 
         if(!newHostList.isEmpty()) {
@@ -695,8 +693,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
         Map<HostState, Double> scoreMap = generateTaskCountHostScoreMap(job);
         for (JobTask task : tasks) {
-            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn.hostManager,
-                                                                                    spawn.getSpawnBalancer(),
+            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn,
                                                                                     job,
                                                                                     scoreMap);
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;

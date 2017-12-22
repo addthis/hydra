@@ -11,7 +11,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -43,18 +42,15 @@ public class HostCandidateIterator {
     private final SpawnBalancer balancer;
     private final TreeSet<HostAndScore> sortedHosts;
     private final int taskScoreIncrement;
-    // this will be memoized by getNewReplicaHosts, -1 is the "not set" value
-    private int minScore = -1;
+    private final int minScore;
 
     public HostCandidateIterator(
             Spawn spawn,
-            HostManager hostManager,
-            SpawnBalancer balancer,
             IJob job,
             Map<HostState, Double> scoreMap) {
         this.spawn = spawn;
-        this.hostManager = hostManager;
-        this.balancer = balancer;
+        this.hostManager = spawn.hostManager;
+        this.balancer = spawn.getSpawnBalancer();
         this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
         this.taskScoreIncrement = balancer.getConfig().getSiblingWeight();
 
@@ -71,6 +67,8 @@ public class HostCandidateIterator {
         for (Map.Entry<HostState, Double> entry : scoreMap.entrySet()) {
             this.sortedHosts.add(new HostAndScore(entry.getKey(), entry.getValue()));
         }
+
+        this.minScore = hostManager.getHostLocationSummary().getPriorityLevel().ordinal() * sortedHosts.size();
     }
 
     /**
@@ -90,17 +88,8 @@ public class HostCandidateIterator {
         for (int i = 0; i < replicas; i++) {
             int minScoreSoFar = Integer.MAX_VALUE;
             HostAndScore bestHost = null;
-            Set<String> ads = new HashSet<>();
-            Set<String> racks = new HashSet<>();
-            Set<String> phys = new HashSet<>();
             for (HostAndScore hostAndScore : sortedHosts) {
                 HostState host = hostAndScore.host;
-                if (this.minScore == -1) {
-                    HostLocation hostLocation = host.getHostLocation();
-                    ads.add(hostLocation.getDataCenter());
-                    racks.add(hostLocation.getRack());
-                    phys.add(hostLocation.getPhysicalHost());
-                }
                 boolean excluded = host.getHostUuid().equals(excludeHostUuid);
                 if (excluded || !host.canMirrorTasks() || (isReplica && !balancer.okToPutReplicaOnHost(host, task))) {
                     continue;
@@ -121,7 +110,6 @@ public class HostCandidateIterator {
                     minScoreSoFar = score;
                 }
             }
-            this.cacheMinScore(ads, racks, phys);
             if (bestHost != null) {
                 this.sortedHosts.remove(bestHost);
                 this.sortedHosts.add(new HostAndScore(bestHost.host, bestHost.score + this.taskScoreIncrement));
@@ -201,28 +189,6 @@ public class HostCandidateIterator {
      */
     public List<String> getNewReplicaHosts(JobTask task, @Nullable String excludeHost) {
         return this.getNewReplicaHosts(1, task, excludeHost, true);
-    }
-
-    /**
-     * Calculate the minScore if it has not already been done.
-     * This prevents iterating through every host every time we call getNewReplicaHosts.
-     */
-    private void cacheMinScore(Collection<String> ads, Collection<String> racks, Collection<String> phys) {
-        if (this.minScore != -1) {
-            return;
-        }
-        int numHosts = this.sortedHosts.size();
-        int multiplier = 3;
-        if (phys.size() > 1) {
-            multiplier = 2;
-        }
-        if (racks.size() > 1) {
-            multiplier = 1;
-        }
-        if (ads.size() > 1) {
-            multiplier = 0;
-        }
-        this.minScore = multiplier * numHosts;
     }
 
     /**
