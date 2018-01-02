@@ -48,6 +48,7 @@ import com.addthis.hydra.query.loadbalance.WorkerTracker;
 import com.addthis.hydra.query.spawndatastore.SpawnDataStoreHandler;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
+import com.addthis.hydra.util.PrometheusServletCreator;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
@@ -61,6 +62,10 @@ import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
+import com.typesafe.config.ConfigFactory;
+
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,6 +97,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     /** Primary Mesh server */
     private final MeshyServer meshy;
 
+    private final Server server;
+
     /** Abstracts away spawndatastore-reliant functions */
     private final SpawnDataStoreHandler spawnDataStoreHandler;
 
@@ -105,6 +112,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         this.tracker = tracker;
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
+        server = new Server(ConfigFactory.load().getInt("hydra.prometheus.mqmaster.port"));
+        PrometheusServletCreator.create(server, new ServletContextHandler());
+        server.start();
         cachey = new MeshFileRefCache(meshy);
         worky = new WorkerTracker();
         allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));
@@ -148,6 +158,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
                 spawnDataStoreHandler.close();
             }
             meshy.close();
+            server.stop();
         } catch (Exception e) {
             log.error("arbitrary exception during mqmaster shutdown", e);
         }

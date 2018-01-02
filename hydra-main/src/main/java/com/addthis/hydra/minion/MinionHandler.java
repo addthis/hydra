@@ -44,10 +44,22 @@ class MinionHandler extends AbstractHandler {
 
     @Override
     public void doStop() {
+        try {
+            // stop prometheus jetty handler
+            minion.handler.stop();
+        } catch (Exception ex) {
+            log.error("Unable to stop prometheus handler", ex);
+        }
     }
 
     @Override
     public void doStart() {
+        try {
+            // start prometheus jetty handler
+            minion.handler.start();
+        } catch (Exception ex) {
+            log.error("Unable to start prometheus handler", ex);
+        }
     }
 
     @Override
@@ -81,8 +93,8 @@ class MinionHandler extends AbstractHandler {
         }
         if (target.equals("/ping")) {
             response.getWriter().write("ACK");
-        } else if (target.startsWith("/metrics")) {
-            minion.metricsHandler.handle(target, baseRequest, request, response);
+       } else if (target.equals("/metrics")) {
+            minion.handler.handle(target, baseRequest, request, response);
         } else if (target.equals("/job.port")) {
             String job = kv.getValue("id");
             int taskID = kv.getIntValue("node", -1);
