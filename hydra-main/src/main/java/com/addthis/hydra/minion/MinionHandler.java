@@ -44,10 +44,22 @@ class MinionHandler extends AbstractHandler {
 
     @Override
     public void doStop() {
+        try {
+            // stop prometheus jetty handler
+            minion.handler.stop();
+        } catch (Exception ex) {
+            log.error("Unable to stop prometheus handler", ex);
+        }
     }
 
     @Override
     public void doStart() {
+        try {
+            // start prometheus jetty handler
+            minion.handler.start();
+        } catch (Exception ex) {
+            log.error("Unable to start prometheus handler", ex);
+        }
     }
 
     @Override

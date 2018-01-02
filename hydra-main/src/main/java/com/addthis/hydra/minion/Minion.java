@@ -265,7 +265,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         PrometheusServletCreator.create(handler);
         jetty.setHandler(minionHandler);
         jetty.start();
-        handler.start();
 
         waitForJetty();
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
@@ -831,7 +830,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     @Override public void close() throws Exception {
         if (!shutdown.getAndSet(true)) {
             log.info("[minion] stopping");
-            handler.stop();
             jetty.stop();
             if (runner != null) {
                 runner.stopTaskRunner();
