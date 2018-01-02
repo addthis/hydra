@@ -34,17 +34,22 @@ public class HostnameMatcherHostLocationInitializer implements HostLocationIniti
 
         String hostname = Parameter.value("minion.localhost");
 
-        Pattern adMatcher = Pattern.compile(Parameter.value("adPattern", "(ad[0-9]+)"));
-        Pattern rackMatcher = Pattern.compile(Parameter.value("rackPattern", "(rack[0-9]+)"));
-        Pattern physicalHostMatcher = Pattern.compile(Parameter.value("physicalHostPattern", "(physicalHost[0-9]+)"));
-        String ad = match(hostname, adMatcher);
-        String rack = match(hostname, rackMatcher);
+        String dataCenterPattern = Parameter.value("minion.datacenterPattern", "");
+        String rackPattern = Parameter.value("minion.rackPattern", "");
+        String physicalHostMatcher = Parameter.value("minion.physicalHostPattern", "");
+
+        String ad = match(hostname, dataCenterPattern);
+        String rack = match(hostname, rackPattern);
         String physicalHost = match(hostname, physicalHostMatcher);
         return new HostLocation(ad, rack, physicalHost);
     }
 
-    private String match(String s, Pattern p) {
-        Matcher matcher = p.matcher(s);
+    private String match(String s, String p) {
+        if (p.equals("")) {
+            return "Unknown";
+        }
+        Pattern pattern = Pattern.compile(p);
+        Matcher matcher = pattern.matcher(s);
         if (matcher.find()) {
             return matcher.group(1);
         }

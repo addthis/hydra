@@ -51,7 +51,7 @@ public class FileReaderHostLocationInitializer implements HostLocationInitialize
                 physicalHost = config.getString("physicalHost");
             }
         } catch (Exception e) {
-            log.warn("error getting host location from {}: {}", file.getName(), e);
+            log.warn("error getting host location from {}: ", file.getName(), e);
         }
         return new HostLocation(dataCenter, rack, physicalHost);
     }

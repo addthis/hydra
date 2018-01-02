@@ -238,7 +238,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     @JsonCreator
     private Minion(@JsonProperty("dataDir") File rootDir,
                    @Nullable @JsonProperty("queueType") String queueType,
-                   @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
+                   @Nullable @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
         this.rootDir = rootDir;
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
