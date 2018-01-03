@@ -197,7 +197,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final AtomicLong diskTotal = new AtomicLong(0);
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
-    final ServletContextHandler handler = new ServletContextHandler();
     final MinionHandler minionHandler = new MinionHandler(this);
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
@@ -262,7 +261,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
 
-        PrometheusServletCreator.create(handler);
         jetty.setHandler(minionHandler);
         jetty.start();
 

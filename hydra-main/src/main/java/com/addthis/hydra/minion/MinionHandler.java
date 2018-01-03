@@ -26,10 +26,12 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.SimpleExec;
 
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.util.PrometheusServletCreator;
 import com.addthis.maljson.JSONObject;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ class MinionHandler extends AbstractHandler {
     private static final Logger log = LoggerFactory.getLogger(MinionHandler.class);
 
     private final Minion minion;
+    final ServletContextHandler handler = new ServletContextHandler();
 
     public MinionHandler(Minion minion) {
         this.minion = minion;
@@ -46,7 +49,7 @@ class MinionHandler extends AbstractHandler {
     public void doStop() {
         try {
             // stop prometheus jetty handler
-            minion.handler.stop();
+            handler.stop();
         } catch (Exception ex) {
             log.error("Unable to stop prometheus handler", ex);
         }
@@ -56,7 +59,8 @@ class MinionHandler extends AbstractHandler {
     public void doStart() {
         try {
             // start prometheus jetty handler
-            minion.handler.start();
+            PrometheusServletCreator.create(handler);
+            handler.start();
         } catch (Exception ex) {
             log.error("Unable to start prometheus handler", ex);
         }
@@ -94,7 +98,7 @@ class MinionHandler extends AbstractHandler {
         if (target.equals("/ping")) {
             response.getWriter().write("ACK");
        } else if (target.equals("/metrics")) {
-            minion.handler.handle(target, baseRequest, request, response);
+            handler.handle(target, baseRequest, request, response);
         } else if (target.equals("/job.port")) {
             String job = kv.getValue("id");
             int taskID = kv.getIntValue("node", -1);
