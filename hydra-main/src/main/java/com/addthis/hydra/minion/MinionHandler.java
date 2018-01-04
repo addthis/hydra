@@ -39,18 +39,18 @@ class MinionHandler extends AbstractHandler {
     private static final Logger log = LoggerFactory.getLogger(MinionHandler.class);
 
     private final Minion minion;
-    final ServletContextHandler handler = new ServletContextHandler();
+    final ServletContextHandler metricsHandler = new ServletContextHandler();
 
     public MinionHandler(Minion minion) {
         this.minion = minion;
-        PrometheusServletCreator.create(handler);
+        PrometheusServletCreator.create(metricsHandler);
     }
 
     @Override
     public void doStop() {
         try {
             // stop prometheus jetty handler
-            handler.stop();
+            metricsHandler.stop();
         } catch (Exception ex) {
             log.error("Unable to stop prometheus handler", ex);
         }
@@ -60,7 +60,7 @@ class MinionHandler extends AbstractHandler {
     public void doStart() {
         try {
             // start prometheus jetty handler
-            handler.start();
+            metricsHandler.start();
         } catch (Exception ex) {
             log.error("Unable to start prometheus handler", ex);
         }
@@ -98,7 +98,7 @@ class MinionHandler extends AbstractHandler {
         if (target.equals("/ping")) {
             response.getWriter().write("ACK");
        } else if (target.equals("/metrics")) {
-            handler.handle(target, baseRequest, request, response);
+            metricsHandler.handle(target, baseRequest, request, response);
         } else if (target.equals("/job.port")) {
             String job = kv.getValue("id");
             int taskID = kv.getIntValue("node", -1);
