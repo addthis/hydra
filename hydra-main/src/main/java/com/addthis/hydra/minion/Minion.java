@@ -210,6 +210,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     Channel channel;
     private CuratorFramework zkClient;
     private ZkGroupMembership minionGroupMembership;
+    private HostLocation hostLocation;
 
     Histogram activeTaskHistogram;
 
@@ -234,7 +235,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
 
     @JsonCreator
     private Minion(@JsonProperty("dataDir") File rootDir,
-                   @Nullable @JsonProperty("queueType") String queueType) throws Exception {
+                   @Nullable @JsonProperty("queueType") String queueType,
+                   @Nullable @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
         this.rootDir = rootDir;
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
@@ -244,6 +246,12 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         } else {
             myHost = InetAddress.getLocalHost().getHostAddress();
         }
+        if (hostLocationInitializer == null) {
+            log.warn("No HostLocationInitializer type specified, using SystemPropertyHostLocationInitializer as default.");
+            hostLocationInitializer = new SystemPropertyHostLocationInitializer();
+        }
+        hostLocation = hostLocationInitializer.getHostLocation();
+        log.info("Host location is: {}", hostLocation.toString());
         user = new SimpleExec("whoami").join().stdoutString().trim();
         path = rootDir.getAbsolutePath();
         diskTotal.set(rootDir.getTotalSpace());
@@ -617,6 +625,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         }
         status.setUsed(new HostCapacity(0, 0, 0, diskTotal.get() - diskFree.get()));
         status.setMax(new HostCapacity(0, 0, 0, diskTotal.get()));
+        status.setHostLocation(hostLocation);
         LinkedList<JobKey> running = new LinkedList<>();
         LinkedList<JobKey> replicating = new LinkedList<>();
         LinkedList<JobKey> backingUp = new LinkedList<>();
