@@ -43,6 +43,7 @@ class MinionHandler extends AbstractHandler {
 
     public MinionHandler(Minion minion) {
         this.minion = minion;
+        PrometheusServletCreator.create(handler);
     }
 
     @Override
@@ -59,7 +60,6 @@ class MinionHandler extends AbstractHandler {
     public void doStart() {
         try {
             // start prometheus jetty handler
-            PrometheusServletCreator.create(handler);
             handler.start();
         } catch (Exception ex) {
             log.error("Unable to start prometheus handler", ex);
