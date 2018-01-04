@@ -39,6 +39,7 @@ import com.addthis.hydra.job.web.resources.SearchResource;
 import com.addthis.hydra.job.web.resources.SpawnConfig;
 import com.addthis.hydra.job.web.resources.SystemResource;
 import com.addthis.hydra.job.web.resources.TaskResource;
+import com.addthis.hydra.util.PrometheusServletCreator;
 import com.addthis.hydra.util.WebSocketManager;
 
 import com.google.common.base.Charsets;
@@ -49,7 +50,6 @@ import com.google.common.io.Files;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
-import com.yammer.metrics.reporting.MetricsServlet;
 
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
@@ -189,9 +189,9 @@ public class SpawnService {
         ServletHolder sh = new ServletHolder(servletContainer);
 
         handler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
         handler.addServlet(sh, "/*");
 
+        PrometheusServletCreator.create(jetty, handler);
 
         //jetty stuff
         jetty.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
