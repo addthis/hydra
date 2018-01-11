@@ -13,13 +13,6 @@ public class HostLocationSummary {
     private static Map<String, Set<String>> dataCenter;
     private static Map<String, Set<String>> rack;
 
-    public enum HostLocationPriorityLevel {
-        DATACENTER,
-        RACK,
-        HOST,
-        NONE
-    }
-
     public HostLocationSummary() {
         dataCenter = new HashMap<>();
         rack = new HashMap<>();

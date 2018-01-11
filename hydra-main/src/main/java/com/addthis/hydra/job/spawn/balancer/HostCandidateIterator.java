@@ -27,7 +27,7 @@ import com.addthis.hydra.util.WithScore;
 public class HostCandidateIterator {
     private static final Comparator<WithScore<JobTask>> taskComparator =
             Collections.reverseOrder(Comparator.comparingDouble(t -> t.score));
-    // note: this complex comparator is necessary because maps need comparators that are consistend with equals
+    // note: this complex comparator is necessary because maps need comparators that are consistent with equals
     private static final Comparator<HostAndScore> hostAndScoreComparator = (h1, h2) -> {
         int result = Double.compare(h1.score, h2.score);
         if (result == 0) {

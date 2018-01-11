@@ -213,6 +213,7 @@ public class SpawnTest extends ZkCodecStartUtil {
         origState.setUsed(new HostCapacity(0, 0, 0, 0));
         origState.setMax(new HostCapacity(0, 0, 0, 700_000_000_000L + 1));
         origState.setMinionTypes("default,g8");
+        origState.setHostLocation(new HostLocation("", "", ""));
         return origState;
     }
 }

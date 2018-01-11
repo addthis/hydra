@@ -22,6 +22,7 @@ import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
@@ -138,6 +139,7 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
         hostState.setUp(up);
         hostState.setReplicas(new JobKey[]{});
         hostState.setStopped(new JobKey[]{});
+        hostState.setHostLocation(new HostLocation("", "", ""));
         return hostState;
     }
 }
