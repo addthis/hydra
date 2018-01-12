@@ -26,18 +26,18 @@ public class HostLocationSummary {
         rack.computeIfAbsent(rk, k-> new HashSet<>()).add(location.getPhysicalHost());
     }
 
-    public HostLocationPriorityLevel getPriorityLevel() {
+    public AvailabilityDomain getPriorityLevel() {
         if(dataCenter.size() > 1) {
-            return HostLocationPriorityLevel.DATACENTER;
+            return AvailabilityDomain.DATACENTER;
         }
         if(rack.size() > 1) {
-            return HostLocationPriorityLevel.RACK;
+            return AvailabilityDomain.RACK;
         }
         Set<String> hosts = rack.entrySet().iterator().next().getValue();
         if(hosts.size() > 1) {
-            return HostLocationPriorityLevel.HOST;
+            return AvailabilityDomain.HOST;
         }
-        return HostLocationPriorityLevel.NONE;
+        return AvailabilityDomain.NONE;
     }
 
 }

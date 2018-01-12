@@ -1,7 +1,6 @@
 package com.addthis.hydra.minion;
 
-import com.addthis.hydra.job.spawn.HostLocationPriorityLevel;
-
+import com.addthis.hydra.job.spawn.AvailabilityDomain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -40,10 +39,13 @@ public class HostLocation {
         return physicalHost;
     }
 
-    public String getPriorityAd(HostLocationPriorityLevel hlpl) {
-        if (hlpl == HostLocationPriorityLevel.DATACENTER) {
+    /**
+     * Get the HostLocation value corresponding to the given AvailabilityDomain.
+     */
+    public String getPriorityAd(AvailabilityDomain ad) {
+        if (ad == AvailabilityDomain.DATACENTER) {
             return this.getDataCenter();
-        } else if (hlpl == HostLocationPriorityLevel.RACK) {
+        } else if (ad == AvailabilityDomain.RACK) {
             return this.getRack();
         } else {
             // HOST or NONE or anything else
@@ -75,24 +77,24 @@ public class HostLocation {
     }
 
     /**
-     * Enforce an order when comparing HostLocations
-     * @param o
-     * @return
+     * Returns a score of distance between this and another HostLocation.
+     * Zero means maximum distance.
+     * This method is used to sort HostLocations by their distance score.
      */
     public int assignScoreByHostLocation(HostLocation o) {
         if (this.getDataCenter().equals(o.getDataCenter())) {
             if (!this.getRack().equals(o.getRack())) {
                 // Same dataCenter, different rack
-                return 1;
+                return AvailabilityDomain.RACK.score;
             }
             if (this.getPhysicalHost().equals(o.getPhysicalHost())) {
                 // dataCenter, rack and physicalHost are the same
-                return 3;
+                return AvailabilityDomain.NONE.score;
             }
             // Same dataCenter, same rack, different physicalHost
-            return 2;
+            return AvailabilityDomain.HOST.score;
         }
         // Different dataCenter
-        return 0;
+        return AvailabilityDomain.DATACENTER.score;
     }
 }
