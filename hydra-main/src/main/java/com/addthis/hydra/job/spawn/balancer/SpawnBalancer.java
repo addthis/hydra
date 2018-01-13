@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.spawn.balancer;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -33,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -53,8 +56,11 @@ import com.addthis.hydra.job.mq.CommandTaskStop;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.spawn.AvailabilityDomain;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.minion.HostLocation;
+import com.addthis.hydra.util.WithScore;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -115,6 +121,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private final Comparator<Job> jobAverageTaskSizeComparator;
     private final Comparator<HostState> hostStateReplicationSuitabilityComparator;
     private final ScheduledExecutorService taskExecutor;
+    private static final Comparator<WithScore<JobTask>> taskComparator =
+            Collections.reverseOrder(Comparator.comparingDouble(t -> t.score));
 
     final Spawn spawn;
     final HostManager hostManager;
@@ -435,7 +443,13 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                          boolean limitBytes,
                                                          int moveLimit,
                                                          boolean obeyDontAutobalanceMe) {
-        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host, otherHosts, limitBytes, config.getBytesMovedFullRebalance(), moveLimit, obeyDontAutobalanceMe);
+        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host,
+                otherHosts,
+                limitBytes,
+                config.getBytesMovedFullRebalance(),
+                moveLimit,
+                obeyDontAutobalanceMe
+        );
         markRecentlyReplicatedTo(moveAssignments);
         moveAssignments.addAll(purgeMisplacedTasks(host, moveLimit));
         return moveAssignments;
@@ -490,8 +504,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         if (host != null) {
             String hostId = host.getHostUuid();
             for (JobKey jobKey : host.allJobKeys()) {
-                Job job = spawn.getJob(jobKey);
                 JobTask task = spawn.getTask(jobKey);
+                Job job = spawn.getJob(jobKey);
                 if ((job != null) && (task != null) && isInMovableState(task)
                     // Only add non-null tasks that are either idle or queued
                     && (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(
@@ -1543,6 +1557,126 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             default:
                 throw new IllegalArgumentException("unknown weight type " + weight);
         }
+    }
+
+    /**
+     * Returns a collection of tasks that are valid to move from {@code fromHostUuid} to {@code toHostUuid},
+     * which will contain between 0 and {@code numTasks} tasks.
+     * <p>
+     * Validity checks include:
+     * - task must be non-null and idle or queued
+     * - tasks must be supposed to live on the fromHost
+     * - if obeyDontAutobalanceMe is false, job.getDontAutoBalanceMe must be false
+     * - Move must result in task and replicas being all on different minAds or having copies in every minAd
+     *
+     * @param fromHostUuid          Host to move task from
+     * @param toHostUuid            Host to move task to
+     * @param numTasks              Maximum number of tasks to return
+     * @param primaryAd             The primary AD in which to ensure spread
+     * @param minAdCardinality      The number of ADs in the {@code primaryAd}
+     * @param obeyDontAutobalanceMe set to true for filesystem-okay host failure
+     */
+    @SuppressWarnings("FloatingPointEquality") public @Nonnull Collection<JobTask> getTasksToMove(
+            String fromHostUuid,
+            String toHostUuid,
+            int numTasks,
+            AvailabilityDomain primaryAd,
+            int minAdCardinality,
+            boolean obeyDontAutobalanceMe) {
+        // fixme: minAdCardinality & primaryAd should come from spawn or hostmanager
+        // loop through all tasks
+        // cache the numScore lowest scores that can validly move
+        // if we find numScore that have minscore and can validly move, just return them immediately
+
+        PriorityQueue<WithScore<JobTask>> sortedTasks = new PriorityQueue<>(numTasks, taskComparator);
+        HostState fromHost = hostManager.getHostState(fromHostUuid);
+        HostLocation fromHostLocation = fromHost.getHostLocation();
+        HostLocation toHostLocation = hostManager.getHostState(toHostUuid).getHostLocation();
+        for (JobKey jobKey : fromHost.allJobKeys()) {
+            JobTask task = spawn.getTask(jobKey);
+            Job job = spawn.getJob(jobKey);
+
+            if ((job != null) && SpawnBalancer.isInMovableState(task) &&
+                (fromHostUuid.equals(task.getHostUUID()) || task.hasReplicaOnHost(fromHostUuid))) {
+                if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
+                    // obeyDontAutobalanceMe is set to false when spawn is doing a filesystem-okay host failure.
+                    // In this case, spawn needs to move the task even if the job owner specified no swapping,
+                    // because the box is likely to be ailing/scheduled for decommission.
+                    // All rebalancing actions use obeyDontAutobalanceMe=true and will conform to the job owner's
+                    // wishes.
+                    continue;
+                }
+                if (!this.isMoveSpreadOutForAd(fromHostLocation, toHostLocation, task, primaryAd, minAdCardinality)) {
+                    // only allow tasks to be moved that are correctly spread out
+                    continue;
+                }
+
+                double taskScore = this.calculateTaskScore(fromHostLocation, toHostLocation, task);
+                double highestScore = sortedTasks.peek().score;
+                if (sortedTasks.isEmpty() || (highestScore > taskScore)) {
+                    // add to queue if it's empty or this task has a lower score than the task with the largest score
+                    sortedTasks.add(new WithScore<>(task, (double) taskScore));
+                } else if ((sortedTasks.size() == numTasks) && (highestScore <= (double) primaryAd.score)) {
+                    // exit loop and return tasks if we have enough tasks and the largest score equals the min score
+                    break;
+                }
+                if (sortedTasks.size() > numTasks) {
+                    // remove largest score after pushing on a lower score
+                    sortedTasks.poll();
+                }
+            }
+        }
+        // this could contain 0 - numTasks tasks.
+        return sortedTasks.stream().map(WithScore::getElement).collect(Collectors.toList());
+    }
+
+    /**
+     * Calculate the availability-domain-score of a task moving from one host to another.
+     * A lower score is a better move to make, because it more distant.
+     */
+    private double calculateTaskScore(HostLocation fromHostLocation, HostLocation toHostLocation, JobTask task) {
+        // get average distance score for all tasks host locations (except any on the fromHostLocation)
+        return task.getAllTaskHosts()
+                .stream()
+                .map(h -> hostManager.getHostState(h).getHostLocation())
+                .filter(hl -> !hl.equals(fromHostLocation))
+                .mapToInt(toHostLocation::assignScoreByHostLocation)
+                .average().orElse(0);
+    }
+
+    /**
+     * Returns true if moving a replica for {@code task} from {@code fromHostLocation} to
+     * {@code toHostLocation} is correctly spread out so that either all replicas will be on
+     * different min ads, or there is a replica on every min ad.
+     */
+    private boolean isMoveSpreadOutForAd(
+            HostLocation fromHostLocation,
+            HostLocation toHostLocation,
+            JobTask task,
+            AvailabilityDomain primaryAd,
+            int minAdCardinality) {
+        List<HostLocation> hostLocations = task.getAllTaskHosts()
+                .stream()
+                .map(h -> hostManager.getHostState(h).getHostLocation())
+                .collect(Collectors.toList());
+        // remove the FIRST instance of the location we're moving FROM
+        hostLocations.remove(fromHostLocation);
+        hostLocations.add(toHostLocation);
+        Set<String> minAdsUsed = new HashSet<>(minAdCardinality);
+        boolean allReplicasOnDifferentAd = true;
+        for (HostLocation location : hostLocations) {
+            boolean isNew = minAdsUsed.add(location.getPriorityAd(primaryAd));
+            // if any min ad was already in minAdsUsed, then all replicas are not on the same min ad.
+            if (!isNew) {
+                allReplicasOnDifferentAd = false;
+            }
+            // if all min ads are used, then the move is sufficiently spread out
+            if (minAdsUsed.size() == minAdCardinality) {
+                return true;
+            }
+        }
+        // if not all min ads are used, then the move is spread out if all replicas are on different min ads.
+        return allReplicasOnDifferentAd;
     }
 
 }
