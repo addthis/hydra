@@ -93,7 +93,7 @@ public class HostCandidateIterator {
                 for (HostLocation location : locations) {
                     score += hostLocation.assignScoreByHostLocation(location);
                 }
-                double avgScore = (double) score / (double) locations.size();
+                double avgScore = locations.isEmpty()? 0 : (double) score / (double) locations.size();
                 if (avgScore == (double) this.minScore) {
                     bestHost = hostAndScore;
                     break;
