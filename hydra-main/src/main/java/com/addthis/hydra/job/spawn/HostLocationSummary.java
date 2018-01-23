@@ -40,4 +40,22 @@ public class HostLocationSummary {
         return AvailabilityDomain.NONE;
     }
 
+    private int computeNumberOfHostsInRacks() {
+        int hostCount = 0;
+        for(Set<String> hostSet : rack.values()) {
+            hostCount+= hostSet.size();
+        }
+        return hostCount;
+    }
+
+    public int getMinCardinality(AvailabilityDomain ad) {
+        switch (ad) {
+            case DATACENTER: return dataCenter.size();
+            case RACK: return rack.size();
+            case HOST: return computeNumberOfHostsInRacks();
+            case NONE:
+            default: return 0;
+        }
+    }
+
 }

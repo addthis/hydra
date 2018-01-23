@@ -171,13 +171,15 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         for (int i = 0; i < numLightHosts; i++) {
             String hostID = "light" + i;
             hostIDs.add(hostID);
-            HostState lightHost = installHostStateWithUUID(hostID,
-                                                           spawn,
-                                                           true,
-                                                           new HostLocation(dataCenterIds[i % dataCenterIds.length], "", ""));
+            HostState lightHost = installHostStateWithUUID(hostID, spawn, true,
+                                                           new HostLocation(dataCenterIds[i % dataCenterIds.length],
+                                                                            "",
+                                                                            "" ));
             lightHost.setUsed(new HostCapacity(0, 0, 0, 20_000_000_000L));
             lightHost.setMax(new HostCapacity(0, 0, 0, 100_000_000_000L));
         }
+
+        waitForAllUpHosts();
 
         int numReplicas = 5;
         Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
@@ -196,6 +198,18 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             for(String replicaAssignment : replicaAssignments) {
                 assertTrue("should not put replica on the same host as the task", !task.getHostUUID().equals(replicaAssignment));
             }
+        }
+
+        // at least one replica should be in a different AD
+        for(JobTask task : job.getCopyOfTasks()) {
+            List<String> replicaAssignments = assignments.get(task.getTaskID());
+            HashSet<HostLocation> locations = new HashSet<>(replicaAssignments.size());
+            for(String replica : replicaAssignments) {
+                locations.add(hostManager.getHostState(replica).getHostLocation());
+            }
+
+            locations.remove(hostManager.getHostState(task.getHostUUID()).getHostLocation());
+            assertTrue(!locations.isEmpty());
         }
     }
 
@@ -411,11 +425,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         hostManager.updateHostState(lightHost1);
         hostManager.updateHostState(lightHost2);
         hostManager.updateHostState(readOnlyHost);
-        int tries = 50;
-        while (spawn.listAvailableHostIds().size() < 5 && tries-- > 0) {
-            // Takes a little while for the new hosts to show up as available
-            Thread.sleep(100);
-        }
+
+        waitForAllUpHosts();
+
         bal.updateAggregateStatistics(hostManager.listHostStatus(null));
 
         // Suppose we have one host with full disk and another with mostly empty disk.
@@ -542,11 +554,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         Job myJob = createJobAndUpdateHosts(spawn, 20, hosts, JitterClock.globalTime(), 2000L, 0);
         installHostStateWithUUID("hNEW1", spawn, true, new HostLocation("a", "", ""));
         installHostStateWithUUID("hNEW2", spawn, true, new HostLocation("b", "", ""));
-        int tries = 50;
-        while (spawn.listAvailableHostIds().size() < 10 && tries-- > 0) {
-            // Takes a little while for the new hosts to show up as available
-            Thread.sleep(100);
-        }
+
+        waitForAllUpHosts();
+
         List<HostState> hostStates = hostManager.listHostStatus(null);
         bal.updateAggregateStatistics(hostStates);
         List<JobTaskMoveAssignment> assignments = bal.getAssignmentsForJobReallocation(myJob, -1, hostStates);
@@ -760,5 +770,23 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         newHostState.setHostLocation(location);
         hostManager.updateHostState(newHostState);
         return newHostState;
+    }
+
+    private void waitForAllUpHosts() throws Exception {
+        // Wait for all hosts to be up due to time needed to pick up zk minion/up change. That matters because
+        // HostManager.listHostStatus may set HostState.up to false depending on zk minion/up data, which may
+        // affect test results below
+        boolean hostsAreUp = false;
+        for (int i = 0; i < 50; i++) {
+            if (spawn.hostManager.listHostStatus(null).stream().allMatch(host -> host.isUp())) {
+                hostsAreUp = true;
+                break;
+            } else {
+                Thread.sleep(1000);
+            }
+        }
+        if (!hostsAreUp) {
+            throw new RuntimeException("Failed to find hosts after waiting");
+        }
     }
 }

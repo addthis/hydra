@@ -127,6 +127,7 @@ import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.SpawnServiceConfiguration;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
@@ -165,8 +166,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * manages minions running on remote notes. runs master http server to communicate with and control those instances.
  */
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
-                setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Spawn implements Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);
 
@@ -246,21 +247,21 @@ public class Spawn implements Codable, AutoCloseable {
                                @Nonnull @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
                                @Nonnull @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor,
                                @Time(MILLISECONDS) @JsonProperty(value = "taskQueueDrainInterval",
-                                                                 required = true) int taskQueueDrainInterval,
+                                       required = true) int taskQueueDrainInterval,
                                @Time(MILLISECONDS) @JsonProperty(value = "hostStatusRequestInterval",
-                                                                 required = true) int hostStatusRequestInterval,
+                                       required = true) int hostStatusRequestInterval,
                                @Time(MILLISECONDS) @JsonProperty(value = "queueKickInterval",
-                                                                 required = true) int queueKickInterval,
+                                       required = true) int queueKickInterval,
                                @Time(MILLISECONDS) @JsonProperty("jobTaskUpdateHeartbeatInterval")
-                               int jobTaskUpdateHeartbeatInterval,
+                                       int jobTaskUpdateHeartbeatInterval,
                                @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                                @Nullable @JsonProperty("jobStore") JobStore jobStore,
                                @Nullable @JsonProperty("queueType") String queueType,
                                @Nullable @JacksonInject CuratorFramework providedZkClient,
                                @Nonnull @JsonProperty(value = "permissionsManager",
-                                                      required = true) PermissionsManager permissionsManager,
+                                       required = true) PermissionsManager permissionsManager,
                                @Nonnull @JsonProperty(value = "jobDefaults",
-                                                      required = true) JobDefaults jobDefaults,
+                                       required = true) JobDefaults jobDefaults,
                                @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize,
                                @Nonnull @JsonProperty(value = "groupManager", required = true) GroupManager groupManager)
             throws Exception {
@@ -470,11 +471,11 @@ public class Spawn implements Codable, AutoCloseable {
         PipedOutputStream out = new PipedOutputStream();
         PipedInputStream in = new PipedInputStream(out);
         JobSearcher js = new JobSearcher(SpawnUtils.getJobsMapFromSpawnState(spawnState),
-                SpawnUtils.getMacroMapFromMacroManager(jobMacroManager),
-                getAliasManager().getAliases(),
-                jobConfigManager,
-                searchOptions,
-                out);
+                                         SpawnUtils.getMacroMapFromMacroManager(jobMacroManager),
+                                         getAliasManager().getAliases(),
+                                         jobConfigManager,
+                                         searchOptions,
+                                         out);
         expandKickExecutor.submit(js);
         return in;
     }
@@ -3154,6 +3155,7 @@ public class Spawn implements Codable, AutoCloseable {
             return null;
         }
         List<HostState> filteredHosts = new ArrayList<>();
+        HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
         for (HostState host : hosts) {
             if ((host == null) || (forMigration && (hostFailWorker.getFailureState(host.getHostUuid())
                                                     != HostFailWorker.FailState.ALIVE))) {
@@ -3164,7 +3166,13 @@ public class Spawn implements Codable, AutoCloseable {
                 // Not a valid migration target
                 continue;
             }
-            if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
+            AvailabilityDomain priorityLevel = hostManager.getHostLocationSummary().getPriorityLevel();
+            if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())
+                && balancer.isMoveSpreadOutForAd(taskLocation,
+                                                 host.getHostLocation(),
+                                                 task,
+                                                 priorityLevel,
+                                                 hostManager.getHostLocationSummary().getMinCardinality(priorityLevel))) {
                 filteredHosts.add(host);
             }
         }

@@ -1649,7 +1649,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * {@code toHostLocation} is correctly spread out so that either all replicas will be on
      * different min ads, or there is a replica on every min ad.
      */
-    private boolean isMoveSpreadOutForAd(
+    public boolean isMoveSpreadOutForAd(
             HostLocation fromHostLocation,
             HostLocation toHostLocation,
             JobTask task,
