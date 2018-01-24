@@ -63,6 +63,7 @@ public class HostCandidateIterator {
     /**
      * Return a host chosen in order of zone preference, then score
      */
+    // FIXME: caching only based on HostLocation score can lead to ignoring an AD completely
     public List<String> getNewReplicaHosts(
             int replicas,
             JobTask task,

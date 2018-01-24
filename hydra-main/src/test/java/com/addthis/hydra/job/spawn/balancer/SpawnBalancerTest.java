@@ -677,6 +677,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         hostState5.setUsed(new HostCapacity(10, 10, 10, 100L));
         hostState6.setUsed(new HostCapacity(10, 10, 10, 200L));
 
+        waitForAllUpHosts();
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
+
         for(JobTask task : job.getCopyOfTasks()) {
             // Use a dummy value of 25 for taskScoreIncrement
             HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn, job, bal.generateTaskCountHostScoreMap(job));
@@ -693,7 +696,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             assertTrue("Should choose Host on different physical host next",
                        iterator.next().equals("hostId3"));
             assertTrue("Should not choose Host in the same location if other hosts available",
-                       iterator.next().equals("hostId6"));
+                       iterator.next().equals("hostId2"));
         }
     }
 

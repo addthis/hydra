@@ -444,11 +444,11 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                          int moveLimit,
                                                          boolean obeyDontAutobalanceMe) {
         List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host,
-                otherHosts,
-                limitBytes,
-                config.getBytesMovedFullRebalance(),
-                moveLimit,
-                obeyDontAutobalanceMe
+                                                                         otherHosts,
+                                                                         limitBytes,
+                                                                         config.getBytesMovedFullRebalance(),
+                                                                         moveLimit,
+                                                                         obeyDontAutobalanceMe
         );
         markRecentlyReplicatedTo(moveAssignments);
         moveAssignments.addAll(purgeMisplacedTasks(host, moveLimit));
@@ -732,19 +732,21 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             List<JobTask> tasks = job.getCopyOfTasks();
             for (JobTask task : tasks) {
                 HostState host = hostManager.getHostState(task.getHostUUID());
-                rv.put(host, rv.getOrDefault(host, 0d) + 1d);
+                rv.merge(host, 1d, Double::sum);
                 if (task.getReplicas() == null) {
                     continue;
                 }
                 for (JobTaskReplica replica : task.getReplicas()) {
                     HostState replicaHost = hostManager.getHostState(replica.getHostUUID());
-                    rv.put(replicaHost, rv.getOrDefault(replicaHost, 0d) + 1d);
+                    rv.merge(replicaHost, 1d, Double::sum);
                 }
             }
-            for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
+
+            List<HostState> hostStates = hostManager.listHostStatus(job.getMinionType());
+            Map<HostState, Double> cachedHostScoreMap = generateHostStateScoreMap(hostStates, null);
+            for (HostState host : hostStates) {
                 if (host.isUp() && !host.isDead()) {
-                    double availDisk = host.getDiskUsedPercent();
-                    rv.put(host, rv.getOrDefault(host, 0d) + availDisk);
+                    rv.merge(host, cachedHostScoreMap.getOrDefault(host, 0d), Double::sum);
                 }
             }
         }
@@ -1637,11 +1639,11 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private double calculateTaskScore(HostLocation fromHostLocation, HostLocation toHostLocation, JobTask task) {
         // get average distance score for all tasks host locations (except any on the fromHostLocation)
         return task.getAllTaskHosts()
-                .stream()
-                .map(h -> hostManager.getHostState(h).getHostLocation())
-                .filter(hl -> !hl.equals(fromHostLocation))
-                .mapToInt(toHostLocation::assignScoreByHostLocation)
-                .average().orElse(0);
+                   .stream()
+                   .map(h -> hostManager.getHostState(h).getHostLocation())
+                   .filter(hl -> !hl.equals(fromHostLocation))
+                   .mapToInt(toHostLocation::assignScoreByHostLocation)
+                   .average().orElse(0);
     }
 
     /**
@@ -1649,6 +1651,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * {@code toHostLocation} is correctly spread out so that either all replicas will be on
      * different min ads, or there is a replica on every min ad.
      */
+    // TODO: add a unit test
     public boolean isMoveSpreadOutForAd(
             HostLocation fromHostLocation,
             HostLocation toHostLocation,
@@ -1656,9 +1659,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             AvailabilityDomain primaryAd,
             int minAdCardinality) {
         List<HostLocation> hostLocations = task.getAllTaskHosts()
-                .stream()
-                .map(h -> hostManager.getHostState(h).getHostLocation())
-                .collect(Collectors.toList());
+                                               .stream()
+                                               .map(h -> hostManager.getHostState(h).getHostLocation())
+                                               .collect(Collectors.toList());
         // remove the FIRST instance of the location we're moving FROM
         hostLocations.remove(fromHostLocation);
         hostLocations.add(toHostLocation);
