@@ -998,7 +998,6 @@ public class Spawn implements Codable, AutoCloseable {
             if(newReplicas.size() > desiredNumberOfReplicas) {
                 List<JobTaskReplica> replicasToRemove = removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
                 newReplicas.removeAll(replicasToRemove);
-                System.out.println("desired num " + desiredNumberOfReplicas + " actual " + newReplicas.size());
                 for(JobTaskReplica replica : replicasToRemove) {
                     spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(),
                                                                      task.getJobUUID(),
