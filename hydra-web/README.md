@@ -11,6 +11,7 @@ npm install webpack -g
 ```
 
 ### Development
+ - run `npm update` if you change package.json
  - build the assets 1x with `webpack -d`
  - continually build on file changes with `webpack -d --watch`
 
