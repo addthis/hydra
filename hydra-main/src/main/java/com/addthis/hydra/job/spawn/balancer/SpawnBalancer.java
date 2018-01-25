@@ -706,10 +706,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         int replicaCount = job.getReplicas();
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
         Map<HostState, Double> scoreMap = generateTaskCountHostScoreMap(job);
+        HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn,
+                                                                                job,
+                                                                                scoreMap);
         for (JobTask task : tasks) {
-            HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn,
-                                                                                    job,
-                                                                                    scoreMap);
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
             List<String> hostIDsToAdd = hostCandidateIterator.getNewReplicaHosts(replicaCount - numExistingReplicas, task);
             if (!hostIDsToAdd.isEmpty()) {
@@ -1574,22 +1574,21 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param fromHostUuid          Host to move task from
      * @param toHostUuid            Host to move task to
      * @param numTasks              Maximum number of tasks to return
-     * @param primaryAd             The primary AD in which to ensure spread
-     * @param minAdCardinality      The number of ADs in the {@code primaryAd}
      * @param obeyDontAutobalanceMe set to true for filesystem-okay host failure
      */
     @SuppressWarnings("FloatingPointEquality") public @Nonnull Collection<JobTask> getTasksToMove(
             String fromHostUuid,
             String toHostUuid,
             int numTasks,
-            AvailabilityDomain primaryAd,
-            int minAdCardinality,
             boolean obeyDontAutobalanceMe) {
-        // fixme: minAdCardinality & primaryAd should come from spawn or hostmanager
         // loop through all tasks
         // cache the numScore lowest scores that can validly move
         // if we find numScore that have minscore and can validly move, just return them immediately
 
+        // primaryAd             The primary AD in which to ensure spread
+        // minAdCardinality      The number of ADs in the primaryAd
+        AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
+        int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);
         PriorityQueue<WithScore<JobTask>> sortedTasks = new PriorityQueue<>(numTasks, taskComparator);
         HostState fromHost = hostManager.getHostState(fromHostUuid);
         HostLocation fromHostLocation = fromHost.getHostLocation();

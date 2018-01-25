@@ -651,15 +651,15 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String hostId1 = "hostId1";
         HostState hostState1 = installHostStateWithUUID(hostId1, spawn, true, new HostLocation("a", "aa", "aaa"));
         String hostId2 = "hostId2";
-        HostState hostState2 = installHostStateWithUUID(hostId2, spawn, true, new HostLocation("b", "aa", "aaa"));
+        HostState hostState2 = installHostStateWithUUID(hostId2, spawn, true, new HostLocation("b", "bb", "bbb"));
         String hostId3 = "hostId3";
-        HostState hostState3 = installHostStateWithUUID(hostId3, spawn, true, new HostLocation("a", "aa", "bbb"));
+        HostState hostState3 = installHostStateWithUUID(hostId3, spawn, true, new HostLocation("a", "aa", "aab"));
         String hostId4 = "hostId4";
-        HostState hostState4 = installHostStateWithUUID(hostId4, spawn, true, new HostLocation("a", "bb", "aaa"));
+        HostState hostState4 = installHostStateWithUUID(hostId4, spawn, true, new HostLocation("a", "ab", "aba"));
         String hostId5 = "hostId5";
-        HostState hostState5 = installHostStateWithUUID(hostId5, spawn, true, new HostLocation("a", "bb", "aaa"));
+        HostState hostState5 = installHostStateWithUUID(hostId5, spawn, true, new HostLocation("a", "ab", "aba"));
         String hostId6 = "hostId6";
-        HostState hostState6 = installHostStateWithUUID(hostId6, spawn, true, new HostLocation("c", "bb", "aaa"));
+        HostState hostState6 = installHostStateWithUUID(hostId6, spawn, true, new HostLocation("c", "cc", "ccc"));
         Job job = createSpawnJob(spawn, 1, Arrays.asList(hostId1), now, 80_000_000L, 0);
         hostState1.setStopped(simulateJobKeys(job));
 

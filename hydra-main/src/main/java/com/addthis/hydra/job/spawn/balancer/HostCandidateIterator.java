@@ -5,7 +5,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -63,13 +62,12 @@ public class HostCandidateIterator {
     /**
      * Return a host chosen in order of zone preference, then score
      */
-    // FIXME: caching only based on HostLocation score can lead to ignoring an AD completely
     public List<String> getNewReplicaHosts(
             int replicas,
             JobTask task,
             @Nullable String excludeHostUuid,
             boolean isReplica) {
-        Collection<HostLocation> locations = new HashSet<>();
+        Collection<HostLocation> locations = new ArrayList<>();
         // get current host locations used by live/replicas
         for (String replicaHostId : task.getAllTaskHosts()) {
             if ((replicaHostId != null) && !replicaHostId.equals(excludeHostUuid)) {

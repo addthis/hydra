@@ -25,6 +25,7 @@ import java.io.PipedOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -34,6 +35,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -132,6 +134,7 @@ import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.WebSocketManager;
+import com.addthis.hydra.util.WithScore;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.service.file.FileReference;
@@ -992,20 +995,81 @@ public class Spawn implements Codable, AutoCloseable {
             newReplicas.addAll(replicateTask(task, replicaHostsToAdd));
         }
         if (!isNewTask(task)) {
-            while (newReplicas.size() > desiredNumberOfReplicas) {
-                JobTaskReplica replica = newReplicas.remove(newReplicas.size() - 1);
-                spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(),
-                                                                 task.getJobUUID(),
-                                                                 task.getTaskID(),
-                                                                 task.getRunCount()));
-                log.info("[replica.delete] {}/{} from {} @ {}",
-                         task.getJobUUID(),
-                         task.getTaskID(),
-                         replica.getHostUUID(),
-                         hostManager.getHostState(replica.getHostUUID()).getHost());
+            if(newReplicas.size() > desiredNumberOfReplicas) {
+                List<JobTaskReplica> replicasToRemove = removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
+                newReplicas.removeAll(replicasToRemove);
+                System.out.println("desired num " + desiredNumberOfReplicas + " actual " + newReplicas.size());
+                for(JobTaskReplica replica : replicasToRemove) {
+                    spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(),
+                                                                     task.getJobUUID(),
+                                                                     task.getTaskID(),
+                                                                     task.getRunCount()));
+                    log.info("[replica.delete] {}/{} from {} @ {}",
+                             task.getJobUUID(),
+                             task.getTaskID(),
+                             replica.getHostUUID(),
+                             hostManager.getHostState(replica.getHostUUID()).getHost());
+                }
             }
         }
         return newReplicas;
+    }
+
+    /**
+     * Remove the highest scored replica from the HostLocation with the max number of duplicates,
+     * or remove the replica on the highest-scored host if replicas are equally spread across HostLocations
+     * @param replicaList List of existing replicas
+     * @param numReplicasToRemove Number of replicas to remove
+     * @return List of replicas to remove
+     */
+    // TODO: add unit test
+    private List<JobTaskReplica> removeExcessReplicas(List<JobTaskReplica> replicaList,
+                                                      int numReplicasToRemove) {
+        List<JobTaskReplica> replicasToRemove = new ArrayList<>(numReplicasToRemove);
+        AvailabilityDomain priorityAd = hostManager.getHostLocationSummary().getPriorityLevel();
+        if(priorityAd == AvailabilityDomain.NONE) {
+            // short-circuit here and retain original behavior by removing replicas from the end of replicaList
+            for(int i = replicaList.size() - numReplicasToRemove; i <= replicaList.size() - 1; i++) {
+                replicasToRemove.add(replicaList.get(i));
+            }
+        } else {
+            Comparator<WithScore<JobTaskReplica>> replicaHostScoreComparator = (r1, r2) -> {
+                int result = Double.compare(r1.score, r2.score);
+                if(result == 0) {
+                    return r1.element.getHostUUID().compareTo(r2.element.getHostUUID());
+                }
+                // Descending order sort
+                return -result;
+            };
+
+            Map<HostLocation, PriorityQueue<WithScore<JobTaskReplica>>> replicaByHostScore = new HashMap<>();
+            Map<HostLocation, Integer> hostLocationCount = new HashMap<>();
+            for(JobTaskReplica replica : replicaList) {
+                HostState hostState = hostManager.getHostState(replica.getHostUUID());
+                Double hostScore = balancer.getHostScoreCached(replica.getHostUUID());
+                replicaByHostScore.computeIfAbsent(hostState.getHostLocation(),
+                                                   k -> new PriorityQueue<>(replicaHostScoreComparator)).add(new WithScore<>(replica, hostScore));
+                hostLocationCount.merge(hostState.getHostLocation(), 1, Integer::sum);
+            }
+
+            for(int i = 0; i < numReplicasToRemove; i++) {
+                HostLocation removeReplicaFromLocation = null;
+                int maxCountSoFar = Integer.MIN_VALUE;
+                // Find the HostLocation with the max number of replicas
+                for(Map.Entry<HostLocation, Integer> entry : hostLocationCount.entrySet()) {
+                    if(entry.getValue() > maxCountSoFar) {
+                        maxCountSoFar = entry.getValue();
+                        removeReplicaFromLocation = entry.getKey();
+                    }
+                }
+                JobTaskReplica removeReplica = replicaByHostScore.get(removeReplicaFromLocation).poll().element;
+                if(removeReplica != null) {
+                    replicasToRemove.add(removeReplica);
+                    hostLocationCount.merge(removeReplicaFromLocation, -1, Integer::sum);
+                }
+            }
+        }
+        return replicasToRemove;
     }
 
     /**
@@ -2398,6 +2462,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @param allowSwap   Whether to allow swapping to replica hosts
      * @return True if some host had the capacity to run the task and the task was sent there; false otherwise
      */
+    // TODO: add a unit test
     public boolean kickOnExistingHosts(Job job,
                                        JobTask task,
                                        long timeOnQueue,
