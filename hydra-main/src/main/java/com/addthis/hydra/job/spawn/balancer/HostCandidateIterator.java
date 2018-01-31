@@ -33,10 +33,7 @@ public class HostCandidateIterator {
     private final int taskScoreIncrement;
     private final int minScore;
 
-    public HostCandidateIterator(
-            Spawn spawn,
-            IJob job,
-            Map<HostState, Double> scoreMap) {
+    public HostCandidateIterator(Spawn spawn, IJob job, Map<HostState, Double> scoreMap) {
         this.hostManager = spawn.hostManager;
         this.balancer = spawn.getSpawnBalancer();
         this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
@@ -62,11 +59,12 @@ public class HostCandidateIterator {
     /**
      * Return a host chosen in order of zone preference, then score
      */
-    public List<String> getNewReplicaHosts(
-            int replicas,
-            JobTask task,
-            @Nullable String excludeHostUuid,
-            boolean isReplica) {
+    public List<String> getNewReplicaHosts(int replicas, JobTask task,
+                                           @Nullable String excludeHostUuid, boolean isReplica) {
+        if(replicas <= 0) {
+            return new ArrayList<>();
+        }
+
         Collection<HostLocation> locations = new ArrayList<>();
         // get current host locations used by live/replicas
         for (String replicaHostId : task.getAllTaskHosts()) {

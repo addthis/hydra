@@ -17,11 +17,14 @@ import java.io.File;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.JitterClock;
@@ -30,6 +33,7 @@ import com.addthis.basis.util.LessFiles;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
@@ -151,6 +155,98 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         assertEquals("should get lightest host first", "id0", hosts.get(0).getHostUuid());
         assertEquals("should get heaviest host second to last", "id" + (numHosts - 1), hosts.get(numHosts - 2).getHostUuid());
         assertEquals("should get recently-replicated-to host last", "id4", hosts.get(numHosts - 1).getHostUuid());
+    }
+
+    /**
+     * Test to check default behavior of removing replicas from the end of the replica list
+     * when no HostLocation information is available
+     */
+    @Test
+    public void removeReplicasWithoutHostLocationTest() throws Exception {
+        int numLightHosts = 9;
+        ArrayList<String> hostIDs = new ArrayList<>(numLightHosts);
+
+        for (int i = 0; i < numLightHosts; i++) {
+            String hostID = "light" + i;
+            hostIDs.add(hostID);
+            HostState lightHost = installHostStateWithUUID(hostID, spawn, true,
+                                                           new HostLocation("", "", "" ));
+            lightHost.setUsed(new HostCapacity(0, 0, 0, 20_000_000_000L));
+            lightHost.setMax(new HostCapacity(0, 0, 0, 100_000_000_000L));
+        }
+
+        waitForAllUpHosts();
+
+        int numReplicas = 5;
+        Job job = createJobAndUpdateHosts(spawn, numLightHosts, hostIDs, now, 1000, 0);
+        job.setReplicas(numReplicas);
+        spawn.updateJob(job);
+
+        // Should have 5 replicas per task
+        for(JobTask task : job.getCopyOfTasks()) {
+            assertTrue(task.getReplicas().size() == numReplicas);
+        }
+
+        job.setReplicas(2);
+        spawn.updateJob(job);
+        assertTrue("Job should not be in degraded state", job.getState() == JobState.IDLE);
+        for(JobTask task : job.getCopyOfTasks()) {
+            Collection<String> taskHosts = task.getAllTaskHosts();
+            assertTrue("Should have 1 task and 2 replicas", taskHosts.size() == 3);
+        }
+    }
+
+    /**
+     * Test to ensure that task and replica locations remain AD-aware upon replica deletion/removal
+     */
+    @Test
+    public void removeReplicasTest() throws Exception {
+        int numLightHosts = 9;
+        ArrayList<String> hostIDs = new ArrayList<>(numLightHosts);
+
+        String[] dataCenterIds = {"a", "b", "c"};
+
+        for (int i = 0; i < numLightHosts; i++) {
+            String hostID = "light" + i;
+            hostIDs.add(hostID);
+            HostState lightHost = installHostStateWithUUID(hostID, spawn, true,
+                                                           new HostLocation(dataCenterIds[i % dataCenterIds.length],
+                                                                            "",
+                                                                            "" ));
+            lightHost.setUsed(new HostCapacity(0, 0, 0, 20_000_000_000L));
+            lightHost.setMax(new HostCapacity(0, 0, 0, 100_000_000_000L));
+        }
+
+        waitForAllUpHosts();
+
+        int numReplicas = 5;
+        Job job = createJobAndUpdateHosts(spawn, numLightHosts, hostIDs, now, 1000, 0);
+        job.setReplicas(numReplicas);
+        spawn.updateJob(job);
+
+        assertTrue("Job should not be in degraded state", job.getState() == JobState.IDLE);
+
+        // Should have 5 replicas per task
+        for(JobTask task : job.getCopyOfTasks()) {
+            assertTrue(task.getReplicas().size() == numReplicas);
+            Set<HostLocation> locations = task.getAllTaskHosts().stream()
+                                              .map(k -> hostManager.getHostState(k).getHostLocation())
+                                              .collect(Collectors.toSet());
+            assertTrue("Replicas should be spread out across HostLocations", locations.size() ==
+                       hostManager.getHostLocationSummary().getMinCardinality(hostManager.getHostLocationSummary().getPriorityLevel()));
+        }
+
+        job.setReplicas(2);
+        spawn.updateJob(job);
+        assertTrue(job.getState() == JobState.IDLE);
+        for(JobTask task : job.getCopyOfTasks()) {
+            Collection<String> taskHosts = task.getAllTaskHosts();
+            assertTrue(taskHosts.size() == 3);
+            Set<HostLocation> locations = taskHosts.stream()
+                                                   .map(host -> hostManager.getHostState(host).getHostLocation())
+                                                   .collect(Collectors.toSet());
+            assertTrue("At least one replica should be on a different HostLocation", locations.size() > 1);
+        }
     }
 
     @Test

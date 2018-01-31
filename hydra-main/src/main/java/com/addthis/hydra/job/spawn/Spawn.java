@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import java.text.ParseException;
 
@@ -996,8 +997,12 @@ public class Spawn implements Codable, AutoCloseable {
         }
         if (!isNewTask(task)) {
             if(newReplicas.size() > desiredNumberOfReplicas) {
-                List<JobTaskReplica> replicasToRemove = removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
-                newReplicas.removeAll(replicasToRemove);
+                HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
+                List<JobTaskReplica> replicasToRemove =
+                        removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
+                for(JobTaskReplica replica : replicasToRemove) {
+                    newReplicas.remove(replica);
+                }
                 for(JobTaskReplica replica : replicasToRemove) {
                     spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(),
                                                                      task.getJobUUID(),
@@ -1041,30 +1046,36 @@ public class Spawn implements Codable, AutoCloseable {
                 return -result;
             };
 
-            Map<HostLocation, PriorityQueue<WithScore<JobTaskReplica>>> replicaByHostScore = new HashMap<>();
-            Map<HostLocation, Integer> hostLocationCount = new HashMap<>();
+            Map<HostLocation, PriorityQueue<WithScore<JobTaskReplica>>> replicasByLocation = new HashMap<>();
             for(JobTaskReplica replica : replicaList) {
                 HostState hostState = hostManager.getHostState(replica.getHostUUID());
                 Double hostScore = balancer.getHostScoreCached(replica.getHostUUID());
-                replicaByHostScore.computeIfAbsent(hostState.getHostLocation(),
-                                                   k -> new PriorityQueue<>(replicaHostScoreComparator)).add(new WithScore<>(replica, hostScore));
-                hostLocationCount.merge(hostState.getHostLocation(), 1, Integer::sum);
+                replicasByLocation.computeIfAbsent(hostState.getHostLocation(),
+                                                   key -> new PriorityQueue<>(replicaHostScoreComparator)).add(new WithScore<>(replica, hostScore));
             }
 
-            for(int i = 0; i < numReplicasToRemove; i++) {
+            int numReplicasRemoved = 0;
+            while(numReplicasRemoved < numReplicasToRemove) {
                 HostLocation removeReplicaFromLocation = null;
+                Double maxScoreSoFar = Double.MIN_VALUE;
                 int maxCountSoFar = Integer.MIN_VALUE;
-                // Find the HostLocation with the max number of replicas
-                for(Map.Entry<HostLocation, Integer> entry : hostLocationCount.entrySet()) {
-                    if(entry.getValue() > maxCountSoFar) {
-                        maxCountSoFar = entry.getValue();
-                        removeReplicaFromLocation = entry.getKey();
+
+                for (Map.Entry<HostLocation, PriorityQueue<WithScore<JobTaskReplica>>> entry : replicasByLocation.entrySet()) {
+                    PriorityQueue<WithScore<JobTaskReplica>> pq = entry.getValue();
+                    if(pq.size() >= maxCountSoFar) {
+                        WithScore<JobTaskReplica> removeReplica = pq.peek();
+                        if(removeReplica != null && (pq.size() > maxCountSoFar || (removeReplica.score > maxScoreSoFar))) {
+                            removeReplicaFromLocation = entry.getKey();
+                            maxScoreSoFar = removeReplica.score;
+                            maxCountSoFar = pq.size();
+                        }
                     }
                 }
-                JobTaskReplica removeReplica = replicaByHostScore.get(removeReplicaFromLocation).poll().element;
+
+                WithScore<JobTaskReplica> removeReplica = replicasByLocation.get(removeReplicaFromLocation).poll();
                 if(removeReplica != null) {
-                    replicasToRemove.add(removeReplica);
-                    hostLocationCount.merge(removeReplicaFromLocation, -1, Integer::sum);
+                    replicasToRemove.add(removeReplica.element);
+                    numReplicasRemoved++;
                 }
             }
         }
