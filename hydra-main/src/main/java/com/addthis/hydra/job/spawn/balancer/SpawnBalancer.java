@@ -1607,7 +1607,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     // wishes.
                     continue;
                 }
-                if (!this.isMoveSpreadOutForAd(fromHostLocation, toHostLocation, task, primaryAd, minAdCardinality)) {
+                if (!this.isMoveSpreadOutForAd(fromHostLocation, toHostLocation, task)) {
                     // only allow tasks to be moved that are correctly spread out
                     continue;
                 }
@@ -1651,12 +1651,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * different min ads, or there is a replica on every min ad.
      */
     // TODO: add a unit test
-    public boolean isMoveSpreadOutForAd(
-            HostLocation fromHostLocation,
-            HostLocation toHostLocation,
-            JobTask task,
-            AvailabilityDomain primaryAd,
-            int minAdCardinality) {
+    public boolean isMoveSpreadOutForAd(HostLocation fromHostLocation, HostLocation toHostLocation, JobTask task) {
+        AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
+        int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);
         List<HostLocation> hostLocations = task.getAllTaskHosts()
                                                .stream()
                                                .map(h -> hostManager.getHostState(h).getHostLocation())

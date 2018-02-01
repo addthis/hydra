@@ -233,7 +233,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
                                               .map(k -> hostManager.getHostState(k).getHostLocation())
                                               .collect(Collectors.toSet());
             assertTrue("Replicas should be spread out across HostLocations", locations.size() ==
-                       hostManager.getHostLocationSummary().getMinCardinality(hostManager.getHostLocationSummary().getPriorityLevel()));
+                                                                             hostManager.getHostLocationSummary().getMinCardinality(hostManager.getHostLocationSummary().getPriorityLevel()));
         }
 
         job.setReplicas(2);
@@ -482,7 +482,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         heavyHost2.setStopped(simulateJobKeys(movableJob2, movableJob3));
 
         Job movableJob4 = createSpawnJob(spawn, 2, Arrays.asList(heavyHost1UUID, heavyHost2UUID), now, 850_000_000L, 0);
-        // Add job keys for tasks of movableJob1 to the task's assigned host
+        // Add job keys for tasks of movableJob4 to the task's assigned host
         List<JobTask> jobTasks = movableJob4.getCopyOfTasks();
         Integer i = 0;
         for(JobTask jobTask : jobTasks) {
@@ -757,7 +757,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         String hostId6 = "hostId6";
         HostState hostState6 = installHostStateWithUUID(hostId6, spawn, true, new HostLocation("c", "cc", "ccc"));
         Job job = createSpawnJob(spawn, 1, Arrays.asList(hostId1), now, 80_000_000L, 0);
-        hostState1.setStopped(simulateJobKeys(job));
+        hostState1.setStopped( simulateJobKeys(job));
 
         hostState1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
         hostState2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
@@ -794,6 +794,53 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             assertTrue("Should not choose Host in the same location if other hosts available",
                        iterator.next().equals("hostId2"));
         }
+    }
+
+    @Test
+    public void isMoveSpreadOutForAdTest() throws Exception {
+        HostState hostState1 = installHostStateWithUUID("host1", spawn, true, new HostLocation("a", "aa", "aaa"));
+        HostState hostState2 = installHostStateWithUUID("host2", spawn, true, new HostLocation("b", "bb", "bbb"));
+        HostState hostState3 = installHostStateWithUUID("host3", spawn, true, new HostLocation("a", "aa", "aab"));
+        HostState hostState4 = installHostStateWithUUID("host4", spawn, true, new HostLocation("a", "ab", "aba"));
+        HostState hostState5 = installHostStateWithUUID("host5", spawn, true, new HostLocation("a", "ab", "aba"));
+        HostState hostState6 = installHostStateWithUUID("host6", spawn, true, new HostLocation("c", "cc", "ccc"));
+
+        waitForAllUpHosts();
+
+        hostState1.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState2.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState3.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState4.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState5.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+        hostState6.setMax(new HostCapacity(10, 10, 10, 100_000_000_000L));
+
+        hostState1.setUsed(new HostCapacity(10, 10, 10, 200L));
+        hostState2.setUsed(new HostCapacity(10, 10, 10, 500L));
+        hostState3.setUsed(new HostCapacity(10, 10, 10, 500L));
+        hostState4.setUsed(new HostCapacity(10, 10, 10, 300L));
+        hostState5.setUsed(new HostCapacity(10, 10, 10, 100L));
+        hostState6.setUsed(new HostCapacity(10, 10, 10, 200L));
+
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
+
+        Job job = createSpawnJob(spawn, 1, Arrays.asList("host1"), now, 80_000_000L, 0);
+        hostState1.setStopped(simulateJobKeys(job));
+        job.setReplicas(1);
+        spawn.updateJob(job);
+
+        JobTask task = job.getTask(0);
+        HostLocation fromLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
+        assertTrue("Should be able to move to other minAD location",
+                   bal.isMoveSpreadOutForAd(fromLocation, hostState2.getHostLocation(), task));
+        assertTrue("Should be able to move within the same HostLocation",
+                   bal.isMoveSpreadOutForAd(fromLocation, hostState3.getHostLocation(), task));
+        assertTrue("Should be able to move within the same minAD HostLocation",
+                   bal.isMoveSpreadOutForAd(fromLocation, hostState4.getHostLocation(), task));
+        assertTrue("Should be able to move within the same minAD HostLocation",
+                   bal.isMoveSpreadOutForAd(fromLocation, hostState5.getHostLocation(), task));
+        assertTrue("Should not be able to move to replica location when other minAD location is available",
+                    !bal.isMoveSpreadOutForAd(fromLocation, hostState6.getHostLocation(), task));
+
     }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {

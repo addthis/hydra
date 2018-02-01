@@ -51,7 +51,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 import java.text.ParseException;
 
@@ -1026,7 +1025,6 @@ public class Spawn implements Codable, AutoCloseable {
      * @param numReplicasToRemove Number of replicas to remove
      * @return List of replicas to remove
      */
-    // TODO: add unit test
     private List<JobTaskReplica> removeExcessReplicas(List<JobTaskReplica> replicaList,
                                                       int numReplicasToRemove) {
         List<JobTaskReplica> replicasToRemove = new ArrayList<>(numReplicasToRemove);
@@ -3242,12 +3240,8 @@ public class Spawn implements Codable, AutoCloseable {
                 continue;
             }
             AvailabilityDomain priorityLevel = hostManager.getHostLocationSummary().getPriorityLevel();
-            if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())
-                && balancer.isMoveSpreadOutForAd(taskLocation,
-                                                 host.getHostLocation(),
-                                                 task,
-                                                 priorityLevel,
-                                                 hostManager.getHostLocationSummary().getMinCardinality(priorityLevel))) {
+            if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid()) &&
+                balancer.isMoveSpreadOutForAd(taskLocation, host.getHostLocation(), task)) {
                 filteredHosts.add(host);
             }
         }
