@@ -726,7 +726,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param job The job to count
      * @return A map describing how heavily a job is assigned to each of its hosts
      */
-    Map<HostState, Double> generateTaskCountHostScoreMap(IJob job) {
+    public Map<HostState, Double> generateTaskCountHostScoreMap(IJob job) {
         Map<HostState, Double> rv = new HashMap<>();
         if (job != null) {
             List<JobTask> tasks = job.getCopyOfTasks();
@@ -1650,7 +1650,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * {@code toHostLocation} is correctly spread out so that either all replicas will be on
      * different min ads, or there is a replica on every min ad.
      */
-    // TODO: add a unit test
     public boolean isMoveSpreadOutForAd(HostLocation fromHostLocation, HostLocation toHostLocation, JobTask task) {
         AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
         int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);

@@ -119,6 +119,7 @@ import com.addthis.hydra.job.mq.StatusTaskPort;
 import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
+import com.addthis.hydra.job.spawn.balancer.HostCandidateIterator;
 import com.addthis.hydra.job.spawn.balancer.SpawnBalancer;
 import com.addthis.hydra.job.spawn.search.JobSearcher;
 import com.addthis.hydra.job.spawn.search.SearchOptions;
@@ -2862,14 +2863,19 @@ public class Spawn implements Codable, AutoCloseable {
     /**
      * Get a replacement host for a new task
      *
-     * @param job The job for the task to be reassigned
+     * @param task The task to be reassigned
      * @return A replacement host ID, if one can be found; null otherwise
      */
-    @Nullable private String getReplacementHost(IJob job) {
-        List<HostState> hosts = hostManager.getLiveHosts(job.getMinionType());
-        for (HostState host : hosts) {
-            if (host.canMirrorTasks()) {
-                return host.getHostUuid();
+    @Nullable private String getReplacementHost(JobTask task) {
+        IJob job = this.getJob(task.getJobUUID());
+        Map<HostState, Double> scoreMap = balancer.generateTaskCountHostScoreMap(job);
+        HostCandidateIterator iterator = new HostCandidateIterator(this, job, scoreMap);
+        List<String> newHostList = iterator.getNewReplicaHosts(1, task, task.getHostUUID(), false);
+        if(!newHostList.isEmpty()) {
+            String newHostUuid = newHostList.get(0);
+            HostState newHost = hostManager.getHostState(newHostUuid);
+            if(newHost != null && newHost.canMirrorTasks()) {
+                return newHostUuid;
             }
         }
         return null;
@@ -2890,7 +2896,7 @@ public class Spawn implements Codable, AutoCloseable {
         HostState host = hostManager.getHostState(task.getHostUUID());
         boolean changed = false;
         if ((host == null) || !host.canMirrorTasks()) {
-            String replacementHost = getReplacementHost(job);
+            String replacementHost = getReplacementHost(task);
             if (replacementHost != null) {
                 task.setHostUUID(replacementHost);
                 changed = true;
