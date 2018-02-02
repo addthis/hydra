@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.minion.HostLocation;
 
 import org.apache.curator.framework.CuratorFramework;
 
@@ -63,7 +64,7 @@ public class HostManager {
                 monitored.put(state.getHostUuid(), state);
             }
         }
-        this.hostLocationSummary.updateHostLocationSummary(state);
+        this.hostLocationSummary.updateHostLocationSummary(listHostStatus(null));
     }
 
     /**
@@ -104,5 +105,13 @@ public class HostManager {
 
     public HostLocationSummary getHostLocationSummary() {
         return hostLocationSummary;
+    }
+
+    public HostLocation getHostLocationForHost(String uuid) {
+        HostState host = this.getHostState(uuid);
+        if(host != null) {
+            return host.getHostLocation();
+        }
+        return null;
     }
 }

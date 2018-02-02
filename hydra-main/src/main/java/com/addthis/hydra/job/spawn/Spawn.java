@@ -1000,6 +1000,7 @@ public class Spawn implements Codable, AutoCloseable {
                 HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
                 List<JobTaskReplica> replicasToRemove =
                         removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
+                // remove only the first instance of each replica in replicasToRemove
                 for(JobTaskReplica replica : replicasToRemove) {
                     newReplicas.remove(replica);
                 }

@@ -1576,19 +1576,15 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param numTasks              Maximum number of tasks to return
      * @param obeyDontAutobalanceMe set to true for filesystem-okay host failure
      */
-    @SuppressWarnings("FloatingPointEquality") public @Nonnull Collection<JobTask> getTasksToMove(
-            String fromHostUuid,
-            String toHostUuid,
-            int numTasks,
-            boolean obeyDontAutobalanceMe) {
+    @SuppressWarnings("FloatingPointEquality")
+    public @Nonnull Collection<JobTask> getTasksToMove(String fromHostUuid, String toHostUuid,
+                                                       int numTasks, boolean obeyDontAutobalanceMe) {
         // loop through all tasks
         // cache the numScore lowest scores that can validly move
         // if we find numScore that have minscore and can validly move, just return them immediately
 
         // primaryAd             The primary AD in which to ensure spread
-        // minAdCardinality      The number of ADs in the primaryAd
         AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
-        int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);
         PriorityQueue<WithScore<JobTask>> sortedTasks = new PriorityQueue<>(numTasks, taskComparator);
         HostState fromHost = hostManager.getHostState(fromHostUuid);
         HostLocation fromHostLocation = fromHost.getHostLocation();

@@ -291,9 +291,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
         for(JobTask task : job.getCopyOfTasks()) {
             List<String> replicaAssignments = assignments.get(task.getTaskID());
-            for(String replicaAssignment : replicaAssignments) {
-                assertTrue("should not put replica on the same host as the task", !task.getHostUUID().equals(replicaAssignment));
-            }
+            assertTrue("Should not put replica on the same host as the task", !replicaAssignments.contains(task.getHostUUID()));
         }
 
         // at least one replica should be in a different AD

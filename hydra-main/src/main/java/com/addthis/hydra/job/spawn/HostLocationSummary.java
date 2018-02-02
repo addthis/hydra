@@ -2,6 +2,7 @@ package com.addthis.hydra.job.spawn;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -10,20 +11,24 @@ import com.addthis.hydra.minion.HostLocation;
 
 public class HostLocationSummary {
 
-    private static Map<String, Set<String>> dataCenter;
-    private static Map<String, Set<String>> rack;
+    private final Map<String, Set<String>> dataCenter;
+    private final Map<String, Set<String>> rack;
 
     public HostLocationSummary() {
         dataCenter = new HashMap<>();
         rack = new HashMap<>();
     }
 
-    public void updateHostLocationSummary(HostState host) {
-        HostLocation location = host.getHostLocation();
-        String dc = location.getDataCenter();
-        String rk = location.getRack();
-        dataCenter.computeIfAbsent(dc, k -> new HashSet<>()).add(rk);
-        rack.computeIfAbsent(rk, k-> new HashSet<>()).add(location.getPhysicalHost());
+    public void updateHostLocationSummary(List<HostState> hostStates) {
+        for(HostState host : hostStates) {
+            if(host.isUp() && !host.isDead()) {
+                HostLocation location = host.getHostLocation();
+                String dc = location.getDataCenter();
+                String rk = location.getRack();
+                dataCenter.computeIfAbsent(dc, k -> new HashSet<>()).add(rk);
+                rack.computeIfAbsent(rk, k -> new HashSet<>()).add(location.getPhysicalHost());
+            }
+        }
     }
 
     public AvailabilityDomain getPriorityLevel() {
@@ -33,9 +38,11 @@ public class HostLocationSummary {
         if(rack.size() > 1) {
             return AvailabilityDomain.RACK;
         }
-        Set<String> hosts = rack.entrySet().iterator().next().getValue();
-        if(hosts.size() > 1) {
-            return AvailabilityDomain.HOST;
+        if(!rack.isEmpty()) {
+            Set<String> hosts = rack.entrySet().iterator().next().getValue();
+            if (hosts.size() > 1) {
+                return AvailabilityDomain.HOST;
+            }
         }
         return AvailabilityDomain.NONE;
     }
