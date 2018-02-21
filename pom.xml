@@ -80,6 +80,7 @@
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.10</hydra.dep.commons-codec.version>
+    <hydra.dep.curator.version>2.8.0</hydra.dep.curator.version>
     <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
     <hydra.dep.jetty.version>8.1.21.v20160908</hydra.dep.jetty.version>
@@ -267,6 +268,21 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
         <version>${hydra.dep.compress.apache.commons-compress.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-framework</artifactId>
+        <version>${hydra.dep.curator.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-client</artifactId>
+        <version>${hydra.dep.curator.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-recipes</artifactId>
+        <version>${hydra.dep.curator.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-codec</groupId>
