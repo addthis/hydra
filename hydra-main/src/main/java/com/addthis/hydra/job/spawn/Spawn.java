@@ -127,10 +127,10 @@ import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.SpawnServiceConfiguration;
+import com.addthis.hydra.job.web.websocket.SpawnWebSocket;
 import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
-import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.service.file.FileReference;
@@ -215,8 +215,6 @@ public class Spawn implements Codable, AutoCloseable {
     private final AtomicBoolean shuttingDown;
     private final BlockingQueue<String> jobUpdateQueue;
     private final SpawnJobFixer spawnJobFixer;
-    //To track web socket connections
-    private final WebSocketManager webSocketManager;
 
     @Nonnull private final File stateFile;
     @Nonnull private final ExecutorService expandKickExecutor;
@@ -268,7 +266,6 @@ public class Spawn implements Codable, AutoCloseable {
         this.shuttingDown = new AtomicBoolean(false);
         this.jobUpdateQueue = new LinkedBlockingQueue<>();
         this.listeners = new ConcurrentHashMap<>();
-        this.webSocketManager = new WebSocketManager();
 
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -546,7 +543,7 @@ public class Spawn implements Codable, AutoCloseable {
                 log.warn("", ex);
             }
         }
-        webSocketManager.addEvent(new ClientEvent(topic, message));
+        SpawnWebSocket.addEvent(new ClientEvent(topic, message));
     }
 
     @Nullable public JSONObject getHostStateUpdateEvent(HostState state) throws Exception {
@@ -2486,10 +2483,6 @@ public class Spawn implements Codable, AutoCloseable {
                 Uninterruptibles.sleepUninterruptibly(100, MILLISECONDS);
             }
         }
-    }
-
-    public WebSocketManager getWebSocketManager() {
-        return this.webSocketManager;
     }
 
     public void toggleHosts(String hosts, boolean disable) {
