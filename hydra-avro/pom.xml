@@ -50,6 +50,10 @@
           <groupId>commons-httpclient</groupId>
           <artifactId>commons-httpclient</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.directory.api</groupId>
+          <artifactId>api-util</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
