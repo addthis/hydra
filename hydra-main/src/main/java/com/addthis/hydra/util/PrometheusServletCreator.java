@@ -57,7 +57,7 @@ public class PrometheusServletCreator {
     /**
      * register prometheus jmx collector.
      */
-    private static void register() {
+    public static void register() {
         try {
             File promConfig = new File(PROMETHEUS_CONFIG);
             if(promConfig.exists()) {

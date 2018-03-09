@@ -81,10 +81,10 @@ import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
-import com.addthis.hydra.util.PrometheusServletCreator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -108,9 +108,8 @@ import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.zookeeper.KeeperException;
 
-import org.eclipse.jetty.io.UncheckedIOException;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.server.ServerConnector;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -315,7 +314,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     }
 
     private int getJettyPort() {
-        return jetty.getConnectors()[0].getLocalPort();
+        return ((ServerConnector) jetty.getConnectors()[0]).getLocalPort();
     }
 
     private void waitForJetty() throws Exception {
@@ -739,7 +738,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 }
             }
         } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
+            Throwables.propagate(ex);
         }
     }
 
