@@ -52,7 +52,9 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
@@ -98,15 +100,15 @@ public class SpawnService {
 
         // for closing certain api resource, namely JobsResource, but new ones can be added
         final Closer closer = Closer.create();
-        ServletContextHandler servletContextHandler = createServletContextHandler(spawn, configuration, closer);
-        Handler handler = createRootHandler(servletContextHandler);
+        ServletContextHandler context = createServletContextHandler(spawn, configuration, closer);
+        Handler handler = createRootHandler(context);
 
         server.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
         server.setHandler(handler);
 
         // this must be after server.setHandler(handler) because websocket configuration needs
         // the server object from servletContextHandler
-        configureWebSocketServlet(servletContextHandler);
+        configureWebSocketServlet(context);
 
         server.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
             @Override
@@ -124,15 +126,25 @@ public class SpawnService {
 
     private void initServerConnectors(Server server, Spawn spawn, SpawnServiceConfiguration configuration)
             throws IOException {
+
+        HttpConfiguration httpConfig = new HttpConfiguration();
+        httpConfig.setSecureScheme("https");
+        httpConfig.setSecurePort(configuration.webPortSSL);
+
         // http
-        ServerConnector http = new ServerConnector(server);
+        ServerConnector http = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
         http.setPort(configuration.webPort);
         server.addConnector(http);
 
         // https
         if (configuration.requireSSL) {
+            // using a SecureResquestCustomor is necessary to make ResoureHandler's welcome file redirect work
+            // otherwise, https://[SPAWN_HOST]:5053 will be redirected to http://[SPAWN_HOST]:5053/index.html
+            // see ATPS-499
+            HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
+            httpsConfig.addCustomizer(new SecureRequestCustomizer());
             SslConnectionFactory sslConnectionFactory = createSslConnectionFactory(configuration);
-            ServerConnector https = new ServerConnector(server, sslConnectionFactory, new HttpConnectionFactory());
+            ServerConnector https = new ServerConnector(server, sslConnectionFactory, new HttpConnectionFactory(httpsConfig));
             https.setPort(configuration.webPortSSL);
             server.addConnector(https);
             spawn.getSystemManager().updateSslEnabled(true);
@@ -152,8 +164,8 @@ public class SpawnService {
                                                               SpawnServiceConfiguration configuration,
                                                               Closer closer) {
         ServletContextHandler context = new ServletContextHandler();
-        context.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
-        context.addServlet(new ServletHolder(createApiServlet(spawn, configuration, closer)), "/*");
+        context.addServlet(new ServletHolder("metrics", new MetricsServlet()), "/metrics");
+        context.addServlet(new ServletHolder("spawn-api", createApiServlet(spawn, configuration, closer)), "/*");
         return context;
     }
 
