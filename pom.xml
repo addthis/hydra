@@ -54,6 +54,7 @@
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <source.skip>true</source.skip>
         <at.check.skip.all>true</at.check.skip.all>
+        <enforcer.skip>false</enforcer.skip>
       </properties>
     </profile>
   </profiles>
