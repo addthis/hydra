@@ -36,6 +36,9 @@ import org.tukaani.xz.XZOutputStream;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
 
+import com.github.luben.zstd.ZstdOutputStream;
+import com.github.luben.zstd.ZstdInputStream;
+
 public class CompressedStream {
 
     private static final int BUFFER_SIZE = 4096;
@@ -48,6 +51,8 @@ public class CompressedStream {
             in = new LZFInputStream(in);
         } else if (name.endsWith(CompressionType.SNAPPY.suffix)) {
             in = new SnappyInputStream(in);
+        } else if (name.endsWith(CompressionType.ZSTD.suffix)) {
+            in = new ZstdInputStream(in);
         } else if (name.endsWith(CompressionType.BZIP2.suffix)) {
             in = new BZip2CompressorInputStream(in, true);
         } else if (name.endsWith(CompressionType.LZMA.suffix)) {
@@ -69,6 +74,9 @@ public class CompressedStream {
                 break;
             case SNAPPY:
                 out = new SnappyOutputStream(out);
+                break;
+            case ZSTD:
+                out = new ZstdOutputStream(out);
                 break;
             case BZIP2:
                 out = new BZip2CompressorOutputStream(out);

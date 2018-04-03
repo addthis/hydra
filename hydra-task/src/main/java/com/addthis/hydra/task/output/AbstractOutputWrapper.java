@@ -106,6 +106,12 @@ public abstract class AbstractOutputWrapper implements OutputWrapper{
                     } catch (IOException e)  {
                         log.warn("", e);
                     }
+                } else if (compress && compressType == CompressionType.ZSTD) {
+                    try {
+                        rawout.flush();
+                    } catch (IOException e)  {
+                        log.warn("", e);
+                    }
                 } else if (compress && compressType == CompressionType.BZIP2) {
                     try {
                         rawout.flush();

@@ -14,7 +14,7 @@
 package com.addthis.hydra.store.compress;
 
 public enum CompressionType {
-    GZIP(".gz"), LZF(".lzf"), SNAPPY(".snappy"), BZIP2(".bz2"), LZMA(".lzma"), XZ(".xz");
+    GZIP(".gz"), LZF(".lzf"), SNAPPY(".snappy"), BZIP2(".bz2"), LZMA(".lzma"), XZ(".xz"), ZSTD(".zst");
 
     public final String suffix;
 
