@@ -20,7 +20,7 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 
@@ -81,7 +81,7 @@ public final class JobCommand implements Codable, Cloneable {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("owner", owner)
                 .add("command", Arrays.deepToString(command))
                 .add("reqCPU", reqCPU)

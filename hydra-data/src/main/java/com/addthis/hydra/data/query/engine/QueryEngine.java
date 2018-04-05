@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -332,7 +333,27 @@ public class QueryEngine {
             return;
         }
         QueryElement next = path[pathIndex];
-        Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? Iterators.<DataTreeNode>emptyIterator() : null;
+        Iterator<DataTreeNode> EMPTY_LIST_ITERATOR = new Iterator<DataTreeNode>() {
+            public boolean hasNext() {
+                return false;
+            }
+            public DataTreeNode next() {
+                throw new NoSuchElementException();
+            }
+            public boolean hasPrevious() {
+                return false;
+            }
+            public Object previous() {
+                throw new NoSuchElementException();
+            }
+            public int nextIndex() {
+                return 0;
+            }
+            public int previousIndex() {
+                return -1;
+            }
+        };
+                Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? EMPTY_LIST_ITERATOR : null;
         if (iter == null) {
             return;
         }

@@ -16,7 +16,7 @@
   <parent>
     <artifactId>jar-pom</artifactId>
     <groupId>com.addthis.common.build.maven.pom</groupId>
-    <version>3.8.0</version>
+    <version>3.8.1-SNAPSHOT</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -82,7 +82,7 @@
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.10</hydra.dep.commons-codec.version>
     <hydra.dep.commons-collections.version>3.2.2</hydra.dep.commons-collections.version>
-    <hydra.dep.curator.version>2.8.0</hydra.dep.curator.version>
+    <hydra.dep.curator.version>4.0.1</hydra.dep.curator.version>
     <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
     <hydra.dep.jetty.version>9.4.8.v20171121</hydra.dep.jetty.version>

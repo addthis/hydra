@@ -17,7 +17,7 @@ import com.addthis.basis.util.Varint;
 
 import com.addthis.codec.annotations.FieldConfig;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -33,7 +33,7 @@ public class Mark extends SimpleMark {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("value", getValue())
                 .add("error", getError())
                 .add("index", getIndex())

@@ -16,7 +16,7 @@ package com.addthis.hydra.task.output.tree;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  * Integer value / index substitution for target name
@@ -58,7 +58,7 @@ public final class TreeMapperPathReference implements Codable {
     }
 
     @Override public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                       .add("path", path)
                       .add("index", index)
                       .toString();
