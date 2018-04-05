@@ -74,7 +74,7 @@ module.exports = [{
     output: {
         filename: 'main.js',
         publicPath: '/spawn2/build/',
-        path: path.resolve(__dirname, '../hydra-main/web/spawn2/build')
+        path: path.resolve(__dirname, '../hydra-main/src/main/resources/web/spawn2/build')
     },
     module: {
         loaders: getLoaders().concat([
@@ -96,7 +96,7 @@ module.exports = [{
     output: {
         filename: 'search-results.js',
         publicPath: '/spawn2/build/',
-        path: path.resolve(__dirname, '../hydra-main/web/spawn2/build')
+        path: path.resolve(__dirname, '../hydra-main/src/main/resources/web/spawn2/build')
     },
     module: {
         loaders: getLoaders()
