@@ -138,7 +138,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.jaxrs</groupId>
       <artifactId>jackson-jaxrs-json-provider</artifactId>
-      <version>2.4.3</version>
+      <version>${hydra.dep.jackson.jackson-jaxrs-json-provider.version}</version>
     </dependency>
 
     <!-- extra metrics dependencies -->
