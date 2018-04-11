@@ -22,7 +22,7 @@ import org.apache.logging.log4j.core.config.json.JsonConfiguration;
 public class HoconConfiguration extends JsonConfiguration {
 
     public HoconConfiguration(ConfigurationSource configSource) {
-        super(configSource);
+        super(null, configSource);
     }
 
     @Override

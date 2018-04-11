@@ -15,6 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import java.io.IOException;
 
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -88,7 +89,7 @@ public class SpawnMQImpl implements SpawnMQ {
     }
 
     @Override
-    public void connectToMQ(String hostUUID) throws IOException {
+    public void connectToMQ(String hostUUID) throws IOException, TimeoutException {
         final MessageListener<HostState> hostStateListener = SpawnMQImpl.this::onMessage;
         QuiesceOnRabbitMQBlockedListener blockedListener = new QuiesceOnRabbitMQBlockedListener(spawn);
         hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", hostStateListener, HostState.class);

@@ -33,6 +33,7 @@ import org.apache.logging.log4j.core.config.Order;
 import org.apache.logging.log4j.core.config.json.JsonConfigurationFactory;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.util.Loader;
+import org.apache.logging.log4j.core.LoggerContext;
 
 @Plugin(name = "HoconConfigurationFactory", category = "ConfigurationFactory")
 @Order(8)
@@ -61,7 +62,7 @@ public class HoconConfigurationFactory extends JsonConfigurationFactory {
     }
 
     @Override
-    public Configuration getConfiguration(final ConfigurationSource source) {
+    public Configuration getConfiguration(LoggerContext loggerContext, final ConfigurationSource source) {
         if (!isActive()) {
             return null;
         }

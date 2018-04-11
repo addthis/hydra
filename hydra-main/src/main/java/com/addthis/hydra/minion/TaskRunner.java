@@ -20,7 +20,7 @@ import com.addthis.basis.util.Backoff;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 
-import com.rabbitmq.client.QueueingConsumer;
+import com.addthis.hydra.mq.QueueingConsumer;
 import com.rabbitmq.client.ShutdownSignalException;
 
 import org.slf4j.Logger;
