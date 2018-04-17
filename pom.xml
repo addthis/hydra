@@ -81,9 +81,9 @@
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.jackson.jackson-jaxrs-json-provider.version>2.4.3</hydra.dep.jackson.jackson-jaxrs-json-provider.version>
-    <hydra.dep.commons-codec.version>2.0-SNAPSHOT</hydra.dep.commons-codec.version>
+    <hydra.dep.commons-codec.version>1.11</hydra.dep.commons-codec.version>
     <hydra.dep.commons-collections.version>4.1</hydra.dep.commons-collections.version>
-    <hydra.dep.commons-lang3.version>3.8-SNAPSHOT</hydra.dep.commons-lang3.version>
+    <hydra.dep.commons-lang3.version>3.7</hydra.dep.commons-lang3.version>
     <hydra.dep.curator.version>4.0.1</hydra.dep.curator.version>
     <hydra.dep.spring.version>5.0.5.RELEASE</hydra.dep.spring.version>
     <hydra.dep.jersey.version>1.19.4</hydra.dep.jersey.version>
@@ -192,7 +192,7 @@
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.2.1-SNAPSHOT</version>
+        <version>1.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
