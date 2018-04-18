@@ -54,12 +54,12 @@
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <source.skip>true</source.skip>
         <at.check.skip.all>true</at.check.skip.all>
-        <enforcer.skip>false</enforcer.skip>
       </properties>
     </profile>
   </profiles>
 
   <properties>
+    <enforcer.skip>false</enforcer.skip>
     <project.build.targetJdk>1.8</project.build.targetJdk>
 
     <dep.plugin.findbugs.version>3.0.0</dep.plugin.findbugs.version>
