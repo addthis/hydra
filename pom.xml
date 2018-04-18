@@ -259,6 +259,16 @@
         <artifactId>snakeyaml</artifactId>
         <version>1.20</version>
       </dependency>
+      <dependency>
+        <groupId>com.nimbusds</groupId>
+        <artifactId>nimbus-jose-jwt</artifactId>
+        <version>5.9</version>
+      </dependency>
+      <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jzlib</artifactId>
+        <version>${hydra.dep.compress.jzlib.version}</version>
+      </dependency>
 
       <!-- property controlled versions -->
       <dependency>

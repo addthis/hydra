@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,8 +35,6 @@ import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
-
-import com.google.common.collect.Iterators;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -333,27 +332,8 @@ public class QueryEngine {
             return;
         }
         QueryElement next = path[pathIndex];
-        Iterator<DataTreeNode> EMPTY_LIST_ITERATOR = new Iterator<DataTreeNode>() {
-            public boolean hasNext() {
-                return false;
-            }
-            public DataTreeNode next() {
-                throw new NoSuchElementException();
-            }
-            public boolean hasPrevious() {
-                return false;
-            }
-            public Object previous() {
-                throw new NoSuchElementException();
-            }
-            public int nextIndex() {
-                return 0;
-            }
-            public int previousIndex() {
-                return -1;
-            }
-        };
-                Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? EMPTY_LIST_ITERATOR : null;
+
+        Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? new ArrayList<DataTreeNode>().iterator() : null;
         if (iter == null) {
             return;
         }
