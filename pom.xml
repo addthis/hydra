@@ -179,11 +179,6 @@
         <artifactId>concurrentlinkedhashmap-lru</artifactId>
         <version>1.4.2</version>
       </dependency>
-      <!--dependency>
-        <groupId>commons-lang</groupId>
-        <artifactId>commons-lang</artifactId>
-        <version>2.6</version>
-      </dependency-->
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
@@ -209,11 +204,6 @@
         <artifactId>commons-math3</artifactId>
         <version>3.6.1</version>
       </dependency>
-      <!--dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-math</artifactId>
-        <version>2.1</version>
-      </dependency-->
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-webapp</artifactId>
