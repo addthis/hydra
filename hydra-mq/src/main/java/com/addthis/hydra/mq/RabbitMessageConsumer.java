@@ -16,6 +16,7 @@ package com.addthis.hydra.mq;
 import javax.annotation.Nonnull;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -114,6 +115,8 @@ public class RabbitMessageConsumer<T> extends DefaultConsumer implements Message
                 channel.close();
             } catch (IOException ex) {
                 firstError = (firstError == null) ? ex : firstError;
+            } catch (TimeoutException e) {
+                log.warn("[rabbitConsumer] error timeout", e);
             }
 
         }
