@@ -25,7 +25,7 @@ import com.addthis.basis.util.SimpleExec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class ProcessUtils {
+final class ProcessUtils {
     private static final Logger log = LoggerFactory.getLogger(ProcessUtils.class);
 
     private ProcessUtils() {}
@@ -111,15 +111,8 @@ public final class ProcessUtils {
         }
     }
 
-    public static boolean activeProcessExistsWithPid(Integer pid, File directory) {
-        String command =
-                "signal=137\n" +
-                "while [ $signal -eq 137 ]; do\n" +
-                "    timeout --signal 9 10s ps " + pid + "\n" +
-                "    signal=$?\n" +
-                "done\n" +
-                "exit $signal";
-        return shell(command, directory) == 0;
+    static boolean activeProcessExistsWithPid(Integer pid, File directory) {
+        return shell("ps " + pid, directory) == 0;
     }
 
     static Integer findActiveRsync(String id, int node) {
