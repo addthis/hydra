@@ -180,6 +180,7 @@ public final class GangliaOutput extends AbstractFilteredOutput {
     private static final class GangliaHosts {
         private final List<HostPort> gangliaHosts;
 
+        @JsonCreator
         private GangliaHosts(String fileName) {
             this.gangliaHosts = new GmondConfigParser().getGmondSendChannels(fileName);
         }
