@@ -64,7 +64,7 @@ public class HostManager {
                 monitored.put(state.getHostUuid(), state);
             }
         }
-        this.hostLocationSummary.updateHostLocationSummary(listHostStatus(null));
+        this.hostLocationSummary.updateHostLocationSummary(getLiveHosts(null));
     }
 
     /**

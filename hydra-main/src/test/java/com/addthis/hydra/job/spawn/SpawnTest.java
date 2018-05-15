@@ -150,6 +150,12 @@ public class SpawnTest extends ZkCodecStartUtil {
             HostState host1 = createHostState("host1");
             host1.setHostLocation(new HostLocation("b", "", ""));
             spawn.hostManager.updateHostState(host1);
+
+            try {
+                Thread.sleep(1000L);
+            } catch(InterruptedException e) {
+
+            }
             spawn.getJobCommandManager().putEntity("c", new JobCommand(), false);
             Job job = spawn.createJob("fsm", 3, Arrays.asList("host0"), "default", "c", false);
             job.setReplicas(1);
