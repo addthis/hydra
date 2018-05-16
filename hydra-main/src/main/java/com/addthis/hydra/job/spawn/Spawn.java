@@ -190,6 +190,16 @@ public class Spawn implements Codable, AutoCloseable {
     private static final int LOG_MAX_SIZE = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String LOG_DIR = Parameter.value("spawn.event.log.dir", "log");
 
+    // Comparators
+    private static final Comparator<WithScore<JobTaskReplica>> replicaHostScoreComparator = (r1, r2) -> {
+        int result = Double.compare(r1.score, r2.score);
+        if(result == 0) {
+            return r1.element.getHostUUID().compareTo(r2.element.getHostUUID());
+        }
+        // Descending order sort
+        return -result;
+    };
+
     public static void main(String... args) throws Exception {
         Spawn spawn = Configs.newDefault(Spawn.class);
         Spawn.startWebInterface(spawn);
@@ -1037,15 +1047,6 @@ public class Spawn implements Codable, AutoCloseable {
                 replicasToRemove.add(replicaList.get(i));
             }
         } else {
-            Comparator<WithScore<JobTaskReplica>> replicaHostScoreComparator = (r1, r2) -> {
-                int result = Double.compare(r1.score, r2.score);
-                if(result == 0) {
-                    return r1.element.getHostUUID().compareTo(r2.element.getHostUUID());
-                }
-                // Descending order sort
-                return -result;
-            };
-
             Map<HostLocation, PriorityQueue<WithScore<JobTaskReplica>>> replicasByLocation = new HashMap<>();
             for(JobTaskReplica replica : replicaList) {
                 HostState hostState = hostManager.getHostState(replica.getHostUUID());
