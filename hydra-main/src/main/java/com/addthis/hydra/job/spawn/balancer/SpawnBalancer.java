@@ -425,7 +425,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // with an assignment that we know has no chance of happening
             // because either the assignment is null or the target host
             // for the assignment is null
-            if (assignment != null && assignment.getTargetUUID() != null) {
+            // add extra safeguard around selection of replica movement to ensure spread across availability domains
+            if (assignment != null && assignment.getTargetUUID() != null &&
+                isMoveSpreadOutForAd(host.getHostLocation(),
+                                     hostManager.getHostLocationForHost(assignment.getTargetUUID()), task)) {
                 moveAssignments.add(assignment);
                 byteLimit -= taskTrueSize;
             }
@@ -506,11 +509,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             for (JobKey jobKey : host.allJobKeys()) {
                 JobTask task = spawn.getTask(jobKey);
                 Job job = spawn.getJob(jobKey);
-                if ((job != null) && (task != null) && isInMovableState(task)
-                    // Only add non-null tasks that are either idle or queued
-                    && (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(
-                        hostId))) // Only add tasks that are supposed to live on the specified host.
-                {
+                // Only add non-null tasks that are either idle or queued
+                // Only add tasks that are supposed to live on the specified host.
+                if ((job != null) && (task != null) && isInMovableState(task) &&
+                    (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(hostId))) {
                     if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
                         // obeyDontAutobalanceMe is set to false when spawn is doing a filesystem-okay host failure.
                         // In this case, spawn needs to move the task even if the job owner specified no swapping,
@@ -1307,7 +1309,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 }
                 long trueSizeBytes = taskSizer.estimateTrueSize(item.getTask());
                 if (pullHostState.hasLive(item.getTask().getJobKey()) ||
-                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove))) {
+                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove)) ||
+                    !isMoveSpreadOutForAd(hostManager.getHostLocationForHost(pushHost),
+                                          hostManager.getHostLocationForHost(pullHost),
+                                          item.getTask())) {
                     continue;
                 }
 
@@ -1358,8 +1363,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 }
                 // Reject the move if the target host is heavily loaded, already has a copy of the task, or the task
                 // is too large
+                // or if the move results in uneven spread of tasks and replicas across ADs
                 if (isExtremeHost(pullHost, true, true) || pullHostState.hasLive(jobKey) ||
-                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove))) {
+                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove)) ||
+                    !isMoveSpreadOutForAd(hostManager.getHostLocationForHost(pushHost),
+                                          hostManager.getHostLocationForHost(pullHost),
+                                          nextTaskItem.getTask())) {
                     if (log.isDebugEnabled()) {
                         log.debug("Unable to move task to host {} fullDisk={} alreadyLive={} byteCount={}>{} {}",
                                   pullHost, isExtremeHost(pullHost, true, true), pullHostState.hasLive(jobKey),
