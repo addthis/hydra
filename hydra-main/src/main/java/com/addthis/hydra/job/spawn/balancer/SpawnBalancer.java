@@ -427,8 +427,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             // for the assignment is null
             // add extra safeguard around selection of replica movement to ensure spread across availability domains
             if (assignment != null && assignment.getTargetUUID() != null &&
-                isMoveSpreadOutForAd(host.getHostLocation(),
-                                     hostManager.getHostLocationForHost(assignment.getTargetUUID()), task)) {
+                isTaskSpreadOutAcrossAd(host.getHostLocation(),
+                                        hostManager.getHostLocationForHost(assignment.getTargetUUID()), task)) {
                 moveAssignments.add(assignment);
                 byteLimit -= taskTrueSize;
             }
@@ -1310,9 +1310,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 long trueSizeBytes = taskSizer.estimateTrueSize(item.getTask());
                 if (pullHostState.hasLive(item.getTask().getJobKey()) ||
                     ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove)) ||
-                    !isMoveSpreadOutForAd(hostManager.getHostLocationForHost(pushHost),
-                                          hostManager.getHostLocationForHost(pullHost),
-                                          item.getTask())) {
+                    !isTaskSpreadOutAcrossAd(hostManager.getHostLocationForHost(pushHost),
+                                             hostManager.getHostLocationForHost(pullHost),
+                                             item.getTask())) {
                     continue;
                 }
 
@@ -1366,9 +1366,9 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 // or if the move results in uneven spread of tasks and replicas across ADs
                 if (isExtremeHost(pullHost, true, true) || pullHostState.hasLive(jobKey) ||
                     ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove)) ||
-                    !isMoveSpreadOutForAd(hostManager.getHostLocationForHost(pushHost),
-                                          hostManager.getHostLocationForHost(pullHost),
-                                          nextTaskItem.getTask())) {
+                    !isTaskSpreadOutAcrossAd(hostManager.getHostLocationForHost(pushHost),
+                                             hostManager.getHostLocationForHost(pullHost),
+                                             nextTaskItem.getTask())) {
                     if (log.isDebugEnabled()) {
                         log.debug("Unable to move task to host {} fullDisk={} alreadyLive={} byteCount={}>{} {}",
                                   pullHost, isExtremeHost(pullHost, true, true), pullHostState.hasLive(jobKey),
@@ -1612,7 +1612,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                     // wishes.
                     continue;
                 }
-                if (!this.isMoveSpreadOutForAd(fromHostLocation, toHostLocation, task)) {
+                if (!this.isTaskSpreadOutAcrossAd(fromHostLocation, toHostLocation, task)) {
                     // only allow tasks to be moved that are correctly spread out
                     continue;
                 }
@@ -1655,16 +1655,20 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * {@code toHostLocation} is correctly spread out so that either all replicas will be on
      * different min ads, or there is a replica on every min ad.
      */
-    public boolean isMoveSpreadOutForAd(HostLocation fromHostLocation, HostLocation toHostLocation, JobTask task) {
+    public boolean isTaskSpreadOutAcrossAd(@Nullable HostLocation fromHostLocation,
+                                           @Nullable HostLocation toHostLocation, JobTask task) {
         AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
         int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);
         List<HostLocation> hostLocations = task.getAllTaskHosts()
                                                .stream()
                                                .map(h -> hostManager.getHostState(h).getHostLocation())
                                                .collect(Collectors.toList());
+        // IF this is a MOVE
         // remove the FIRST instance of the location we're moving FROM
-        hostLocations.remove(fromHostLocation);
-        hostLocations.add(toHostLocation);
+        if(fromHostLocation != null && toHostLocation != null) {
+            hostLocations.remove(fromHostLocation);
+            hostLocations.add(toHostLocation);
+        }
         Set<String> minAdsUsed = new HashSet<>(minAdCardinality);
         boolean allReplicasOnDifferentAd = true;
         for (HostLocation location : hostLocations) {

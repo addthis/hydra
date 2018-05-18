@@ -852,15 +852,15 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         JobTask task = job.getTask(0);
         HostLocation fromLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
         assertTrue("Should be able to move to other minAD location",
-                   bal.isMoveSpreadOutForAd(fromLocation, hostState2.getHostLocation(), task));
+                   bal.isTaskSpreadOutAcrossAd(fromLocation, hostState2.getHostLocation(), task));
         assertTrue("Should be able to move within the same HostLocation",
-                   bal.isMoveSpreadOutForAd(fromLocation, hostState3.getHostLocation(), task));
+                   bal.isTaskSpreadOutAcrossAd(fromLocation, hostState3.getHostLocation(), task));
         assertTrue("Should be able to move within the same minAD HostLocation",
-                   bal.isMoveSpreadOutForAd(fromLocation, hostState4.getHostLocation(), task));
+                   bal.isTaskSpreadOutAcrossAd(fromLocation, hostState4.getHostLocation(), task));
         assertTrue("Should be able to move within the same minAD HostLocation",
-                   bal.isMoveSpreadOutForAd(fromLocation, hostState5.getHostLocation(), task));
+                   bal.isTaskSpreadOutAcrossAd(fromLocation, hostState5.getHostLocation(), task));
         assertTrue("Should not be able to move to replica location when other minAD location is available",
-                    !bal.isMoveSpreadOutForAd(fromLocation, hostState6.getHostLocation(), task));
+                    !bal.isTaskSpreadOutAcrossAd(fromLocation, hostState6.getHostLocation(), task));
 
     }
 

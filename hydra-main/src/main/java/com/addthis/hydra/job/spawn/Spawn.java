@@ -151,6 +151,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Gauge;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
@@ -389,6 +390,18 @@ public class Spawn implements Codable, AutoCloseable {
         this.eventLog =
                 new RollingLog(new File(LOG_DIR, "events-jobs"), "job", EVENT_LOG_COMPRESS, LOG_MAX_SIZE, LOG_MAX_AGE);
         Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(hostManager));
+        Metrics.newGauge(Spawn.class, "jobsNotAdSpread", new Gauge<Integer>() {
+            @Override
+            public Integer value() {
+                int numJobsNotSpread = 0;
+                for(Job job : listJobs()) {
+                    if(!isJobSpreadAcrossAvailabilityDomains(job)) {
+                        numJobsNotSpread++;
+                    }
+                }
+                return numJobsNotSpread;
+            }
+        });
         writeState();
     }
 
@@ -3158,6 +3171,21 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     /**
+     * Check if the job's tasks are spread out across availability domains
+     * @param job
+     * @return
+     */
+    public boolean isJobSpreadAcrossAvailabilityDomains(Job job) {
+        List<JobTask> tasks = job.getCopyOfTasks();
+        for(JobTask task : tasks) {
+            if(!this.getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Helper function for kickOnExistingHosts.
      *
      * @param task A task, typically one that is about to be kicked
@@ -3249,7 +3277,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
             AvailabilityDomain priorityLevel = hostManager.getHostLocationSummary().getPriorityLevel();
             if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid()) &&
-                balancer.isMoveSpreadOutForAd(taskLocation, host.getHostLocation(), task)) {
+                balancer.isTaskSpreadOutAcrossAd(taskLocation, host.getHostLocation(), task)) {
                 filteredHosts.add(host);
             }
         }
