@@ -402,6 +402,21 @@ public class Spawn implements Codable, AutoCloseable {
                 return numJobsNotSpread;
             }
         });
+
+        Metrics.newGauge(Spawn.class, "tasksNotAdSpread", new Gauge<Integer>() {
+            @Override
+            public Integer value() {
+                int numTasksNotSpread = 0;
+                for(Job job : listJobs()) {
+                    for(JobTask task : job.getCopyOfTasks()) {
+                        if(!getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)) {
+                            numTasksNotSpread++;
+                        }
+                    }
+                }
+                return numTasksNotSpread;
+            }
+        });
         writeState();
     }
 
@@ -3178,7 +3193,7 @@ public class Spawn implements Codable, AutoCloseable {
     public boolean isJobSpreadAcrossAvailabilityDomains(Job job) {
         List<JobTask> tasks = job.getCopyOfTasks();
         for(JobTask task : tasks) {
-            if(!this.getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)){
+            if(!this.getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)) {
                 return false;
             }
         }

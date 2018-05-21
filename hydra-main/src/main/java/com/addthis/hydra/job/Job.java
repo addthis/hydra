@@ -28,7 +28,6 @@ import com.addthis.basis.util.RollingLog;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.util.LogUtil;
 import com.addthis.hydra.util.StringMapHelper;
 import com.addthis.maljson.JSONObject;
