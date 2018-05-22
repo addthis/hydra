@@ -417,6 +417,28 @@ public class Spawn implements Codable, AutoCloseable {
                 return numTasksNotSpread;
             }
         });
+
+        Metrics.newGauge(Spawn.class, "underreplicatedTaskCount", new Gauge<Integer>() {
+           @Override
+           public Integer value() {
+               int underreplicatedTaskCount = 0;
+                for(Job job : listJobs()) {
+                    for(JobTask task : job.getCopyOfTasks()) {
+                        if(checkHostForTask(task, task.getHostUUID()).getType() ==
+                           JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
+                            underreplicatedTaskCount++;
+                        }
+                        for(JobTaskReplica replica : task.getAllReplicas()) {
+                            if(checkHostForTask(task, replica.getHostUUID()).getType() ==
+                               JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
+                                underreplicatedTaskCount++;
+                            }
+                        }
+                    }
+                }
+               return underreplicatedTaskCount;
+           }
+        });
         writeState();
     }
 
