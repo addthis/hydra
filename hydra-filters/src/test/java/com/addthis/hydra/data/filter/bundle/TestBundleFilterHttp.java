@@ -29,7 +29,7 @@ public class TestBundleFilterHttp {
     @Test
     public void fieldTest() {
         BundleFilterHttp bfh = BundleFilterHttp.create(BundleFilterTemplate.create(new String[]{"http://", "{{domain}}", "/", "{{path}}"}, "url"), "content");
-        MapBundle bundle = MapBundle.createBundle(new String[]{"domain", "addthis.com", "path", ""});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"domain", "example.com", "path", ""});
         bfh.filter(bundle);
         assertTrue(bundle.get("content") != null);
     }

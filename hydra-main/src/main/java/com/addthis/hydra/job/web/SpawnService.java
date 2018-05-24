@@ -13,12 +13,12 @@
  */
 package com.addthis.hydra.job.web;
 
-import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.websocket.DeploymentException;
+import javax.websocket.server.ServerContainer;
 
 import java.io.File;
 import java.io.IOException;
-
-import java.util.EnumSet;
 
 import com.addthis.basis.util.Parameter;
 
@@ -39,93 +39,137 @@ import com.addthis.hydra.job.web.resources.SearchResource;
 import com.addthis.hydra.job.web.resources.SpawnConfig;
 import com.addthis.hydra.job.web.resources.SystemResource;
 import com.addthis.hydra.job.web.resources.TaskResource;
-import com.addthis.hydra.util.WebSocketManager;
+import com.addthis.hydra.job.web.websocket.SpawnWebSocket;
+import com.addthis.hydra.util.PrometheusServletCreator;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
 import com.google.common.io.Closer;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
-import com.yammer.metrics.reporting.MetricsServlet;
 
-import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.GzipHandler;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
-import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
+import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.servlets.GzipFilter;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.prometheus.client.exporter.MetricsServlet;
 
 public class SpawnService {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
-    private static final int POLL_TIMEOUT = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
 
+    private static final int POLL_TIMEOUT = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
     private static final String WEB_DIR = Parameter.value("spawn.web.dir", "web");
     private static final String INDEX_FILENAME = Parameter.value("spawn.index.file", "index.html");
     private static final int SPAWN_RESOURCE_MAX_AGE_SECONDS = Parameter.intValue("spawn.web.resource.maxAge", 60 * 60 * 24);
 
-    private final SpawnServiceConfiguration configuration;
-
-    private final boolean sslEnabled;
-    private final Server jetty;
-    private final SpawnConfig servlets;
-    private final WebSocketManager webSocketManager;
-    private final Closer resourceCloser;
-    private static String readFile(String path) throws IOException {
-        return Files.toString(new File(path), Charsets.UTF_8).trim();
-    }
+    private final Server server;
 
     public SpawnService(final Spawn spawn, SpawnServiceConfiguration configuration) throws Exception {
-        this.jetty = new Server();
-        this.configuration = configuration;
+        server = createServer(spawn, configuration);
 
-        SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
-        selectChannelConnector.setPort(configuration.webPort);
-        String keyStorePath = configuration.keyStorePath;
-        String keyStorePassword = configuration.keyStorePassword;
-        String keyManagerPassword = configuration.keyManagerPassword;
+    }
 
-        if (!Strings.isNullOrEmpty(keyStorePassword) &&
-            !Strings.isNullOrEmpty(keyManagerPassword) &&
-            !Strings.isNullOrEmpty(keyStorePath)) {
-            SslSelectChannelConnector sslSelectChannelConnector = new SslSelectChannelConnector();
-            sslSelectChannelConnector.setPort(configuration.webPortSSL);
-            SslContextFactory sslContextFactory = sslSelectChannelConnector.getSslContextFactory();
-            sslContextFactory.setKeyStorePath(keyStorePath);
-            sslContextFactory.setKeyStorePassword(readFile(keyStorePassword));
-            sslContextFactory.setKeyManagerPassword(readFile(keyManagerPassword));
-            log.info("Registering ssl connector");
-            jetty.setConnectors(new Connector[]{selectChannelConnector, sslSelectChannelConnector});
-            sslEnabled = true;
-        } else if (configuration.requireSSL) {
-            String message = "Missing one or more of \"com.addthis.hydra.job.spawn.Spawn.keyStorePath\", " +
-                             "\"com.addthis.hydra.job.spawn.Spawn.keyStorePassword\", " +
-                             "and \"com.addthis.hydra.job.spawn.Spawn.keyManagerPassword\". " +
-                             "Set \"com.addthis.hydra.job.spawn.Spawn.requireSSL\" to false to disable SSL.";
-            throw new IllegalStateException(message);
-        } else {
-            log.info("Not registering ssl connector");
-            jetty.setConnectors(new Connector[]{selectChannelConnector});
-            sslEnabled = false;
+    public void start() throws Exception {
+        PrometheusServletCreator.register();
+        server.start();
+    }
+
+    private Server createServer(final Spawn spawn, SpawnServiceConfiguration configuration) throws Exception {
+        Server server = new Server();
+
+        initServerConnectors(server, spawn, configuration);
+
+        // for closing certain api resource, namely JobsResource, but new ones can be added
+        final Closer closer = Closer.create();
+        ServletContextHandler context = createServletContextHandler(spawn, configuration, closer);
+        Handler handler = createRootHandler(context);
+
+        server.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
+        server.setHandler(handler);
+
+        // this must be after server.setHandler(handler) because websocket configuration needs
+        // the server object from servletContextHandler
+        configureWebSocketServlet(context);
+
+        server.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
+            @Override
+            public void lifeCycleStopping(LifeCycle event) {
+                super.lifeCycleStopping(event);
+                try {
+                    closer.close();
+                } catch (IOException ex) {
+                    log.error("IOException while closing jetty resources: ", ex);
+                }
+            }
+        });
+        return server;
+    }
+
+    private void initServerConnectors(Server server, Spawn spawn, SpawnServiceConfiguration configuration)
+            throws IOException {
+
+        HttpConfiguration httpConfig = new HttpConfiguration();
+        httpConfig.setSecureScheme("https");
+        httpConfig.setSecurePort(configuration.webPortSSL);
+
+        // http
+        ServerConnector http = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
+        http.setPort(configuration.webPort);
+        server.addConnector(http);
+
+        // https
+        if (configuration.requireSSL) {
+            // using a SecureResquestCustomor is necessary to make ResoureHandler's welcome file redirect work
+            // otherwise, https://[SPAWN_HOST]:5053 will be redirected to http://[SPAWN_HOST]:5053/index.html
+            // see ATPS-499
+            HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
+            httpsConfig.addCustomizer(new SecureRequestCustomizer());
+            SslConnectionFactory sslConnectionFactory = createSslConnectionFactory(configuration);
+            ServerConnector https = new ServerConnector(server, sslConnectionFactory, new HttpConnectionFactory(httpsConfig));
+            https.setPort(configuration.webPortSSL);
+            server.addConnector(https);
+            spawn.getSystemManager().updateSslEnabled(true);
         }
-        spawn.getSystemManager().updateSslEnabled(sslEnabled);
+    }
 
-        this.servlets = new SpawnConfig();
-        this.webSocketManager = spawn.getWebSocketManager();
+    private SslConnectionFactory createSslConnectionFactory(SpawnServiceConfiguration configuration)
+            throws IOException {
+        SslContextFactory sslContextFactory = new SslContextFactory();
+        sslContextFactory.setKeyStorePath(configuration.keyStorePath);
+        sslContextFactory.setKeyStorePassword(readFile(configuration.keyStorePassword));
+        sslContextFactory.setKeyManagerPassword(readFile(configuration.keyManagerPassword));
+        return new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.asString());
+    }
 
+    private ServletContextHandler createServletContextHandler(Spawn spawn,
+                                                              SpawnServiceConfiguration configuration,
+                                                              Closer closer) {
+        ServletContextHandler context = new ServletContextHandler();
+        context.addServlet(new ServletHolder("metrics", new MetricsServlet()), "/metrics");
+        context.addServlet(new ServletHolder("spawn-api", createApiServlet(spawn, configuration, closer)), "/*");
+        return context;
+    }
+
+    private ServletContainer createApiServlet(Spawn spawn, SpawnServiceConfiguration configuration, Closer closer) {
         //instantiate resources
         SystemResource systemResource = new SystemResource(spawn);
         ListenResource listenResource = new ListenResource(spawn, systemResource, POLL_TIMEOUT);
@@ -140,74 +184,61 @@ public class SpawnService {
         AlertResource alertResource = new AlertResource(spawn.getJobAlertManager());
         AuthenticationResource authenticationResource = new AuthenticationResource(spawn);
 
-        //register resources
-        servlets.addResource(systemResource);
-        servlets.addResource(listenResource);
-        servlets.addResource(jobsResource);
-        servlets.addResource(groupsResource);
-        servlets.addResource(macroResource);
-        servlets.addResource(commandResource);
-        servlets.addResource(searchResource);
-        servlets.addResource(taskResource);
-        servlets.addResource(aliasResource);
-        servlets.addResource(hostResource);
-        servlets.addResource(alertResource);
-        servlets.addResource(authenticationResource);
-
-        resourceCloser = Closer.create();
-        resourceCloser.register(jobsResource);
+        SpawnConfig resources = new SpawnConfig();
+        resources.addResource(systemResource);
+        resources.addResource(listenResource);
+        resources.addResource(jobsResource);
+        resources.addResource(groupsResource);
+        resources.addResource(macroResource);
+        resources.addResource(commandResource);
+        resources.addResource(searchResource);
+        resources.addResource(taskResource);
+        resources.addResource(aliasResource);
+        resources.addResource(hostResource);
+        resources.addResource(alertResource);
+        resources.addResource(authenticationResource);
 
         //register providers
-        servlets.addProvider(OptionalQueryParamInjectableProvider.class);
-        servlets.addProvider(KVPairsProvider.class);
-        servlets.addProvider(new JacksonJsonProvider(Jackson.defaultMapper()));
+        resources.addProvider(OptionalQueryParamInjectableProvider.class);
+        resources.addProvider(KVPairsProvider.class);
+        resources.addProvider(new JacksonJsonProvider(Jackson.defaultMapper()));
 
         //Feature settings
-        servlets.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);
+        resources.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);
+
+        closer.register(jobsResource);
+        return new ServletContainer(resources);
     }
 
-    public void start() throws Exception {
-        log.info("[init] running spawn2 on port " + configuration.webPort +
-                 (sslEnabled ? (" and port " + configuration.webPortSSL) : ""));
+    private Handler createRootHandler(ServletContextHandler servletContextHandler) {
+        ResourceHandler resourceHandler = createResourceHandler();
 
+        HandlerList handlers = new HandlerList();
+        handlers.setHandlers(new Handler[]{resourceHandler, servletContextHandler});
+
+        GzipHandler gzipHandler = new GzipHandler();
+        gzipHandler.setHandler(handlers);
+
+        return gzipHandler;
+    }
+
+    private ResourceHandler createResourceHandler() {
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
         resourceHandler.setWelcomeFiles(new String[]{INDEX_FILENAME});
         resourceHandler.setResourceBase(WEB_DIR);
         resourceHandler.setCacheControl("max-age=" + SPAWN_RESOURCE_MAX_AGE_SECONDS);
-
-        ServletContextHandler handler = new ServletContextHandler();
-        webSocketManager.setHandler(handler);
-
-        HandlerList handlers = new HandlerList();
-        handlers.setHandlers(new Handler[]{resourceHandler, webSocketManager});
-
-        GzipHandler gzipHandler = new GzipHandler();
-        gzipHandler.setHandler(handlers);
-
-        ServletContainer servletContainer = new ServletContainer(servlets);
-        ServletHolder sh = new ServletHolder(servletContainer);
-
-        handler.addFilter(GzipFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
-        handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
-        handler.addServlet(sh, "/*");
-
-
-        //jetty stuff
-        jetty.setAttribute("org.eclipse.jetty.Request.maxFormContentSize", 5000000);
-        jetty.setHandler(gzipHandler);
-        jetty.start();
-
-        jetty.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
-            @Override
-            public void lifeCycleStopping(LifeCycle event) {
-                super.lifeCycleStopping(event);
-                try {
-                    resourceCloser.close();
-                } catch (IOException ex) {
-                    log.error("IOException while closing jetty resources: ", ex);
-                }
-            }
-        });
+        return resourceHandler;
     }
+
+    private void configureWebSocketServlet(ServletContextHandler servletContextHandler)
+            throws ServletException, DeploymentException {
+        ServerContainer wscontainer = WebSocketServerContainerInitializer.configureContext(servletContextHandler);
+        wscontainer.addEndpoint(SpawnWebSocket.class);
+    }
+
+    private String readFile(String path) throws IOException {
+        return Files.toString(new File(path), Charsets.UTF_8).trim();
+    }
+
 }

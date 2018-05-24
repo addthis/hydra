@@ -16,14 +16,14 @@
   <parent>
     <artifactId>jar-pom</artifactId>
     <groupId>com.addthis.common.build.maven.pom</groupId>
-    <version>3.8.0</version>
+    <version>3.9.0</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.6.47-SNAPSHOT</version>
+  <version>5.6.60-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -54,6 +54,7 @@
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <source.skip>true</source.skip>
         <at.check.skip.all>true</at.check.skip.all>
+        <enforcer.skip>false</enforcer.skip>
       </properties>
     </profile>
   </profiles>
@@ -67,9 +68,9 @@
 
     <!-- addthis dependency versions -->
     <hydra.dep.bark.version>2.1.5</hydra.dep.bark.version>
-    <hydra.dep.basis.version>4.2.0</hydra.dep.basis.version>
-    <hydra.dep.bundle.version>2.10.0</hydra.dep.bundle.version>
-    <hydra.dep.codec.version>3.7.0</hydra.dep.codec.version>
+    <hydra.dep.basis.version>4.3.0</hydra.dep.basis.version>
+    <hydra.dep.bundle.version>2.11.0</hydra.dep.bundle.version>
+    <hydra.dep.codec.version>3.8.0</hydra.dep.codec.version>
     <hydra.dep.meshy.version>3.4.0</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.2.1</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
@@ -80,13 +81,15 @@
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.10</hydra.dep.commons-codec.version>
+    <hydra.dep.commons-collections.version>3.2.2</hydra.dep.commons-collections.version>
+    <hydra.dep.curator.version>2.8.0</hydra.dep.curator.version>
     <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
-    <hydra.dep.jetty.version>8.1.21.v20160908</hydra.dep.jetty.version>
+    <hydra.dep.jetty.version>9.4.8.v20171121</hydra.dep.jetty.version>
     <hydra.dep.netty3.version>3.9.3.Final</hydra.dep.netty3.version>
     <hydra.dep.netty4.version>4.0.28.Final</hydra.dep.netty4.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
-    <hydra.dep.hadoop.version>2.4.0.2.1.1.0-385</hydra.dep.hadoop.version>
+    <hydra.dep.hadoop.version>2.8.2</hydra.dep.hadoop.version>
     <hydra.dep.guava.retrying.version>2.0.0</hydra.dep.guava.retrying.version>
 
     <!-- compression dependency versions -->
@@ -220,6 +223,11 @@
         <artifactId>hamcrest-core</artifactId>
         <version>1.3</version>
       </dependency>
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>1.16</version>
+      </dependency>
 
       <!-- property controlled versions -->
       <dependency>
@@ -264,9 +272,29 @@
         <version>${hydra.dep.compress.apache.commons-compress.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-framework</artifactId>
+        <version>${hydra.dep.curator.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-client</artifactId>
+        <version>${hydra.dep.curator.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-recipes</artifactId>
+        <version>${hydra.dep.curator.version}</version>
+      </dependency>
+      <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
         <version>${hydra.dep.commons-codec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-collections</groupId>
+        <artifactId>commons-collections</artifactId>
+        <version>${hydra.dep.commons-collections.version}</version>
       </dependency>
       <dependency>
         <groupId>org.xerial.snappy</groupId>

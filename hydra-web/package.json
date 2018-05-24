@@ -41,7 +41,7 @@
     "datatables": "1.10.12",
     "datatables.net-dt": "1.10.12",
     "invariant": "^2.2.1",
-    "jquery": "^2.2.2",
+    "jquery": "^3.0.0",
     "js-cookie": "^2.1.0",
     "nvd3": "^1.8.2",
     "oboe": "^2.1.2",

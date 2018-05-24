@@ -80,11 +80,11 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
-import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -108,9 +108,8 @@ import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.zookeeper.KeeperException;
 
-import org.eclipse.jetty.io.UncheckedIOException;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.server.ServerConnector;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -197,7 +196,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final AtomicLong diskTotal = new AtomicLong(0);
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
-    final ServletHandler metricsHandler;
     final MinionHandler minionHandler = new MinionHandler(this);
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
@@ -229,7 +227,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         user = null;
         path = null;
         jetty = null;
-        metricsHandler = null;
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
@@ -238,7 +235,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     @JsonCreator
     private Minion(@JsonProperty("dataDir") File rootDir,
                    @Nullable @JsonProperty("queueType") String queueType,
-                   @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
+                   @Nullable @JsonProperty("hostLocationInitializer") HostLocationInitializer hostLocationInitializer) throws Exception {
         this.rootDir = rootDir;
         startTime = System.currentTimeMillis();
         stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
@@ -249,12 +246,11 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             myHost = InetAddress.getLocalHost().getHostAddress();
         }
         if (hostLocationInitializer == null) {
-            log.warn("No HostLocationInitializer type specified, using default");
-            hostLocation = HostLocation.forHost(myHost);
-        } else {
-            hostLocation = hostLocationInitializer.getHostLocation();
-            log.info("Host location is: {}", hostLocation.toString());
+            log.warn("No HostLocationInitializer type specified, using SystemPropertyHostLocationInitializer as default.");
+            hostLocationInitializer = new SystemPropertyHostLocationInitializer();
         }
+        hostLocation = hostLocationInitializer.getHostLocation();
+        log.info("Host location is: {}", hostLocation.toString());
         user = new SimpleExec("whoami").join().stdoutString().trim();
         path = rootDir.getAbsolutePath();
         diskTotal.set(rootDir.getTotalSpace());
@@ -262,14 +258,19 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         diskReadOnly = false;
         minionTaskDeleter = new MinionTaskDeleter();
         if (stateFile.exists()) {
+            if(stateFile.length() == 0) {
+                log.error("minion.state is empty when reading it");
+            }
             CodecJSON.decodeString(this, LessBytes.toString(LessFiles.read(stateFile)));
         } else {
             uuid = UUID.randomUUID().toString();
         }
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
+
         jetty.setHandler(minionHandler);
         jetty.start();
+
         waitForJetty();
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
         sendStatusFailAfterRetriesCount = Metrics.newCounter(Minion.class,
@@ -277,7 +278,6 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                                                              "-JMXONLY");
         nonIdleIgnoredKicks = Metrics.newMeter(Minion.class, "nonIdleIgnoredKicks", "ignored-kick", TimeUnit.MINUTES);
         fileStatsTimer = Metrics.newTimer(Minion.class, "JobTask-byte-size-timer");
-        metricsHandler = MetricsServletMaker.makeHandler();
         activeTaskHistogram = Metrics.newHistogram(Minion.class, "activeTasks");
         new HostMetricUpdater(this);
         try {
@@ -314,7 +314,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     }
 
     private int getJettyPort() {
-        return jetty.getConnectors()[0].getLocalPort();
+        return ((ServerConnector) jetty.getConnectors()[0]).getLocalPort();
     }
 
     private void waitForJetty() throws Exception {
@@ -593,6 +593,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     void writeState() {
         minionStateLock.lock();
         try {
+            log.info("Writing {} to minion.state when the minion.state file size is {}", CodecJSON.encodeString(this), stateFile.exists() ? stateFile.length() : 0);
             LessFiles.write(stateFile, LessBytes.toBytes(CodecJSON.encodeString(this)), false);
         } catch (IOException io) {
             log.warn("Error writing minion state to disk: ", io);
@@ -737,7 +738,7 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
                 }
             }
         } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
+            Throwables.propagate(ex);
         }
     }
 
