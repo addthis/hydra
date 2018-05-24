@@ -39,6 +39,10 @@ public class HostLocation {
         this.physicalHost = physicalHost;
     }
 
+    public static HostLocation forHost(String hostname) {
+        return new HostLocation("Unknown", "Unknown", hostname);
+    }
+
     public String getDataCenter() {
         return dataCenter;
     }
@@ -51,7 +55,6 @@ public class HostLocation {
         return physicalHost;
     }
 
-<<<<<<< HEAD
     /**
      * Get the HostLocation value corresponding to the given AvailabilityDomain.
      */
@@ -87,5 +90,27 @@ public class HostLocation {
 
     public String toString() {
         return "dataCenter=" + dataCenter + ", rack=" + rack + ", physicalHost=" + physicalHost;
+    }
+
+    /**
+     * Returns a score of distance between this and another HostLocation.
+     * Zero means maximum distance.
+     * This method is used to sort HostLocations by their distance score.
+     */
+    public int assignScoreByHostLocation(HostLocation o) {
+        if (this.getDataCenter().equals(o.getDataCenter())) {
+            if (!this.getRack().equals(o.getRack())) {
+                // Same dataCenter, different rack
+                return AvailabilityDomain.RACK.score;
+            }
+            if (this.getPhysicalHost().equals(o.getPhysicalHost())) {
+                // dataCenter, rack and physicalHost are the same
+                return AvailabilityDomain.NONE.score;
+            }
+            // Same dataCenter, same rack, different physicalHost
+            return AvailabilityDomain.HOST.score;
+        }
+        // Different dataCenter
+        return AvailabilityDomain.DATACENTER.score;
     }
 }
