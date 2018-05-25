@@ -439,6 +439,13 @@ public final class Job implements IJob {
             } else if (enabled && state == JobState.DEGRADED.getValue()) {
                 // Clear degraded state by recalculating
                 calculateJobState(true);
+            } else if (!enabled) {
+                for (JobTask task : getCopyOfTasks()) {
+                    JobTaskState state = task.getState();
+                    if (state == JobTaskState.QUEUED || state == JobTaskState.QUEUED_HOST_UNAVAIL || state == JobTaskState.QUEUED_NO_SLOT) {
+                        setTaskState(task, JobTaskState.IDLE, true);
+                    }
+                }
             }
             return true;
         }
@@ -535,7 +542,8 @@ public final class Job implements IJob {
         if (force
             || (isEnabled() && curr.canTransition(state))
             || (!isEnabled() && (state == JobState.IDLE))
-            || (!isEnabled() && (state == JobState.ERROR))) {
+            || (!isEnabled() && (state == JobState.ERROR))
+            || (!isEnabled() && (state == JobState.SCHEDULED))) {
             // Note dependence on ordering!
             this.state = state.ordinal();
             return true;
