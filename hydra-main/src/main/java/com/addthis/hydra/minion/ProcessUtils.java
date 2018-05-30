@@ -112,7 +112,7 @@ final class ProcessUtils {
     }
 
     static boolean activeProcessExistsWithPid(Integer pid, File directory) {
-        return shell("ps " + pid, directory) == 0;
+        return shell("ps " + pid + " > /dev/null", directory) == 0;
     }
 
     static Integer findActiveRsync(String id, int node) {
