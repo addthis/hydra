@@ -27,7 +27,6 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
-import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.minion.HostLocation;
 import com.addthis.maljson.JSONException;
@@ -49,7 +48,6 @@ public class HostFailWorker {
     private final AtomicBoolean obeyTaskSlots = new AtomicBoolean(true); // Whether spawn should honor the max task slots when moving tasks to fail hosts
     private final HostFailState hostFailState;
     private final Spawn spawn;
-    private final HostManager hostManager;
 
     // Perform host-failure related operations at a given interval
     private static final long hostFailDelayMillis = Parameter.longValue("host.fail.delay", 15_000);
@@ -72,9 +70,8 @@ public class HostFailWorker {
     private static final String infoFatalWarningKey = "fatal";
     private final ScheduledExecutorService executorService;
 
-    public HostFailWorker(Spawn spawn, HostManager hostManager, ScheduledExecutorService executorService) {
+    public HostFailWorker(Spawn spawn, ScheduledExecutorService executorService) {
         this.spawn = spawn;
-        this.hostManager = hostManager;
         this.executorService = executorService;
         hostFailState = new HostFailState(spawn);
         hostFailState.loadState();

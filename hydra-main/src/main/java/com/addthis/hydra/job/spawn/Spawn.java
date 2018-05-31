@@ -338,7 +338,7 @@ public class Spawn implements Codable, AutoCloseable {
         // XXX Instantiate HostFailWorker/SpawnBalancer before SpawnMQ to avoid NPE during startup
         // Once connected, SpawnMQ will call HostFailWorker/SpawnBalancer to get host information,
         // so the latter components must be created first.
-        hostFailWorker = new HostFailWorker(this, hostManager, scheduledExecutor);
+        hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this, hostManager);
 
 
