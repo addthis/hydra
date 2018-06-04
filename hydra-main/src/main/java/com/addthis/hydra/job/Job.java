@@ -542,8 +542,7 @@ public final class Job implements IJob {
         if (force
             || (isEnabled() && curr.canTransition(state))
             || (!isEnabled() && (state == JobState.IDLE))
-            || (!isEnabled() && (state == JobState.ERROR))
-            || (!isEnabled() && (state == JobState.SCHEDULED))) {
+            || (!isEnabled() && (state == JobState.ERROR)) {
             // Note dependence on ordering!
             this.state = state.ordinal();
             return true;
