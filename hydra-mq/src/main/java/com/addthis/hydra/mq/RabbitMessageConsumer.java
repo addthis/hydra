@@ -115,6 +115,7 @@ public class RabbitMessageConsumer<T> extends DefaultConsumer implements Message
             } catch (IOException ex) {
                 firstError = (firstError == null) ? ex : firstError;
             }
+
         }
         if (firstError != null) {
             throw firstError;

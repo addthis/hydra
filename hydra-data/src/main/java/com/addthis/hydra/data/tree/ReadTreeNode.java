@@ -27,7 +27,7 @@ import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.IReadWeighable;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 
 /**
@@ -193,7 +193,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
     }
 
     @Override public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                       .add("name", name)
                       .add("nodedb", nodedb)
                       .add("nodes", nodes)

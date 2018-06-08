@@ -16,6 +16,7 @@ package com.addthis.hydra.job;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -57,7 +58,7 @@ public final class JobQueryConfig implements Codable, Cloneable {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("can-query", getCanQuery())
                 .toString();
     }

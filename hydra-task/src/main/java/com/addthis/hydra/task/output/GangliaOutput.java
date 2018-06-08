@@ -30,7 +30,7 @@ import com.addthis.codec.jackson.Jackson;
 import com.addthis.metrics.reporter.config.GmondConfigParser;
 import com.addthis.metrics.reporter.config.HostPort;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -164,7 +164,7 @@ public final class GangliaOutput extends AbstractFilteredOutput {
     }
 
     @Override public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                       .add("hosts", hostsToString())
                       .add("tMax", tMax)
                       .add("dMax", dMax)

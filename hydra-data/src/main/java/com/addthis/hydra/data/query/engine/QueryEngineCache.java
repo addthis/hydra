@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -201,7 +201,7 @@ public class QueryEngineCache {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("engineCacheSize", engineCacheSize)
                 .add("refreshInterval", refreshInterval)
                 .add("maintenanceInterval", maintenanceInterval)

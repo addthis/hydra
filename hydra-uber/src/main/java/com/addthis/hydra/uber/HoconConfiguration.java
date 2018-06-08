@@ -15,6 +15,7 @@ package com.addthis.hydra.uber;
 
 import java.io.IOException;
 
+import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.json.JsonConfiguration;
@@ -22,7 +23,7 @@ import org.apache.logging.log4j.core.config.json.JsonConfiguration;
 public class HoconConfiguration extends JsonConfiguration {
 
     public HoconConfiguration(ConfigurationSource configSource) {
-        super(configSource);
+        super(LoggerContext.getContext(), configSource);
     }
 
     @Override

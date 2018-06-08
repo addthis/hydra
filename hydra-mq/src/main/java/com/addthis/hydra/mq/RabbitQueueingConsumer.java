@@ -14,9 +14,10 @@
 package com.addthis.hydra.mq;
 
 import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.ShutdownSignalException;
 
-public class RabbitQueueingConsumer extends com.rabbitmq.client.QueueingConsumer {
+public class RabbitQueueingConsumer extends QueueingConsumer {
 
 
     public RabbitQueueingConsumer(Channel channel) {

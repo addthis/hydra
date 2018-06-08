@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -369,6 +370,9 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
             return true;
         } catch (IOException e) {
             log.error("Error connecting to rabbitmq at {}", batchBrokerAddresses, e);
+            return false;
+        } catch (TimeoutException e) {
+            log.error("Error timeout connecting to rabbitmq at {}", batchBrokerAddresses, e);
             return false;
         }
     }

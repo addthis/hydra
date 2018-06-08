@@ -21,7 +21,7 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 public class QueryEntry {
 
@@ -105,7 +105,7 @@ public class QueryEntry {
     }
 
     @Override public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                       .add("query", query)
                       .add("preOpLines", preOpLines)
                       .add("postOpLines", postOpLines)

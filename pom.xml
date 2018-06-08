@@ -16,7 +16,7 @@
   <parent>
     <artifactId>jar-pom</artifactId>
     <groupId>com.addthis.common.build.maven.pom</groupId>
-    <version>3.9.0</version>
+    <version>3.9.1</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -54,12 +54,12 @@
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <source.skip>true</source.skip>
         <at.check.skip.all>true</at.check.skip.all>
-        <enforcer.skip>false</enforcer.skip>
       </properties>
     </profile>
   </profiles>
 
   <properties>
+    <enforcer.skip>false</enforcer.skip>
     <project.build.targetJdk>1.8</project.build.targetJdk>
 
     <dep.plugin.findbugs.version>3.0.0</dep.plugin.findbugs.version>
@@ -77,27 +77,33 @@
     <hydra.dep.ahocorasick.version>1.5.4</hydra.dep.ahocorasick.version>
 
     <!-- external dependency versions -->
-    <hydra.dep.log4j2.version>2.4.1</hydra.dep.log4j2.version>
+    <hydra.dep.log4j2.version>2.11.0</hydra.dep.log4j2.version>
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
-    <hydra.dep.commons-codec.version>1.10</hydra.dep.commons-codec.version>
-    <hydra.dep.commons-collections.version>3.2.2</hydra.dep.commons-collections.version>
-    <hydra.dep.curator.version>2.8.0</hydra.dep.curator.version>
-    <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
-    <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
-    <hydra.dep.jetty.version>9.4.8.v20171121</hydra.dep.jetty.version>
-    <hydra.dep.netty3.version>3.9.3.Final</hydra.dep.netty3.version>
-    <hydra.dep.netty4.version>4.0.28.Final</hydra.dep.netty4.version>
+    <hydra.dep.jackson.jackson-jaxrs-json-provider.version>2.4.3</hydra.dep.jackson.jackson-jaxrs-json-provider.version>
+    <hydra.dep.commons-codec.version>1.11</hydra.dep.commons-codec.version>
+    <hydra.dep.commons-collections.version>4.1</hydra.dep.commons-collections.version>
+    <hydra.dep.commons-lang3.version>3.7</hydra.dep.commons-lang3.version>
+    <hydra.dep.curator.version>4.0.1</hydra.dep.curator.version>
+    <hydra.dep.spring.version>5.0.5.RELEASE</hydra.dep.spring.version>
+    <hydra.dep.jersey.version>1.19.4</hydra.dep.jersey.version>
+    <hydra.dep.jetty.version>9.4.9.v20180320</hydra.dep.jetty.version>
+    <hydra.dep.netty3.version>3.10.6.Final</hydra.dep.netty3.version>
+    <hydra.dep.netty4.version>4.1.23.Final</hydra.dep.netty4.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
-    <hydra.dep.hadoop.version>2.8.2</hydra.dep.hadoop.version>
+    <hydra.dep.hadoop.version>3.0.1</hydra.dep.hadoop.version>
     <hydra.dep.guava.retrying.version>2.0.0</hydra.dep.guava.retrying.version>
+    <hydra.dep.jsoup.version>1.11.2</hydra.dep.jsoup.version>
+    <hydra.dep.jopt-simple.version>5.0.4</hydra.dep.jopt-simple.version>
+    <hydra.dep.apache.httpcomponents.httpclient.version>4.5.5</hydra.dep.apache.httpcomponents.httpclient.version>
+    <hydra.dep.apache.zookeeper.version>3.4.11</hydra.dep.apache.zookeeper.version>
 
     <!-- compression dependency versions -->
-    <hydra.dep.compress.compress-lzf.version>1.0.3</hydra.dep.compress.compress-lzf.version>
+    <hydra.dep.compress.compress-lzf.version>1.0.4</hydra.dep.compress.compress-lzf.version>
     <hydra.dep.compress.jzlib.version>1.1.3</hydra.dep.compress.jzlib.version>
-    <hydra.dep.compress.snappy-java.version>1.1.1.6</hydra.dep.compress.snappy-java.version>
-    <hydra.dep.compress.org.tukaani.xz.version>1.5</hydra.dep.compress.org.tukaani.xz.version>
-    <hydra.dep.compress.apache.commons-compress.version>1.9</hydra.dep.compress.apache.commons-compress.version>
+    <hydra.dep.compress.snappy-java.version>1.1.7.1</hydra.dep.compress.snappy-java.version>
+    <hydra.dep.compress.org.tukaani.xz.version>1.8</hydra.dep.compress.org.tukaani.xz.version>
+    <hydra.dep.compress.apache.commons-compress.version>1.16.1</hydra.dep.compress.apache.commons-compress.version>
   </properties>
 
   <!-- included in every submodule -->
@@ -123,7 +129,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>1.10.8</version>
+      <version>2.17.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -134,12 +140,12 @@
       <dependency>
         <groupId>com.clearspring.analytics</groupId>
         <artifactId>stream</artifactId>
-        <version>2.9.0</version>
+        <version>2.9.6</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>3.4.5</version>
+        <version>${hydra.dep.apache.zookeeper.version}</version>
         <exclusions>
           <!-- prevent any non-bark transitive zookeeper dependencies from pulling in old netty3 -->
           <exclusion>
@@ -151,62 +157,72 @@
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
-        <version>4.4.1</version>
+        <version>${hydra.dep.apache.httpcomponents.httpclient.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpcore</artifactId>
-        <version>4.4.1</version>
+        <version>4.4.9</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
-        <version>3.1</version>
+        <version>${hydra.dep.commons-lang3.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jgit</groupId>
         <artifactId>org.eclipse.jgit</artifactId>
-        <version>4.0.1.201506240215-r</version>
+        <version>4.11.0.201803080745-r</version>
       </dependency>
       <dependency>
         <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
         <artifactId>concurrentlinkedhashmap-lru</artifactId>
-        <version>1.3.2</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-lang</groupId>
-        <artifactId>commons-lang</artifactId>
-        <version>2.6</version>
+        <version>1.4.2</version>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
-        <version>2.0.1</version>
+        <version>2.6</version>
       </dependency>
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.1.1</version>
+        <version>1.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
-        <version>1.7.7</version>
+        <version>1.8.2</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.2.4</version>
+        <version>2.8.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-math3</artifactId>
-        <version>3.3</version>
+        <version>3.6.1</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-math</artifactId>
-        <version>2.1</version>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-webapp</artifactId>
+        <version>${hydra.dep.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>${hydra.dep.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlet</artifactId>
+        <version>${hydra.dep.jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-server</artifactId>
+        <version>${hydra.dep.jetty.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.servlet</groupId>
@@ -214,9 +230,14 @@
         <version>2.5</version>
       </dependency>
       <dependency>
+        <groupId>javax.xml.bind</groupId>
+        <artifactId>jaxb-api</artifactId>
+        <version>2.3.0</version>
+      </dependency>
+      <dependency>
         <groupId>org.jboss.logging</groupId>
         <artifactId>jboss-logging</artifactId>
-        <version>3.2.0.Final</version>
+        <version>3.3.2.Final</version>
       </dependency>
       <dependency>
         <groupId>org.hamcrest</groupId>
@@ -226,7 +247,17 @@
       <dependency>
         <groupId>org.yaml</groupId>
         <artifactId>snakeyaml</artifactId>
-        <version>1.16</version>
+        <version>1.20</version>
+      </dependency>
+      <dependency>
+        <groupId>com.nimbusds</groupId>
+        <artifactId>nimbus-jose-jwt</artifactId>
+        <version>5.9</version>
+      </dependency>
+      <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jzlib</artifactId>
+        <version>${hydra.dep.compress.jzlib.version}</version>
       </dependency>
 
       <!-- property controlled versions -->
@@ -292,14 +323,19 @@
         <version>${hydra.dep.commons-codec.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-collections</groupId>
-        <artifactId>commons-collections</artifactId>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
         <version>${hydra.dep.commons-collections.version}</version>
       </dependency>
       <dependency>
         <groupId>org.xerial.snappy</groupId>
         <artifactId>snappy-java</artifactId>
         <version>${hydra.dep.compress.snappy-java.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.tukaani</groupId>
+        <artifactId>xz</artifactId>
+        <version>${hydra.dep.compress.org.tukaani.xz.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
@@ -507,11 +543,11 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>3.4</version>
+          <version>3.6</version>
         </plugin>
         <plugin>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.9</version>
+          <version>3.0.2</version>
         </plugin>
       </plugins>
     </pluginManagement>

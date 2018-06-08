@@ -14,6 +14,7 @@
 package com.addthis.hydra.mq;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 import com.rabbitmq.client.Connection;
 
@@ -31,7 +32,7 @@ public class RabbitMQUtil {
      *
      * @param addresses formatted as "host1[:port],host2[:port]", etc.
      */
-    public static Connection createConnection(String addresses, String username, String password) throws IOException {
+    public static Connection createConnection(String addresses, String username, String password) throws IOException, TimeoutException {
         Config config = new Config()
                 .withRetryPolicy(RetryPolicies.retryAlways())
                 .withRecoveryPolicy(new RecoveryPolicy()

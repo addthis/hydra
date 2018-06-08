@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,8 +35,6 @@ import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
-
-import com.google.common.collect.Iterators;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -332,7 +332,8 @@ public class QueryEngine {
             return;
         }
         QueryElement next = path[pathIndex];
-        Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? Iterators.<DataTreeNode>emptyIterator() : null;
+
+        Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? new ArrayList<DataTreeNode>().iterator() : null;
         if (iter == null) {
             return;
         }

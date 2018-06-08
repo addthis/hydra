@@ -23,7 +23,7 @@ import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
 import com.addthis.hydra.store.util.Raw;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 
 /**
@@ -175,7 +175,7 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("codec", codec)
                 .add("clazz", clazz)
                 .toString();
