@@ -19,26 +19,25 @@ import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.client.Delivery;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.AMQP;
-import java.io.IOException;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class RabbitQueueingConsumer extends DefaultConsumer {
 
-    private final BlockingQueue<Delivery> _queue;
+    private final BlockingQueue<Delivery> queue;
 
     public RabbitQueueingConsumer(Channel channel) {
         super(channel);
-        _queue = new LinkedBlockingQueue<Delivery>();
+        queue = new LinkedBlockingQueue<>();
     }
 
     @Override public void handleDelivery(String consumerTag,
             Envelope envelope,
             AMQP.BasicProperties properties,
             byte[] body)
-            throws IOException
     {
-        this._queue.add(new Delivery(envelope, properties, body));
+        this.queue.add(new Delivery(envelope, properties, body));
     }
 
     /**
@@ -50,7 +49,7 @@ public class RabbitQueueingConsumer extends DefaultConsumer {
     public Delivery nextDelivery()
             throws InterruptedException, ShutdownSignalException
     {
-        return _queue.take();
+        return queue.take();
     }
 
     @Override public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
