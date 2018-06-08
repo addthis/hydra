@@ -20,7 +20,7 @@ import com.addthis.basis.util.Backoff;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 
-import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.Delivery;
 import com.rabbitmq.client.ShutdownSignalException;
 
 import org.slf4j.Logger;
@@ -45,7 +45,7 @@ class TaskRunner extends Thread {
 
     @Override public void run() {
         while (!done) {
-            QueueingConsumer.Delivery delivery = null;
+            Delivery delivery = null;
             try {
                 delivery = minion.batchJobConsumer.nextDelivery();
                 CommandTaskKick kick = null;

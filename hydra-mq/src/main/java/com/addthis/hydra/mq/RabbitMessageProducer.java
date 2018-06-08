@@ -74,7 +74,11 @@ public class RabbitMessageProducer<T> implements MessageProducer<T> {
 
     @Override public void close() throws IOException {
         if (channel != null) {
-            channel.close();
+            try {
+                channel.close();
+            } catch (TimeoutException e) {
+                log.warn("[rabbit.producer] error timeout", e);
+            }
         }
         if (connection != null) {
             connection.close();
