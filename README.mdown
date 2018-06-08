@@ -110,14 +110,14 @@ script to assist with this.  To run the local stack:
 
 The first time the script is run a `hydra-local` directory will be created.
 
- * `./hydra-uber/bin/local-stack.sh start` - start ZooKeeper
- * `./hydra-uber/bin/local-stack.sh start` - start spawn, querymaster etc.
- * `./hydra-uber/bin/local-stack.sh seed` - add some sample data
+ * `./hydra-uber/local/bin/local-stack.sh start` - start ZooKeeper
+ * `./hydra-uber/local/bin/local-stack.sh start` - start spawn, querymaster etc.
+ * `./hydra-uber/local/bin/local-stack.sh seed` - add some sample data
  
 You can then navigate to http://localhost:5052/ and you should see
 the spawn web interface.
   
-When done `./hydra-uber/bin/local-stack.sh stop` will stop everything
+When done `./hydra-uber/local/bin/local-stack.sh stop` will stop everything
 except ZooKeeper, and running `stop` a second time will bring that
 process down as well.
 

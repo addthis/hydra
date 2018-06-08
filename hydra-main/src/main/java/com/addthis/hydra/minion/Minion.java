@@ -111,6 +111,7 @@ import org.apache.zookeeper.KeeperException;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -197,7 +198,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
     final AtomicLong diskTotal = new AtomicLong(0);
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
-    final MinionHandler minionHandler = new MinionHandler(this);
+    private ServletContextHandler servletContext = new MinionServletContext(this).build();
+
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
     int minionPid = -1;
@@ -269,7 +271,8 @@ public class Minion implements MessageListener<CoreMessage>, Codable, AutoClosea
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
 
-        jetty.setHandler(minionHandler);
+
+        jetty.setHandler(servletContext);
         jetty.start();
 
         waitForJetty();
