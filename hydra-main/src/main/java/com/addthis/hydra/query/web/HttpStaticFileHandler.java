@@ -20,6 +20,7 @@ package com.addthis.hydra.query.web;
 import java.io.File;
 import java.io.IOException;
 
+import java.io.InputStream;
 import java.util.Date;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -33,6 +34,12 @@ import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.Parameter;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledHeapByteBuf;
+import io.netty.handler.codec.bytes.ByteArrayEncoder;
+import org.apache.commons.compress.utils.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,10 +122,21 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
     private static final Logger log = LoggerFactory.getLogger(HttpStaticFileHandler.class);
+    private static final String WEB_RESOURCE_DIR = "web";
 
-    private static final String webDir = Parameter.value("qmaster.web.dir", "web");
+    private final ClassLoader classLoader;
+    private final Path jarPath;
+    private final long jarModifiedSeconds;
+
 
     public HttpStaticFileHandler() {
+        this.classLoader = this.getClass().getClassLoader();
+        try {
+            jarPath  = Paths.get(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
+            jarModifiedSeconds = Files.getLastModifiedTime(jarPath).toMillis() / 1000;
+        } catch (Exception e) {
+           throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -148,19 +166,7 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
             return;
         }
 
-        Path file = Paths.get(webDir + path);
-        log.trace("trying to serve static file {}", file);
-        if (Files.isHidden(file) || Files.notExists(file)) {
-            sendError(ctx, NOT_FOUND);
-            return;
-        }
-
-        if (!Files.isRegularFile(file)) {
-            sendError(ctx, FORBIDDEN);
-            return;
-        }
-
-        log.trace("cache validation occuring for {}", file);
+        log.trace("cache validation occuring for {}", path);
         // Cache Validation
         String ifModifiedSince = request.headers().get(IF_MODIFIED_SINCE);
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
@@ -170,31 +176,44 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
             // Only compare up to the second because the datetime format we send to the client
             // does not have milliseconds
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
-            long fileLastModifiedSeconds = Files.getLastModifiedTime(file).toMillis() / 1000;
-            if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
+            if (ifModifiedSinceDateSeconds == jarModifiedSeconds) {
                 sendNotModified(ctx);
                 return;
             }
         }
 
-        log.trace("sending {}", file);
-
-        FileChannel fileChannel;
+        log.trace("reading {}", path);
+        Path resourcePath = Paths.get(WEB_RESOURCE_DIR, path);
+        InputStream resourceStream = classLoader.getResourceAsStream(resourcePath.toString());
+        int fileLength = -1;
         try {
-            fileChannel = FileChannel.open(file, StandardOpenOption.READ);
-        } catch (IOException fnfe) {
+            fileLength = resourceStream.available();
+        } catch(Exception e) {
+            log.error("resource \"" + resourcePath.toString() + "\" not readable: ", e);
+        }
+
+        if (resourceStream == null) {
             sendError(ctx, NOT_FOUND);
             return;
         }
-        long fileLength = fileChannel.size();
+        if (Files.isHidden(resourcePath) || fileLength < 0) {
+            resourceStream.close();
+            sendError(ctx, NOT_FOUND);
+            return;
+        }
+
+        ByteBuf resourceContents = UnpooledByteBufAllocator.DEFAULT.buffer(fileLength, fileLength);
+        while(resourceStream.available() > 0) {
+            resourceContents.writeBytes(resourceStream, resourceStream.available());
+        }
+        resourceStream.close();
 
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         setContentLength(response, fileLength);
-        setContentTypeHeader(response, file);
+        setContentTypeHeader(response, resourcePath);
         try {
-            setDateAndCacheHeaders(response, file);
+            setDateAndCacheHeaders(response, jarPath);
         } catch (IOException ioex) {
-            fileChannel.close();
             sendError(ctx, NOT_FOUND);
             return;
         }
@@ -206,7 +225,7 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
         ctx.write(response);
 
         // Write the content.
-        ctx.write(new DefaultFileRegion(fileChannel, 0, fileLength));
+        ctx.write(resourceContents);
 
         // Write the end marker
         ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);

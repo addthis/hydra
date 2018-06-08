@@ -17,8 +17,6 @@ import javax.servlet.ServletException;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 
-import java.io.File;
-import java.io.IOException;
 
 import com.addthis.basis.util.Parameter;
 
@@ -65,6 +63,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.component.AbstractLifeCycle;
 import org.eclipse.jetty.util.component.LifeCycle;
+import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer;
 import org.slf4j.Logger;
@@ -72,14 +71,17 @@ import org.slf4j.LoggerFactory;
 
 import io.prometheus.client.exporter.MetricsServlet;
 
+import java.io.File;
+import java.io.IOException;
+
 public class SpawnService {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
 
     private static final int POLL_TIMEOUT = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
-    private static final String WEB_DIR = Parameter.value("spawn.web.dir", "web");
     private static final String INDEX_FILENAME = Parameter.value("spawn.index.file", "index.html");
     private static final int SPAWN_RESOURCE_MAX_AGE_SECONDS = Parameter.intValue("spawn.web.resource.maxAge", 60 * 60 * 24);
+    private static final String WEB_RESOURCE_DIR = "web";
 
     private final Server server;
 
@@ -226,7 +228,7 @@ public class SpawnService {
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
         resourceHandler.setWelcomeFiles(new String[]{INDEX_FILENAME});
-        resourceHandler.setResourceBase(WEB_DIR);
+        resourceHandler.setBaseResource(Resource.newClassPathResource(WEB_RESOURCE_DIR));
         resourceHandler.setCacheControl("max-age=" + SPAWN_RESOURCE_MAX_AGE_SECONDS);
         return resourceHandler;
     }
