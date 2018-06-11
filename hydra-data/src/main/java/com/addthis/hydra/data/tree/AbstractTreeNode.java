@@ -110,12 +110,18 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
                     if (kl == 0) {
                         continue;
                     }
-                    String key = new String(buf.readBytes(kl).array(), Charset.forName("UTF-8"));
+                    byte[] keyBytes = new byte[kl];
+                    buf.readBytes(keyBytes);
+                    String key = new String(keyBytes, Charset.forName("UTF-8"));
                     int cl = Varint.readUnsignedVarInt(buf);
-                    String className = new String(buf.readBytes(cl).array(), Charset.forName("UTF-8"));
+                    byte[] classBytes = new byte[cl];
+                    buf.readBytes(classBytes);
+                    String className = new String(classBytes, Charset.forName("UTF-8"));
                     TreeNodeData tn = (TreeNodeData) Fields.getClassFieldMap(TreeNodeData.class).getClass(className).newInstance();
                     int vl = Varint.readUnsignedVarInt(buf);
-                    tn.bytesDecode(buf.readBytes(vl).array(), version);
+                    byte[] valueBytes = new byte[vl];
+                    buf.readBytes(valueBytes);
+                    tn.bytesDecode(valueBytes, version);
                     dataMap.put(key, tn);
                 }
                 data = dataMap;
