@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 public final class LogUtils {
     private static final Logger log = LoggerFactory.getLogger(LogUtils.class);
+    private static final int logLineLimit = 20000000;
 
     /** Streams task log files from newest to oldest. The returned Stream should be closed. */
     public static Stream<Path> streamTaskLogsByName(JobTask task) throws IOException {
@@ -93,8 +94,16 @@ public final class LogUtils {
                     }
                 }
                 bytesRead = (int) (len - off);
-                byte[] buf = new byte[bytesRead];
-                raf.read(buf);
+                byte[] buf = null;
+                // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
+                if(bytesRead >= logLineLimit) {
+                    buf = new byte[logLineLimit];
+                    raf.read(buf);
+                    addExceedingMsg(buf, "UTF-8");
+                } else {
+                    buf = new byte[bytesRead];
+                    raf.read(buf);
+                }
                 content = LessBytes.toString(buf);
                 endOffset = len;
             } else if (len > 0 && startOffset < len) {
@@ -107,9 +116,18 @@ public final class LogUtils {
                     }
                 }
                 bytesRead = (int) (off - startOffset);
-                byte[] buf = new byte[bytesRead];
-                raf.seek(startOffset);
-                raf.read(buf);
+                byte[] buf = null;
+                // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
+                if(bytesRead >= logLineLimit) {
+                    buf = new byte[logLineLimit];
+                    raf.seek(startOffset);
+                    raf.read(buf);
+                    addExceedingMsg(buf, "UTF-8");
+                } else {
+                    buf = new byte[bytesRead];
+                    raf.seek(startOffset);
+                    raf.read(buf);
+                }
                 content = LessBytes.toString(buf);
                 endOffset = off;
             } else if (startOffset == len) {
@@ -140,8 +158,16 @@ public final class LogUtils {
                     lines--;
                 }
             }
-            byte[] buf = new byte[(int) (len - off)];
-            raf.read(buf);
+            byte[] buf = null;
+            // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
+            if(len - off >= logLineLimit) {
+                buf = new byte[logLineLimit];
+                raf.read(buf);
+                addExceedingMsg(buf, "UTF-8");
+            } else {
+                buf = new byte[(int) (len - off)];
+                raf.read(buf);
+            }
             return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
@@ -162,14 +188,34 @@ public final class LogUtils {
                     lines--;
                 }
             }
-            byte[] buf = new byte[(int) off];
-            raf.seek(0);
-            raf.read(buf);
+            byte[] buf = null;
+            // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
+            if(off >= logLineLimit) {
+                buf = new byte[logLineLimit];
+                raf.seek(0);
+                raf.read(buf);
+                addExceedingMsg(buf, "UTF-8");
+            } else {
+                buf = new byte[(int) off];
+                raf.seek(0);
+                raf.read(buf);
+            }
             return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
         }
         return "";
+    }
+
+    private static void addExceedingMsg(byte[] buf, String charsetName) {
+        try {
+            byte[] lastLine = "\nCannot display all lines. Reduce lines!\n".getBytes(charsetName);
+            for (int lastLineIndex = 0; lastLineIndex < lastLine.length; lastLineIndex++) {
+                buf[logLineLimit - lastLine.length + lastLineIndex] = lastLine[lastLineIndex];
+            }
+        } catch  (Exception e) {
+            log.warn("", e);
+        }
     }
 
     private LogUtils() {}
