@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 
 public final class LogUtils {
     private static final Logger log = LoggerFactory.getLogger(LogUtils.class);
-    private static final int logLineLimit = 20000000;
+    private static final int logBufLimit = 20000000;
 
     /** Streams task log files from newest to oldest. The returned Stream should be closed. */
     public static Stream<Path> streamTaskLogsByName(JobTask task) throws IOException {
@@ -96,8 +96,8 @@ public final class LogUtils {
                 bytesRead = (int) (len - off);
                 byte[] buf = null;
                 // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-                if(bytesRead >= logLineLimit) {
-                    buf = new byte[logLineLimit];
+                if(bytesRead >= logBufLimit) {
+                    buf = new byte[logBufLimit];
                     raf.read(buf);
                     addExceedingMsg(buf, "UTF-8");
                 } else {
@@ -118,8 +118,8 @@ public final class LogUtils {
                 bytesRead = (int) (off - startOffset);
                 byte[] buf = null;
                 // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-                if(bytesRead >= logLineLimit) {
-                    buf = new byte[logLineLimit];
+                if(bytesRead >= logBufLimit) {
+                    buf = new byte[logBufLimit];
                     raf.seek(startOffset);
                     raf.read(buf);
                     addExceedingMsg(buf, "UTF-8");
@@ -160,8 +160,8 @@ public final class LogUtils {
             }
             byte[] buf = null;
             // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-            if(len - off >= logLineLimit) {
-                buf = new byte[logLineLimit];
+            if(len - off >= logBufLimit) {
+                buf = new byte[logBufLimit];
                 raf.read(buf);
                 addExceedingMsg(buf, "UTF-8");
             } else {
@@ -190,8 +190,8 @@ public final class LogUtils {
             }
             byte[] buf = null;
             // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-            if(off >= logLineLimit) {
-                buf = new byte[logLineLimit];
+            if(off >= logBufLimit) {
+                buf = new byte[logBufLimit];
                 raf.seek(0);
                 raf.read(buf);
                 addExceedingMsg(buf, "UTF-8");
@@ -211,7 +211,7 @@ public final class LogUtils {
         try {
             byte[] lastLine = "\nCannot display all lines. Reduce lines!\n".getBytes(charsetName);
             for (int lastLineIndex = 0; lastLineIndex < lastLine.length; lastLineIndex++) {
-                buf[logLineLimit - lastLine.length + lastLineIndex] = lastLine[lastLineIndex];
+                buf[logBufLimit - lastLine.length + lastLineIndex] = lastLine[lastLineIndex];
             }
         } catch  (Exception e) {
             log.warn("", e);
