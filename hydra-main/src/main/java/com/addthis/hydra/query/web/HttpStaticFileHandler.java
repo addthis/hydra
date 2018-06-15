@@ -189,7 +189,7 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
         try {
             fileLength = resourceStream.available();
         } catch(Exception e) {
-            log.error("resource \"" + resourcePath.toString() + "\" not readable: ", e);
+            log.trace("resource \"{}\" not readable: {}", resourcePath.toString(), e);
         }
 
         if (resourceStream == null) {
