@@ -1054,7 +1054,6 @@ public class Spawn implements Codable, AutoCloseable {
         }
         if (!isNewTask(task)) {
             if(newReplicas.size() > desiredNumberOfReplicas) {
-                HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
                 List<JobTaskReplica> replicasToRemove =
                         removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
                 // remove only the first instance of each replica in replicasToRemove
@@ -2919,6 +2918,8 @@ public class Spawn implements Codable, AutoCloseable {
         if(!newHostList.isEmpty()) {
             String newHostUuid = newHostList.get(0);
             HostState newHost = hostManager.getHostState(newHostUuid);
+            // canMirrorTasks is already checked in HostCandidateIterator.
+            // We retain the additional check below as a safety measure
             if(newHost != null && newHost.canMirrorTasks()) {
                 return newHostUuid;
             }
@@ -3305,7 +3306,6 @@ public class Spawn implements Codable, AutoCloseable {
                 // Not a valid migration target
                 continue;
             }
-            AvailabilityDomain priorityLevel = hostManager.getHostLocationSummary().getPriorityLevel();
             if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid()) &&
                 balancer.isTaskSpreadOutAcrossAd(taskLocation, host.getHostLocation(), task)) {
                 filteredHosts.add(host);

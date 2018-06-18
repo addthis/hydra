@@ -5,6 +5,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -39,17 +40,18 @@ public class HostCandidateIterator {
         this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
         this.taskScoreIncrement = balancer.getConfig().getSiblingWeight();
 
+        Map<HostState, Double> copyOfScoreMap = new HashMap<>(scoreMap);
         if(job != null) {
             for (JobTask task : job.getCopyOfTasks()) {
                 for (String replicaHostId : task.getAllTaskHosts()) {
                     HostState host = hostManager.getHostState(replicaHostId);
-                    Double score = scoreMap.getOrDefault(host, 0d);
-                    scoreMap.put(host, score + (double) this.taskScoreIncrement);
+                    Double score = copyOfScoreMap.getOrDefault(host, 0d);
+                    copyOfScoreMap.put(host, score + (double) this.taskScoreIncrement);
                 }
             }
         }
         // create the sortedHosts priority queue which will be used for picking candidate hosts
-        for (Map.Entry<HostState, Double> entry : scoreMap.entrySet()) {
+        for (Map.Entry<HostState, Double> entry : copyOfScoreMap.entrySet()) {
             this.sortedHosts.add(new WithScore<>(entry.getKey(), entry.getValue()));
         }
 
