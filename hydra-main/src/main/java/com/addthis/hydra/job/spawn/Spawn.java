@@ -1746,7 +1746,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("got find orphans request for missing job {}", task.getJobUUID());
             return rv;
         }
-        Set<String> expectedTaskHosts = task.getAllTaskHosts();
+        List<String> expectedTaskHosts = task.getAllTaskHosts();
         for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
             if ((host == null) || !host.isUp() || host.isDead() || host.getHostUuid()
                                                                        .equals(task.getRebalanceTarget())) {
@@ -2911,7 +2911,8 @@ public class Spawn implements Codable, AutoCloseable {
      */
     @Nullable private String getReplacementHost(JobTask task) {
         IJob job = this.getJob(task.getJobUUID());
-        Map<HostState, Double> scoreMap = balancer.generateTaskCountHostScoreMap(job);
+        Map<HostState, Double> scoreMap =
+                balancer.generateHostStateScoreMap(hostManager.listHostStatus(job.getMinionType()));
         HostCandidateIterator iterator = new HostCandidateIterator(this, job, scoreMap);
         List<String> newHostList = iterator.getNewReplicaHosts(1, task, task.getHostUUID(), false);
         if(!newHostList.isEmpty()) {

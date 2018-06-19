@@ -298,7 +298,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
         }
         // This map of hosts to scores will be updated by every call to assignTasksFromSingleJobToHosts.
-        Map<HostState, Double> hostScoreMap = generateHostStateScoreMap(hosts, null);
+        Map<HostState, Double> hostScoreMap = generateHostStateScoreMap(hosts);
         // This map stores where to send each task.
         Map<JobTask, String> hostAssignments = new HashMap<>(tasks.size());
         for (Map.Entry<String, List<JobTask>> entry : tasksByJobID.entrySet()) {
@@ -310,18 +310,16 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     /**
-     * Internal function that creates a map of HostStates to their hostScores.
+     * Function that creates a map of HostStates to their hostScores.
      *
      * @param hosts The hosts from spawn
-     * @param jobID is specified, adds a factor that scales with the number of siblings on each host from that job.
      * @return A map taking each HostState to its score
      */
-    private Map<HostState, Double> generateHostStateScoreMap(Collection<HostState> hosts, @Nullable String jobID) {
+    public Map<HostState, Double> generateHostStateScoreMap(Collection<HostState> hosts) {
         final Map<HostState, Double> hostScores = new HashMap<>(hosts.size());
         for (HostState host : hosts) {
             if ((host != null) && host.isUp() && !host.isDead()) {
-                int siblingScore = (jobID != null) ? (host.getTaskCount(jobID) * config.getSiblingWeight()) : 0;
-                double score = getHostScoreCached(host.getHostUuid()) + siblingScore;
+                double score = getHostScoreCached(host.getHostUuid());
                 hostScores.put(host, score);
             }
         }
@@ -533,7 +531,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     /**
-     * Given an ordered list of hosts, move the task to a suitable host, then move that host to the end of the list
+     * Given an ordered list of hosts, move the task to a suitable host
      *
      * @param task       The task to move
      * @param fromHostId The task to move the host from
@@ -548,8 +546,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
             return null;
         }
-
-        Map<HostState, Double> scoreMap = generateHostStateScoreMap(otherHosts, task.getJobUUID());
+        Map<HostState, Double> scoreMap = generateHostStateScoreMap(otherHosts);
         Job job = spawn.getJob(task.getJobUUID());
         HostCandidateIterator iterator = new HostCandidateIterator(spawn, job, scoreMap);
         List<String> newHostList = iterator.getNewReplicaHosts(1, task, taskHost, true);
@@ -707,49 +704,18 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         int replicaCount = job.getReplicas();
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
-        Map<HostState, Double> scoreMap = generateTaskCountHostScoreMap(job);
+        // Note: we will get an up-to-date list of up and not dead hosts here
+        Map<HostState, Double> scoreMap =
+                generateHostStateScoreMap(hostManager.listHostStatus(job.getMinionType()));
         HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn,
                                                                                 job,
                                                                                 scoreMap);
         for (JobTask task : tasks) {
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
-            List<String> hostIDsToAdd = hostCandidateIterator.getNewReplicaHosts(replicaCount - numExistingReplicas, task);
+            List<String> hostIDsToAdd =
+                    hostCandidateIterator.getNewReplicaHosts(replicaCount - numExistingReplicas, task);
             if (!hostIDsToAdd.isEmpty()) {
                 rv.put(task.getTaskID(), hostIDsToAdd);
-            }
-        }
-        return rv;
-    }
-
-    /**
-     * Count the number of tasks per host for a single job, then add in a small factor for how heavily weighted each
-     * host's disk is
-     *
-     * @param job The job to count
-     * @return A map describing how heavily a job is assigned to each of its hosts
-     */
-    public Map<HostState, Double> generateTaskCountHostScoreMap(IJob job) {
-        Map<HostState, Double> rv = new HashMap<>();
-        if (job != null) {
-            List<JobTask> tasks = job.getCopyOfTasks();
-            for (JobTask task : tasks) {
-                HostState host = hostManager.getHostState(task.getHostUUID());
-                rv.merge(host, 1d, Double::sum);
-                if (task.getReplicas() == null) {
-                    continue;
-                }
-                for (JobTaskReplica replica : task.getReplicas()) {
-                    HostState replicaHost = hostManager.getHostState(replica.getHostUUID());
-                    rv.merge(replicaHost, 1d, Double::sum);
-                }
-            }
-
-            List<HostState> hostStates = hostManager.listHostStatus(job.getMinionType());
-            Map<HostState, Double> cachedHostScoreMap = generateHostStateScoreMap(hostStates, null);
-            for (HostState host : hostStates) {
-                if (host.isUp() && !host.isDead()) {
-                    rv.merge(host, cachedHostScoreMap.getOrDefault(host, 0d), Double::sum);
-                }
             }
         }
         return rv;
@@ -907,7 +873,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             throws Exception {
         List<JobTask> tasks = generateUnassignedTaskList(jobID, taskCount);
         Map<JobTask, String> hostAssignments =
-                assignTasksFromSingleJobToHosts(tasks, generateHostStateScoreMap(hosts, null));
+                assignTasksFromSingleJobToHosts(tasks, generateHostStateScoreMap(hosts));
         List<JobTask> rv = new ArrayList<>(tasks.size());
         for (Map.Entry<JobTask, String> entry : hostAssignments.entrySet()) {
             JobTask task = entry.getKey();
@@ -1649,7 +1615,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                    .map(h -> hostManager.getHostState(h).getHostLocation())
                    .filter(hl -> !hl.equals(fromHostLocation))
                    .mapToInt(toHostLocation::assignScoreByHostLocation)
-                   .average().orElse(0);
+                   .average().orElse(0D);
     }
 
     /**
