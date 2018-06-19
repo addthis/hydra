@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -94,16 +95,7 @@ public final class LogUtils {
                     }
                 }
                 bytesRead = (int) (len - off);
-                byte[] buf = null;
-                // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-                if(bytesRead >= logBufLimit) {
-                    buf = new byte[logBufLimit];
-                    raf.read(buf);
-                    addExceedingMsg(buf, "UTF-8");
-                } else {
-                    buf = new byte[bytesRead];
-                    raf.read(buf);
-                }
+                byte[] buf = readFileBytesLimited(raf, bytesRead);
                 content = LessBytes.toString(buf);
                 endOffset = len;
             } else if (len > 0 && startOffset < len) {
@@ -116,18 +108,8 @@ public final class LogUtils {
                     }
                 }
                 bytesRead = (int) (off - startOffset);
-                byte[] buf = null;
-                // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-                if(bytesRead >= logBufLimit) {
-                    buf = new byte[logBufLimit];
-                    raf.seek(startOffset);
-                    raf.read(buf);
-                    addExceedingMsg(buf, "UTF-8");
-                } else {
-                    buf = new byte[bytesRead];
-                    raf.seek(startOffset);
-                    raf.read(buf);
-                }
+                raf.seek(startOffset);
+                byte[] buf = readFileBytesLimited(raf, bytesRead);
                 content = LessBytes.toString(buf);
                 endOffset = off;
             } else if (startOffset == len) {
@@ -158,16 +140,7 @@ public final class LogUtils {
                     lines--;
                 }
             }
-            byte[] buf = null;
-            // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-            if(len - off >= logBufLimit) {
-                buf = new byte[logBufLimit];
-                raf.read(buf);
-                addExceedingMsg(buf, "UTF-8");
-            } else {
-                buf = new byte[(int) (len - off)];
-                raf.read(buf);
-            }
+            byte[] buf = readFileBytesLimited(raf, (int)(len - off));
             return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
@@ -188,18 +161,8 @@ public final class LogUtils {
                     lines--;
                 }
             }
-            byte[] buf = null;
-            // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-            if(off >= logBufLimit) {
-                buf = new byte[logBufLimit];
-                raf.seek(0);
-                raf.read(buf);
-                addExceedingMsg(buf, "UTF-8");
-            } else {
-                buf = new byte[(int) off];
-                raf.seek(0);
-                raf.read(buf);
-            }
+            raf.seek(0);
+            byte[] buf = readFileBytesLimited(raf, (int)off);
             return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
@@ -207,15 +170,32 @@ public final class LogUtils {
         return "";
     }
 
-    private static void addExceedingMsg(byte[] buf, String charsetName) {
+    private static void addExceedingMsg(byte[] buf) {
         try {
-            byte[] lastLine = "\nCannot display all lines. Reduce lines!\n".getBytes(charsetName);
-            for (int lastLineIndex = 0; lastLineIndex < lastLine.length; lastLineIndex++) {
-                buf[logBufLimit - lastLine.length + lastLineIndex] = lastLine[lastLineIndex];
-            }
-        } catch  (Exception e) {
+            String lastLineString = "\nExceeded " + logBufLimit + " bytes. Reduce requested lines!\n";
+            byte[] lastLineBytes = lastLineString.getBytes("UTF-8");
+            System.arraycopy(lastLineBytes, 0, buf, buf.length-lastLineBytes.length, lastLineBytes.length);
+        } catch  (UnsupportedEncodingException e) {
             log.warn("", e);
         }
+    }
+
+    private static byte[] readFileBytesLimited(RandomAccessFile raf, int bytesRead){
+        byte[] buf = null;
+        try {
+            // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
+            if (bytesRead >= logBufLimit) {
+                buf = new byte[logBufLimit];
+                raf.read(buf);
+                addExceedingMsg(buf);
+            } else {
+                buf = new byte[bytesRead];
+                raf.read(buf);
+            }
+        } catch (IOException e) {
+            log.warn("", e);
+        }
+        return buf;
     }
 
     private LogUtils() {}
