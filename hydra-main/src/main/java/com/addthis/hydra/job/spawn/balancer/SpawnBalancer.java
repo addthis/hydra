@@ -1585,6 +1585,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param numTasks              Maximum number of tasks to return
      * @param obeyDontAutobalanceMe set to true for filesystem-okay host failure
      */
+    // NOTE: keeping this code around for potential future improvements to spawnbalancer.
     @SuppressWarnings("FloatingPointEquality")
     public @Nonnull Collection<JobTask> getTasksToMove(String fromHostUuid, String toHostUuid,
                                                        int numTasks, boolean obeyDontAutobalanceMe) {
@@ -1618,6 +1619,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 }
 
                 double taskScore = this.calculateTaskScore(fromHostLocation, toHostLocation, task);
+                // fixme: null pointer exception
                 double highestScore = sortedTasks.peek().score;
                 if (sortedTasks.isEmpty() || (highestScore > taskScore)) {
                     // add to queue if it's empty or this task has a lower score than the task with the largest score
