@@ -19,7 +19,14 @@ public class HostLocationSummary {
         rack = new HashMap<>();
     }
 
+    /**
+     * Remove all existing mappings for dataCenter, rack and physicalHost info
+     * Then rebuild host location summary with <i>current</i> list of live hosts
+     * @param hostStates Current list of live hosts as observed by HostManager
+     */
     public void updateHostLocationSummary(List<HostState> hostStates) {
+        dataCenter.clear();
+        rack.clear();
         for(HostState host : hostStates) {
             if(host.isUp() && !host.isDead()) {
                 HostLocation location = host.getHostLocation();

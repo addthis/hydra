@@ -1042,7 +1042,7 @@ public class Spawn implements Codable, AutoCloseable {
     private List<JobTaskReplica> addReplicasAndRemoveExcess(JobTask task,
                                                             List<String> replicaHostsToAdd,
                                                             int desiredNumberOfReplicas,
-                                                            List<JobTaskReplica> currentReplicas) throws Exception {
+                                                            List<JobTaskReplica> currentReplicas) {
         List<JobTaskReplica> newReplicas;
         if (currentReplicas == null) {
             newReplicas = new ArrayList<>();
@@ -1056,11 +1056,10 @@ public class Spawn implements Codable, AutoCloseable {
             if(newReplicas.size() > desiredNumberOfReplicas) {
                 List<JobTaskReplica> replicasToRemove =
                         removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
-                // remove only the first instance of each replica in replicasToRemove
+
                 for(JobTaskReplica replica : replicasToRemove) {
+                    // remove only the first instance of each replica in replicasToRemove
                     newReplicas.remove(replica);
-                }
-                for(JobTaskReplica replica : replicasToRemove) {
                     spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(),
                                                                      task.getJobUUID(),
                                                                      task.getTaskID(),
@@ -1089,25 +1088,25 @@ public class Spawn implements Codable, AutoCloseable {
         AvailabilityDomain priorityAd = hostManager.getHostLocationSummary().getPriorityLevel();
         if(priorityAd == AvailabilityDomain.NONE) {
             // short-circuit here and retain original behavior by removing replicas from the end of replicaList
-            for(int i = replicaList.size() - numReplicasToRemove; i <= replicaList.size() - 1; i++) {
+            for(int i = replicaList.size() - numReplicasToRemove; i <= (replicaList.size() - 1); i++) {
                 replicasToRemove.add(replicaList.get(i));
             }
         } else {
-            Map<HostLocation, PriorityQueue<WithScore<JobTaskReplica>>> replicasByLocation = new HashMap<>();
+            Map<String, PriorityQueue<WithScore<JobTaskReplica>>> replicasByLocation = new HashMap<>();
             for(JobTaskReplica replica : replicaList) {
                 HostState hostState = hostManager.getHostState(replica.getHostUUID());
                 Double hostScore = balancer.getHostScoreCached(replica.getHostUUID());
-                replicasByLocation.computeIfAbsent(hostState.getHostLocation(),
+                replicasByLocation.computeIfAbsent(hostState.getHostLocation().getPriorityAd(priorityAd),
                                                    key -> new PriorityQueue<>(replicaHostScoreComparator)).add(new WithScore<>(replica, hostScore));
             }
 
             int numReplicasRemoved = 0;
             while(numReplicasRemoved < numReplicasToRemove) {
-                HostLocation removeReplicaFromLocation = null;
+                String removeReplicaFromLocation = null;
                 Double maxScoreSoFar = Double.MIN_VALUE;
                 int maxCountSoFar = Integer.MIN_VALUE;
 
-                for (Map.Entry<HostLocation, PriorityQueue<WithScore<JobTaskReplica>>> entry : replicasByLocation.entrySet()) {
+                for (Map.Entry<String, PriorityQueue<WithScore<JobTaskReplica>>> entry : replicasByLocation.entrySet()) {
                     PriorityQueue<WithScore<JobTaskReplica>> pq = entry.getValue();
                     if(pq.size() >= maxCountSoFar) {
                         WithScore<JobTaskReplica> removeReplica = pq.peek();
