@@ -816,7 +816,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             if (host.getHostUuid().equals(failedHostUuid)) {
                 continue;
             }
-            if (host.canMirrorTasks() && okToPutReplicaOnHost(host, task)) {
+            if (host.canMirrorTasks() && okToPutReplicaOnHost(host, task) &&
+                isTaskSpreadOutAcrossAd(hostManager.getHostLocationForHost(task.getHostUUID()),
+                                        hostManager.getHostLocationForHost(host.getHostUuid()),
+                                        task)) {
                 // Host found! Move this host to the end of the host list so we don't immediately pick it again
                 hostIterator.remove();
                 hosts.add(host);
