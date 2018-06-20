@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 public class BundleFilterDebugPrint implements BundleFilter {
 
     private static final int MAX_BUNDLE_LIMIT = 1000;
+    private static final int MAX_BUNDLE_CHARS = 10000;
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterDebugPrint.class);
 
@@ -101,7 +102,7 @@ public class BundleFilterDebugPrint implements BundleFilter {
     }
 
     public static String formatBundle(Bundle bundle) {
-        return BundlePrinter.printBundle(bundle);
+        return BundlePrinter.printBundle(bundle, MAX_BUNDLE_CHARS);
     }
 
     private boolean testBundleTimer() {

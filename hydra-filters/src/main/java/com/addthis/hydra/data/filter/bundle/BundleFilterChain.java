@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 public class BundleFilterChain implements BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterChain.class);
+    private static final int MAX_BUNDLE_CHARS = 10000;
 
     /**
      * The chain of bundle filters to execute.
@@ -72,7 +73,7 @@ public class BundleFilterChain implements BundleFilter {
             if (!f.filter(row) && failStop) {
                 if (debug && bundleCounter.getAndIncrement() < debugMaxBundles) {
                     log.warn("fail @ " + CodecJSON.tryEncodeString(f, "UNKNOWN") + " with " +
-                             BundlePrinter.printBundle(row));
+                             BundlePrinter.printBundle(row, MAX_BUNDLE_CHARS));
                 }
                 return failReturn;
             }
