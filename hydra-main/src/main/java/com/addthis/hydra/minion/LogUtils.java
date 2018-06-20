@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public final class LogUtils {
     private static final Logger log = LoggerFactory.getLogger(LogUtils.class);
-    private static final int logBufLimit = 20000000;
+    private static final int LOG_BUF_LIMIT = 20000000;
 
     /** Streams task log files from newest to oldest. The returned Stream should be closed. */
     public static Stream<Path> streamTaskLogsByName(JobTask task) throws IOException {
@@ -172,7 +172,7 @@ public final class LogUtils {
 
     private static void addExceedingMsg(byte[] buf) {
         try {
-            String lastLineString = "\nExceeded " + logBufLimit + " bytes. Reduce requested lines!\n";
+            String lastLineString = "\nExceeded " + LOG_BUF_LIMIT + " bytes. Reduce requested lines!\n";
             byte[] lastLineBytes = lastLineString.getBytes("UTF-8");
             System.arraycopy(lastLineBytes, 0, buf, buf.length-lastLineBytes.length, lastLineBytes.length);
         } catch  (UnsupportedEncodingException e) {
@@ -184,13 +184,11 @@ public final class LogUtils {
         byte[] buf = null;
         try {
             // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
-            if (bytesRead >= logBufLimit) {
-                buf = new byte[logBufLimit];
-                raf.read(buf);
+            int limitedBytesRead = Math.min(bytesRead, LOG_BUF_LIMIT);
+            buf = new byte[limitedBytesRead];
+            raf.read(buf);
+            if (bytesRead >= LOG_BUF_LIMIT) {
                 addExceedingMsg(buf);
-            } else {
-                buf = new byte[bytesRead];
-                raf.read(buf);
             }
         } catch (IOException e) {
             log.warn("", e);
