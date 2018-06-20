@@ -49,6 +49,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -250,6 +251,10 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final RollingLog eventLog;
     @Nullable private final JobStore jobStore;
 
+    private final AtomicInteger underReplicatedTaskCount = new AtomicInteger();
+    private final AtomicInteger jobsNotAdSpreadCount = new AtomicInteger();
+    private final AtomicInteger tasksNotAdSpreadCount = new AtomicInteger();
+
     @JsonCreator private Spawn(@JsonProperty("debug") String debug,
                                @JsonProperty(value = "queryPort", required = true) int queryPort,
                                @JsonProperty("queryHttpHost") String queryHttpHost,
@@ -381,6 +386,18 @@ public class Spawn implements Codable, AutoCloseable {
             kickJobsOnQueue();
             writeSpawnQueue();
         }, queueKickInterval, queueKickInterval, MILLISECONDS);
+
+        // Metrics for underreplicated task count, jobs and tasks that are not AD-spread
+        // Update periodically to avoid slowing down metrics reporting
+        scheduledExecutor.scheduleWithFixedDelay(this::updateUnderReplicatedTaskCount,
+                                                 jobTaskUpdateHeartbeatInterval,
+                                                 jobTaskUpdateHeartbeatInterval,
+                                                 MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(this::updateJobAndTaskAdSpreadCount,
+                                                 jobTaskUpdateHeartbeatInterval,
+                                                 jobTaskUpdateHeartbeatInterval,
+                                                 MILLISECONDS);
+
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         this.jobStore = jobStore;
@@ -390,53 +407,59 @@ public class Spawn implements Codable, AutoCloseable {
         Metrics.newGauge(Spawn.class, "jobsNotAdSpread", new Gauge<Integer>() {
             @Override
             public Integer value() {
-                int numJobsNotSpread = 0;
-                for(Job job : listJobs()) {
-                    if(!isJobSpreadAcrossAvailabilityDomains(job)) {
-                        numJobsNotSpread++;
-                    }
-                }
-                return numJobsNotSpread;
+                return jobsNotAdSpreadCount.get();
             }
         });
 
         Metrics.newGauge(Spawn.class, "tasksNotAdSpread", new Gauge<Integer>() {
             @Override
             public Integer value() {
-                int numTasksNotSpread = 0;
-                for(Job job : listJobs()) {
-                    for(JobTask task : job.getCopyOfTasks()) {
-                        if(!getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)) {
-                            numTasksNotSpread++;
-                        }
-                    }
-                }
-                return numTasksNotSpread;
+                return tasksNotAdSpreadCount.get();
             }
         });
 
-        Metrics.newGauge(Spawn.class, "underreplicatedTaskCount", new Gauge<Integer>() {
-           @Override
-           public Integer value() {
-               int underreplicatedTaskCount = 0;
-                for(Job job : listJobs()) {
-                    for(JobTask task : job.getCopyOfTasks()) {
-                        if(checkHostForTask(task, task.getHostUUID()).getType() ==
-                           JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
-                            underreplicatedTaskCount++;
-                        }
-                        for(JobTaskReplica replica : task.getAllReplicas()) {
-                            if(checkHostForTask(task, replica.getHostUUID()).getType() ==
-                               JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
-                                underreplicatedTaskCount++;
-                            }
-                        }
+        Metrics.newGauge(Spawn.class, "underreplicatedTaskCount", underReplicatedTaskCount::get);
+
+        writeState();
+    }
+
+    private void updateJobAndTaskAdSpreadCount() {
+        int numJobsNotSpread = 0;
+        int numTasksNotSpread = 0;
+        boolean jobNotSpread;
+        for(Job job : listJobs()) {
+            jobNotSpread = false;
+            for(JobTask task : job.getCopyOfTasks()) {
+                if(!getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)) {
+                    jobNotSpread = true;
+                    numTasksNotSpread++;
+                }
+            }
+            if(jobNotSpread) {
+                numJobsNotSpread++;
+            }
+        }
+        this.jobsNotAdSpreadCount.set(numJobsNotSpread);
+        this.tasksNotAdSpreadCount.set(numTasksNotSpread);
+    }
+
+    private void updateUnderReplicatedTaskCount() {
+        int underreplicatedTaskCount = 0;
+        for(Job job : listJobs()) {
+            for(JobTask task : job.getCopyOfTasks()) {
+                if(checkHostForTask(task, task.getHostUUID()).getType() ==
+                   JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
+                    underreplicatedTaskCount++;
+                }
+                for(JobTaskReplica replica : task.getAllReplicas()) {
+                    if(checkHostForTask(task, replica.getHostUUID()).getType() ==
+                       JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
+                        underreplicatedTaskCount++;
                     }
                 }
-               return underreplicatedTaskCount;
-           }
-        });
-        writeState();
+            }
+        }
+        this.underReplicatedTaskCount.set(underreplicatedTaskCount);
     }
 
     private void jobTaskUpdateHeartbeatCheck() {
@@ -3199,21 +3222,6 @@ public class Spawn implements Codable, AutoCloseable {
         }
         Job.logJobEvent(job, JobEvent.FINISH, eventLog);
         balancer.requestJobSizeUpdate(job.getId(), 0);
-    }
-
-    /**
-     * Check if the job's tasks are spread out across availability domains
-     * @param job
-     * @return
-     */
-    public boolean isJobSpreadAcrossAvailabilityDomains(Job job) {
-        List<JobTask> tasks = job.getCopyOfTasks();
-        for(JobTask task : tasks) {
-            if(!this.getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
