@@ -418,7 +418,12 @@ public class Spawn implements Codable, AutoCloseable {
             }
         });
 
-        Metrics.newGauge(Spawn.class, "underreplicatedTaskCount", underReplicatedTaskCount::get);
+        Metrics.newGauge(Spawn.class, "underreplicatedTaskCount", new Gauge<Integer>() {
+            @Override
+            public Integer value() {
+                return underReplicatedTaskCount.get();
+            }
+        });
 
         writeState();
     }
