@@ -747,9 +747,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         List<HostState> copyOfHosts = new ArrayList<>(hosts);
         List<JobTask> tasks = findAllTasksAssignedToHost(failedHost);
         List<JobTask> sortedTasks = new ArrayList<>(tasks);
-        Collections.sort(sortedTasks,
-                         (o1, o2) -> Long.compare(taskSizer.estimateTrueSize(o1), taskSizer.estimateTrueSize(o2)));
-        Collections.sort(copyOfHosts, hostStateScoreComparator);
+        sortedTasks.sort(Comparator.comparingLong(taskSizer::estimateTrueSize));
+        copyOfHosts.sort(hostStateScoreComparator);
         Collection<String> modifiedJobIds = new HashSet<>();
         for (JobTask task : sortedTasks) {
             modifiedJobIds.add(task.getJobUUID());
