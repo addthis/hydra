@@ -389,11 +389,7 @@ public class Spawn implements Codable, AutoCloseable {
 
         // Metrics for underreplicated task count, jobs and tasks that are not AD-spread
         // Update periodically to avoid slowing down metrics reporting
-        scheduledExecutor.scheduleWithFixedDelay(this::updateUnderReplicatedTaskCount,
-                                                 jobTaskUpdateHeartbeatInterval,
-                                                 jobTaskUpdateHeartbeatInterval,
-                                                 MILLISECONDS);
-        scheduledExecutor.scheduleWithFixedDelay(this::updateJobAndTaskAdSpreadCount,
+        scheduledExecutor.scheduleWithFixedDelay(this::updateJobAndTaskCountMetrics,
                                                  jobTaskUpdateHeartbeatInterval,
                                                  jobTaskUpdateHeartbeatInterval,
                                                  MILLISECONDS);
@@ -428,30 +424,25 @@ public class Spawn implements Codable, AutoCloseable {
         writeState();
     }
 
-    private void updateJobAndTaskAdSpreadCount() {
+    /**
+     * Periodically update counts for:
+     *      1. Jobs not AD-spread
+     *      2. Tasks not AD-spread
+     *      3. Under-replicated tasks
+     */
+    private void updateJobAndTaskCountMetrics() {
         int numJobsNotSpread = 0;
         int numTasksNotSpread = 0;
         boolean jobNotSpread;
+        int underreplicatedTaskCount = 0;
         for(Job job : listJobs()) {
             jobNotSpread = false;
             for(JobTask task : job.getCopyOfTasks()) {
+                // Checks task and replica spread
                 if(!getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)) {
                     jobNotSpread = true;
                     numTasksNotSpread++;
                 }
-            }
-            if(jobNotSpread) {
-                numJobsNotSpread++;
-            }
-        }
-        this.jobsNotAdSpreadCount.set(numJobsNotSpread);
-        this.tasksNotAdSpreadCount.set(numTasksNotSpread);
-    }
-
-    private void updateUnderReplicatedTaskCount() {
-        int underreplicatedTaskCount = 0;
-        for(Job job : listJobs()) {
-            for(JobTask task : job.getCopyOfTasks()) {
                 if(checkHostForTask(task, task.getHostUUID()).getType() ==
                    JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
                     underreplicatedTaskCount++;
@@ -463,7 +454,12 @@ public class Spawn implements Codable, AutoCloseable {
                     }
                 }
             }
+            if(jobNotSpread) {
+                numJobsNotSpread++;
+            }
         }
+        this.jobsNotAdSpreadCount.set(numJobsNotSpread);
+        this.tasksNotAdSpreadCount.set(numTasksNotSpread);
         this.underReplicatedTaskCount.set(underreplicatedTaskCount);
     }
 

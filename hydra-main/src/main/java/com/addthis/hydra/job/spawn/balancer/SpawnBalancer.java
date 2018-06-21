@@ -744,16 +744,17 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param failedHost The id of the host being failed
      */
     public void fixTasksForFailedHost(List<HostState> hosts, String failedHost) {
+        List<HostState> copyOfHosts = new ArrayList<>(hosts);
         List<JobTask> tasks = findAllTasksAssignedToHost(failedHost);
         List<JobTask> sortedTasks = new ArrayList<>(tasks);
         Collections.sort(sortedTasks,
                          (o1, o2) -> Long.compare(taskSizer.estimateTrueSize(o1), taskSizer.estimateTrueSize(o2)));
-        hosts = sortHostsByDiskSpace(hosts);
+        Collections.sort(copyOfHosts, hostStateScoreComparator);
         Collection<String> modifiedJobIds = new HashSet<>();
         for (JobTask task : sortedTasks) {
             modifiedJobIds.add(task.getJobUUID());
             try {
-                attemptFixTaskForFailedHost(task, hosts, failedHost);
+                attemptFixTaskForFailedHost(task, copyOfHosts, failedHost);
             } catch (Exception ex) {
                 log.warn("Warning: failed to recover task {}", task.getJobKey(), ex);
             }
