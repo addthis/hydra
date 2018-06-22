@@ -39,7 +39,7 @@ public class HostManager {
     @Nonnull final ConcurrentMap<String, HostState> monitored;
     @Nonnull final SetMembershipListener minionMembers;
     @Nonnull final SetMembershipListener deadMinionMembers;
-    HostLocationSummary hostLocationSummary;
+    private final HostLocationSummary hostLocationSummary;
 
     public HostManager(CuratorFramework zkClient) {
         this.monitored = new ConcurrentHashMap<>();

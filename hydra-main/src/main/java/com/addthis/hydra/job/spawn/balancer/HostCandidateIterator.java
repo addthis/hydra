@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.HostManager;
@@ -38,15 +37,20 @@ public class HostCandidateIterator {
     private final int taskScoreIncrement;
     private final int minScore;
 
-    public HostCandidateIterator(Spawn spawn, IJob job, Map<HostState, Double> scoreMap) {
+    public HostCandidateIterator(Spawn spawn, List<JobTask> tasks, Map<HostState, Double> scoreMap) {
         this.hostManager = spawn.hostManager;
         this.balancer = spawn.getSpawnBalancer();
-        this.sortedHosts = new TreeSet<>(hostAndScoreComparator);
         this.taskScoreIncrement = balancer.getConfig().getSiblingWeight();
+        this.minScore = hostManager.getHostLocationSummary().getPriorityLevel().score;
+        this.sortedHosts = generateScoreMapForJob(spawn.hostManager, tasks, scoreMap);
+    }
 
+    public TreeSet<WithScore<HostState>> generateScoreMapForJob(HostManager hostManager, List<JobTask> tasks,
+                                                                Map<HostState, Double> scoreMap) {
+        TreeSet<WithScore<HostState>> sortedHosts = new TreeSet<>(hostAndScoreComparator);
         Map<HostState, Double> copyOfScoreMap = new HashMap<>(scoreMap);
-        if(job != null) {
-            for (JobTask task : job.getCopyOfTasks()) {
+        if(tasks != null) {
+            for (JobTask task : tasks) {
                 for (String replicaHostId : task.getAllTaskHosts()) {
                     HostState host = hostManager.getHostState(replicaHostId);
                     Double score = copyOfScoreMap.getOrDefault(host, 0d);
@@ -56,10 +60,9 @@ public class HostCandidateIterator {
         }
         // create the sortedHosts priority queue which will be used for picking candidate hosts
         for (Map.Entry<HostState, Double> entry : copyOfScoreMap.entrySet()) {
-            this.sortedHosts.add(new WithScore<>(entry.getKey(), entry.getValue()));
+            sortedHosts.add(new WithScore<>(entry.getKey(), entry.getValue()));
         }
-
-        this.minScore = hostManager.getHostLocationSummary().getPriorityLevel().score;
+        return sortedHosts;
     }
 
     /**

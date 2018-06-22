@@ -340,7 +340,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         // At this stage that the list is not empty
         // All tasks are from the same job
         Job job = spawn.getJob(tasks.get(0).getJobUUID());
-        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job, storedHostScores);
+        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job.getCopyOfTasks(), storedHostScores);
         List<String> hostsToAssign = new ArrayList<>(tasks.size());
         for (JobTask task : tasks) {
             if(task == null) {
@@ -548,7 +548,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         Map<HostState, Double> scoreMap = generateHostStateScoreMap(otherHosts);
         Job job = spawn.getJob(task.getJobUUID());
-        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job, scoreMap);
+        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job.getCopyOfTasks(), scoreMap);
         List<String> newHostList = iterator.getNewReplicaHosts(1, task, taskHost, true);
 
         if(!newHostList.isEmpty()) {
@@ -708,7 +708,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         Map<HostState, Double> scoreMap =
                 generateHostStateScoreMap(hostManager.listHostStatus(job.getMinionType()));
         HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn,
-                                                                                job,
+                                                                                job.getCopyOfTasks(),
                                                                                 scoreMap);
         for (JobTask task : tasks) {
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
