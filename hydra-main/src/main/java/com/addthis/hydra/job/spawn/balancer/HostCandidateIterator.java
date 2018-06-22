@@ -60,6 +60,10 @@ public class HostCandidateIterator {
 
     /**
      * Return a host chosen in order of zone preference, then score
+     * There are two <i>scores</i> at work here: the "Host score", which is a measure of load on the host
+     * and the "Host Location score", which is a measure of distance/separation between HostLocation(s).
+     * The hosts selected as replica targets attempt to minimize HostLocationScore (see {@link HostLocation#assignScoreByHostLocation(HostLocation)})
+     * and HostScore (see {@link SpawnBalancer#generateHostStateScoreMap(Collection)})
      */
     public List<String> getNewReplicaHosts(int replicas, JobTask task,
                                            @Nullable String excludeHostUuid, boolean isReplica) {
@@ -68,7 +72,7 @@ public class HostCandidateIterator {
         }
 
         Collection<HostLocation> locations = new ArrayList<>();
-        // get current host locations used by live/replicas
+        // assemble a list of host locations currently holding live/replicas
         for (String replicaHostId : task.getAllTaskHosts()) {
             if ((replicaHostId != null) && !replicaHostId.equals(excludeHostUuid)) {
                 locations.add(hostManager.getHostState(replicaHostId).getHostLocation());
@@ -80,6 +84,9 @@ public class HostCandidateIterator {
         for (int i = 0; i < replicas; i++) {
             double minScoreSoFar = Double.MAX_VALUE;
             WithScore<HostState> bestHost = null;
+
+            // Hosts are already sorted by HostScore
+            // Choose the host that has the best HostLocationScore
             for (WithScore<HostState> hostAndScore : sortedHosts) {
                 HostState host = hostAndScore.element;
                 boolean excluded = host.getHostUuid().equals(excludeHostUuid);
@@ -89,10 +96,13 @@ public class HostCandidateIterator {
                 HostLocation hostLocation = host.getHostLocation();
                 int score = 0;
                 // HostLocation further away from task and replica locations gets lower score
+                // Calculate the total distance between this host and all current live/replicas
                 for (HostLocation location : locations) {
                     score += hostLocation.assignScoreByHostLocation(location);
                 }
                 double avgScore = locations.isEmpty()? 0 : (double) score / (double) locations.size();
+
+                // This is the furthest distance possible with the hosts currently registred with HostManager
                 if (avgScore == (double) this.minScore) {
                     bestHost = hostAndScore;
                     break;
