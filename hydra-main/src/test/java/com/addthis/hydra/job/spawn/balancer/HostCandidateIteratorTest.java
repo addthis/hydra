@@ -89,6 +89,12 @@ public class HostCandidateIteratorTest {
         assertEquals(hostId3, resultList.get(3).element.getHostUuid());
         assertEquals(hostId2, resultList.get(4).element.getHostUuid());
         assertEquals(hostId1, resultList.get(5).element.getHostUuid());
+        assertEquals(20d, resultList.get(0).score, 0);
+        assertEquals(50d, resultList.get(1).score, 0);
+        assertEquals(70d, resultList.get(2).score, 0);
+        assertEquals(160d, resultList.get(3).score, 0);
+        assertEquals(170d, resultList.get(4).score, 0);
+        assertEquals(180d, resultList.get(5).score, 0);
     }
 
     @Test
