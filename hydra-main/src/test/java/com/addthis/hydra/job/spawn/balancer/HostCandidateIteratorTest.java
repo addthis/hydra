@@ -16,10 +16,7 @@ import com.addthis.hydra.job.spawn.HostLocationSummary;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.minion.HostLocation;
-<<<<<<< Updated upstream
 import com.addthis.hydra.util.WithScore;
-=======
->>>>>>> Stashed changes
 
 import org.junit.Before;
 import org.junit.Test;
