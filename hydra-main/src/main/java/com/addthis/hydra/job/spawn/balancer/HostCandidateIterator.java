@@ -18,6 +18,10 @@ import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.util.WithScore;
 
+/**
+ * You should make a new HostCandidateIterator for each use, instead of using a single instance.
+ * Otherwise the sortedHosts will not get updated.
+ */
 public class HostCandidateIterator {
     // note: this complex comparator is necessary because maps need comparators that are consistent with equals
     private static final Comparator<WithScore<HostState>> hostAndScoreComparator = (h1, h2) -> {
@@ -65,13 +69,15 @@ public class HostCandidateIterator {
      * The hosts selected as replica targets attempt to minimize HostLocationScore (see {@link HostLocation#assignScoreByHostLocation(HostLocation)})
      * and HostScore (see {@link SpawnBalancer#generateHostStateScoreMap(Collection)})
      */
-    public List<String> getNewReplicaHosts(int replicas, JobTask task,
+    public List<String> getNewReplicaHosts(int replicasToAdd, JobTask task,
                                            @Nullable String excludeHostUuid, boolean isReplica) {
-        if(replicas <= 0) {
+        if(replicasToAdd < 1) {
             return new ArrayList<>();
         }
 
+        List<String> chosenHostIds = new ArrayList<>(replicasToAdd);
         Collection<HostLocation> locations = new ArrayList<>();
+
         // assemble a list of host locations currently holding live/replicas
         for (String replicaHostId : task.getAllTaskHosts()) {
             if ((replicaHostId != null) && !replicaHostId.equals(excludeHostUuid)) {
@@ -79,10 +85,9 @@ public class HostCandidateIterator {
             }
         }
 
-        List<String> chosenHostIds = new ArrayList<>(replicas);
         // create each replica
-        for (int i = 0; i < replicas; i++) {
-            double minScoreSoFar = Double.MAX_VALUE;
+        for (int i = 0; i < replicasToAdd; i++) {
+            int minScoreSoFar = Integer.MAX_VALUE;
             WithScore<HostState> bestHost = null;
 
             // Hosts are already sorted by HostScore
@@ -100,17 +105,16 @@ public class HostCandidateIterator {
                 for (HostLocation location : locations) {
                     score += hostLocation.assignScoreByHostLocation(location);
                 }
-                double avgScore = locations.isEmpty()? 0 : (double) score / (double) locations.size();
 
                 // This is the furthest distance possible with the hosts currently registred with HostManager
-                if (avgScore == (double) this.minScore) {
+                if (score == (this.minScore * locations.size())) {
                     bestHost = hostAndScore;
                     break;
                 }
-                if (avgScore < minScoreSoFar) {
+                if (score < minScoreSoFar) {
                     // should cache this host as it's further away than the previous best host we've seen
                     bestHost = hostAndScore;
-                    minScoreSoFar = avgScore;
+                    minScoreSoFar = score;
                 }
             }
             if (bestHost != null) {
