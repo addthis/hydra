@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.mq.HostState;
@@ -17,7 +16,10 @@ import com.addthis.hydra.job.spawn.HostLocationSummary;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.minion.HostLocation;
+<<<<<<< Updated upstream
 import com.addthis.hydra.util.WithScore;
+=======
+>>>>>>> Stashed changes
 
 import org.junit.Before;
 import org.junit.Test;
@@ -63,8 +65,6 @@ public class HostCandidateIteratorTest {
         HostLocationSummary summary = mock(HostLocationSummary.class);
         when(hostManager.getHostLocationSummary()).thenReturn(summary);
         when(summary.getPriorityLevel()).thenReturn(AvailabilityDomain.DATACENTER);
-
-
     }
 
     @Test public void sortedHostsCreatedCorrectly() {
@@ -95,34 +95,41 @@ public class HostCandidateIteratorTest {
     }
 
     @Test
-    public void testHostCandidateIterator() throws Exception {
-        Job job = mock(Job.class);
-        JobTask task1 = new JobTask("hostId1", 0, 0);
-        when(job.getCopyOfTasks()).thenReturn(Arrays.asList(task1));
-
+    public void newReplicasShouldSpreadAcrossAd() {
+        JobTask task = new JobTask("hostId1", 0, 0);
         Map<HostState, Double> scoreMap = new HashMap<>();
-        scoreMap.put(hostManager.getHostState(hostId1), 10d);
-        scoreMap.put(hostManager.getHostState(hostId2), 20d);
+        scoreMap.put(hostManager.getHostState(hostId1), 20d);
+        scoreMap.put(hostManager.getHostState(hostId2), 50d);
+        scoreMap.put(hostManager.getHostState(hostId3), 50d);
+        scoreMap.put(hostManager.getHostState(hostId4), 30d);
+        scoreMap.put(hostManager.getHostState(hostId5), 10d);
+        scoreMap.put(hostManager.getHostState(hostId6), 20d);
 
-        for(JobTask task : job.getCopyOfTasks()) {
-            // Use a dummy value of 25 for taskScoreIncrement
-            HostCandidateIterator hostCandidateIterator =
-                    new HostCandidateIterator(spawn, job.getCopyOfTasks(), scoreMap);
-            List<String> hostIdsToAdd = hostCandidateIterator.getNewReplicaHosts(5, task);
-            assertTrue("Host candidate iterator should have hosts", !hostIdsToAdd.isEmpty());
+        HostCandidateIterator hostCandidateIterator =
+                new HostCandidateIterator(spawn, Arrays.asList(task), scoreMap);
+        List<String> hostIdsToAdd = hostCandidateIterator.getNewReplicaHosts(5, task);
+        assertTrue("Host candidate iterator should have hosts", !hostIdsToAdd.isEmpty());
+        Iterator<String> iterator = hostIdsToAdd.iterator();
+        assertTrue("Should choose HostLocation with min score and different datacenter",
+                   iterator.next().equals("hostId6"));
+        assertTrue("Should choose HostLocation on different datacenter next",
+                   iterator.next().equals("hostId2"));
+        assertTrue("Should choose Host with lower score on different rack next",
+                   iterator.next().equals("hostId5"));
+        assertTrue("Should choose Host on different physical host next",
+                   iterator.next().equals("hostId3"));
+        assertTrue("Should not choose Host in the same location if other hosts available",
+                   iterator.next().equals("hostId6"));
+    }
 
-            Iterator<String> iterator = hostIdsToAdd.iterator();
-            assertTrue("Should choose HostLocation with min score and different datacenter",
-                       iterator.next().equals("hostId6"));
-            assertTrue("Should choose HostLocation on different datacenter next",
-                       iterator.next().equals("hostId2"));
-            assertTrue("Should choose Host with lower score on different rack next",
-                       iterator.next().equals("hostId5"));
-            assertTrue("Should choose Host on different physical host next",
-                       iterator.next().equals("hostId3"));
-            assertTrue("Should not choose Host in the same location if other hosts available",
-                       iterator.next().equals("hostId2"));
-        }
+
+    @Test
+    public void invalidNumOfReplicas() {
+        JobTask task = new JobTask("hostId1", 0, 0);
+        HostCandidateIterator hostCandidateIterator =
+                new HostCandidateIterator(spawn, Arrays.asList(task), new HashMap<>());
+        assertTrue(hostCandidateIterator.getNewReplicaHosts(0, new JobTask()).isEmpty());
+        assertTrue(hostCandidateIterator.getNewReplicaHosts(-1, new JobTask()).isEmpty());
     }
 
     private HostState setUpHostState(String hostId, boolean isUp, String dc, String ra, String ph) {
