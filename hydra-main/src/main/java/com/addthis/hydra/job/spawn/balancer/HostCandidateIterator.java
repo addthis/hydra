@@ -42,11 +42,11 @@ public class HostCandidateIterator {
         this.balancer = spawn.getSpawnBalancer();
         this.taskScoreIncrement = balancer.getConfig().getSiblingWeight();
         this.minScore = hostManager.getHostLocationSummary().getPriorityLevel().score;
-        this.sortedHosts = generateScoreMapForJob(spawn.hostManager, tasks, scoreMap);
+        this.sortedHosts = HostCandidateIterator.generateSortedHosts(spawn.hostManager, tasks, scoreMap, taskScoreIncrement);
     }
 
-    public TreeSet<WithScore<HostState>> generateScoreMapForJob(HostManager hostManager, List<JobTask> tasks,
-                                                                Map<HostState, Double> scoreMap) {
+    public static TreeSet<WithScore<HostState>> generateSortedHosts(
+            HostManager hostManager, List<JobTask> tasks, Map<HostState, Double> scoreMap, int taskScoreIncrement) {
         TreeSet<WithScore<HostState>> sortedHosts = new TreeSet<>(hostAndScoreComparator);
         Map<HostState, Double> copyOfScoreMap = new HashMap<>(scoreMap);
         if(tasks != null) {
@@ -54,7 +54,7 @@ public class HostCandidateIterator {
                 for (String replicaHostId : task.getAllTaskHosts()) {
                     HostState host = hostManager.getHostState(replicaHostId);
                     Double score = copyOfScoreMap.getOrDefault(host, 0d);
-                    copyOfScoreMap.put(host, score + (double) this.taskScoreIncrement);
+                    copyOfScoreMap.put(host, score + (double) taskScoreIncrement);
                 }
             }
         }

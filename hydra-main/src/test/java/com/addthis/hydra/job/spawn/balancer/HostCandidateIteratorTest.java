@@ -1,31 +1,35 @@
 package com.addthis.hydra.job.spawn.balancer;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.AvailabilityDomain;
 import com.addthis.hydra.job.spawn.HostLocationSummary;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.minion.HostLocation;
-import com.addthis.hydra.util.ZkCodecStartUtil;
+import com.addthis.hydra.util.WithScore;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class HostCandidateIteratorTest extends ZkCodecStartUtil {
+public class HostCandidateIteratorTest {
 
     private Spawn spawn;
     private SpawnBalancer bal;
@@ -61,7 +65,33 @@ public class HostCandidateIteratorTest extends ZkCodecStartUtil {
         when(summary.getPriorityLevel()).thenReturn(AvailabilityDomain.DATACENTER);
 
 
+    }
 
+    @Test public void sortedHostsCreatedCorrectly() {
+        // make scoremap
+        Map<HostState, Double> scoreMap = new HashMap<>();
+        scoreMap.put(hostManager.getHostState(hostId1), 20d);
+        scoreMap.put(hostManager.getHostState(hostId2), 50d);
+        scoreMap.put(hostManager.getHostState(hostId3), 40d);
+        scoreMap.put(hostManager.getHostState(hostId4), 30d);
+        scoreMap.put(hostManager.getHostState(hostId5), 10d);
+        scoreMap.put(hostManager.getHostState(hostId6), 20d);
+        // make tasks with hosts and replicas
+        List<JobTask> tasks = new ArrayList<>();
+        tasks.add(setupJobTask(hostId1, hostId2, hostId3));
+        tasks.add(setupJobTask(hostId1, hostId2, hostId3));
+        tasks.add(setupJobTask(hostId1, hostId2, hostId3));
+        tasks.add(setupJobTask(hostId4, hostId5, hostId1));
+
+        TreeSet<WithScore<HostState>> result =
+                HostCandidateIterator.generateSortedHosts(hostManager, tasks, scoreMap, 40);
+        List<WithScore<HostState>> resultList = new ArrayList<>(result);
+        assertEquals(hostId6, resultList.get(0).element.getHostUuid());
+        assertEquals(hostId5, resultList.get(1).element.getHostUuid());
+        assertEquals(hostId4, resultList.get(2).element.getHostUuid());
+        assertEquals(hostId3, resultList.get(3).element.getHostUuid());
+        assertEquals(hostId2, resultList.get(4).element.getHostUuid());
+        assertEquals(hostId1, resultList.get(5).element.getHostUuid());
     }
 
     @Test
@@ -100,5 +130,16 @@ public class HostCandidateIteratorTest extends ZkCodecStartUtil {
         host.setUp(isUp);
         host.setHostLocation(new HostLocation(dc, ra, ph));
         return host;
+    }
+
+    private JobTask setupJobTask(String hostUUID, String... replicaUUIDs) {
+        JobTask t = new JobTask();
+        t.setHostUUID(hostUUID);
+        List<JobTaskReplica> replicas = new ArrayList<>();
+        for (String replicaUUID : replicaUUIDs) {
+            replicas.add(new JobTaskReplica(replicaUUID, null, 0, 0));
+        }
+        t.setReplicas(replicas);
+        return t;
     }
 }
