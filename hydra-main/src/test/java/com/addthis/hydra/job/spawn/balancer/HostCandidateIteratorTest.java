@@ -233,12 +233,12 @@ public class HostCandidateIteratorTest {
         JobTask task1 = setupJobTask(hostId1, hostId6);
         JobTask task2 = setupJobTask(hostId2, hostId4, hostId5, hostId6);
         Map<HostState, Double> scoreMap = new HashMap<>();
-        scoreMap.put(host1, 20d); // 60
-        scoreMap.put(host2, 50d); // 90
-        scoreMap.put(host3, 50d); // 90
-        scoreMap.put(host4, 30d); // 70
-        scoreMap.put(host5, 10d); // 50
-        scoreMap.put(host6, 20d); // 60
+        scoreMap.put(host1, 20d);
+        scoreMap.put(host2, 50d);
+        scoreMap.put(host3, 50d);
+        scoreMap.put(host4, 30d);
+        scoreMap.put(host5, 10d);
+        scoreMap.put(host6, 20d);
 
         HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn, Arrays.asList(task1), scoreMap);
         List<String> replicasForTask1 = hostCandidateIterator.getNewReplicaHosts(5, task1);
