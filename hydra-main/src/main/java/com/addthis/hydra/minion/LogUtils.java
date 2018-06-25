@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public final class LogUtils {
     private static final Logger log = LoggerFactory.getLogger(LogUtils.class);
+    private static final int LOG_BUF_LIMIT = 20000000;
 
     /** Streams task log files from newest to oldest. The returned Stream should be closed. */
     public static Stream<Path> streamTaskLogsByName(JobTask task) throws IOException {
@@ -93,8 +95,7 @@ public final class LogUtils {
                     }
                 }
                 bytesRead = (int) (len - off);
-                byte[] buf = new byte[bytesRead];
-                raf.read(buf);
+                byte[] buf = readFileBytesLimited(raf, bytesRead);
                 content = LessBytes.toString(buf);
                 endOffset = len;
             } else if (len > 0 && startOffset < len) {
@@ -107,9 +108,8 @@ public final class LogUtils {
                     }
                 }
                 bytesRead = (int) (off - startOffset);
-                byte[] buf = new byte[bytesRead];
                 raf.seek(startOffset);
-                raf.read(buf);
+                byte[] buf = readFileBytesLimited(raf, bytesRead);
                 content = LessBytes.toString(buf);
                 endOffset = off;
             } else if (startOffset == len) {
@@ -140,8 +140,7 @@ public final class LogUtils {
                     lines--;
                 }
             }
-            byte[] buf = new byte[(int) (len - off)];
-            raf.read(buf);
+            byte[] buf = readFileBytesLimited(raf, (int)(len - off));
             return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
@@ -162,14 +161,39 @@ public final class LogUtils {
                     lines--;
                 }
             }
-            byte[] buf = new byte[(int) off];
             raf.seek(0);
-            raf.read(buf);
+            byte[] buf = readFileBytesLimited(raf, (int)off);
             return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
         }
         return "";
+    }
+
+    private static void addExceedingMsg(byte[] buf) {
+        try {
+            String lastLineString = "\nExceeded " + LOG_BUF_LIMIT + " bytes. Reduce requested lines!\n";
+            byte[] lastLineBytes = lastLineString.getBytes("UTF-8");
+            System.arraycopy(lastLineBytes, 0, buf, buf.length-lastLineBytes.length, lastLineBytes.length);
+        } catch  (UnsupportedEncodingException e) {
+            log.warn("", e);
+        }
+    }
+
+    private static byte[] readFileBytesLimited(RandomAccessFile raf, int bytesRead){
+        byte[] buf = null;
+        try {
+            // limiting log reads below 20MB, in case of reaching heap limit and crashing minion
+            int limitedBytesRead = Math.min(bytesRead, LOG_BUF_LIMIT);
+            buf = new byte[limitedBytesRead];
+            raf.read(buf);
+            if (bytesRead >= LOG_BUF_LIMIT) {
+                addExceedingMsg(buf);
+            }
+        } catch (IOException e) {
+            log.warn("", e);
+        }
+        return buf;
     }
 
     private LogUtils() {}
