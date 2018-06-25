@@ -1,7 +1,5 @@
 package com.addthis.hydra.job.spawn.balancer;
 
-import java.lang.reflect.Array;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -9,7 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
@@ -102,6 +99,26 @@ public class HostCandidateIteratorTest {
         assertTrue(hostId4.equals(newReplicas.get(2)));
         assertTrue(hostId3.equals(newReplicas.get(3)));
         assertTrue(hostId2.equals(newReplicas.get(4)));
+    }
+
+    @Test
+    public void repeatHostLocationWhenNecessary() {
+        Map<HostState, Double> scoreMap = new HashMap<>();
+        scoreMap.put(host1, 30d);
+        scoreMap.put(host2, 30d);
+        scoreMap.put(host3, 30d);
+        scoreMap.put(host4, 30d);
+        scoreMap.put(host5, 30d);
+        scoreMap.put(host6, 30d);
+
+        JobTask task = setupJobTask(hostId1, hostId2, hostId6);
+        HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn, Arrays.asList(task), scoreMap);
+        List<String> newReplicas = hostCandidateIterator.getNewReplicaHosts(5, task);
+        assertTrue(hostId4.equals(newReplicas.get(0)));
+        assertTrue(hostId3.equals(newReplicas.get(1)));
+        assertTrue(hostId2.equals(newReplicas.get(2)));
+        assertTrue(hostId6.equals(newReplicas.get(3)));
+        assertTrue(hostId5.equals(newReplicas.get(4)));
     }
 
     @Test
