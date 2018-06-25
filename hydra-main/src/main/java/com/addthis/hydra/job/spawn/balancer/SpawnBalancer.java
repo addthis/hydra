@@ -1632,7 +1632,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);
         List<HostLocation> hostLocations = task.getAllTaskHosts()
                                                .stream()
-                                               .map(h -> hostManager.getHostState(h).getHostLocation())
+                                               .map(h -> hostManager.getHostLocationForHost(h))
                                                .collect(Collectors.toList());
         // IF this is a MOVE
         // remove the FIRST instance of the location we're moving FROM
