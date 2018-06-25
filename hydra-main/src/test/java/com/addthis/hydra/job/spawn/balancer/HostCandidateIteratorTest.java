@@ -11,6 +11,7 @@ import java.util.TreeSet;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.job.spawn.AvailabilityDomain;
 import com.addthis.hydra.job.spawn.HostLocationSummary;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
@@ -215,6 +216,38 @@ public class HostCandidateIteratorTest {
         List<String> hostIdsForTask2 = hostCandidateIterator.getNewReplicaHosts(1, task2);
         assertTrue(hostIdsForTask2.size() == 1);
         assertTrue(hostIdsForTask2.get(0).equals(hostId1));
+    }
+
+    @Test
+    public void selectHostsBasedOnHostScore() {
+        HostLocation location = new HostLocation("Unknown", "Unknown", "Unknown");
+        host1.setHostLocation(location);
+        host2.setHostLocation(location);
+        host3.setHostLocation(location);
+        host4.setHostLocation(location);
+        host5.setHostLocation(location);
+        host6.setHostLocation(location);
+        hostManager.getHostLocationSummary().updateHostLocationSummary(Arrays.asList(host1, host2, host3, host4, host5, host6));
+        assertTrue(hostManager.getHostLocationSummary().getPriorityLevel() == AvailabilityDomain.NONE);
+
+        JobTask task1 = setupJobTask(hostId1, hostId6);
+        JobTask task2 = setupJobTask(hostId2, hostId4, hostId5, hostId6);
+        Map<HostState, Double> scoreMap = new HashMap<>();
+        scoreMap.put(host1, 20d); // 60
+        scoreMap.put(host2, 50d); // 90
+        scoreMap.put(host3, 50d); // 90
+        scoreMap.put(host4, 30d); // 70
+        scoreMap.put(host5, 10d); // 50
+        scoreMap.put(host6, 20d); // 60
+
+        HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn, Arrays.asList(task1), scoreMap);
+        List<String> replicasForTask1 = hostCandidateIterator.getNewReplicaHosts(5, task1);
+        assertTrue(replicasForTask1.size() == 5);
+        assertTrue(hostId5.equals(replicasForTask1.get(0)));
+        assertTrue(hostId4.equals(replicasForTask1.get(1)));
+        assertTrue(hostId2.equals(replicasForTask1.get(2)));
+        assertTrue(hostId3.equals(replicasForTask1.get(3)));
+        assertTrue(hostId5.equals(replicasForTask1.get(4)));
     }
 
     private HostState setUpHostState(String hostId, boolean isUp, String dc, String ra, String ph) {
