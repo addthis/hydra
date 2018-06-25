@@ -1,5 +1,7 @@
 package com.addthis.hydra.job.spawn.balancer;
 
+import java.lang.reflect.Array;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -76,7 +78,30 @@ public class HostCandidateIteratorTest {
         HostLocationSummary summary = new HostLocationSummary();
         summary.updateHostLocationSummary(Arrays.asList(host1, host2, host3, host4, host5, host6));
         when(hostManager.getHostLocationSummary()).thenReturn(summary);
-//        when(summary.getPriorityLevel()).thenReturn(AvailabilityDomain.DATACENTER);
+    }
+
+    @Test
+    public void highScoreHostsShouldReturnReplicas() {
+        Map<HostState, Double> scoreMap = new HashMap<>();
+        scoreMap.put(host1, 80d);
+        scoreMap.put(host2, 80d);
+        scoreMap.put(host3, 80d);
+        scoreMap.put(host4, 80d);
+        scoreMap.put(host5, 80d);
+        scoreMap.put(host6, 80d);
+
+        JobTask task = setupJobTask(hostId1);
+        HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn, Arrays.asList(task), scoreMap);
+        List<String> newReplicas = hostCandidateIterator.getNewReplicaHosts(5, task);
+
+        // Hosts 1 and 5 have the same HostLocation as other chosen hosts
+        // They will not be chosen until all other options are exhausted
+        assertTrue(newReplicas.size() == 5);
+        assertTrue(hostId2.equals(newReplicas.get(0)));
+        assertTrue(hostId6.equals(newReplicas.get(1)));
+        assertTrue(hostId4.equals(newReplicas.get(2)));
+        assertTrue(hostId3.equals(newReplicas.get(3)));
+        assertTrue(hostId2.equals(newReplicas.get(4)));
     }
 
     @Test
@@ -152,12 +177,8 @@ public class HostCandidateIteratorTest {
 
     @Test
     public void chooseFarthestHostWithLowestScore() {
-        JobTask task = new JobTask(hostId1, 0, 0);
-        JobTaskReplica replica = new JobTaskReplica(hostId6, null, 0, 0);
-        List<JobTaskReplica> replicas = new ArrayList<>();
-        replicas.add(replica);
-        task.setReplicas(replicas);
-
+        JobTask task1 = setupJobTask(hostId1, hostId6);
+        JobTask task2 = setupJobTask(hostId2, hostId4, hostId5, hostId6);
         Map<HostState, Double> scoreMap = new HashMap<>();
         scoreMap.put(host1, 20d);
         scoreMap.put(host2, 50d);
@@ -167,16 +188,16 @@ public class HostCandidateIteratorTest {
         scoreMap.put(host6, 20d);
 
         HostCandidateIterator hostCandidateIterator =
-                new HostCandidateIterator(spawn, Arrays.asList(task), scoreMap);
-        List<String> hostIdsToAdd = hostCandidateIterator.getNewReplicaHosts(2, task);
-        assertTrue(hostIdsToAdd.size() == 2);
-        assertTrue(hostIdsToAdd.get(0).equals(hostId2));
-        assertTrue(hostIdsToAdd.get(1).equals(hostId5));
+                new HostCandidateIterator(spawn, Arrays.asList(task1), scoreMap);
+        List<String> hostIdsForTask1 = hostCandidateIterator.getNewReplicaHosts(2, task1);
+        assertTrue(hostIdsForTask1.size() == 2);
+        assertTrue(hostIdsForTask1.get(0).equals(hostId2));
+        assertTrue(hostIdsForTask1.get(1).equals(hostId5));
 
-        replicas.addAll(hostIdsToAdd.stream()
-                                    .map(id -> new JobTaskReplica(id, null, 0, 0))
-                                    .collect(Collectors.toList()));
-        task.setReplicas(replicas);
+        hostCandidateIterator = new HostCandidateIterator(spawn, Arrays.asList(task2), scoreMap);
+        List<String> hostIdsForTask2 = hostCandidateIterator.getNewReplicaHosts(1, task2);
+        assertTrue(hostIdsForTask2.size() == 1);
+        assertTrue(hostIdsForTask2.get(0).equals(hostId1));
     }
 
     private HostState setUpHostState(String hostId, boolean isUp, String dc, String ra, String ph) {
