@@ -2937,7 +2937,7 @@ public class Spawn implements Codable, AutoCloseable {
         IJob job = this.getJob(task.getJobUUID());
         Map<HostState, Double> scoreMap =
                 balancer.generateHostStateScoreMap(hostManager.listHostStatus(job.getMinionType()));
-        HostCandidateIterator iterator = new HostCandidateIterator(this, job, scoreMap);
+        HostCandidateIterator iterator = new HostCandidateIterator(this, job.getCopyOfTasks(), scoreMap);
         List<String> newHostList = iterator.getNewReplicaHosts(1, task, task.getHostUUID(), false);
         if(!newHostList.isEmpty()) {
             String newHostUuid = newHostList.get(0);

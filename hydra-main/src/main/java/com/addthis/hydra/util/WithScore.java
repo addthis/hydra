@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.util;
 
+import com.google.common.base.MoreObjects;
+
 /**
  * Something that needs to be stored with a score.
  *
@@ -29,5 +31,9 @@ public class WithScore<T> {
 
     public T getElement() {
         return element;
+    }
+
+    @Override public String toString() {
+        return MoreObjects.toStringHelper(this).add("score", score).add("element", element).toString();
     }
 }
