@@ -16,7 +16,7 @@ package com.addthis.hydra.task.run;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -56,7 +56,7 @@ public class TaskRunConfig {
     }
 
     @Override public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                       .add("node", node)
                       .add("nodeCount", nodeCount)
                       .add("jobId", jobId)

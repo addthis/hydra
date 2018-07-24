@@ -30,7 +30,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import io.netty.channel.ChannelProgressivePromise;
 
@@ -202,7 +202,7 @@ public class OpFrequencyTable extends AbstractTableOp {
 
         @Override
         public String toString() {
-            return Objects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this)
                     .add("totalEntries", totalEntries)
                     .add("freqMap", freqMap)
                     .toString();

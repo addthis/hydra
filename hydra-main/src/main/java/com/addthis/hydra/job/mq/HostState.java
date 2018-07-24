@@ -24,7 +24,7 @@ import java.util.Set;
 
 import com.addthis.hydra.minion.HostLocation;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 
@@ -213,7 +213,7 @@ public class HostState implements HostMessage {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("uuid", getHostUuid())
                 .add("last-update-time", getLastUpdateTime())
                 .add("host", getHost())

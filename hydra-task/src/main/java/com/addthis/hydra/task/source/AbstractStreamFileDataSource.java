@@ -67,7 +67,7 @@ import com.addthis.hydra.task.stream.StreamSourceFiltered;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
 import com.addthis.hydra.store.compress.CompressedStream;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -409,14 +409,14 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     @Override public String toString() {
-        return populateToString(Objects.toStringHelper(this));
+        return populateToString(MoreObjects.toStringHelper(this));
     }
 
     private String fileStatsToString(String reason) {
-        return populateToString(Objects.toStringHelper(reason));
+        return populateToString(MoreObjects.toStringHelper(reason));
     }
 
-    private String populateToString(Objects.ToStringHelper helper) {
+    private String populateToString(MoreObjects.ToStringHelper helper) {
         return helper.add("reading", reading.count())
                      .add("opening", opening.count())
                      .add("unseen", openNew.count())
@@ -682,7 +682,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     if (++bundlesSkipped % 100 == 0) {
                         int totalSkip = localBundleSkip.get() + bundlesSkipped;
                         if ((totalSkip / 100) % 250 == 0) {
-                            log.info(Objects.toStringHelper(Thread.currentThread().getName() + " bundle skip log")
+                            log.info(MoreObjects.toStringHelper(Thread.currentThread().getName() + " bundle skip log")
                                             .add("thread-skip", totalSkip)
                                             .add("file-skip", bundlesSkipped)
                                             .add("file-to-skip", read)

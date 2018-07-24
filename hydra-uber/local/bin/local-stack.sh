@@ -73,7 +73,7 @@ done
     for dir in exec zoo log etc streams pid bin cert; do
         [ ! -d $dir ] && mkdir $dir
     done
-    [ ! -f bin/job-task.sh ] && cp ../hydra-uber/local/bin/job-task.sh bin/
+    [ ! -f bin/job-task.sh ] && cp ../hydra-uber/bin/job-task.sh bin/
     [ ! -f cert/keystore.jks ] && cp ../hydra-uber/local/cert/keystore.jks cert/
     [ ! -f cert/keystore.password ] && cp ../hydra-uber/local/cert/keystore.password cert/
     [ ! -h web ] && ln -s ../hydra-main/web web

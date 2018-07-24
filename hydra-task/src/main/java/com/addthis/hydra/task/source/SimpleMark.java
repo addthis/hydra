@@ -20,7 +20,7 @@ import com.addthis.codec.codables.BytesCodable;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.task.stream.StreamFile;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -53,7 +53,7 @@ public class SimpleMark implements Codable, BytesCodable {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("val", getValue())
                 .add("index", getIndex())
                 .add("end", isEnd())

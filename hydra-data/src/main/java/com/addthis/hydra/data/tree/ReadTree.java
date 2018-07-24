@@ -249,7 +249,7 @@ public final class ReadTree implements DataTree {
     }
 
     @Override public String toString() {
-        return com.google.common.base.Objects.toStringHelper(this)
+        return com.google.common.base.MoreObjects.toStringHelper(this)
                                              .add("nodeCacheSize", nodeCacheSize)
                                              .add("nodeCacheWeight", nodeCacheWeight)
                                              .add("pageCacheSize", pageCacheSize)

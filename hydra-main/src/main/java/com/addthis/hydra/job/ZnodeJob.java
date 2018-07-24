@@ -23,7 +23,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -112,7 +112,7 @@ public class ZnodeJob implements IJob {
 
         @Override
         public String toString() {
-            return Objects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this)
                     .add("state", state)
                     .add("creator", creator)
                     .add("owner", owner)
@@ -564,7 +564,7 @@ public class ZnodeJob implements IJob {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("RootZnodeData", getRootData())
                 .add("config", getConfig())
                 .add("job-query-config", getQueryConfig())

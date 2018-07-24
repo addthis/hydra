@@ -15,6 +15,7 @@ package com.addthis.hydra.mq;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 import com.addthis.codec.jackson.Jackson;
 
@@ -53,7 +54,7 @@ public class RabbitMessageProducer<T> implements MessageProducer<T> {
      */
     public static <T> RabbitMessageProducer<T> constructAndOpen(String exchangeName, String brokerAddresses,
                                                          String brokerUsername, String brokerPassword,
-                                                         BlockedListener blockedListener) throws IOException {
+                                                         BlockedListener blockedListener) throws IOException, TimeoutException {
         RabbitMessageProducer<T> producer = new RabbitMessageProducer<T>(exchangeName, brokerAddresses,
                                                                    brokerUsername, brokerPassword,
                                                                    blockedListener);
@@ -61,7 +62,7 @@ public class RabbitMessageProducer<T> implements MessageProducer<T> {
         return producer;
     }
 
-    private void open() throws IOException {
+    private void open() throws IOException, TimeoutException {
         connection = RabbitMQUtil.createConnection(brokerAddresses, brokerUsername, brokerPassword);
         if (blockedListener != null) {
             connection.addBlockedListener(blockedListener);
@@ -73,7 +74,11 @@ public class RabbitMessageProducer<T> implements MessageProducer<T> {
 
     @Override public void close() throws IOException {
         if (channel != null) {
-            channel.close();
+            try {
+                channel.close();
+            } catch (TimeoutException e) {
+                log.warn("[rabbit.producer] error timeout", e);
+            }
         }
         if (connection != null) {
             connection.close();

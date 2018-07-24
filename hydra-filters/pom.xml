@@ -80,12 +80,12 @@
     <dependency>
       <groupId>net.sf.jopt-simple</groupId>
       <artifactId>jopt-simple</artifactId>
-      <version>3.2</version>
+      <version>${hydra.dep.jopt-simple.version}</version>
     </dependency>
     <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
-      <version>1.9.2</version>
+      <version>${hydra.dep.jsoup.version}</version>
     </dependency>
     <dependency>
       <groupId>com.github.rholder</groupId>
@@ -95,14 +95,6 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.3.2</version>
-    </dependency>
-
-    <!-- test dependencies -->
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

@@ -15,7 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import com.addthis.hydra.job.mq.JobKey;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -43,7 +43,7 @@ public class SpawnQueueItem extends JobKey {
     }
 
     @Override public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                       .add("jobKey", getJobKey())
                       .add("priority", priority)
                       .add("creationTime", creationTime)
