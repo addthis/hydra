@@ -339,8 +339,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
         // At this stage that the list is not empty
         // All tasks are from the same job
-        Job job = spawn.getJob(tasks.get(0).getJobUUID());
-        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job.getCopyOfTasks(), storedHostScores);
+        HostCandidateIterator iterator = new HostCandidateIterator(spawn, tasks, storedHostScores);
         List<String> hostsToAssign = new ArrayList<>(tasks.size());
         for (JobTask task : tasks) {
             if(task == null) {

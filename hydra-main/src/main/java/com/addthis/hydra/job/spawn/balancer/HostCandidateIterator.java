@@ -53,8 +53,10 @@ public class HostCandidateIterator {
             for (JobTask task : tasks) {
                 for (String replicaHostId : task.getAllTaskHosts()) {
                     HostState host = hostManager.getHostState(replicaHostId);
-                    Double score = copyOfScoreMap.getOrDefault(host, 0d);
-                    copyOfScoreMap.put(host, score + (double) taskScoreIncrement);
+                    if(host != null) {
+                        Double score = copyOfScoreMap.getOrDefault(host, 0d);
+                        copyOfScoreMap.put(host, score + (double) taskScoreIncrement);
+                    }
                 }
             }
         }
