@@ -1628,6 +1628,11 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     public boolean isTaskSpreadOutAcrossAd(@Nullable HostLocation fromHostLocation,
                                            @Nullable HostLocation toHostLocation, JobTask task) {
         AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
+
+        if(primaryAd == AvailabilityDomain.NONE) {
+            return true;
+        }
+
         int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);
         List<HostLocation> hostLocations = task.getAllTaskHosts()
                                                .stream()
