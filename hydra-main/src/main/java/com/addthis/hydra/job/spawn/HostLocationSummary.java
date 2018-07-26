@@ -78,7 +78,7 @@ public class HostLocationSummary {
             case RACK: return rackToPhysicalHostRef.get().size();
             case HOST: return computeNumberOfHostsInRacks();
             case NONE:
-            default: return 0;
+            default: return 1;
         }
     }
 
