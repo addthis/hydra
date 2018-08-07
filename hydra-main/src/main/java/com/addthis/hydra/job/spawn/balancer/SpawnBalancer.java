@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.spawn.balancer;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -54,8 +56,11 @@ import com.addthis.hydra.job.mq.CommandTaskStop;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.spawn.AvailabilityDomain;
 import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.minion.HostLocation;
+import com.addthis.hydra.util.WithScore;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -112,11 +117,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     private final Cache<String, Boolean> recentlyBalancedHosts;
     private final Cache<String, Boolean> recentlyReplicatedToHosts;
     private final SpawnBalancerTaskSizer taskSizer;
-    private final Comparator<HostAndScore> hostAndScoreComparator;
     private final Comparator<HostState> hostStateScoreComparator;
     private final Comparator<Job> jobAverageTaskSizeComparator;
     private final Comparator<HostState> hostStateReplicationSuitabilityComparator;
     private final ScheduledExecutorService taskExecutor;
+    private static final Comparator<WithScore<JobTask>> taskComparator =
+            Collections.reverseOrder(Comparator.comparingDouble(t -> t.score));
 
     final Spawn spawn;
     final HostManager hostManager;
@@ -147,7 +153,6 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         recentlyReplicatedToHosts = CacheBuilder.newBuilder().expireAfterWrite(
                 Parameter.intValue("spawnbalance.host.replicate.interval.mins", 15), TimeUnit.MINUTES
         ).build();
-        hostAndScoreComparator = Comparator.comparingDouble(has -> has.score);
         hostStateScoreComparator = Comparator.comparingDouble(hostState -> this.getHostScoreCached(hostState.getHostUuid()));
         jobAverageTaskSizeComparator = (job, job1) -> {
             if ((job == null) || (job1 == null)) {
@@ -293,7 +298,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             }
         }
         // This map of hosts to scores will be updated by every call to assignTasksFromSingleJobToHosts.
-        Map<HostState, Double> hostScoreMap = generateHostStateScoreMap(hosts, null);
+        Map<HostState, Double> hostScoreMap = generateHostStateScoreMap(hosts);
         // This map stores where to send each task.
         Map<JobTask, String> hostAssignments = new HashMap<>(tasks.size());
         for (Map.Entry<String, List<JobTask>> entry : tasksByJobID.entrySet()) {
@@ -305,18 +310,16 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     /**
-     * Internal function that creates a map of HostStates to their hostScores.
+     * Function that creates a map of HostStates to their hostScores.
      *
      * @param hosts The hosts from spawn
-     * @param jobID is specified, adds a factor that scales with the number of siblings on each host from that job.
      * @return A map taking each HostState to its score
      */
-    private Map<HostState, Double> generateHostStateScoreMap(Collection<HostState> hosts, @Nullable String jobID) {
+    public Map<HostState, Double> generateHostStateScoreMap(Collection<HostState> hosts) {
         final Map<HostState, Double> hostScores = new HashMap<>(hosts.size());
         for (HostState host : hosts) {
             if ((host != null) && host.isUp() && !host.isDead()) {
-                int siblingScore = (jobID != null) ? (host.getTaskCount(jobID) * config.getSiblingWeight()) : 0;
-                double score = getHostScoreCached(host.getHostUuid()) + siblingScore;
+                double score = getHostScoreCached(host.getHostUuid());
                 hostScores.put(host, score);
             }
         }
@@ -333,33 +336,24 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         if ((tasks == null) || tasks.isEmpty()) {
             return new HashMap<>();
         }
-        // Make a heap of hosts based on the storedHostScores, from lightest to heaviest.
-        PriorityQueue<HostAndScore> hostScores =
-                new PriorityQueue<>(1 + storedHostScores.size(), hostAndScoreComparator);
-        for (Map.Entry<HostState, Double> hostStateDoubleEntry : storedHostScores.entrySet()) {
-            if (canReceiveNewTasks(hostStateDoubleEntry.getKey())) {
-                hostScores.add(new HostAndScore(hostStateDoubleEntry.getKey(), hostStateDoubleEntry.getValue()));
-            }
-        }
-        if (hostScores.isEmpty()) {
-            log.warn("[spawn.balancer] found no hosts eligible to receive new tasks");
-            throw new RuntimeException("no eligible hosts for new task");
-        }
-        // Make a list of hosts as big as the list of tasks. This list may repeat hosts if it is necessary to do so.
-        Collection<String> hostsToAssign = new ArrayList<>(tasks.size());
+
+        // At this stage that the list is not empty
+        // All tasks are from the same job
+        HostCandidateIterator iterator = new HostCandidateIterator(spawn, tasks, storedHostScores);
+        List<String> hostsToAssign = new ArrayList<>(tasks.size());
         for (JobTask task : tasks) {
-            if (task == null) {
+            if(task == null) {
                 continue;
             }
-            // Pick the lightest host.
-            HostAndScore h = hostScores.poll();
-            HostState host = h.host;
-            hostsToAssign.add(host.getHostUuid());
-            // Then moderately weight that host in the heap so we won't pick it again immediately.
-            hostScores.add(new HostAndScore(host, h.score + config.getSiblingWeight()));
-            // Lightly weight that host in storedHostScores so we won't pick the same hosts over and over if we call
-            // this method repeatedly
-            storedHostScores.put(host, h.score + config.getActiveTaskWeight());
+            List<String> targetHostList = iterator.getNewReplicaHosts(1, task, null, false);
+            if(targetHostList.isEmpty()) {
+                log.warn("[spawn.balancer] found no hosts eligible to receive new tasks");
+                throw new RuntimeException("no eligible hosts for new task");
+            }
+            String targetHost = targetHostList.get(0);
+            hostsToAssign.add(targetHost);
+            storedHostScores.put(hostManager.getHostState(targetHost),
+                                 storedHostScores.getOrDefault(targetHost, 0d) + config.getActiveTaskWeight());
         }
         return pairTasksAndHosts(tasks, hostsToAssign);
     }
@@ -418,19 +412,20 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                            boolean obeyDontAutobalanceMe) {
         List<JobTaskMoveAssignment> moveAssignments = new ArrayList<>();
 
-        List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
-
         for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
             long taskTrueSize = getTaskTrueSize(task);
             if (limitBytes && (taskTrueSize > byteLimit)) {
                 continue;
             }
-            JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
+            JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), otherHosts);
             // we don't want to take up one of the limited rebalance slots
             // with an assignment that we know has no chance of happening
             // because either the assignment is null or the target host
             // for the assignment is null
-            if (assignment != null && assignment.getTargetUUID() != null) {
+            // add extra safeguard around selection of replica movement to ensure spread across availability domains
+            if (assignment != null && assignment.getTargetUUID() != null &&
+                isTaskSpreadOutAcrossAd(host.getHostLocation(),
+                                        hostManager.getHostLocationForHost(assignment.getTargetUUID()), task)) {
                 moveAssignments.add(assignment);
                 byteLimit -= taskTrueSize;
             }
@@ -448,7 +443,13 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                          boolean limitBytes,
                                                          int moveLimit,
                                                          boolean obeyDontAutobalanceMe) {
-        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host, otherHosts, limitBytes, config.getBytesMovedFullRebalance(), moveLimit, obeyDontAutobalanceMe);
+        List<JobTaskMoveAssignment> moveAssignments = getMoveAssignments(host,
+                                                                         otherHosts,
+                                                                         limitBytes,
+                                                                         config.getBytesMovedFullRebalance(),
+                                                                         moveLimit,
+                                                                         obeyDontAutobalanceMe
+        );
         markRecentlyReplicatedTo(moveAssignments);
         moveAssignments.addAll(purgeMisplacedTasks(host, moveLimit));
         return moveAssignments;
@@ -503,13 +504,12 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         if (host != null) {
             String hostId = host.getHostUuid();
             for (JobKey jobKey : host.allJobKeys()) {
-                Job job = spawn.getJob(jobKey);
                 JobTask task = spawn.getTask(jobKey);
-                if ((job != null) && (task != null) && isInMovableState(task)
-                    // Only add non-null tasks that are either idle or queued
-                    && (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(
-                        hostId))) // Only add tasks that are supposed to live on the specified host.
-                {
+                Job job = spawn.getJob(jobKey);
+                // Only add non-null tasks that are either idle or queued
+                // Only add tasks that are supposed to live on the specified host.
+                if ((job != null) && (task != null) && isInMovableState(task) &&
+                    (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(hostId))) {
                     if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
                         // obeyDontAutobalanceMe is set to false when spawn is doing a filesystem-okay host failure.
                         // In this case, spawn needs to move the task even if the job owner specified no swapping,
@@ -530,7 +530,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     }
 
     /**
-     * Given an ordered list of hosts, move the task to a suitable host, then move that host to the end of the list
+     * Given an ordered list of hosts, move the task to a suitable host
      *
      * @param task       The task to move
      * @param fromHostId The task to move the host from
@@ -540,21 +540,18 @@ public class SpawnBalancer implements Codable, AutoCloseable {
     @Nullable private JobTaskMoveAssignment moveTask(JobTask task,
                                                      String fromHostId,
                                                      Collection<HostState> otherHosts) {
-        Iterator<HostState> hostStateIterator = otherHosts.iterator();
         String taskHost = task.getHostUUID();
-        boolean live = task.getHostUUID().equals(fromHostId);
+        boolean live = taskHost.equals(fromHostId);
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
             return null;
         }
-        while (hostStateIterator.hasNext()) {
-            HostState next = hostStateIterator.next();
-            String nextId = next.getHostUuid();
-            if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && next.canMirrorTasks() &&
-                okToPutReplicaOnHost(next, task)) {
-                hostStateIterator.remove();
-                otherHosts.add(next);
-                return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false);
-            }
+        Map<HostState, Double> scoreMap = generateHostStateScoreMap(otherHosts);
+        Job job = spawn.getJob(task.getJobUUID());
+        HostCandidateIterator iterator = new HostCandidateIterator(spawn, job.getCopyOfTasks(), scoreMap);
+        List<String> newHostList = iterator.getNewReplicaHosts(1, task, taskHost, true);
+
+        if(!newHostList.isEmpty()) {
+            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, newHostList.get(0), !live, false);
         }
         return null;
     }
@@ -591,7 +588,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param task          The task that might be replicated to that host
      * @return True if it is okay to put a replica on the host
      */
-    private boolean okToPutReplicaOnHost(HostState hostCandidate, JobTask task) {
+    boolean okToPutReplicaOnHost(HostState hostCandidate, JobTask task) {
         Job job;
         String hostId;
         if ((hostCandidate == null) || ((hostId = hostCandidate.getHostUuid()) == null) ||
@@ -705,82 +702,22 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             return rv;
         }
         int replicaCount = job.getReplicas();
-        Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
-        PriorityQueue<HostAndScore> scoreHeap = new PriorityQueue<>(1, hostAndScoreComparator);
-        for (Map.Entry<String, Double> entry : scoreMap.entrySet()) {
-            scoreHeap.add(new HostAndScore(hostManager.getHostState(entry.getKey()), entry.getValue()));
-        }
-        Map<String, Integer> allocationMap = new HashMap<>();
         List<JobTask> tasks = (taskID > 0) ? Collections.singletonList(job.getTask(taskID)) : job.getCopyOfTasks();
+        // Note: we will get an up-to-date list of up and not dead hosts here
+        Map<HostState, Double> scoreMap =
+                generateHostStateScoreMap(hostManager.listHostStatus(job.getMinionType()));
+        HostCandidateIterator hostCandidateIterator = new HostCandidateIterator(spawn,
+                                                                                job.getCopyOfTasks(),
+                                                                                scoreMap);
         for (JobTask task : tasks) {
             int numExistingReplicas = task.getReplicas() != null ? task.getReplicas().size() : 0;
-            List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
-            // Add new replicas as long as the task needs them & there are remaining hosts
-            for (int i = 0; i < (replicaCount - numExistingReplicas); i++) {
-                for (HostAndScore hostAndScore : scoreHeap) {
-                    HostState candidateHost = hostAndScore.host;
-                    if ((candidateHost == null) || !candidateHost.canMirrorTasks()) {
-                        continue;
-                    }
-                    int currentCount;
-                    if (allocationMap.containsKey(candidateHost.getHostUuid())) {
-                        currentCount = allocationMap.get(candidateHost.getHostUuid());
-                    } else {
-                        currentCount = 0;
-                    }
-
-                    if (okToPutReplicaOnHost(candidateHost, task)) {
-                        hostIDsToAdd.add(candidateHost.getHostUuid());
-                        scoreHeap.remove(hostAndScore);
-                        scoreHeap.add(new HostAndScore(candidateHost, hostAndScore.score + 1));
-                        allocationMap.put(candidateHost.getHostUuid(), currentCount + 1);
-                        break;
-                    }
-                }
-            }
+            List<String> hostIDsToAdd =
+                    hostCandidateIterator.getNewReplicaHosts(replicaCount - numExistingReplicas, task);
             if (!hostIDsToAdd.isEmpty()) {
                 rv.put(task.getTaskID(), hostIDsToAdd);
             }
         }
         return rv;
-    }
-
-    /**
-     * Count the number of tasks per host for a single job, then add in a small factor for how heavily weighted each
-     * host's disk is
-     *
-     * @param job The job to count
-     * @return A map describing how heavily a job is assigned to each of its hosts
-     */
-    private Map<String, Double> generateTaskCountHostScoreMap(IJob job) {
-        Map<String, Double> rv = new HashMap<>();
-        if (job != null) {
-            List<JobTask> tasks = job.getCopyOfTasks();
-            for (JobTask task : tasks) {
-                rv.put(task.getHostUUID(), addOrIncrement(rv.get(task.getHostUUID()), 1d));
-                if (task.getReplicas() == null) {
-                    continue;
-                }
-                for (JobTaskReplica replica : task.getReplicas()) {
-                    rv.put(replica.getHostUUID(), addOrIncrement(rv.get(replica.getHostUUID()), 1d));
-                }
-            }
-            for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
-                if (host.isUp() && !host.isDead()) {
-                    double availDisk = 1 - host.getDiskUsedPercent();
-                    rv.put(host.getHostUuid(), addOrIncrement(rv.get(host.getHostUuid()), availDisk));
-                }
-            }
-        }
-        return rv;
-    }
-
-    private static double addOrIncrement(Double currentValue, Double value) {
-        if (currentValue != null) {
-            return currentValue + value;
-        } else {
-            return value;
-        }
     }
 
     public void requestJobSizeUpdate(String jobId, int taskId) {
@@ -806,16 +743,16 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      * @param failedHost The id of the host being failed
      */
     public void fixTasksForFailedHost(List<HostState> hosts, String failedHost) {
+        List<HostState> copyOfHosts = new ArrayList<>(hosts);
         List<JobTask> tasks = findAllTasksAssignedToHost(failedHost);
         List<JobTask> sortedTasks = new ArrayList<>(tasks);
-        Collections.sort(sortedTasks,
-                         (o1, o2) -> Long.compare(taskSizer.estimateTrueSize(o1), taskSizer.estimateTrueSize(o2)));
-        hosts = sortHostsByDiskSpace(hosts);
+        sortedTasks.sort(Comparator.comparingLong(taskSizer::estimateTrueSize));
+        copyOfHosts.sort(hostStateScoreComparator);
         Collection<String> modifiedJobIds = new HashSet<>();
         for (JobTask task : sortedTasks) {
             modifiedJobIds.add(task.getJobUUID());
             try {
-                attemptFixTaskForFailedHost(task, hosts, failedHost);
+                attemptFixTaskForFailedHost(task, copyOfHosts, failedHost);
             } catch (Exception ex) {
                 log.warn("Warning: failed to recover task {}", task.getJobKey(), ex);
             }
@@ -878,7 +815,10 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             if (host.getHostUuid().equals(failedHostUuid)) {
                 continue;
             }
-            if (host.canMirrorTasks() && okToPutReplicaOnHost(host, task)) {
+            if (host.canMirrorTasks() && okToPutReplicaOnHost(host, task) &&
+                isTaskSpreadOutAcrossAd(hostManager.getHostLocationForHost(task.getHostUUID()),
+                                        hostManager.getHostLocationForHost(host.getHostUuid()),
+                                        task)) {
                 // Host found! Move this host to the end of the host list so we don't immediately pick it again
                 hostIterator.remove();
                 hosts.add(host);
@@ -935,7 +875,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             throws Exception {
         List<JobTask> tasks = generateUnassignedTaskList(jobID, taskCount);
         Map<JobTask, String> hostAssignments =
-                assignTasksFromSingleJobToHosts(tasks, generateHostStateScoreMap(hosts, null));
+                assignTasksFromSingleJobToHosts(tasks, generateHostStateScoreMap(hosts));
         List<JobTask> rv = new ArrayList<>(tasks.size());
         for (Map.Entry<JobTask, String> entry : hostAssignments.entrySet()) {
             JobTask task = entry.getKey();
@@ -1300,59 +1240,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     }
 
-    /* Pull tasks off the given host and move them elsewhere, obeying the maxPerHost and maxBytesToMove limits */
-    private MoveAssignmentList moveTasksOffHost(JobTaskItemByHostMap tasksByHost,
-                                                int maxPerHost,
-                                                int numToMove,
-                                                long maxBytesToMove,
-                                                String pushHost) {
-        if (log.isDebugEnabled()) {
-            log.debug("received move assignment maxPerHost:{} numToMove:{} pushHost:{}", maxPerHost, numToMove,
-                      pushHost);
-        }
-        MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
-        Collection<JobKey> alreadyMoved = new HashSet<>();
-        Iterator<String> otherHosts = tasksByHost.getHostIterator(true);
-        while (otherHosts.hasNext() && (rv.size() < numToMove)) {
-            String pullHost = otherHosts.next();
-            if (pushHost.equals(pullHost)) {
-                continue;
-            }
-            HostState pullHostState = hostManager.getHostState(pullHost);
-            Iterator<JobTaskItem> itemIterator = new ArrayList<>(tasksByHost.get(pushHost)).iterator();
-            while (itemIterator.hasNext() && (rv.size() < numToMove) &&
-                   (tasksByHost.get(pullHost).size() < maxPerHost)) {
-                JobTaskItem nextTaskItem = itemIterator.next();
-                long trueSizeBytes = taskSizer.estimateTrueSize(nextTaskItem.getTask());
-                JobKey jobKey = nextTaskItem.getTask().getJobKey();
-                Job job = spawn.getJob(jobKey);
-                if ((job == null) || !pullHostState.getMinionTypes().contains(job.getMinionType())) {
-                    continue;
-                }
-                // Reject the move if the target host is heavily loaded, already has a copy of the task, or the task
-                // is too large
-                if (isExtremeHost(pullHost, true, true) || pullHostState.hasLive(jobKey) ||
-                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove))) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Unable to move task to host {} fullDisk={} alreadyLive={} byteCount={}>{} {}",
-                                  pullHost, isExtremeHost(pullHost, true, true), pullHostState.hasLive(jobKey),
-                                  trueSizeBytes, maxBytesToMove, trueSizeBytes > maxBytesToMove);
-                    }
-                    continue;
-                }
-                if (!alreadyMoved.contains(jobKey) && (pullHost != null) &&
-                    tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false,
-                                                     false));
-                    alreadyMoved.add(nextTaskItem.getTask().getJobKey());
-                    maxBytesToMove -= trueSizeBytes;
-                }
-            }
-        }
-        return rv;
-    }
 
-    /* Push tasks onto the given host, obeying the maxPerHost and maxBytesToMove limits */
     private MoveAssignmentList moveTasksOntoHost(JobTaskItemByHostMap tasksByHost,
                                                  int maxPerHost,
                                                  int numToMove,
@@ -1360,7 +1248,8 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                                                  String pullHost) {
         MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
         Collection<JobKey> alreadyMoved = new HashSet<>();
-        Iterator<String> otherHosts = tasksByHost.getHostIterator(false);
+        Iterator<String> otherHosts = tasksByHost.getHostIterator(true);
+
         if (isExtremeHost(pullHost, true, true)) {
             return rv;
         }
@@ -1388,14 +1277,19 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 }
                 long trueSizeBytes = taskSizer.estimateTrueSize(item.getTask());
                 if (pullHostState.hasLive(item.getTask().getJobKey()) ||
-                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove))) {
+                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove)) ||
+                    !isTaskSpreadOutAcrossAd(hostManager.getHostLocationForHost(pushHost),
+                                             hostManager.getHostLocationForHost(pullHost),
+                                             item.getTask())) {
                     continue;
                 }
+
                 if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
                     rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false));
                     alreadyMoved.add(item.getTask().getJobKey());
                     maxBytesToMove -= trueSizeBytes;
                 }
+
                 if (rv.size() >= numToMove) {
                     break;
                 }
@@ -1403,6 +1297,66 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         }
         return rv;
     }
+
+    /* Pull tasks off the given host and move them elsewhere, obeying the maxPerHost and maxBytesToMove limits */
+
+    private MoveAssignmentList moveTasksOffHost(JobTaskItemByHostMap tasksByHost,
+                                                int maxPerHost,
+                                                int numToMove,
+                                                long maxBytesToMove,
+                                                String pushHost) {
+        if (log.isDebugEnabled()) {
+            log.debug("received move assignment maxPerHost:{} numToMove:{} pushHost:{}", maxPerHost, numToMove,
+                      pushHost);
+        }
+        MoveAssignmentList rv = new MoveAssignmentList(spawn, taskSizer);
+        Collection<JobKey> alreadyMoved = new HashSet<>();
+        Iterator<String> otherHosts = tasksByHost.getHostIterator(true);
+
+        while (otherHosts.hasNext() && (rv.size() < numToMove)) {
+            String pullHost = otherHosts.next();
+            if (pushHost.equals(pullHost)) {
+                continue;
+            }
+            HostState pullHostState = hostManager.getHostState(pullHost);
+            Iterator<JobTaskItem> itemIterator = new ArrayList<>(tasksByHost.get(pushHost)).iterator();
+            while (itemIterator.hasNext() && (rv.size() < numToMove) &&
+                   (tasksByHost.get(pullHost).size() < maxPerHost)) {
+                JobTaskItem nextTaskItem = itemIterator.next();
+                long trueSizeBytes = taskSizer.estimateTrueSize(nextTaskItem.getTask());
+                JobKey jobKey = nextTaskItem.getTask().getJobKey();
+                Job job = spawn.getJob(jobKey);
+                if ((job == null) || !pullHostState.getMinionTypes().contains(job.getMinionType())) {
+                    continue;
+                }
+                // Reject the move if the target host is heavily loaded, already has a copy of the task, or the task
+                // is too large
+                // or if the move results in uneven spread of tasks and replicas across ADs
+                if (isExtremeHost(pullHost, true, true) || pullHostState.hasLive(jobKey) ||
+                    ((maxBytesToMove > 0) && (trueSizeBytes > maxBytesToMove)) ||
+                    !isTaskSpreadOutAcrossAd(hostManager.getHostLocationForHost(pushHost),
+                                             hostManager.getHostLocationForHost(pullHost),
+                                             nextTaskItem.getTask())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Unable to move task to host {} fullDisk={} alreadyLive={} byteCount={}>{} {}",
+                                  pullHost, isExtremeHost(pullHost, true, true), pullHostState.hasLive(jobKey),
+                                  trueSizeBytes, maxBytesToMove, trueSizeBytes > maxBytesToMove);
+                    }
+                    continue;
+                }
+
+                if (!alreadyMoved.contains(jobKey) && (pullHost != null) &&
+                    tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
+                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false,
+                                                     false));
+                    alreadyMoved.add(nextTaskItem.getTask().getJobKey());
+                    maxBytesToMove -= trueSizeBytes;
+                }
+            }
+        }
+        return rv;
+    }
+    /* Push tasks onto the given host, obeying the maxPerHost and maxBytesToMove limits */
 
     /* Count the number of tasks that live on each host */
     private JobTaskItemByHostMap generateTaskCountByHost(List<HostState> hosts, Iterable<JobTask> tasks) {
@@ -1582,6 +1536,129 @@ public class SpawnBalancer implements Codable, AutoCloseable {
             default:
                 throw new IllegalArgumentException("unknown weight type " + weight);
         }
+    }
+
+    /**
+     * Returns a collection of tasks that are valid to move from {@code fromHostUuid} to {@code toHostUuid},
+     * which will contain between 0 and {@code numTasks} tasks.
+     * <p>
+     * Validity checks include:
+     * - task must be non-null and idle or queued
+     * - tasks must be supposed to live on the fromHost
+     * - if obeyDontAutobalanceMe is false, job.getDontAutoBalanceMe must be false
+     * - Move must result in task and replicas being all on different minAds or having copies in every minAd
+     *
+     * @param fromHostUuid          Host to move task from
+     * @param toHostUuid            Host to move task to
+     * @param numTasks              Maximum number of tasks to return
+     * @param obeyDontAutobalanceMe set to true for filesystem-okay host failure
+     */
+    // NOTE: keeping this code around for potential future improvements to spawnbalancer.
+    @SuppressWarnings("FloatingPointEquality")
+    public @Nonnull Collection<JobTask> getTasksToMove(String fromHostUuid, String toHostUuid,
+                                                       int numTasks, boolean obeyDontAutobalanceMe) {
+        // loop through all tasks
+        // cache the numScore lowest scores that can validly move
+        // if we find numScore that have minscore and can validly move, just return them immediately
+
+        // primaryAd             The primary AD in which to ensure spread
+        AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
+        PriorityQueue<WithScore<JobTask>> sortedTasks = new PriorityQueue<>(numTasks, taskComparator);
+        HostState fromHost = hostManager.getHostState(fromHostUuid);
+        HostLocation fromHostLocation = fromHost.getHostLocation();
+        HostLocation toHostLocation = hostManager.getHostState(toHostUuid).getHostLocation();
+        for (JobKey jobKey : fromHost.allJobKeys()) {
+            JobTask task = spawn.getTask(jobKey);
+            Job job = spawn.getJob(jobKey);
+
+            if ((job != null) && SpawnBalancer.isInMovableState(task) &&
+                (fromHostUuid.equals(task.getHostUUID()) || task.hasReplicaOnHost(fromHostUuid))) {
+                if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
+                    // obeyDontAutobalanceMe is set to false when spawn is doing a filesystem-okay host failure.
+                    // In this case, spawn needs to move the task even if the job owner specified no swapping,
+                    // because the box is likely to be ailing/scheduled for decommission.
+                    // All rebalancing actions use obeyDontAutobalanceMe=true and will conform to the job owner's
+                    // wishes.
+                    continue;
+                }
+                if (!this.isTaskSpreadOutAcrossAd(fromHostLocation, toHostLocation, task)) {
+                    // only allow tasks to be moved that are correctly spread out
+                    continue;
+                }
+
+                double taskScore = this.calculateTaskScore(fromHostLocation, toHostLocation, task);
+                // fixme: null pointer exception
+                double highestScore = sortedTasks.peek().score;
+                if (sortedTasks.isEmpty() || (highestScore > taskScore)) {
+                    // add to queue if it's empty or this task has a lower score than the task with the largest score
+                    sortedTasks.add(new WithScore<>(task, (double) taskScore));
+                } else if ((sortedTasks.size() == numTasks) && (highestScore <= (double) primaryAd.score)) {
+                    // exit loop and return tasks if we have enough tasks and the largest score equals the min score
+                    break;
+                }
+                if (sortedTasks.size() > numTasks) {
+                    // remove largest score after pushing on a lower score
+                    sortedTasks.poll();
+                }
+            }
+        }
+        // this could contain 0 - numTasks tasks.
+        return sortedTasks.stream().map(WithScore::getElement).collect(Collectors.toList());
+    }
+
+    /**
+     * Calculate the availability-domain-score of a task moving from one host to another.
+     * A lower score is a better move to make, because it more distant.
+     */
+    private double calculateTaskScore(HostLocation fromHostLocation, HostLocation toHostLocation, JobTask task) {
+        // get average distance score for all tasks host locations (except any on the fromHostLocation)
+        return task.getAllTaskHosts()
+                   .stream()
+                   .map(h -> hostManager.getHostState(h).getHostLocation())
+                   .filter(hl -> !hl.equals(fromHostLocation))
+                   .mapToInt(toHostLocation::assignScoreByHostLocation)
+                   .average().orElse(0D);
+    }
+
+    /**
+     * Returns true if moving a replica for {@code task} from {@code fromHostLocation} to
+     * {@code toHostLocation} is correctly spread out so that either all replicas will be on
+     * different min ads, or there is a replica on every min ad.
+     */
+    public boolean isTaskSpreadOutAcrossAd(@Nullable HostLocation fromHostLocation,
+                                           @Nullable HostLocation toHostLocation, JobTask task) {
+        AvailabilityDomain primaryAd = hostManager.getHostLocationSummary().getPriorityLevel();
+
+        if(primaryAd == AvailabilityDomain.NONE) {
+            return true;
+        }
+
+        int minAdCardinality = hostManager.getHostLocationSummary().getMinCardinality(primaryAd);
+        List<HostLocation> hostLocations = task.getAllTaskHosts()
+                                               .stream()
+                                               .map(h -> hostManager.getHostLocationForHost(h))
+                                               .collect(Collectors.toList());
+        // IF this is a MOVE
+        // remove the FIRST instance of the location we're moving FROM
+        if(fromHostLocation != null && toHostLocation != null) {
+            hostLocations.remove(fromHostLocation);
+            hostLocations.add(toHostLocation);
+        }
+        Set<String> minAdsUsed = new HashSet<>(minAdCardinality);
+        boolean allReplicasOnDifferentAd = true;
+        for (HostLocation location : hostLocations) {
+            boolean isNew = minAdsUsed.add(location.getPriorityAd(primaryAd));
+            // if any min ad was already in minAdsUsed, then all replicas are not on the same min ad.
+            if (!isNew) {
+                allReplicasOnDifferentAd = false;
+            }
+            // if all min ads are used, then the move is sufficiently spread out
+            if (minAdsUsed.size() == minAdCardinality) {
+                return true;
+            }
+        }
+        // if not all min ads are used, then the move is spread out if all replicas are on different min ads.
+        return allReplicasOnDifferentAd;
     }
 
 }

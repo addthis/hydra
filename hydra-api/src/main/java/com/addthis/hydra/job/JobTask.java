@@ -321,8 +321,8 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
         this.rebalanceSource = rebalanceSource;
     }
 
-    public Set<String> getAllTaskHosts() {
-        Set<String> rv = new HashSet<>();
+    public List<String> getAllTaskHosts() {
+        List<String> rv = new ArrayList<>();
         rv.add(hostUuid);
         if (getAllReplicas() != null) {
             for (JobTaskReplica replica : getAllReplicas()) {

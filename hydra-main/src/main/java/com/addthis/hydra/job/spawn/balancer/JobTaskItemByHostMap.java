@@ -104,7 +104,6 @@ class JobTaskItemByHostMap extends HashMap<String, Set<JobTaskItem>> {
         return new ArrayList<>(rv);
     }
 
-
     public Iterator<String> getHostIterator(boolean smallFirst) {
         if (hostsSorted == null) {
             generateHostsSorted();

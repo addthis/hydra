@@ -33,9 +33,12 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.balancer.SpawnBalancerConfig;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.collect.ImmutableList;
+
+import org.apache.zookeeper.CreateMode;
 
 import org.junit.After;
 import org.junit.Before;
@@ -79,11 +82,24 @@ public class SpawnStateTest extends ZkCodecStartUtil {
         host.getUsed().setDisk(0);
         host.setUp(true);
         host.setDead(false);
+        host.setHostLocation(new HostLocation("", "", ""));
+    }
+
+    private void registerAndWaitForMinion() throws Exception {
+        String zkPath = host.isUp() ? "/minion/up/" + host.getHostUuid() : "/minion/dead/" + host.getHostUuid();
+        zkClient.create().withMode(CreateMode.EPHEMERAL).forPath(zkPath);
+
+        try {
+            Thread.sleep(1000L);
+        } catch(InterruptedException e) {
+
+        }
     }
 
     @Test
     public void testJobConfigs() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
+            registerAndWaitForMinion();
             JobExpander jobExpander = new JobExpanderImpl(spawn, spawn.getJobMacroManager(), spawn.getAliasManager());
             JobConfigManager jobConfigManager = new JobConfigManager(spawn.getSpawnDataStore(), jobExpander);
             String conf1 = "{myjob:[1,2,3]}";
@@ -106,7 +122,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
     @Test
     public void testAutomaticAlertDeletion() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
-
+            registerAndWaitForMinion();
             spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
             spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);
@@ -125,7 +141,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
     @Test
     public void testAutomaticAlertReduction() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
-
+            registerAndWaitForMinion();
             spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
             spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a", false);

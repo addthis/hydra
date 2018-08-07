@@ -22,6 +22,7 @@ import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
@@ -86,7 +87,7 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
         // Mark some hosts for failure, then spin up a new HostFailWorker and make sure it can load the state
         hostFailWorker.markHostsToFail("a,b", HostFailWorker.FailState.FAILING_FS_DEAD);
         hostFailWorker.markHostsToFail("c", HostFailWorker.FailState.FAILING_FS_OKAY);
-        HostFailWorker hostFailWorker2 = new HostFailWorker(spawn, spawn.hostManager, null);
+        HostFailWorker hostFailWorker2 = new HostFailWorker(spawn, null);
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("a"));
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("b"));
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_OKAY, hostFailWorker2.getFailureState("c"));
@@ -138,6 +139,7 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
         hostState.setUp(up);
         hostState.setReplicas(new JobKey[]{});
         hostState.setStopped(new JobKey[]{});
+        hostState.setHostLocation(new HostLocation("", "", ""));
         return hostState;
     }
 }

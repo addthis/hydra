@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.minion.HostLocation;
 
 import org.apache.curator.framework.CuratorFramework;
 
@@ -38,11 +39,13 @@ public class HostManager {
     @Nonnull final ConcurrentMap<String, HostState> monitored;
     @Nonnull final SetMembershipListener minionMembers;
     @Nonnull final SetMembershipListener deadMinionMembers;
+    private final HostLocationSummary hostLocationSummary;
 
     public HostManager(CuratorFramework zkClient) {
         this.monitored = new ConcurrentHashMap<>();
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
+        this.hostLocationSummary = new HostLocationSummary();
     }
 
     public HostState getHostState(String hostUuid) {
@@ -61,6 +64,7 @@ public class HostManager {
                 monitored.put(state.getHostUuid(), state);
             }
         }
+        this.hostLocationSummary.updateHostLocationSummary(getLiveHosts(null));
     }
 
     /**
@@ -97,5 +101,17 @@ public class HostManager {
             }
         }
         return rv;
+    }
+
+    public HostLocationSummary getHostLocationSummary() {
+        return hostLocationSummary;
+    }
+
+    public HostLocation getHostLocationForHost(String uuid) {
+        HostState host = this.getHostState(uuid);
+        if(host != null) {
+            return host.getHostLocation();
+        }
+        return null;
     }
 }

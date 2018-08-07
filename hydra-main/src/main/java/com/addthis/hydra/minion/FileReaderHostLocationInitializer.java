@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FileReaderHostLocationInitializer implements HostLocationInitializer{
-    private static final Logger log = LoggerFactory.getLogger(Minion.class);
+    private static final Logger log = LoggerFactory.getLogger(FileReaderHostLocationInitializer.class);
 
     private File file;
 

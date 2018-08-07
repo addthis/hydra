@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 class SystemPropertyHostLocationInitializer implements HostLocationInitializer{
 
-    private static final Logger log = LoggerFactory.getLogger(Minion.class);
+    private static final Logger log = LoggerFactory.getLogger(SystemPropertyHostLocationInitializer.class);
 
     @JsonCreator
     public SystemPropertyHostLocationInitializer() {

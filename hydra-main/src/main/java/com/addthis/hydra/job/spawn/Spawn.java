@@ -25,6 +25,7 @@ import java.io.PipedOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -34,6 +35,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -47,6 +49,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -117,6 +120,7 @@ import com.addthis.hydra.job.mq.StatusTaskPort;
 import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
+import com.addthis.hydra.job.spawn.balancer.HostCandidateIterator;
 import com.addthis.hydra.job.spawn.balancer.SpawnBalancer;
 import com.addthis.hydra.job.spawn.search.JobSearcher;
 import com.addthis.hydra.job.spawn.search.SearchOptions;
@@ -128,9 +132,11 @@ import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 import com.addthis.hydra.job.web.websocket.SpawnWebSocket;
+import com.addthis.hydra.minion.HostLocation;
 import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
+import com.addthis.hydra.util.WithScore;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.service.file.FileReference;
@@ -146,6 +152,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Gauge;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
@@ -165,8 +172,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * manages minions running on remote notes. runs master http server to communicate with and control those instances.
  */
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
-                setterVisibility = JsonAutoDetect.Visibility.NONE)
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Spawn implements Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);
 
@@ -184,6 +191,16 @@ public class Spawn implements Codable, AutoCloseable {
     private static final int LOG_MAX_AGE = Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
     private static final int LOG_MAX_SIZE = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String LOG_DIR = Parameter.value("spawn.event.log.dir", "log");
+
+    // Comparators
+    private static final Comparator<WithScore<JobTaskReplica>> replicaHostScoreComparator = (r1, r2) -> {
+        int result = Double.compare(r1.score, r2.score);
+        if(result == 0) {
+            return r1.element.getHostUUID().compareTo(r2.element.getHostUUID());
+        }
+        // Descending order sort
+        return -result;
+    };
 
     public static void main(String... args) throws Exception {
         Spawn spawn = Configs.newDefault(Spawn.class);
@@ -234,6 +251,10 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final RollingLog eventLog;
     @Nullable private final JobStore jobStore;
 
+    private final AtomicInteger underReplicatedTaskCount = new AtomicInteger();
+    private final AtomicInteger jobsNotAdSpreadCount = new AtomicInteger();
+    private final AtomicInteger tasksNotAdSpreadCount = new AtomicInteger();
+
     @JsonCreator private Spawn(@JsonProperty("debug") String debug,
                                @JsonProperty(value = "queryPort", required = true) int queryPort,
                                @JsonProperty("queryHttpHost") String queryHttpHost,
@@ -244,21 +265,21 @@ public class Spawn implements Codable, AutoCloseable {
                                @Nonnull @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
                                @Nonnull @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor,
                                @Time(MILLISECONDS) @JsonProperty(value = "taskQueueDrainInterval",
-                                                                 required = true) int taskQueueDrainInterval,
+                                       required = true) int taskQueueDrainInterval,
                                @Time(MILLISECONDS) @JsonProperty(value = "hostStatusRequestInterval",
-                                                                 required = true) int hostStatusRequestInterval,
+                                       required = true) int hostStatusRequestInterval,
                                @Time(MILLISECONDS) @JsonProperty(value = "queueKickInterval",
-                                                                 required = true) int queueKickInterval,
+                                       required = true) int queueKickInterval,
                                @Time(MILLISECONDS) @JsonProperty("jobTaskUpdateHeartbeatInterval")
-                               int jobTaskUpdateHeartbeatInterval,
+                                       int jobTaskUpdateHeartbeatInterval,
                                @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                                @Nullable @JsonProperty("jobStore") JobStore jobStore,
                                @Nullable @JsonProperty("queueType") String queueType,
                                @Nullable @JacksonInject CuratorFramework providedZkClient,
                                @Nonnull @JsonProperty(value = "permissionsManager",
-                                                      required = true) PermissionsManager permissionsManager,
+                                       required = true) PermissionsManager permissionsManager,
                                @Nonnull @JsonProperty(value = "jobDefaults",
-                                                      required = true) JobDefaults jobDefaults,
+                                       required = true) JobDefaults jobDefaults,
                                @Bytes @JsonProperty(value = "datastoreCacheSize") long datastoreCacheSize,
                                @Nonnull @JsonProperty(value = "groupManager", required = true) GroupManager groupManager)
             throws Exception {
@@ -322,7 +343,7 @@ public class Spawn implements Codable, AutoCloseable {
         // XXX Instantiate HostFailWorker/SpawnBalancer before SpawnMQ to avoid NPE during startup
         // Once connected, SpawnMQ will call HostFailWorker/SpawnBalancer to get host information,
         // so the latter components must be created first.
-        hostFailWorker = new HostFailWorker(this, hostManager, scheduledExecutor);
+        hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this, hostManager);
 
 
@@ -365,13 +386,81 @@ public class Spawn implements Codable, AutoCloseable {
             kickJobsOnQueue();
             writeSpawnQueue();
         }, queueKickInterval, queueKickInterval, MILLISECONDS);
+
+        // Metrics for underreplicated task count, jobs and tasks that are not AD-spread
+        // Update periodically to avoid slowing down metrics reporting
+        scheduledExecutor.scheduleWithFixedDelay(this::updateJobAndTaskCountMetrics,
+                                                 jobTaskUpdateHeartbeatInterval,
+                                                 jobTaskUpdateHeartbeatInterval,
+                                                 MILLISECONDS);
+
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         this.jobStore = jobStore;
         this.eventLog =
                 new RollingLog(new File(LOG_DIR, "events-jobs"), "job", EVENT_LOG_COMPRESS, LOG_MAX_SIZE, LOG_MAX_AGE);
         Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(hostManager));
+        Metrics.newGauge(Spawn.class, "jobsNotAdSpread", new Gauge<Integer>() {
+            @Override
+            public Integer value() {
+                return jobsNotAdSpreadCount.get();
+            }
+        });
+
+        Metrics.newGauge(Spawn.class, "tasksNotAdSpread", new Gauge<Integer>() {
+            @Override
+            public Integer value() {
+                return tasksNotAdSpreadCount.get();
+            }
+        });
+
+        Metrics.newGauge(Spawn.class, "underreplicatedTaskCount", new Gauge<Integer>() {
+            @Override
+            public Integer value() {
+                return underReplicatedTaskCount.get();
+            }
+        });
+
         writeState();
+    }
+
+    /**
+     * Periodically update counts for:
+     *      1. Jobs not AD-spread
+     *      2. Tasks not AD-spread
+     *      3. Under-replicated tasks
+     */
+    private void updateJobAndTaskCountMetrics() {
+        int numJobsNotSpread = 0;
+        int numTasksNotSpread = 0;
+        boolean jobNotSpread;
+        int underreplicatedTaskCount = 0;
+        for(Job job : listJobs()) {
+            jobNotSpread = false;
+            for(JobTask task : job.getCopyOfTasks()) {
+                // Checks task and replica spread
+                if(!getSpawnBalancer().isTaskSpreadOutAcrossAd(null, null, task)) {
+                    jobNotSpread = true;
+                    numTasksNotSpread++;
+                }
+                if(checkHostForTask(task, task.getHostUUID()).getType() ==
+                   JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
+                    underreplicatedTaskCount++;
+                }
+                for(JobTaskReplica replica : task.getAllReplicas()) {
+                    if(checkHostForTask(task, replica.getHostUUID()).getType() ==
+                       JobTaskDirectoryMatch.MatchType.MISMATCH_MISSING_LIVE) {
+                        underreplicatedTaskCount++;
+                    }
+                }
+            }
+            if(jobNotSpread) {
+                numJobsNotSpread++;
+            }
+        }
+        this.jobsNotAdSpreadCount.set(numJobsNotSpread);
+        this.tasksNotAdSpreadCount.set(numTasksNotSpread);
+        this.underReplicatedTaskCount.set(underreplicatedTaskCount);
     }
 
     private void jobTaskUpdateHeartbeatCheck() {
@@ -467,11 +556,11 @@ public class Spawn implements Codable, AutoCloseable {
         PipedOutputStream out = new PipedOutputStream();
         PipedInputStream in = new PipedInputStream(out);
         JobSearcher js = new JobSearcher(SpawnUtils.getJobsMapFromSpawnState(spawnState),
-                SpawnUtils.getMacroMapFromMacroManager(jobMacroManager),
-                getAliasManager().getAliases(),
-                jobConfigManager,
-                searchOptions,
-                out);
+                                         SpawnUtils.getMacroMapFromMacroManager(jobMacroManager),
+                                         getAliasManager().getAliases(),
+                                         jobConfigManager,
+                                         searchOptions,
+                                         out);
         expandKickExecutor.submit(js);
         return in;
     }
@@ -977,7 +1066,7 @@ public class Spawn implements Codable, AutoCloseable {
     private List<JobTaskReplica> addReplicasAndRemoveExcess(JobTask task,
                                                             List<String> replicaHostsToAdd,
                                                             int desiredNumberOfReplicas,
-                                                            List<JobTaskReplica> currentReplicas) throws Exception {
+                                                            List<JobTaskReplica> currentReplicas) {
         List<JobTaskReplica> newReplicas;
         if (currentReplicas == null) {
             newReplicas = new ArrayList<>();
@@ -988,20 +1077,79 @@ public class Spawn implements Codable, AutoCloseable {
             newReplicas.addAll(replicateTask(task, replicaHostsToAdd));
         }
         if (!isNewTask(task)) {
-            while (newReplicas.size() > desiredNumberOfReplicas) {
-                JobTaskReplica replica = newReplicas.remove(newReplicas.size() - 1);
-                spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(),
-                                                                 task.getJobUUID(),
-                                                                 task.getTaskID(),
-                                                                 task.getRunCount()));
-                log.info("[replica.delete] {}/{} from {} @ {}",
-                         task.getJobUUID(),
-                         task.getTaskID(),
-                         replica.getHostUUID(),
-                         hostManager.getHostState(replica.getHostUUID()).getHost());
+            if(newReplicas.size() > desiredNumberOfReplicas) {
+                List<JobTaskReplica> replicasToRemove =
+                        removeExcessReplicas(newReplicas, newReplicas.size() - desiredNumberOfReplicas);
+
+                for(JobTaskReplica replica : replicasToRemove) {
+                    // remove only the first instance of each replica in replicasToRemove
+                    newReplicas.remove(replica);
+                    spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(),
+                                                                     task.getJobUUID(),
+                                                                     task.getTaskID(),
+                                                                     task.getRunCount()));
+                    log.info("[replica.delete] {}/{} from {} @ {}",
+                             task.getJobUUID(),
+                             task.getTaskID(),
+                             replica.getHostUUID(),
+                             hostManager.getHostState(replica.getHostUUID()).getHost());
+                }
             }
         }
         return newReplicas;
+    }
+
+    /**
+     * Remove the highest scored replica from the HostLocation with the max number of duplicates,
+     * or remove the replica on the highest-scored host if replicas are equally spread across HostLocations
+     * @param replicaList List of existing replicas
+     * @param numReplicasToRemove Number of replicas to remove
+     * @return List of replicas to remove
+     */
+    private List<JobTaskReplica> removeExcessReplicas(List<JobTaskReplica> replicaList,
+                                                      int numReplicasToRemove) {
+        List<JobTaskReplica> replicasToRemove = new ArrayList<>(numReplicasToRemove);
+        AvailabilityDomain priorityAd = hostManager.getHostLocationSummary().getPriorityLevel();
+        if(priorityAd == AvailabilityDomain.NONE) {
+            // short-circuit here and retain original behavior by removing replicas from the end of replicaList
+            for(int i = replicaList.size() - numReplicasToRemove; i <= (replicaList.size() - 1); i++) {
+                replicasToRemove.add(replicaList.get(i));
+            }
+        } else {
+            Map<String, PriorityQueue<WithScore<JobTaskReplica>>> replicasByLocation = new HashMap<>();
+            for(JobTaskReplica replica : replicaList) {
+                HostState hostState = hostManager.getHostState(replica.getHostUUID());
+                Double hostScore = balancer.getHostScoreCached(replica.getHostUUID());
+                replicasByLocation.computeIfAbsent(hostState.getHostLocation().getPriorityAd(priorityAd),
+                                                   key -> new PriorityQueue<>(replicaHostScoreComparator)).add(new WithScore<>(replica, hostScore));
+            }
+
+            int numReplicasRemoved = 0;
+            while(numReplicasRemoved < numReplicasToRemove) {
+                String removeReplicaFromLocation = null;
+                Double maxScoreSoFar = Double.MIN_VALUE;
+                int maxCountSoFar = Integer.MIN_VALUE;
+
+                for (Map.Entry<String, PriorityQueue<WithScore<JobTaskReplica>>> entry : replicasByLocation.entrySet()) {
+                    PriorityQueue<WithScore<JobTaskReplica>> pq = entry.getValue();
+                    if(pq.size() >= maxCountSoFar) {
+                        WithScore<JobTaskReplica> removeReplica = pq.peek();
+                        if(removeReplica != null && (pq.size() > maxCountSoFar || (removeReplica.score > maxScoreSoFar))) {
+                            removeReplicaFromLocation = entry.getKey();
+                            maxScoreSoFar = removeReplica.score;
+                            maxCountSoFar = pq.size();
+                        }
+                    }
+                }
+
+                WithScore<JobTaskReplica> removeReplica = replicasByLocation.get(removeReplicaFromLocation).poll();
+                if(removeReplica != null) {
+                    replicasToRemove.add(removeReplica.element);
+                    numReplicasRemoved++;
+                }
+            }
+        }
+        return replicasToRemove;
     }
 
     /**
@@ -1622,7 +1770,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("got find orphans request for missing job {}", task.getJobUUID());
             return rv;
         }
-        Set<String> expectedTaskHosts = task.getAllTaskHosts();
+        List<String> expectedTaskHosts = task.getAllTaskHosts();
         for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
             if ((host == null) || !host.isUp() || host.isDead() || host.getHostUuid()
                                                                        .equals(task.getRebalanceTarget())) {
@@ -2394,6 +2542,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @param allowSwap   Whether to allow swapping to replica hosts
      * @return True if some host had the capacity to run the task and the task was sent there; false otherwise
      */
+    // TODO: add a unit test
     public boolean kickOnExistingHosts(Job job,
                                        JobTask task,
                                        long timeOnQueue,
@@ -2781,14 +2930,22 @@ public class Spawn implements Codable, AutoCloseable {
     /**
      * Get a replacement host for a new task
      *
-     * @param job The job for the task to be reassigned
+     * @param task The task to be reassigned
      * @return A replacement host ID, if one can be found; null otherwise
      */
-    @Nullable private String getReplacementHost(IJob job) {
-        List<HostState> hosts = hostManager.getLiveHosts(job.getMinionType());
-        for (HostState host : hosts) {
-            if (host.canMirrorTasks()) {
-                return host.getHostUuid();
+    @Nullable private String getReplacementHost(JobTask task) {
+        IJob job = this.getJob(task.getJobUUID());
+        Map<HostState, Double> scoreMap =
+                balancer.generateHostStateScoreMap(hostManager.listHostStatus(job.getMinionType()));
+        HostCandidateIterator iterator = new HostCandidateIterator(this, job.getCopyOfTasks(), scoreMap);
+        List<String> newHostList = iterator.getNewReplicaHosts(1, task, task.getHostUUID(), false);
+        if(!newHostList.isEmpty()) {
+            String newHostUuid = newHostList.get(0);
+            HostState newHost = hostManager.getHostState(newHostUuid);
+            // canMirrorTasks is already checked in HostCandidateIterator.
+            // We retain the additional check below as a safety measure
+            if(newHost != null && newHost.canMirrorTasks()) {
+                return newHostUuid;
             }
         }
         return null;
@@ -2809,7 +2966,7 @@ public class Spawn implements Codable, AutoCloseable {
         HostState host = hostManager.getHostState(task.getHostUUID());
         boolean changed = false;
         if ((host == null) || !host.canMirrorTasks()) {
-            String replacementHost = getReplacementHost(job);
+            String replacementHost = getReplacementHost(task);
             if (replacementHost != null) {
                 task.setHostUUID(replacementHost);
                 changed = true;
@@ -3147,6 +3304,7 @@ public class Spawn implements Codable, AutoCloseable {
             return null;
         }
         List<HostState> filteredHosts = new ArrayList<>();
+        HostLocation taskLocation = hostManager.getHostState(task.getHostUUID()).getHostLocation();
         for (HostState host : hosts) {
             if ((host == null) || (forMigration && (hostFailWorker.getFailureState(host.getHostUuid())
                                                     != HostFailWorker.FailState.ALIVE))) {
@@ -3157,7 +3315,8 @@ public class Spawn implements Codable, AutoCloseable {
                 // Not a valid migration target
                 continue;
             }
-            if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
+            if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid()) &&
+                balancer.isTaskSpreadOutAcrossAd(taskLocation, host.getHostLocation(), task)) {
                 filteredHosts.add(host);
             }
         }
