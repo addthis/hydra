@@ -71,6 +71,10 @@ public class JobStoreGit {
     private static final Logger log = LoggerFactory.getLogger(JobStoreGit.class);
     boolean haveRemoteBranch = false;
 
+    // Add a DO_NOT_DELETE_ME file under jobstore/jobs/
+    // Avoid accidentally deleting/removing the jobstore when all jobs are deleted
+    private static final String DO_NOT_DELETE_FILENAME = "DO_NOT_DELETE_ME";
+
     /**
      * Set up a git repository in a directory.
      *
@@ -266,6 +270,10 @@ public class JobStoreGit {
             }
             if (!jobDir.exists()) {
                 LessFiles.initDirectory(jobDir);
+            }
+            File doNotDeleteMeFile = new File(jobDir, DO_NOT_DELETE_FILENAME);
+            if (!doNotDeleteMeFile.exists()) {
+                doNotDeleteMeFile.createNewFile();
             }
         }
     }
