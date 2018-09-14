@@ -271,10 +271,6 @@ public class JobStoreGit {
             if (!jobDir.exists()) {
                 LessFiles.initDirectory(jobDir);
             }
-            File doNotDeleteMeFile = new File(jobDir, DO_NOT_DELETE_FILENAME);
-            if (!doNotDeleteMeFile.exists()) {
-                doNotDeleteMeFile.createNewFile();
-            }
             commit(DO_NOT_DELETE_FILENAME,
                    null,
                    "DO NOT DELETE ME! AVOID ACCIDENTALLY DELETING THE JOBSTORE!",
