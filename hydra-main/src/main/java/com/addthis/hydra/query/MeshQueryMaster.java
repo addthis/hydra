@@ -134,12 +134,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         return isActive;
     }
 
-    public boolean deactivateMqMaster(boolean deactivate) {
-        if(deactivate) {
-            // Set mqMaster's isActive field to false
-            return this.isActive.compareAndSet(true, !deactivate);
-        }
-        return this.isActive.compareAndSet(false, true);
+    public void setIsMqMasterActive(boolean active) {
+        this.isActive.set(active);
     }
 
     public SpawnDataStoreHandler getSpawnDataStoreHandler() {

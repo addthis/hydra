@@ -285,28 +285,31 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             }
             case "/mqmaster/deactivate": {
-                log.trace("Received MeshQueryMaster deactivate request");
+                log.info("Received MeshQueryMaster deactivate request");
                 String shouldDeactivate = kv.getValue("deactivate");
-                boolean success;
                 switch (shouldDeactivate) {
-                    case "1":   success = meshQueryMaster.deactivateMqMaster(true);
-                        break;
-                    case "0":   success = meshQueryMaster.deactivateMqMaster(false);
-                        break;
-                    default:  success = false;
-                }
-                if(success) {
-                    writer.write("[1]");
-                } else {
-                    writer.write("[0]");
+                    case "1":   meshQueryMaster.setIsMqMasterActive(false);
+                                break;
+                    case "0":   meshQueryMaster.setIsMqMasterActive(true);
+                                break;
+                    default:
+                                // Send response 400
+                                log.info("Received invalid mqMaster deactivate request");
+                                if (ctx.channel().isActive()) {
+                                    sendError(ctx, HttpResponseStatus.BAD_REQUEST);
+                                }
+                                return;
                 }
                 break;
             }
             case "/mqmaster/healthcheck": {
-                if(meshQueryMaster.getIsActive().get()) {
-                    writer.write("[1]");
-                } else {
-                    writer.write("[0]");
+                // Send 400 if mqMaster is not active
+                // Send 200 if mqMaster is active (NO-OP here as response OK is sent below)
+                if(!meshQueryMaster.getIsActive().get()) {
+                    if (ctx.channel().isActive()) {
+                        sendError(ctx, HttpResponseStatus.NOT_FOUND);
+                        return;
+                    }
                 }
                 break;
             }
