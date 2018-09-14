@@ -275,6 +275,11 @@ public class JobStoreGit {
             if (!doNotDeleteMeFile.exists()) {
                 doNotDeleteMeFile.createNewFile();
             }
+            commit(DO_NOT_DELETE_FILENAME,
+                   null,
+                   "DO NOT DELETE ME! AVOID ACCIDENTALLY DELETING THE JOBSTORE!",
+                   "Add do not delete file");
+            push();
         }
     }
 
