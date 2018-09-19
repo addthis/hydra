@@ -1,0 +1,533 @@
+
+ LICENSES FOR THIRD-PARTY COMPONENTS 
+
+===============================================================================
+   
+The following sections list licensing information for
+libraries included with the Hydra source and components
+used to test Hydra. 
+
+The following software may be included in this product:
+
+===============================================================================
+
+		Guava: Google Core Libraries For Java
+
+Guava: Google Core Libraries For Java » 24.1-jre uses the Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works.
+
+http://www.apache.org/licenses/LICENSE-2.0.txt
+
+--------------------------------------------------------------------------- 
+
+        Metrics Core Library » 2.2.0
+        Metrics Servlet Support » 2.2.0
+        Metrics Ganglia Support » 2.2.0
+
+Copyright 2010-2012 Coda Hale and Yammer, Inc. 
+
+Metrics Core Library 2.2.0 uses the Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+--------------------------------------------------------------------------- 
+
+		FindBugs JSR305
+
+FindBugs JSR305 » 3.0.2 uses GNU Lesser General Public License and Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+http://www.gnu.org/licenses/lgpl.html
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+--------------------------------------------------------------------------- 
+
+        SLF4J Simple Binding 
+
+        SLF4J API Module 
+
+ Copyright (c) 2004-2007 QOS.ch
+
+SLF4J Simple Binding 1.7.25 and SLF4J API Module 1.7.25 use MIT license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+
+https://opensource.org/licenses/mit-license.php
+
+--------------------------------------------------------------------------- 
+
+Mockito Core » 2.17.0
+Mockito » 1.10.19
+
+The MIT License
+
+Copyright (c) 2007 Mockito contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+https://github.com/mockito/mockito/blob/release/2.x/LICENSE
+
+--------------------------------------------------------------------------- 
+
+        JUnit
+
+  
+
+JUnit » 4.12 uses Eclipse Public License - Version 1.0, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+
+http://www.eclipse.org/org/documents/epl-v10.php
+
+
+--------------------------------------------------------------------------- 
+
+		Jackson Databind » 2.9.5
+		Jackson Core » 2.9.5
+		Jackson Annotations » 2.9.5
+		Jackson Datatype: Guava » 2.9.5
+		Jackson Datatype: JDK8 » 2.9.5
+		Jackson Datatype: JSR310 » 2.9.5
+		Jackson Datatype Joda » 2.9.5
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+---------------------------------------------------------------------------
+
+		Joda Time » 2.5
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+---------------------------------------------------------------------------
+
+		MapDB » 1.0.9
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+---------------------------------------------------------------------------
+
+        Netty/Buffer » 4.1.23.Final
+        Netty/All In One » 4.1.23.Final
+
+Copyright 2014 The Netty Project
+  
+
+Netty/Buffer » 4.1.23.Final uses the Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+
+https://github.com/netty/netty/blob/4.0/LICENSE.txt
+
+---------------------------------------------------------------------------
+
+        Compress LZF » 1.0.4
+
+Copyright 2009-2010 Ning, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License. You may obtain a copy of
+the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations under
+the License.
+
+---------------------------------------------------------------------------
+
+		JZlib » 1.1.3
+
+JZlib 0.0.* were released under the GNU LGPL license.  Later, we have switched 
+over to a BSD-style license. 
+
+------------------------------------------------------------------------------
+Copyright (c) 2000-2011 ymnk, JCraft,Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  1. Redistributions of source code must retain the above copyright notice,
+     this list of conditions and the following disclaimer.
+
+  2. Redistributions in binary form must reproduce the above copyright 
+     notice, this list of conditions and the following disclaimer in 
+     the documentation and/or other materials provided with the distribution.
+
+  3. The names of the authors may not be used to endorse or promote products
+     derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL JCRAFT,
+INC. OR ANY CONTRIBUTORS TO THIS SOFTWARE BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---------------------------------------------------------------------------
+
+		Snappy Java » 1.1.7.1
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+
+https://github.com/xerial/snappy-java/blob/master/LICENSE
+
+---------------------------------------------------------------------------
+
+		XZ For Java » 1.8
+
+Licensing
+This Java implementation of XZ has been put into the public domain, thus you can do whatever you want with it. All the files in the package have been written by Lasse Collin, but some files are heavily based on public domain code written by Igor Pavlov.
+
+---------------------------------------------------------------------------
+
+		Apache Commons Compress » 1.16.1
+		Apache Commons Codec » 1.11
+		Apache Commons IO » 2.6
+		Apache Commons Lang » 3.7
+		Apache Commons Math » 3.6.1
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+https://www.apache.org/licenses/LICENSE-2.0.txt
+
+---------------------------------------------------------------------------
+
+		Oracle NoSQL Database Server » 5.0.73 (com.sleepycat:je:jar:5.0.73)
+
+Copyright (c) 2002, 2013 Oracle and/or its affiliates.  All rights reserved.
+http://download.oracle.com/maven/com/sleepycat/je/license.txt
+
+---------------------------------------------------------------------------
+
+		JOpt Simple » 5.0.4
+
+The MIT License
+Copyright (c) 2004-2016 Paul R. Holser, Jr.
+
+https://github.com/jopt-simple/jopt-simple/blob/master/LICENSE.txt
+
+---------------------------------------------------------------------------
+
+		JSoup Java HTML Parser » 1.11.2
+
+The MIT License
+Copyright © 2009 - 2017 Jonathan Hedley (jonathan@hedley.net)
+
+https://jsoup.org/license
+
+---------------------------------------------------------------------------
+
+		Guava Retrying » 2.0.0
+
+Copyright 2012-2015 Ray Holder
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+https://github.com/rholder/guava-retrying/blob/master/LICENSE
+
+---------------------------------------------------------------------------
+
+		RabbitMQ Java Client » 5.2.0
+
+This package, the RabbitMQ Java client library, is triple-licensed under
+the Mozilla Public License 1.1 ("MPL"), the GNU General Public License
+version 2 ("GPL") and the Apache License version 2 ("ASL"). For the MPL,
+please see LICENSE-MPL-RabbitMQ. For the GPL, please see LICENSE-GPL2.
+For the ASL, please see LICENSE-APACHE2.
+
+The RabbitMQ Java client library includes third-party software under the
+ASL. For this license, please see LICENSE-APACHE2. For attribution of
+copyright and other details of provenance, please refer to the source code.
+
+If you have any questions regarding licensing, please contact info@rabbitmq.com.
+
+https://github.com/rabbitmq/rabbitmq-java-client/blob/master/LICENSE
+https://github.com/rabbitmq/rabbitmq-java-client/blob/master/LICENSE-APACHE2
+https://github.com/rabbitmq/rabbitmq-java-client/blob/master/LICENSE-GPL2
+https://github.com/rabbitmq/rabbitmq-java-client/blob/master/LICENSE-MPL-RabbitMQ
+
+---------------------------------------------------------------------------
+
+		Lyra » 0.5.5
+
+Copyright 2013-2017 Jonathan Halterman - Released under the Apache 2.0 license.
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+https://github.com/jhalterman/lyra/blob/master/LICENSE
+
+---------------------------------------------------------------------------
+
+		Config » 1.2.1
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+https://github.com/lightbend/config/blob/master/LICENSE-2.0.txt
+
+---------------------------------------------------------------------------
+
+		JBoss Logging 3 » 3.3.2.Final
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+http://www.apache.org/licenses/LICENSE-2.0.txt
+
+---------------------------------------------------------------------------
+
+		Gson » 2.8.2
+
+Copyright 2008 Google Inc.
+
+Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+
+https://github.com/google/gson/blob/master/LICENSE
+
+---------------------------------------------------------------------------
+
+		Gmetric4j » 1.0.7
+
+    Copyright (C) 2010-2015 Daniel Pocock <daniel@pocock.com.au>
+    Copyright (c) 2008-2011 Jasper Humphrey <jasper521@gmail.com>
+
+Based on:	jmxetric by Jasper Humphrey (BSD style license)
+
+License:             BSD terms
+
+    Copyright (C) 2010-2012 Daniel Pocock <daniel@pocock.com.au>
+    Copyright (c) 2008-2011 Jasper Humphrey <jasper521@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+---------------------------------------------------------------------------
+
+		Apache Parquet Avro (Incubating) » 1.5.0
+
+Copyright 2012-2013 Twitter, Inc.
+
+Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
+
+---------------------------------------------------------------------------
+
+		Apache Hadoop Client Aggregator » 3.0.1
+
+Licensed under the Apache License, Version 2.0
+
+https://github.com/apache/hadoop/blob/trunk/LICENSE.txt
+https://github.com/apache/hadoop/blob/trunk/NOTICE.txt
+
+---------------------------------------------------------------------------
+
+		Apache Avro » 1.8.2
+
+Copyright 2010-2015 The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0
+
+https://github.com/apache/avro/blob/master/LICENSE.txt
+
+---------------------------------------------------------------------------
+
+		JGit Core » 4.11.0.201803080745-r
+
+Copyright (C) 2009-2010, Google Inc.
+Copyright (C) 2012, Matthias Sohn <matthias.sohn@sap.com>
+
+This program and the accompanying materials are made available
+under the terms of the Eclipse Distribution License v1.0 which
+accompanies this distribution, is reproduced below, and is
+available at http://www.eclipse.org/org/documents/edl-v10.php
+
+https://github.com/eclipse/jgit/blob/master/LICENSE
+
+---------------------------------------------------------------------------
+
+		Jetty :: Servlet Handling » 9.4.9.v20180320
+		Jetty :: Utility Servlets and Filters » 9.4.9.v20180320
+		Jetty :: Server Core » 9.4.9.v20180320
+		Javax WebSocket Server Impl » 9.4.9.v20180320
+
+  
+
+The Apache 2.0 license and Eclipse Public License - Version 1.0, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+
+http://www.apache.org/licenses/LICENSE-2.0 
+
+http://www.eclipse.org/org/documents/epl-v10.php
+
+
+---------------------------------------------------------------------------
+
+		WebSocket Server API » 1.0
+
+COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.1
+The GNU General Public License (GPL) Version 2, June 1991
+
+https://github.com/javaee/websocket-spec/blob/master/LICENSE
+https://javaee.github.io/glassfish/LICENSE
+
+---------------------------------------------------------------------------
+
+		Jersey Core » 1.19.4
+		Jersey Servlet » 1.19.4
+		Jersey JSON » 1.19.4
+
+COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.1
+The GNU General Public License (GPL) Version 2
+
+https://jersey.github.io/license.html
+http://glassfish.java.net/public/CDDL+GPL_1_1.html
+
+---------------------------------------------------------------------------
+
+		Drizzle JDBC » 1.4
+
+Copyright (c) 2009-2013, Marcus Eriksson
+
+BSD 3-Clause "New" or "Revised" License
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+   3. Neither the name of the driver nor the names of its contributors may
+   be used to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
+EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+
+
+https://github.com/krummas/DrizzleJDBC/blob/master/LICENSE.txt
+
+---------------------------------------------------------------------------
+
+		C3P0 » 0.9.5.2
+
+The GNU Lesser General Public License (LGPL), version 2.1
+The Eclipse Public License (EPL), version 1.0
+
+https://github.com/swaldman/c3p0/blob/master/LICENSE
+https://github.com/swaldman/c3p0/blob/master/LICENSE-LGPL
+https://github.com/swaldman/c3p0/blob/master/LICENSE-EPL
+
+---------------------------------------------------------------------------
+
+		Jackson JAXRS JSON » 2.4.3
+
+The Apache Software License, Version 2.0	
+
+http://www.apache.org/licenses/LICENSE-2.0.txt
+
+--------------------------------------------------------------------------- 
+
+        Collector 
+
+  
+
+Collector 0.10 uses the Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+--------------------------------------------------------------------------- 
+
+        Prometheus Java Simpleclient 
+
+        Prometheus Java Simpleclient Hotspot 
+
+        Prometheus Java Simpleclient Servlet 
+
+  
+
+Prometheus Java Simpleclient 0.0.26, Prometheus Java Simpleclient Hotspot 0.0.26, Prometheus Java Simpleclient Servlet 0.0.26 use the Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+  
+
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+--------------------------------------------------------------------------- 
+
+		Spring TestContext Framework » 5.0.5.RELEASE
+		Spring Core » 5.0.5.RELEASE
+
+The Spring Framework is released under version 2.0 of the Apache License.
+
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+--------------------------------------------------------------------------- 
+
+		Log4j API » 2.11.0
+		Log4j Core » 2.11.0
+		Log4j SLF4J Impl » 2.11.0
+		Log4j JUL » 2.11.0
+		Log4j JCL » 2.11.0
+
+Apache Log4j
+Copyright 1999-2017 Apache Software Foundation
+
+Listed under the Apache 2.0 license, shown below. See the License for details about distribution rights, and the specific rights regarding derivate works. 
+
+https://github.com/apache/logging-log4j2/blob/master/LICENSE.txt
+
+
