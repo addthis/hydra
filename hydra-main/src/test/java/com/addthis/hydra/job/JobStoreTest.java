@@ -80,12 +80,6 @@ public class JobStoreTest {
         assertNull(jobStore.getDeletedJobConfig("bogus_job_id"));
     }
 
-    @Test(expected = GitAPIException.class)
-    public void getDeletedJobConfigGitError() throws Exception {
-        // without the init commit jgit will throw an No HEAD exception 
-        jobStore.getDeletedJobConfig("bogus_job_id");
-    }
-    
     @Test
     public void getHistoryNonExistentJob() throws Exception {
         jobStore.submitConfigUpdate(JOB_ID, "bob", "config 1", null);

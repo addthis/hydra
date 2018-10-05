@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -769,7 +770,15 @@ public class JobTask implements Codable {
 
     public void exec(@Nonnull CommandTaskKick kickMessage, boolean execute) throws Exception {
         // setup data directory
-        jobDir = LessFiles.initDirectory(new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
+        File liveDir = new File(minion.rootDir, id + File.separator + node + File.separator + "live");
+        // on first kick (live dir does not exist), create an empty backup
+        // this allows user to revert in case of error on first kick
+        if(!liveDir.exists()) {
+            File emptySnapshot = new File(taskRoot, new GoldBackup().generateCurrentName(true));
+            LessFiles.initDirectory(emptySnapshot);
+            Files.createFile(Paths.get(emptySnapshot.toPath().toString(), "backup.complete"));
+        }
+        jobDir = LessFiles.initDirectory(liveDir);
         File configDir = getConfigDir();
         if (!configDir.exists()) {
             LessFiles.initDirectory(configDir);
