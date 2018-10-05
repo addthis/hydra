@@ -169,7 +169,7 @@ function startBrokers() {
     if [ ! -f "pid/pid.rabbitmq" ]; then
         touch pid/pid.rabbitmq
         echo "starting rabbitmq"
-        nohup rabbitmq-server > log/rabbitmq-server.out 2>&1 &
+        nohup rabbitmq-server > log/rabbitmq-server.log 2>&1 &
         quit=1
     fi
     if [ ! -f pid/pid.zookeeper ]; then
@@ -191,13 +191,13 @@ function startOthers() {
     if [ ! -f pid/pid.mqworker ]; then
         export HYDRA_LOG=log/worker
         echo "starting mesh query worker"
-        ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker > log/mqworker.out 2>&1 &
+        ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker > log/mqworker.log 2>&1 &
         echo "$!" > pid/pid.mqworker
     fi
     if [ ! -f pid/pid.mqmaster ]; then
         export HYDRA_LOG=log/master
         echo "starting mesh query master"
-        ${JAVA_CMD} ${MQ_MASTER_OPT} -jar ${HYDRA_EXEC} mqmaster etc web jar > log/mqmaster.out 2>&1 &
+        ${JAVA_CMD} ${MQ_MASTER_OPT} -jar ${HYDRA_EXEC} mqmaster etc web jar > log/mqmaster.log 2>&1 &
         echo "$!" > pid/pid.mqmaster
     fi
     for minion in $minions; do
@@ -206,18 +206,18 @@ function startOthers() {
             jvmname="-Dvisualvm.display.name=${minion}"
             dataDir="-Dcom.addthis.hydra.minion.Minion.dataDir=${minion}"
             echo "${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion}" > log/${minion}.cmd
-            ${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.out 2>&1 &
+            ${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.log 2>&1 &
             echo "$!" > pid/pid.${minion}
         fi
     done
     if [ ! -f pid/pid.spawn ]; then
         echo "starting spawn"
-        ${JAVA_CMD} ${SPAWN_OPT} -jar ${HYDRA_EXEC} spawn > log/spawn.out 2>&1 &
+        ${JAVA_CMD} ${SPAWN_OPT} -jar ${HYDRA_EXEC} spawn > log/spawn.log 2>&1 &
         echo "$!" > pid/pid.spawn
     fi
     if [ ! -f pid/pid.meshy ]; then
         echo "starting meshy"
-        ${JAVA_CMD} ${MESHY_OPT} -jar ${HYDRA_EXEC} mesh server 5000 streams > log/meshy.out 2>&1 &
+        ${JAVA_CMD} ${MESHY_OPT} -jar ${HYDRA_EXEC} mesh server 5000 streams > log/meshy.log 2>&1 &
         echo "$!" > pid/pid.meshy
     fi
     echo "--------------------------------------------------"
