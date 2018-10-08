@@ -120,12 +120,12 @@ export HYDRA_EXEC=`ls -t ${HYDRA_CONF}/target/hydra-uber-*exec*jar | head -n 1`
 export LOG4J_PROPERTIES="-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager \
 -Dlog4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory -Dlogging.stderr=off"
 
-export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dje.maxMemory=256MiB \
+export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dlogfile.name=mqmaster.out -Deps.mem.debug=10000 -Dje.maxMemory=256MiB \
 -Dje.sharedCache=true -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 \
 -Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 \
 -Dmeshy.stream.prefetch=true -Dqmaster.mesh.peer.port=5101"
 
-export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource \
+export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dlogfile.name=mqworker.out -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource \
 -Dmeshy.stream.prefetch=true -Dmeshy.senders=1 -Dcom.addthis.hydra.query.MeshQueryWorker.bindAddress=5101 \
 -Dcom.addthis.hydra.query.MeshQueryWorker.root=${HYDRA_LOCAL_DIR} \
 -Dcom.addthis.hydra.query.MeshQueryWorker.peers=localhost:5100"
@@ -134,7 +134,7 @@ export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localh
 -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 \
 -Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0 -Dbatch.brokerAddresses=localhost"
 
-export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspawn.queryhost=localhost -Dspawn.status.interval=6000 \
+export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dlogfile.name=spawn.out -Dspawn.localhost=localhost -Dspawn.queryhost=localhost -Dspawn.status.interval=6000 \
 -Dspawn.chore.interval=3000 -Dhttp.post.max=327680  -Dspawn.polltime=10000 -Dspawnbalance.min.disk.percent.avail.replicas=0.01 \
 -Dspawn.auth.ldap=false -Dmesh.port=5000 -Djob.store.remote=false -Dspawn.queue.new.task.last.slot.delay=0 -Dspawn.defaultReplicaCount=0 \
 -Dspawnbalance.disk.free.newtasks=20000000000 \
@@ -145,7 +145,7 @@ export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspa
 -Dcom.addthis.hydra.job.web.SpawnServiceConfiguration.defaultSSL=false \
 -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
 
-export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dmeshy.autoMesh=false -Dmeshy.throttleLog=true \
+export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dlogfile.name=meshy.out -Dmeshy.autoMesh=false -Dmeshy.throttleLog=true \
 -Dmeshy.buffers.enable=true -Dmeshy.stream.maxopen=10000"
 
 export JAVA_CMD="java -server ${JAVA_OPTS} -Djava.net.preferIPv4Stack=true -Djava.library.path=${ZMQ_LIBDIR} \
@@ -205,8 +205,9 @@ function startOthers() {
             echo "starting ${minion}"
             jvmname="-Dvisualvm.display.name=${minion}"
             dataDir="-Dcom.addthis.hydra.minion.Minion.dataDir=${minion}"
+            logDir="-Dlogfile.name=${minion}.out"
             echo "${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion}" > log/${minion}.cmd
-            ${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.err 2>&1 &
+            ${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} ${logDir} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.err 2>&1 &
             echo "$!" > pid/pid.${minion}
         fi
     done
