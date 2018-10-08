@@ -191,13 +191,13 @@ function startOthers() {
     if [ ! -f pid/pid.mqworker ]; then
         export HYDRA_LOG=log/worker
         echo "starting mesh query worker"
-        ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker > log/mqworker.err 2>&1 &
+        ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker > log/mqworker.out 2>&1 &
         echo "$!" > pid/pid.mqworker
     fi
     if [ ! -f pid/pid.mqmaster ]; then
         export HYDRA_LOG=log/master
         echo "starting mesh query master"
-        ${JAVA_CMD} ${MQ_MASTER_OPT} -jar ${HYDRA_EXEC} mqmaster etc web jar > log/mqmaster.err 2>&1 &
+        ${JAVA_CMD} ${MQ_MASTER_OPT} -jar ${HYDRA_EXEC} mqmaster etc web jar > log/mqmaster.out 2>&1 &
         echo "$!" > pid/pid.mqmaster
     fi
     for minion in $minions; do
@@ -207,18 +207,18 @@ function startOthers() {
             dataDir="-Dcom.addthis.hydra.minion.Minion.dataDir=${minion}"
             logDir="-Dlogfile.name=${minion}"
             echo "${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion}" > log/${minion}.cmd
-            ${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} ${logDir} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.err 2>&1 &
+            ${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} ${logDir} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.out 2>&1 &
             echo "$!" > pid/pid.${minion}
         fi
     done
     if [ ! -f pid/pid.spawn ]; then
         echo "starting spawn"
-        ${JAVA_CMD} ${SPAWN_OPT} -jar ${HYDRA_EXEC} spawn > log/spawn.err 2>&1 &
+        ${JAVA_CMD} ${SPAWN_OPT} -jar ${HYDRA_EXEC} spawn > log/spawn.out 2>&1 &
         echo "$!" > pid/pid.spawn
     fi
     if [ ! -f pid/pid.meshy ]; then
         echo "starting meshy"
-        ${JAVA_CMD} ${MESHY_OPT} -jar ${HYDRA_EXEC} mesh server 5000 streams > log/meshy.err 2>&1 &
+        ${JAVA_CMD} ${MESHY_OPT} -jar ${HYDRA_EXEC} mesh server 5000 streams > log/meshy.out 2>&1 &
         echo "$!" > pid/pid.meshy
     fi
     echo "--------------------------------------------------"
