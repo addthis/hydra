@@ -43,6 +43,7 @@ public class TestValueFilterExclude {
                 0,
                 0,
                 0,
+                0,
                 0).filter(ValueFactory.create(val))).map(Object::toString).orElse(null);
     }
 

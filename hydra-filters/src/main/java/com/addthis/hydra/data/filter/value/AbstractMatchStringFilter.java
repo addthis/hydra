@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.concurrent.*;
 
 import com.addthis.ahocorasick.AhoCorasick;
 import com.addthis.ahocorasick.SearchResult;
@@ -36,6 +37,7 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.util.concurrent.MoreExecutors;
 
 abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual implements SuperCodable {
 
@@ -100,6 +102,11 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
      */
     final private int urlRetries;
 
+    /**
+     * Set an interval to fetch the required URL and update the bundle filter setting by calling the postDecodeHelper.
+     */
+    final private int refreshInterval;
+
     final private int urlMinBackoff;
 
     final private int urlMaxBackoff;
@@ -123,6 +130,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               boolean toLower,
                               int urlTimeout,
                               int urlRetries,
+                              int refreshInterval,
                               int urlMinBackoff,
                               int urlMaxBackoff,
                               boolean not) {
@@ -138,6 +146,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         this.toLower = toLower;
         this.urlTimeout = urlTimeout;
         this.urlRetries = urlRetries;
+        this.refreshInterval = refreshInterval;
         this.urlMinBackoff = urlMinBackoff;
         this.urlMaxBackoff = urlMaxBackoff;
         this.not = not;
@@ -201,7 +210,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         return false;
     }
 
-    @Override public void postDecode() {
+    public void postDecodeHelper() {
         if (valueURL != null) {
             JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(valueURL)
                     .setContention(urlTimeout, urlRetries, urlMinBackoff, urlMaxBackoff);
@@ -258,6 +267,24 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         }
     }
 
+    @Override public void postDecode() {
+        if (refreshInterval == 0) {
+            postDecodeHelper();
+        } else {
+            ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
+            // upon JVM termination, wait for the tasks for up to 100ms before exiting the executor service
+            ExecutorService executorService = MoreExecutors.getExitingExecutorService(executor, 100, TimeUnit.MILLISECONDS);
+
+            executorService.submit(() -> {
+                while (true) {
+                    postDecodeHelper();
+                    // sleep for refreshInterval minutes before decoding again
+                    Thread.sleep(refreshInterval * 60 * 1000 );
+                }
+            });
+        }
+    }
+
     @Override public void preEncode() {}
 
     private static final class ValidationOnly extends AbstractMatchStringFilter {
@@ -273,6 +300,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               @JsonProperty("toLower") boolean toLower,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
                               @JsonProperty("urlRetries") int urlRetries,
+                              @Time(TimeUnit.MINUTES) @JsonProperty("refreshInterval") int refreshInterval,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff) {
             super(value,
@@ -287,6 +315,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                   toLower,
                   urlTimeout,
                   urlRetries,
+                  refreshInterval,
                   urlMinBackoff,
                   urlMaxBackoff,
                   false);
