@@ -22,9 +22,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.addthis.ahocorasick.AhoCorasick;
 import com.addthis.ahocorasick.SearchResult;
@@ -107,7 +106,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     /**
      * Set an interval to fetch the required URL and update the bundle filter setting by calling the postDecodeHelper.
      */
-    final private int refreshInterval;
+    final private int refreshMinutes;
 
     final private int urlMinBackoff;
 
@@ -132,7 +131,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               boolean toLower,
                               int urlTimeout,
                               int urlRetries,
-                              int refreshInterval,
+                              int refreshMinutes,
                               int urlMinBackoff,
                               int urlMaxBackoff,
                               boolean not) {
@@ -148,7 +147,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         this.toLower = toLower;
         this.urlTimeout = urlTimeout;
         this.urlRetries = urlRetries;
-        this.refreshInterval = refreshInterval;
+        this.refreshMinutes = refreshMinutes;
         this.urlMinBackoff = urlMinBackoff;
         this.urlMaxBackoff = urlMaxBackoff;
         this.not = not;
@@ -270,20 +269,15 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     }
 
     @Override public void postDecode() {
-        if (refreshInterval == 0) {
+        if (refreshMinutes == 0) {
             postDecodeHelper();
         } else {
-            ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
+            ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
             // upon JVM termination, wait for the tasks for up to 100ms before exiting the executor service
-            ExecutorService executorService = MoreExecutors.getExitingExecutorService(executor, 100, TimeUnit.MILLISECONDS);
-
-            executorService.submit(() -> {
-                while (true) {
-                    postDecodeHelper();
-                    // sleep for refreshInterval minutes before decoding again
-                    Thread.sleep(refreshInterval * 60 * 1000 );
-                }
-            });
+            ScheduledExecutorService executorService = MoreExecutors.getExitingScheduledExecutorService(executor, 100, TimeUnit.MILLISECONDS);
+            executorService.scheduleWithFixedDelay(() -> {
+                postDecodeHelper();
+            }, 0, refreshMinutes, TimeUnit.MINUTES);
         }
     }
 
@@ -302,7 +296,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               @JsonProperty("toLower") boolean toLower,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
                               @JsonProperty("urlRetries") int urlRetries,
-                              @Time(TimeUnit.MINUTES) @JsonProperty("refreshInterval") int refreshInterval,
+                              @Time(TimeUnit.MINUTES) @JsonProperty("refreshMinutes") int refreshMinutes,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff) {
             super(value,
@@ -317,7 +311,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                   toLower,
                   urlTimeout,
                   urlRetries,
-                  refreshInterval,
+                  refreshMinutes,
                   urlMinBackoff,
                   urlMaxBackoff,
                   false);
