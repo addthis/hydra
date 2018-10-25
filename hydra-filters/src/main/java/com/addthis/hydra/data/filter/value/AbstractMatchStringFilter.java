@@ -269,15 +269,14 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     }
 
     @Override public void postDecode() {
-        if (refreshMinutes == 0) {
-            postDecodeHelper();
-        } else {
+        // need to call postDecodeHelper first even in the scheduled service case. Otherwise the filter might not be initialized since
+        // the new thread might not be ready to finish decoding, and the current thread might use the uninitialized object
+        postDecodeHelper();
+        if (refreshMinutes > 0) {
             ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
             // upon JVM termination, wait for the tasks for up to 100ms before exiting the executor service
             ScheduledExecutorService executorService = MoreExecutors.getExitingScheduledExecutorService(executor, 100, TimeUnit.MILLISECONDS);
-            executorService.scheduleWithFixedDelay(() -> {
-                postDecodeHelper();
-            }, 0, refreshMinutes, TimeUnit.MINUTES);
+            executorService.scheduleWithFixedDelay(this :: postDecodeHelper, refreshMinutes, refreshMinutes, TimeUnit.MINUTES);
         }
     }
 
