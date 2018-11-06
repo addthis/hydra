@@ -115,10 +115,10 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     final private boolean not;
 
-    private AtomicReference<ArrayList<Pattern>> pattern;
-    private AtomicReference<ArrayList<Pattern>> findPattern;
+    private AtomicReference<ArrayList<Pattern>> pattern = new AtomicReference<>();
+    private AtomicReference<ArrayList<Pattern>> findPattern = new AtomicReference<>();
 
-    private AtomicReference<AhoCorasick> containsDictionary;
+    private AtomicReference<AhoCorasick> containsDictionary = new AtomicReference<>();
 
     AbstractMatchStringFilter(TypedField<Set<String>> value,
             String valueURL,
@@ -152,9 +152,6 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         this.urlMinBackoff = urlMinBackoff;
         this.urlMaxBackoff = urlMaxBackoff;
         this.not = not;
-        this.pattern = new AtomicReference<>();
-        this.findPattern = new AtomicReference<>();
-        this.containsDictionary = new AtomicReference<>();
         if (match != null) {
             ArrayList<Pattern> np = new ArrayList<>();
             for (String s : match) {
