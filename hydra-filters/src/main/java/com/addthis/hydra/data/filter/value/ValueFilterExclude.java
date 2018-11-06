@@ -56,6 +56,7 @@ public class ValueFilterExclude extends AbstractMatchStringFilter {
                        @JsonProperty("toLower") boolean toLower,
                        @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
                        @JsonProperty("urlRetries") int urlRetries,
+                       @Time(TimeUnit.MINUTES) @JsonProperty("refreshMinutes") int refreshMinutes,
                        @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
                        @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff) {
         super(value,
@@ -70,6 +71,7 @@ public class ValueFilterExclude extends AbstractMatchStringFilter {
               toLower,
               urlTimeout,
               urlRetries,
+              refreshMinutes,
               urlMinBackoff,
               urlMaxBackoff,
               true);

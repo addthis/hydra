@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ScheduledExecutorService;
 
 import com.addthis.ahocorasick.AhoCorasick;
 import com.addthis.ahocorasick.SearchResult;
@@ -36,6 +38,7 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.util.concurrent.MoreExecutors;
 
 abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual implements SuperCodable {
 
@@ -100,6 +103,11 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
      */
     final private int urlRetries;
 
+    /**
+     * Set an interval to fetch the required URL and update the bundle filter setting by calling the postDecodeHelper.
+     */
+    final private int refreshMinutes;
+
     final private int urlMinBackoff;
 
     final private int urlMaxBackoff;
@@ -123,6 +131,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               boolean toLower,
                               int urlTimeout,
                               int urlRetries,
+                              int refreshMinutes,
                               int urlMinBackoff,
                               int urlMaxBackoff,
                               boolean not) {
@@ -138,6 +147,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         this.toLower = toLower;
         this.urlTimeout = urlTimeout;
         this.urlRetries = urlRetries;
+        this.refreshMinutes = refreshMinutes;
         this.urlMinBackoff = urlMinBackoff;
         this.urlMaxBackoff = urlMaxBackoff;
         this.not = not;
@@ -201,7 +211,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         return false;
     }
 
-    @Override public void postDecode() {
+    public void postDecodeHelper() {
         if (valueURL != null) {
             JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(valueURL)
                     .setContention(urlTimeout, urlRetries, urlMinBackoff, urlMaxBackoff);
@@ -258,6 +268,18 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         }
     }
 
+    @Override public void postDecode() {
+        // need to call postDecodeHelper first even in the scheduled service case. Otherwise the filter might not be initialized since
+        // the new thread might not be ready to finish decoding, and the current thread might use the uninitialized object
+        postDecodeHelper();
+        if (refreshMinutes > 0) {
+            ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
+            // upon JVM termination, wait for the tasks for up to 100ms before exiting the executor service
+            ScheduledExecutorService executorService = MoreExecutors.getExitingScheduledExecutorService(executor, 100, TimeUnit.MILLISECONDS);
+            executorService.scheduleWithFixedDelay(this :: postDecodeHelper, refreshMinutes, refreshMinutes, TimeUnit.MINUTES);
+        }
+    }
+
     @Override public void preEncode() {}
 
     private static final class ValidationOnly extends AbstractMatchStringFilter {
@@ -273,6 +295,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               @JsonProperty("toLower") boolean toLower,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
                               @JsonProperty("urlRetries") int urlRetries,
+                              @Time(TimeUnit.MINUTES) @JsonProperty("refreshMinutes") int refreshMinutes,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
                               @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff) {
             super(value,
@@ -287,6 +310,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                   toLower,
                   urlTimeout,
                   urlRetries,
+                  refreshMinutes,
                   urlMinBackoff,
                   urlMaxBackoff,
                   false);
