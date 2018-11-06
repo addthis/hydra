@@ -15,7 +15,6 @@ package com.addthis.hydra.data.filter.value;
 
 import javax.annotation.Nullable;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
