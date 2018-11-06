@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.addthis.ahocorasick.AhoCorasick;
 import com.addthis.ahocorasick.SearchResult;
@@ -45,7 +46,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     /**
      * The input must match exactly to an element in this set.
      */
-    private TypedField<Set<String>> value;
+    private AtomicReference<TypedField<Set<String>>> value;
 
     /**
      * A URL to retrieve the 'value' field.
@@ -75,7 +76,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     /**
      * A substring of the input must match exactly to an element of this set.
      */
-    private TypedField<Set<String>> contains;
+    private AtomicReference<TypedField<Set<String>>> contains;
 
     /**
      * A URL to retrieve the 'contains' field.
@@ -114,10 +115,10 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     final private boolean not;
 
-    private ArrayList<Pattern> pattern;
-    private ArrayList<Pattern> findPattern;
+    private AtomicReference<ArrayList<Pattern>> pattern;
+    private AtomicReference<ArrayList<Pattern>> findPattern;
 
-    private AhoCorasick containsDictionary;
+    private AtomicReference<AhoCorasick> containsDictionary;
 
     AbstractMatchStringFilter(TypedField<Set<String>> value,
                               String valueURL,
@@ -135,13 +136,13 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                               int urlMinBackoff,
                               int urlMaxBackoff,
                               boolean not) {
-        this.value = value;
+        this.value = new AtomicReference<>(value);
         this.valueURL = valueURL;
         this.match = match;
         this.matchURL = matchURL;
         this.find = find;
         this.findURL = findURL;
-        this.contains = contains;
+        this.contains = new AtomicReference<>(contains);
         this.containsURL = containsURL;
         this.urlReturnsCSV = urlReturnsCSV;
         this.toLower = toLower;
@@ -156,21 +157,22 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             for (String s : match) {
                 np.add(Pattern.compile(s));
             }
-            this.pattern = np;
+            this.pattern = new AtomicReference<>(np);
         }
         if (find != null) {
             ArrayList<Pattern> np = new ArrayList<>();
             for (String s : find) {
                 np.add(Pattern.compile(s));
             }
-            this.findPattern = np;
+            this.findPattern = new AtomicReference<>(np);
         }
     }
 
     public boolean passedMatch(String sv) {
         // match regex
-        if (pattern != null) {
-            for (Pattern pat : pattern) {
+        ArrayList<Pattern> localPattern = pattern.get();
+        if (localPattern != null) {
+            for (Pattern pat : localPattern) {
                 if (pat.matcher(sv).matches()) {
                     return true;
                 }
@@ -181,11 +183,13 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     public boolean passedContains(String sv, Bundle context) {
         // match contains
-        if (containsDictionary != null) {
-            Iterator<SearchResult> matcher = containsDictionary.progressiveSearch(sv);
+        AhoCorasick localContainsDictionary = containsDictionary.get();
+        TypedField<Set<String>> localContains = contains.get();
+        if (localContainsDictionary != null) {
+            Iterator<SearchResult> matcher = localContainsDictionary.progressiveSearch(sv);
             return matcher.hasNext();
-        } else if (contains != null) {
-            for (String search : contains.getValue(context)) {
+        } else if (localContains != null) {
+            for (String search : localContains.getValue(context)) {
                 if (sv.contains(search)) {
                     return true;
                 }
@@ -196,13 +200,15 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     public boolean passedValue(String sv, Bundle context) {
         // match exact values
-        return (value != null) && value.getValue(context).contains(sv);
+        TypedField<Set<String>> localValue = value.get();
+        return (localValue != null) && localValue.getValue(context).contains(sv);
     }
 
     public boolean passedFind(String sv) {
         // match regex
-        if (findPattern != null) {
-            for (Pattern pat : findPattern) {
+        ArrayList<Pattern> localFindPattern = findPattern.get();
+        if (localFindPattern != null) {
+            for (Pattern pat : localFindPattern) {
                 if (pat.matcher(sv).find()) {
                     return true;
                 }
@@ -218,7 +224,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             if (urlReturnsCSV) {
                 loader.setCsv(true);
             }
-            value = new ConstantTypedField<>(loader.load());
+            value.set(new ConstantTypedField<>(loader.load()));
         }
         if (matchURL != null) {
             JSONFetcher.SetLoader loader = new JSONFetcher.SetLoader(matchURL)
@@ -232,7 +238,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                 for (String s : match) {
                     np.add(Pattern.compile(s));
                 }
-                this.pattern = np;
+                this.pattern.set(np);
             }
         }
         if (findURL != null) {
@@ -247,7 +253,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                 for (String s : find) {
                     np.add(Pattern.compile(s));
                 }
-                this.findPattern = np;
+                this.findPattern.set(np);
             }
         }
         if (containsURL != null) {
@@ -256,14 +262,15 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             if (urlReturnsCSV) {
                 loader.setCsv(true);
             }
-            contains = new ConstantTypedField<>(loader.load());
+            contains.set(new ConstantTypedField<>(loader.load()));
         }
         if (contains instanceof Supplier) {
             Set<String> candidates = ((Supplier<Set<String>>) contains).get();
             if (candidates != null) {
-                containsDictionary = AhoCorasick.builder().build();
-                candidates.forEach(containsDictionary::add);
-                containsDictionary.prepare();
+                AhoCorasick nd = AhoCorasick.builder().build();
+                candidates.forEach(nd::add);
+                nd.prepare();
+                containsDictionary.set(nd);
             }
         }
     }
