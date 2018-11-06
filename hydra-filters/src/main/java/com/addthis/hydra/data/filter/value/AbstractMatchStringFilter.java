@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import javax.annotation.Nullable;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -264,8 +265,9 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             }
             contains.set(new ConstantTypedField<>(loader.load()));
         }
-        if (contains instanceof Supplier) {
-            Set<String> candidates = ((Supplier<Set<String>>) contains).get();
+        TypedField<Set<String>> nc = contains.get();
+        if (nc instanceof Supplier) {
+            Set<String> candidates = ((Supplier<Set<String>>) nc).get();
             if (candidates != null) {
                 AhoCorasick nd = AhoCorasick.builder().build();
                 candidates.forEach(nd::add);
