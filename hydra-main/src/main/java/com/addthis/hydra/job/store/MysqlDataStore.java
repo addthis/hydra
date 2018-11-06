@@ -13,12 +13,10 @@
  */
 package com.addthis.hydra.job.store;
 
-import javax.sql.rowset.serial.SerialBlob;
-
 import java.util.Properties;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Blob;
+import com.mysql.cj.jdbc.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -40,10 +38,9 @@ import org.slf4j.LoggerFactory;
 public class MysqlDataStore extends JdbcDataStore<Blob> {
 
     private static final Logger log = LoggerFactory.getLogger(MysqlDataStore.class);
-    private static final String driverClass = Parameter.value("sql.datastore.driverclass", "org.drizzle.jdbc.DrizzleDriver");
+    private static final String driverClass = Parameter.value("sql.datastore.driverclass", "com.mysql.cj.jdbc.Driver");
 
-    /* There are known issues with Drizzle and InnoDB tables. Using the MyISAM type is strongly recommended. */
-    private static final String tableType = Parameter.value("sql.datastore.tabletype", "MyISAM");
+    private static final String tableType = Parameter.value("sql.datastore.tabletype", "InnoDB");
     private static final String description = "mysql";
 
     public MysqlDataStore(String jdbcUrl, String dbName, String tableName, Properties properties) throws Exception {
@@ -149,9 +146,9 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
     }
 
     @Override
-    protected Blob valueToDBType(String value) throws SQLException {
+    protected Blob valueToDBType(String value) {
         if (value != null) {
-            return new SerialBlob(value.getBytes(StandardCharsets.UTF_8));
+            return new Blob(value.getBytes(StandardCharsets.UTF_8), new ExceptionInterceptorImpl());
         } else {
             return null;
         }

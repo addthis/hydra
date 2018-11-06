@@ -75,7 +75,7 @@ public class DataStoreUtil {
     private static final String markCutoverCompleteKey = "/spawndatastore.cutover.complete";
     private static final String fsDataStoreFileRoot = Parameter.value("spawn.datastore.fs.dir", "etc/datastore");
 
-    public static enum DataStoreType {ZK, MYSQL, MYSQL2, FS, POSTGRES}
+    public static enum DataStoreType {ZK, MYSQL, FS, POSTGRES}
 
     /**
      * Create the canonical SpawnDataStore based on the system parameters
@@ -115,9 +115,7 @@ public class DataStoreUtil {
             case FS: return new FilesystemDataStore(new File(fsDataStoreFileRoot));
             case ZK: return new ZookeeperDataStore(null);
             case MYSQL:
-                return new MysqlDataStore("jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
-            case MYSQL2:
-                return new MysqlDataStore2("jdbc:mysql://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, "`"+sqlTableName+"`", properties);
+                return new MysqlDataStore("jdbc:mysql://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
             case POSTGRES:
                 return new PostgresDataStore("jdbc:postgres://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
             default: throw new IllegalArgumentException("Unexpected DataStoreType " + type);

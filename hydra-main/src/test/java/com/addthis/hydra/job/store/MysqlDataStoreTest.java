@@ -15,10 +15,9 @@
  */
 package com.addthis.hydra.job.store;
 
-import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 
-import java.sql.Blob;
+import com.mysql.cj.jdbc.Blob;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;

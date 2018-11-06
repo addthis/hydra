@@ -16,6 +16,6 @@ public class ExceptionInterceptorImpl implements ExceptionInterceptor{
     }
 
     @Override public Exception interceptException(Exception sqlEx) {
-        return new SQLException("gagagaga!", sqlEx);
+        return new SQLException("Mysql Blob initiation error!", sqlEx);
     }
 }
