@@ -121,21 +121,21 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     private AtomicReference<AhoCorasick> containsDictionary;
 
     AbstractMatchStringFilter(TypedField<Set<String>> value,
-                              String valueURL,
-                              HashSet<String> match,
-                              String matchURL,
-                              HashSet<String> find,
-                              String findURL,
-                              TypedField<Set<String>> contains,
-                              String containsURL,
-                              boolean urlReturnsCSV,
-                              boolean toLower,
-                              int urlTimeout,
-                              int urlRetries,
-                              int refreshMinutes,
-                              int urlMinBackoff,
-                              int urlMaxBackoff,
-                              boolean not) {
+            String valueURL,
+            HashSet<String> match,
+            String matchURL,
+            HashSet<String> find,
+            String findURL,
+            TypedField<Set<String>> contains,
+            String containsURL,
+            boolean urlReturnsCSV,
+            boolean toLower,
+            int urlTimeout,
+            int urlRetries,
+            int refreshMinutes,
+            int urlMinBackoff,
+            int urlMaxBackoff,
+            boolean not) {
         this.value = new AtomicReference<>(value);
         this.valueURL = valueURL;
         this.match = match;
@@ -152,19 +152,22 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         this.urlMinBackoff = urlMinBackoff;
         this.urlMaxBackoff = urlMaxBackoff;
         this.not = not;
+        this.pattern = new AtomicReference<>();
+        this.findPattern = new AtomicReference<>();
+        this.containsDictionary = new AtomicReference<>();
         if (match != null) {
             ArrayList<Pattern> np = new ArrayList<>();
             for (String s : match) {
                 np.add(Pattern.compile(s));
             }
-            this.pattern = new AtomicReference<>(np);
+            this.pattern.set(np);
         }
         if (find != null) {
             ArrayList<Pattern> np = new ArrayList<>();
             for (String s : find) {
                 np.add(Pattern.compile(s));
             }
-            this.findPattern = new AtomicReference<>(np);
+            this.findPattern.set(np);
         }
     }
 
@@ -291,36 +294,36 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     private static final class ValidationOnly extends AbstractMatchStringFilter {
         public ValidationOnly(@AutoParam @JsonProperty("value") TypedField<Set<String>> value,
-                              @JsonProperty("valueURL") String valueURL,
-                              @JsonProperty("match") HashSet<String> match,
-                              @JsonProperty("matchURL") String matchURL,
-                              @JsonProperty("find") HashSet<String> find,
-                              @JsonProperty("findURL") String findURL,
-                              @AutoParam @JsonProperty("contains") TypedField<Set<String>> contains,
-                              @JsonProperty("containsURL") String containsURL,
-                              @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
-                              @JsonProperty("toLower") boolean toLower,
-                              @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
-                              @JsonProperty("urlRetries") int urlRetries,
-                              @Time(TimeUnit.MINUTES) @JsonProperty("refreshMinutes") int refreshMinutes,
-                              @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
-                              @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff) {
+                @JsonProperty("valueURL") String valueURL,
+                @JsonProperty("match") HashSet<String> match,
+                @JsonProperty("matchURL") String matchURL,
+                @JsonProperty("find") HashSet<String> find,
+                @JsonProperty("findURL") String findURL,
+                @AutoParam @JsonProperty("contains") TypedField<Set<String>> contains,
+                @JsonProperty("containsURL") String containsURL,
+                @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
+                @JsonProperty("toLower") boolean toLower,
+                @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlTimeout") int urlTimeout,
+                @JsonProperty("urlRetries") int urlRetries,
+                @Time(TimeUnit.MINUTES) @JsonProperty("refreshMinutes") int refreshMinutes,
+                @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMinBackoff") int urlMinBackoff,
+                @Time(TimeUnit.MILLISECONDS) @JsonProperty("urlMaxBackoff") int urlMaxBackoff) {
             super(value,
-                  valueURL,
-                  match,
-                  matchURL,
-                  find,
-                  findURL,
-                  contains,
-                  containsURL,
-                  urlReturnsCSV,
-                  toLower,
-                  urlTimeout,
-                  urlRetries,
-                  refreshMinutes,
-                  urlMinBackoff,
-                  urlMaxBackoff,
-                  false);
+                    valueURL,
+                    match,
+                    matchURL,
+                    find,
+                    findURL,
+                    contains,
+                    containsURL,
+                    urlReturnsCSV,
+                    toLower,
+                    urlTimeout,
+                    urlRetries,
+                    refreshMinutes,
+                    urlMinBackoff,
+                    urlMaxBackoff,
+                    false);
         }
 
         @Override public void postDecode() {
