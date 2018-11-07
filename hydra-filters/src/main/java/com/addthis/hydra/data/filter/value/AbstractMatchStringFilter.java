@@ -56,7 +56,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     /**
      * The input must match to one of the regular expressions in this set.
      */
-    private HashSet<String> match;
+    private volatile HashSet<String> match;
 
     /**
      * A URL to retrieve the 'match' field.
@@ -66,7 +66,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     /**
      * A substring of the input must match to one of the regular expressions in this set.
      */
-    private HashSet<String> find;
+    private volatile HashSet<String> find;
 
     /**
      * A URL to retrieve the 'find' field.
