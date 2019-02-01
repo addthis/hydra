@@ -625,9 +625,16 @@ public class SpawnBalancer implements Codable, AutoCloseable {
      */
     public boolean okayToAutobalance() {
         // Don't autobalance if it is disabled, spawn is quiesced, or the failure queue is non-empty
+        log.info(
+                "Auto balance level: {}, Quiesce status: {}, Queued hosts to fail: {}",
+                config.getAutoBalanceLevel(),
+                spawn.getSystemManager().isQuiesced(),
+                spawn.getHostFailWorker().queuedHosts().size()
+        );
         if ((config.getAutoBalanceLevel() == 0) ||
             spawn.getSystemManager().isQuiesced() ||
             spawn.getHostFailWorker().queuedHosts().size() > 0) {
+            log.info("Not Okay to autobalance");
             return false;
         }
         // Don't autobalance if there are still jobs in rebalance state
@@ -637,6 +644,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
                 return false;
             }
         }
+        log.info("Okay to autobalance");
         return true;
     }
 

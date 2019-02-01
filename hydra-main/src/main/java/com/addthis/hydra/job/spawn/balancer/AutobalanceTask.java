@@ -21,6 +21,7 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
 
 import org.joda.time.DateTimeConstants;
+import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +61,12 @@ class AutobalanceTask implements Runnable {
                 rebalance(RebalanceType.JOB, RebalanceWeight.HEAVY);
                 lastJobAutobalanceTime = now;
                 minutesSinceLastBalanceGauge.setLastBalanceTime(now);
+            } else {
+                log.info(
+                        "Unable to autobalance. Last host autobalance time: {}, Last job autobalance time: {}",
+                        new LocalDateTime(lastHostAutobalanceTime),
+                        new LocalDateTime(lastJobAutobalanceTime)
+                );
             }
         }
     }
