@@ -8,7 +8,7 @@ import java.util.Properties;
 
 public class ExceptionInterceptorImpl implements ExceptionInterceptor{
     @Override public ExceptionInterceptor init(Properties props, Log log) {
-        return null;
+        return this;
     }
 
     @Override public void destroy() {
