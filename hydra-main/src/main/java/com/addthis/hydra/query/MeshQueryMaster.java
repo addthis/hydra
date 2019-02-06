@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.util.LessStreams;
@@ -108,8 +109,11 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private final WorkerTracker worky;
     private final DefaultTaskAllocators allocators;
 
+    private AtomicBoolean isActive;
+
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
+        this.isActive = new AtomicBoolean(true);
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
         server = new Server(ConfigFactory.load().getInt("hydra.prometheus.mqmaster.port"));
@@ -134,6 +138,14 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         } else {
             spawnDataStoreHandler = null;
         }
+    }
+
+    public AtomicBoolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsMqMasterActive(boolean active) {
+        this.isActive.set(active);
     }
 
     public SpawnDataStoreHandler getSpawnDataStoreHandler() {
