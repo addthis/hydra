@@ -13,12 +13,10 @@
  */
 package com.addthis.hydra.job.store;
 
-import javax.sql.rowset.serial.SerialBlob;
-
 import java.util.Properties;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Blob;
+import com.mysql.cj.jdbc.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -148,9 +146,9 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
     }
 
     @Override
-    protected Blob valueToDBType(String value) throws SQLException {
+    protected Blob valueToDBType(String value) {
         if (value != null) {
-            return new SerialBlob(value.getBytes(StandardCharsets.UTF_8));
+            return new Blob(value.getBytes(StandardCharsets.UTF_8), new ExceptionInterceptorImpl());
         } else {
             return null;
         }
