@@ -40,9 +40,10 @@ import org.slf4j.LoggerFactory;
 public class MysqlDataStore extends JdbcDataStore<Blob> {
 
     private static final Logger log = LoggerFactory.getLogger(MysqlDataStore.class);
-    private static final String driverClass = Parameter.value("sql.datastore.driverclass", "com.mysql.cj.jdbc.Driver");
+    private static final String driverClass = Parameter.value("sql.datastore.driverclass", "org.drizzle.jdbc.DrizzleDriver");
 
-    private static final String tableType = Parameter.value("sql.datastore.tabletype", "InnoDB");
+    /* There are known issues with Drizzle and InnoDB tables. Using the MyISAM type is strongly recommended. */
+    private static final String tableType = Parameter.value("sql.datastore.tabletype", "MyISAM");
     private static final String description = "mysql";
 
     public MysqlDataStore(String jdbcUrl, String dbName, String tableName, Properties properties) throws Exception {
