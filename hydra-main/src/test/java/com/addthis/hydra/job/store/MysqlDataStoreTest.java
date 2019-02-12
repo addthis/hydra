@@ -15,8 +15,12 @@
  */
 package com.addthis.hydra.job.store;
 
-import com.ning.compress.lzf.LZFDecoder;
-import com.ning.compress.lzf.LZFEncoder;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.logging.Logger;
 
 import java.sql.Blob;
 import java.sql.Connection;
@@ -28,14 +32,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.logging.Logger;
-
 import com.addthis.basis.test.SlowTest;
+
+import com.ning.compress.lzf.LZFEncoder;
 
 import org.junit.After;
 import org.junit.AfterClass;
