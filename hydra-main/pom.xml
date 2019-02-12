@@ -125,10 +125,10 @@
       <artifactId>jersey-json</artifactId>
       <version>${hydra.dep.jersey.version}</version>
     </dependency>
-     <dependency>
-      <groupId>org.drizzle.jdbc</groupId>
-      <artifactId>drizzle-jdbc</artifactId>
-      <version>1.4</version>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>8.0.11</version>
     </dependency>
     <dependency>
       <groupId>com.mchange</groupId>

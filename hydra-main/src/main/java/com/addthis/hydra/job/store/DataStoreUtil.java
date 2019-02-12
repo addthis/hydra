@@ -115,7 +115,7 @@ public class DataStoreUtil {
             case FS: return new FilesystemDataStore(new File(fsDataStoreFileRoot));
             case ZK: return new ZookeeperDataStore(null);
             case MYSQL:
-                return new MysqlDataStore("jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
+                return new MysqlDataStore("jdbc:mysql://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
             case POSTGRES:
                 return new PostgresDataStore("jdbc:postgres://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
             default: throw new IllegalArgumentException("Unexpected DataStoreType " + type);
