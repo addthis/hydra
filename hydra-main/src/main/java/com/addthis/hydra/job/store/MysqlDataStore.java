@@ -16,7 +16,6 @@ package com.addthis.hydra.job.store;
 import java.util.Properties;
 
 import java.nio.charset.StandardCharsets;
-import com.mysql.cj.jdbc.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -24,6 +23,7 @@ import java.sql.SQLException;
 
 import com.addthis.basis.util.Parameter;
 
+import com.mysql.cj.jdbc.Blob;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFException;
@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
  * A class for storing spawn configuration data into a mysql database. Reads and
  * writes values from a single table.
  */
+
 public class MysqlDataStore extends JdbcDataStore<Blob> {
 
     private static final Logger log = LoggerFactory.getLogger(MysqlDataStore.class);
