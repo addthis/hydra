@@ -44,6 +44,7 @@ import com.google.common.collect.Lists;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.google.common.io.Files;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -145,6 +146,9 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     protected File autoResumeFile;
     private final AtomicBoolean running = new AtomicBoolean(true);
 
+    protected DateTime firstDate;
+    protected DateTime lastDate;
+
     @Nullable
     protected ChronoUnit intervalUnit;
 
@@ -157,7 +161,17 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     protected abstract boolean doInit() throws IOException;
 
     /** perform any shutdown steps specific to the implementing class */
-    public abstract void doShutdown() throws IOException;
+    public void doShutdown() throws IOException {
+        if ((lastDate != null) && (formatter != null)) {
+            try {
+                DateTime autoResumeDate = lastDate.minusDays(1);
+                JSONObject jo = new JSONObject().put("lastDate", formatter.print(autoResumeDate)).put("moreData", moreData);
+                Files.write(LessBytes.toBytes(jo.toString(2)), autoResumeFile);
+            } catch (Exception ex) {
+                log.warn("unable to write auto-resume file", ex);
+            }
+        }
+    }
 
     /**
      * @return true if the configuration for this source includes a template 'mod' element
@@ -179,6 +193,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         }
         this.stateDir = stateDir;
         autoResumeFile = new File(this.stateDir, "job.source");
+
         if (log.isTraceEnabled()) {
             log.trace("shards :: {}", LessStrings.join(shards, " :: "));
         }

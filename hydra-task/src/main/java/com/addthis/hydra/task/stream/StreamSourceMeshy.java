@@ -182,8 +182,6 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
 
     MeshyClient meshLink;
     private MeshHostScoreCache scoreCache;
-    DateTime firstDate;
-    DateTime lastDate;
 
     private volatile int peerCount = -1;
 
@@ -530,7 +528,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     }
 
     @Override
-    public void doShutdown() {
+    public void doShutdown() throws IOException {
         if (!lateFileFindMap.isEmpty()) {
             log.warn("Late File Finds:\n{}", Joiner.on('\n').join(lateFileFindMap.entrySet()));
         }
@@ -539,14 +537,22 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         } else {
             log.warn("Did not call meshLink.close() because meshLink is null.");
         }
-        if ((lastDate != null) && (formatter != null)) {
-            try {
-                DateTime autoResumeDate = lastDate.minusDays(1);
-                JSONObject jo = new JSONObject().put("lastDate", formatter.print(autoResumeDate)).put("moreData", moreData);
-                Files.write(LessBytes.toBytes(jo.toString(2)), autoResumeFile);
-            } catch (Exception ex) {
-                log.warn("unable to write auto-resume file", ex);
-            }
-        }
+        super.doShutdown();
+    }
+
+    public DateTime getFirstDate() {
+        return firstDate;
+    }
+
+    public DateTime getLastDate() {
+        return lastDate;
+    }
+
+    public void setFirstDate(DateTime date) {
+        firstDate = date;
+    }
+
+    public void setLastDate(DateTime date) {
+        lastDate = date;
     }
 }
