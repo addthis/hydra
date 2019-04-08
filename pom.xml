@@ -23,7 +23,7 @@
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.6.80-SNAPSHOT</version>
+  <version>5.6.83-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -71,7 +71,7 @@
     <hydra.dep.basis.version>4.3.1</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.11.4</hydra.dep.bundle.version>
     <hydra.dep.codec.version>3.8.2</hydra.dep.codec.version>
-    <hydra.dep.meshy.version>3.4.4</hydra.dep.meshy.version>
+    <hydra.dep.meshy.version>3.4.6-SNAPSHOT</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.2.2</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
     <hydra.dep.ahocorasick.version>1.5.4</hydra.dep.ahocorasick.version>
@@ -531,16 +531,6 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
- 
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <version>0.11</version>
-      </plugin>
-    </plugins>
-  </reporting>
 
   <build>
     <pluginManagement>

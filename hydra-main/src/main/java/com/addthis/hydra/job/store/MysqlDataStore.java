@@ -13,12 +13,9 @@
  */
 package com.addthis.hydra.job.store;
 
-import javax.sql.rowset.serial.SerialBlob;
-
 import java.util.Properties;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -26,6 +23,7 @@ import java.sql.SQLException;
 
 import com.addthis.basis.util.Parameter;
 
+import com.mysql.cj.jdbc.Blob;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFException;
@@ -37,6 +35,7 @@ import org.slf4j.LoggerFactory;
  * A class for storing spawn configuration data into a mysql database. Reads and
  * writes values from a single table.
  */
+
 public class MysqlDataStore extends JdbcDataStore<Blob> {
 
     private static final Logger log = LoggerFactory.getLogger(MysqlDataStore.class);
@@ -148,9 +147,9 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
     }
 
     @Override
-    protected Blob valueToDBType(String value) throws SQLException {
+    protected Blob valueToDBType(String value) {
         if (value != null) {
-            return new SerialBlob(value.getBytes(StandardCharsets.UTF_8));
+            return new Blob(value.getBytes(StandardCharsets.UTF_8), new ExceptionInterceptorImpl());
         } else {
             return null;
         }

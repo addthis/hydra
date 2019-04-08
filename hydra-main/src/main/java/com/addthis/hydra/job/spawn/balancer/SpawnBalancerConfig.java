@@ -34,7 +34,7 @@ public class SpawnBalancerConfig implements Codable {
 
     // How aggressively balancing should be done. For now, 0=no rebalancing, 1=rebalance jobs that are over/under-allocated, 2=rebalance all jobs
     @FieldConfig
-    private int autoBalanceLevel = 0;
+    private int autoBalanceLevel = 1;
 
     // During reallocation, don't move more than this many tasks
     @FieldConfig

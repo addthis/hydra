@@ -26,10 +26,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.util.LessStreams;
@@ -85,6 +87,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private static final String  meshPeers       = Parameter.value("qmaster.mesh.peers", "localhost");
     private static final int     meshPeerPort    = Parameter.intValue("qmaster.mesh.peer.port", 5101);
     private static final boolean enableZooKeeper = Parameter.boolValue("qmaster.enableZooKeeper", true);
+    private static final int     meshyUnitDelay    = Parameter.intValue("qmaster.mesh.peer.unitDelay", 1000);
+    private static final int     meshyMaxDelayUnit    = Parameter.intValue("qmaster.mesh.peer.maxDelayUnit", 3);
+    private static final int     meshyMaxRetries    = Parameter.intValue("qmaster.mesh.peer.maxRetries", 5);
 
     private static final QueryTaskSource EMPTY_TASK_SOURCE = new QueryTaskSource(new QueryTaskSourceOption[0]);
 
@@ -108,8 +113,11 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private final WorkerTracker worky;
     private final DefaultTaskAllocators allocators;
 
+    private AtomicBoolean isActive;
+
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
+        this.isActive = new AtomicBoolean(true);
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
         server = new Server(ConfigFactory.load().getInt("hydra.prometheus.mqmaster.port"));
@@ -134,6 +142,14 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         } else {
             spawnDataStoreHandler = null;
         }
+    }
+
+    public AtomicBoolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsMqMasterActive(boolean active) {
+        this.isActive.set(active);
     }
 
     public SpawnDataStoreHandler getSpawnDataStoreHandler() {
@@ -167,9 +183,11 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private void connectToMeshPeers() {
         if (meshPeers != null) {
             String[] peers = meshPeers.split(",");
+            LinkedList<InetSocketAddress> addresses = new LinkedList<>();
             for (String peer : peers) {
-                meshy.connectPeer(new InetSocketAddress(peer, meshPeerPort));
+                addresses.add(new InetSocketAddress(peer, meshPeerPort));
             }
+            meshy.connectPeers(addresses, meshyUnitDelay, meshyMaxDelayUnit, meshyMaxRetries);
         }
     }
 

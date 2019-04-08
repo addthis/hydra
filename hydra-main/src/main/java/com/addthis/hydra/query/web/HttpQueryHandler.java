@@ -284,6 +284,39 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write(q.getPaths()[0]);
                 break;
             }
+            case "/mqmaster/deactivate": {
+                log.info("Received MeshQueryMaster deactivate request");
+                String shouldDeactivate = kv.getValue("deactivate");
+                if(shouldDeactivate == null) {
+                    // Avoid NPE and send response 400
+                    shouldDeactivate = "";
+                }
+                switch(shouldDeactivate) {
+                    case "1":   meshQueryMaster.setIsMqMasterActive(false);
+                                break;
+                    case "0":   meshQueryMaster.setIsMqMasterActive(true);
+                                break;
+                    default:
+                                // Send response 400
+                                log.info("Received invalid mqMaster deactivate request");
+                                if (ctx.channel().isActive()) {
+                                    sendError(ctx, HttpResponseStatus.BAD_REQUEST);
+                                }
+                                return;
+                }
+                break;
+            }
+            case "/mqmaster/healthcheck": {
+                // Send 400 if mqMaster is not active
+                // Send 200 if mqMaster is active (NO-OP here as response OK is sent below)
+                if(!meshQueryMaster.getIsActive().get()) {
+                    if (ctx.channel().isActive()) {
+                        sendError(ctx, HttpResponseStatus.NOT_FOUND);
+                        return;
+                    }
+                }
+                break;
+            }
             default:
                 // forward to static file server
                 ctx.pipeline().addLast(staticFileHandler);
@@ -307,4 +340,5 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             ((Future<Void>) lastContentFuture).addListener(ChannelFutureListener.CLOSE);
         }
     }
+
 }
