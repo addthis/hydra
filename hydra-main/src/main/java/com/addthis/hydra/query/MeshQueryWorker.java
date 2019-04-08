@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 import java.net.InetSocketAddress;
+import java.util.LinkedList;
 
 import com.addthis.basis.jvm.Shutdown;
 import com.addthis.basis.util.LessStrings;
@@ -90,6 +91,7 @@ public class MeshQueryWorker implements AutoCloseable {
             netIf = null;
         }
         this.meshyServer = new MeshyServer(portNum, root, netIf, new MeshyServerGroup());
+        LinkedList<InetSocketAddress> addresses = new LinkedList<>();
         for (String peer : LessStrings.splitArray(peers, ",")) {
             String[] hostPort = LessStrings.splitArray(peer, ":");
             int port;
@@ -98,8 +100,9 @@ public class MeshQueryWorker implements AutoCloseable {
             } else {
                 port = meshyServer.getLocalAddress().getPort();
             }
-            meshyServer.connectPeer(new InetSocketAddress(hostPort[0], port));
+            addresses.add(new InetSocketAddress(hostPort[0], port));
         }
+        meshyServer.connectPeers(addresses);
         log.info("[init]  web port={}, mesh server={}", webPort, meshyServer);
     }
 
