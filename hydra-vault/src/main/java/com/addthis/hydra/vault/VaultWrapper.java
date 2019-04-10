@@ -14,12 +14,13 @@
 package com.addthis.hydra.vault;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Provides the method to get vault object
  */
 public interface VaultWrapper {
     public void login(String vault_server) throws IOException;
-    public void put(String path, String key, String secret);
-    public String get(String path, String key);
+    public void putSecret(String path, Map<String, ? extends Object> secrets);
+    public Map<String, String> getSecret(String path);
 }
