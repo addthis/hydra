@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
-
+import com.addthis.hydra.vault.VaultWrapper;
 import com.addthis.hydra.query.spawndatastore.AliasBiMap;
 
 import com.google.common.collect.Lists;
@@ -69,7 +69,8 @@ public class DataStoreUtil {
     private static final String sqlDbName = Parameter.value("spawn.sql.db", "sdsDB_" + clusterName);
     private static final String sqlHostName = Parameter.value("spawn.sql.host", "localhost");
     private static final String sqlUser = Parameter.value("spawn.sql.user"); // Intentionally defaults to null for no user/pass
-    private static final String sqlPassword = Parameter.value("spawn.sql.password", "");
+    private static String sqlPassword = Parameter.value("spawn.sql.password", "");
+    private static final String sqlPasspath = Parameter.value("spawn.sql.passpath", "");
     private static final int sqlPort = Parameter.intValue("spawn.sql.port", 3306);
 
     private static final String markCutoverCompleteKey = "/spawndatastore.cutover.complete";
@@ -109,6 +110,11 @@ public class DataStoreUtil {
         Properties properties = new Properties();
         if (sqlUser != null) {
             properties.put("user", sqlUser);
+            if(sqlPasspath.length() != 0) {
+                VaultWrapper vaultClient = (VaultWrapper) Class.forName("com.addthis.hydra.vault.VaultWrapperImpl").newInstance();//new VaultWrapperImpl();
+                vaultClient.login("https://vault.prd.phxshared.oracledatacloud.com");
+                sqlPassword = vaultClient.get(sqlPasspath, "value");
+            }
             properties.put("password", sqlPassword);
         }
         switch (type) {

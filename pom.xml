@@ -515,6 +515,11 @@
         <artifactId>hydra-meshy-http</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-vault</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!--
           The sleepycat license has surprisingly strong copyleft
