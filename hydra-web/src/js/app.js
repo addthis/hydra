@@ -64,7 +64,7 @@ function(
         },
         authprefix:function() {
             var useSSL = app.loginSSLDefault || (window.location.href.lastIndexOf("https", 0) == 0);
-            return (useSSL ? "https://" : "http://") + window.location.hostname + ":" + (useSSL ? "5053" : "5052");
+            return (useSSL ? "https://" : "http://") + window.location.hostname + (useSSL ? "" : ":5052");
         },
         initialize:function() {
             // delete legacy cookies

@@ -18,11 +18,7 @@ const path = require('path');
 
 function getResolve() {
     return {
-        root: [
-            __dirname + '/src/js'
-        ],
-
-        modulesDirectories: ['modules', 'node_modules'],
+        modules: [__dirname + '/src/js', 'modules', 'node_modules'],
 
         /* Migrated from RequireJS require.config paths */
         alias: {
@@ -40,7 +36,7 @@ function getResolve() {
             'ace/ext/searchbox': 'brace/ext/searchbox',
             'git.template': '../../templates/git.properties.html'
         },
-        extensions: ['', '.es6.js', '.js']
+        extensions: ['*', '.es6.js', '.js']
     };
 }
 
@@ -51,10 +47,10 @@ function getLoaders() {
             exclude: /node_modules/,
             loader: 'babel-loader',
             query: {
-                presets: ['stage-0', 'es2015', 'react'],
+                presets: ['@babel/preset-env', '@babel/preset-react'],
                 plugins: [
-                    'babel-plugin-transform-decorators-legacy',
-                    'transform-class-properties'
+                    ['@babel/plugin-proposal-decorators', { 'legacy': true }],
+                    ["@babel/plugin-proposal-class-properties", { "loose": false }]
                 ]
             }
         },
@@ -77,7 +73,7 @@ module.exports = [{
         path: path.resolve(__dirname, '../hydra-main/src/main/resources/web/spawn2/build')
     },
     module: {
-        loaders: getLoaders().concat([
+        rules: getLoaders().concat([
             /* require.js shims */
             {
                 test: require.resolve('./src/js/vendor/datatable-1.9.4-modified'),
@@ -90,6 +86,9 @@ module.exports = [{
         ])
     },
     resolve: getResolve(),
+    resolveLoader: {
+        moduleExtensions: ['-loader']
+    },
     devtool: '#source-map'
 }, {
     entry: 'search-results',
@@ -99,7 +98,7 @@ module.exports = [{
         path: path.resolve(__dirname, '../hydra-main/src/main/resources/web/spawn2/build')
     },
     module: {
-        loaders: getLoaders()
+        rules: getLoaders()
     },
     resolve: getResolve(),
     devtool: '#source-map'
