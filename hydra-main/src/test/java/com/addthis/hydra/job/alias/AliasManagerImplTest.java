@@ -11,49 +11,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
-
-import com.addthis.basis.test.SlowTest;
-
-import com.addthis.hydra.query.spawndatastore.AliasBiMap;
-import com.addthis.hydra.util.ZkCodecStartUtil;
+package com.addthis.hydra.job.alias;
 
 import com.google.common.collect.ImmutableList;
 
+import org.junit.After;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-@Category(SlowTest.class)
-public class AliasBiMapTest extends ZkCodecStartUtil {
-
+public class AliasManagerImplTest {
     @Test
     public void testConstruction() throws Exception {
-        AliasBiMap abm = new AliasBiMap();
+        AliasManager abm = new AliasManagerImpl();
         assertNull(abm.getJobs("foo"));
         assertNull(abm.getLikelyAlias("foo"));
     }
 
     @Test
     public void testInit() throws Exception {
-        AliasBiMap abm = new AliasBiMap();
-        assertNull(abm.getJobs("foo"));
-        assertNull(abm.getLikelyAlias("foo"));
-    }
-
-    @Test
-    public void testInit2() throws Exception {
-        AliasBiMap abm = new AliasBiMap();
+        AliasManager abm = new AliasManagerImpl();
         assertNull(abm.getJobs("foo"));
         assertNull(abm.getLikelyAlias("foo"));
     }
 
     @Test
     public void testLocalGetPut() throws Exception {
-        AliasBiMap abm = new AliasBiMap();
+        AliasManager abm = new AliasManagerImpl();
         assertNull(abm.getJobs("foo"));
         abm.putAlias("a1", ImmutableList.of("j1", "j2"));
         assertEquals(ImmutableList.of("j1", "j2"), abm.getJobs("a1"));
@@ -64,14 +50,12 @@ public class AliasBiMapTest extends ZkCodecStartUtil {
         assertNull(abm.getLikelyAlias("j1"));
     }
 
-
     @Test
     public void testPropagation() throws Exception {
-        System.setProperty("alias.bimap.expire", "50");
-        AliasBiMap abm = new AliasBiMap();
+        AliasManager abm = new AliasManagerImpl();
         abm.putAlias("a1", ImmutableList.of("j1", "j2"));
 
-        AliasBiMap r_abm = new AliasBiMap();
+        AliasManagerImpl r_abm = new AliasManagerImpl();
         assertEquals(ImmutableList.of("j1", "j2"), r_abm.getJobs("a1"));
         assertEquals("a1", r_abm.getLikelyAlias("j1"));
 
@@ -93,10 +77,8 @@ public class AliasBiMapTest extends ZkCodecStartUtil {
 
     @Test
     public void updateLoop() throws Exception {
-        System.setProperty("alias.bimap.refresh", "500");
-        AliasBiMap abm = new AliasBiMap();
-
-        AliasBiMap r_abm = new AliasBiMap();
+        AliasManager abm = new AliasManagerImpl();
+        AliasManager r_abm = new AliasManagerImpl();
 
         for (int i = 0; i < 5; i++) {
             int retries = 10;
@@ -114,5 +96,10 @@ public class AliasBiMapTest extends ZkCodecStartUtil {
         }
     }
 
-
+    @After
+    public void cleanUp() throws Exception {
+        AliasManager abm1 = new AliasManagerImpl();
+        abm1.deleteAlias("a1");
+        abm1.deleteAlias("a2");
+    }
 }

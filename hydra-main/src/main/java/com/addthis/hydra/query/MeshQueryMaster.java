@@ -276,7 +276,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         }
     }
 
-    private List<String> expandAlias(String jobId) {
+    private List<String> expandAlias(String jobId) throws ExecutionException {
         if (spawnDataStoreHandler != null) {
             return spawnDataStoreHandler.expandAlias(jobId);
         } else {

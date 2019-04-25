@@ -22,8 +22,13 @@ public interface AliasManager {
 
     void addAlias(String alias, List<String> jobs);
 
-    void deleteAlias(String alias);
+    void deleteAlias(String alias) throws Exception;
 
     List<String> aliasToJobs(String alias);
 
+    List<String> getJobs(String alias);
+
+    String getLikelyAlias(String jobid);
+
+    void putAlias(String alias, List<String> jobs);
 }
