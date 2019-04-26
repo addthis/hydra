@@ -46,14 +46,14 @@ public class MeshyStreamFile implements StreamFile {
     @Override
     public InputStream getInputStream() throws IOException {
         if (streamSourceMeshy.useProcessedTimeRangeMax()) {
-            if ((streamSourceMeshy.firstDate == null) || (date.getMillis() < streamSourceMeshy.firstDate.getMillis())) {
-                streamSourceMeshy.firstDate = date;
-                log.debug("FIRST DATE = {}", streamSourceMeshy.firstDate);
+            if ((streamSourceMeshy.getFirstDate() == null) || (date.getMillis() < streamSourceMeshy.getFirstDate().getMillis())) {
+                streamSourceMeshy.setFirstDate(date);
+                log.debug("FIRST DATE = {}", streamSourceMeshy.getFirstDate());
             }
         }
-        if ((streamSourceMeshy.lastDate == null) || (date.getMillis() > streamSourceMeshy.lastDate.getMillis())) {
-            streamSourceMeshy.lastDate = date;
-            log.debug("LAST DATE = {}", streamSourceMeshy.lastDate);
+        if ((streamSourceMeshy.getLastDate() == null) || (date.getMillis() > streamSourceMeshy.getLastDate().getMillis())) {
+            streamSourceMeshy.setLastDate(date);
+            log.debug("LAST DATE = {}", streamSourceMeshy.getLastDate());
         }
         // this fails on linux with out the explicit cast to InputStream
         return new StreamSource(streamSourceMeshy.meshLink, meshFile.getHostUUID(),
