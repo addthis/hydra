@@ -193,7 +193,6 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         }
         this.stateDir = stateDir;
         autoResumeFile = new File(this.stateDir, "job.source");
-
         if (log.isTraceEnabled()) {
             log.trace("shards :: {}", LessStrings.join(shards, " :: "));
         }
