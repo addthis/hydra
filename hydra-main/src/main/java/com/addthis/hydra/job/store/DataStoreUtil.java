@@ -113,7 +113,7 @@ public class DataStoreUtil {
             if(sqlPasspath.length() != 0) {
                 VaultWrapper vaultClient = (VaultWrapper) Class.forName("com.addthis.hydra.vault.VaultWrapperImpl").newInstance();//new VaultWrapperImpl();
                 vaultClient.login("https://vault.prd.phxshared.oracledatacloud.com");
-                sqlPassword = vaultClient.get(sqlPasspath, "value");
+                sqlPassword = vaultClient.getSecret(sqlPasspath).get("value");
             }
             properties.put("password", sqlPassword);
         }
