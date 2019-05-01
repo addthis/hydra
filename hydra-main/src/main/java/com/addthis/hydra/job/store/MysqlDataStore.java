@@ -66,7 +66,7 @@ public class MysqlDataStore extends JdbcDataStore<Blob> {
     protected void runSetupTableCommand() throws SQLException {
         try (Connection connection = cpds.getConnection()) {
             String tableSetupCommand = String.format("CREATE TABLE IF NOT EXISTS %s ( "
-                    + "%s INT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
+                    + "%s BIGINT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
                     "%s VARCHAR(%d) NOT NULL, %s MEDIUMBLOB, %s VARCHAR(%d), " + // VARCHAR path, BLOB value, VARCHAR child
                     "PRIMARY KEY (%s), UNIQUE KEY (%s,%s)) " + // Use id as primary key, enforce unique (path, child) combo
                     "ENGINE=%s", // Use specified table type (MyISAM works best in practice)
