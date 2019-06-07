@@ -90,19 +90,13 @@ public class MeshQueryWorker implements AutoCloseable {
         } else {
             netIf = null;
         }
-        this.meshyServer = new MeshyServer(portNum, root, netIf, new MeshyServerGroup());
         LinkedList<InetSocketAddress> addresses = new LinkedList<>();
         for (String peer : LessStrings.splitArray(peers, ",")) {
             String[] hostPort = LessStrings.splitArray(peer, ":");
-            int port;
-            if (hostPort.length > 1) {
-                port = Integer.parseInt(hostPort[1]);
-            } else {
-                port = meshyServer.getLocalAddress().getPort();
-            }
+            int port = (hostPort.length > 1) ? Integer.parseInt(hostPort[1]) : portNum;
             addresses.add(new InetSocketAddress(hostPort[0], port));
         }
-        meshyServer.connectPeers(addresses);
+        this.meshyServer = new MeshyServer(portNum, root, netIf, new MeshyServerGroup(), addresses);
         log.info("[init]  web port={}, mesh server={}", webPort, meshyServer);
     }
 

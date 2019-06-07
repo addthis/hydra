@@ -87,9 +87,6 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
     private static final String  meshPeers       = Parameter.value("qmaster.mesh.peers", "localhost");
     private static final int     meshPeerPort    = Parameter.intValue("qmaster.mesh.peer.port", 5101);
     private static final boolean enableZooKeeper = Parameter.boolValue("qmaster.enableZooKeeper", true);
-    private static final int meshRetryPeersUnitDelay = Parameter.intValue("qmaster.mesh.retry.peers.unitDelay", 1000);
-    private static final int meshRetryPeersMaxDelayUnit = Parameter.intValue("qmaster.mesh.retry.peers.maxDelayUnit", 3);
-    private static final int meshRetryPeersMaxRetries = Parameter.intValue("qmaster.mesh.retry.peers.maxRetries", 5);
 
     private static final QueryTaskSource EMPTY_TASK_SOURCE = new QueryTaskSource(new QueryTaskSourceOption[0]);
 
@@ -119,14 +116,21 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         this.tracker = tracker;
         this.isActive = new AtomicBoolean(true);
 
-        meshy = new MeshyServer(meshPort, new File(meshRoot));
+        LinkedList<InetSocketAddress> meshPeerAddresses = new LinkedList<>();
+        if (meshPeers != null) {
+            String[] peers = meshPeers.split(",");
+            for (String peer : peers) {
+                meshPeerAddresses.add(new InetSocketAddress(peer, meshPeerPort));
+            }
+        }
+
+        meshy = new MeshyServer(meshPort, new File(meshRoot), meshPeerAddresses);
         server = new Server(ConfigFactory.load().getInt("hydra.prometheus.mqmaster.port"));
         PrometheusServletCreator.create(server, new ServletContextHandler());
         server.start();
         cachey = new MeshFileRefCache(meshy);
         worky = new WorkerTracker();
         allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));
-        connectToMeshPeers();
 
         try {
             // Delete the tmp directory (disk sort directory)
@@ -177,17 +181,6 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
             server.stop();
         } catch (Exception e) {
             log.error("arbitrary exception during mqmaster shutdown", e);
-        }
-    }
-
-    private void connectToMeshPeers() {
-        if (meshPeers != null) {
-            String[] peers = meshPeers.split(",");
-            LinkedList<InetSocketAddress> addresses = new LinkedList<>();
-            for (String peer : peers) {
-                addresses.add(new InetSocketAddress(peer, meshPeerPort));
-            }
-            meshy.connectPeers(addresses, meshRetryPeersUnitDelay, meshRetryPeersMaxDelayUnit, meshRetryPeersMaxRetries);
         }
     }
 
