@@ -44,6 +44,10 @@
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-task</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.addthis.hydra</groupId>
+      <artifactId>hydra-vault</artifactId>
+    </dependency>
 
     <!-- addthis open source -->
     <dependency>

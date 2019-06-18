@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -115,14 +116,21 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
         this.tracker = tracker;
         this.isActive = new AtomicBoolean(true);
 
-        meshy = new MeshyServer(meshPort, new File(meshRoot));
+        LinkedList<InetSocketAddress> meshPeerAddresses = new LinkedList<>();
+        if (meshPeers != null) {
+            String[] peers = meshPeers.split(",");
+            for (String peer : peers) {
+                meshPeerAddresses.add(new InetSocketAddress(peer, meshPeerPort));
+            }
+        }
+
+        meshy = new MeshyServer(meshPort, new File(meshRoot), meshPeerAddresses);
         server = new Server(ConfigFactory.load().getInt("hydra.prometheus.mqmaster.port"));
         PrometheusServletCreator.create(server, new ServletContextHandler());
         server.start();
         cachey = new MeshFileRefCache(meshy);
         worky = new WorkerTracker();
         allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));
-        connectToMeshPeers();
 
         try {
             // Delete the tmp directory (disk sort directory)
@@ -173,15 +181,6 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter implements Au
             server.stop();
         } catch (Exception e) {
             log.error("arbitrary exception during mqmaster shutdown", e);
-        }
-    }
-
-    private void connectToMeshPeers() {
-        if (meshPeers != null) {
-            String[] peers = meshPeers.split(",");
-            for (String peer : peers) {
-                meshy.connectPeer(new InetSocketAddress(peer, meshPeerPort));
-            }
         }
     }
 
