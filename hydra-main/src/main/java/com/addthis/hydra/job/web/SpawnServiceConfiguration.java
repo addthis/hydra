@@ -32,6 +32,8 @@ public class SpawnServiceConfiguration {
     public final int webPortSSL;
     public final boolean requireSSL;
     public final boolean defaultSSL;
+    public final boolean sslOnly;
+    public final String keystoreType;
     public final int authenticationTimeout;
     public final int sudoTimeout;
     public final int groupUpdateInterval;
@@ -58,6 +60,8 @@ public class SpawnServiceConfiguration {
                                      @JsonProperty(value = "webPortSSL", required = true) int webPortSSL,
                                      @JsonProperty(value = "requireSSL", required = true) boolean requireSSL,
                                      @JsonProperty(value = "defaultSSL", required = true) boolean defaultSSL,
+                                     @JsonProperty(value = "sslOnly") boolean sslOnly,
+                                     @JsonProperty(value = "keystoreType") String keystoreType,
                                      @Time(SECONDS) @JsonProperty(value = "authTimeout", required = true) int authenticationTimeout,
                                      @Time(SECONDS) @JsonProperty(value = "sudoTimeout", required = true) int sudoTimeout,
                                      @Time(SECONDS) @JsonProperty(value = "groupUpdateInterval") int groupUpdateInterval,
@@ -71,6 +75,8 @@ public class SpawnServiceConfiguration {
         this.webPortSSL = webPortSSL;
         this.requireSSL = requireSSL;
         this.defaultSSL = defaultSSL;
+        this.sslOnly = sslOnly;
+        this.keystoreType = keystoreType;
         this.authenticationTimeout = authenticationTimeout;
         this.sudoTimeout = sudoTimeout;
         this.groupUpdateInterval = groupUpdateInterval;

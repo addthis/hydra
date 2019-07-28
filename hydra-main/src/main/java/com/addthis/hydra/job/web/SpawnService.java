@@ -17,6 +17,8 @@ import javax.servlet.ServletException;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 
+import java.io.File;
+import java.io.IOException;
 
 import com.addthis.basis.util.Parameter;
 
@@ -70,9 +72,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.prometheus.client.exporter.MetricsServlet;
-
-import java.io.File;
-import java.io.IOException;
 
 public class SpawnService {
 
@@ -134,9 +133,11 @@ public class SpawnService {
         httpConfig.setSecurePort(configuration.webPortSSL);
 
         // http
-        ServerConnector http = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
-        http.setPort(configuration.webPort);
-        server.addConnector(http);
+        if (!configuration.sslOnly) {
+            ServerConnector http = new ServerConnector(server, new HttpConnectionFactory(httpConfig));
+            http.setPort(configuration.webPort);
+            server.addConnector(http);
+        }
 
         // https
         if (configuration.requireSSL) {
@@ -159,6 +160,7 @@ public class SpawnService {
         sslContextFactory.setKeyStorePath(configuration.keyStorePath);
         sslContextFactory.setKeyStorePassword(readFile(configuration.keyStorePassword));
         sslContextFactory.setKeyManagerPassword(readFile(configuration.keyManagerPassword));
+        sslContextFactory.setKeyStoreType(configuration.keystoreType);
         return new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.asString());
     }
 
