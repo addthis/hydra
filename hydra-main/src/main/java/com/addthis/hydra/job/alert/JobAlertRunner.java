@@ -41,6 +41,7 @@ import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnMesh;
 import com.addthis.hydra.job.store.SpawnDataStore;
+import com.addthis.hydra.job.web.SpawnServiceConfiguration;
 import com.addthis.hydra.util.EmailUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -60,6 +61,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import org.apache.commons.lang3.StringUtils;
@@ -78,6 +80,7 @@ public class JobAlertRunner {
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
     private static final String clusterHead =
             ConfigFactory.load().getString("com.addthis.hydra.job.spawn.Spawn.httpHost");
+    private final String clusterUrl;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -103,6 +106,17 @@ public class JobAlertRunner {
     private volatile boolean lastAlertScanFailed;
 
     public JobAlertRunner(Spawn spawn) {
+        Config config = ConfigFactory.load();
+        String scheme;
+        int port;
+        if (SpawnServiceConfiguration.SINGLETON.sslOnly) {
+            scheme = "https://";
+            port = SpawnServiceConfiguration.SINGLETON.webPortSSL;
+        } else {
+            scheme = "http://";
+            port = SpawnServiceConfiguration.SINGLETON.webPort;
+        }
+        clusterUrl = scheme + clusterHead + ':' + port;
         this.spawn = spawn;
         this.spawnDataStore = spawn.getSpawnDataStore();
         try {
@@ -192,7 +206,7 @@ public class JobAlertRunner {
         }
     }
 
-    private static String emailSummary(Job job) {
+    private String emailSummary(Job job) {
         long files = 0;
         double bytes = 0;
         int running = 0;
@@ -230,7 +244,7 @@ public class JobAlertRunner {
             }
             sb.append("Cluster : " + clusterHead + "\n");
             sb.append("Job : " + job.getId() + "\n");
-            sb.append("Job Link : http://" + clusterHead + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
+            sb.append("Job Link : " + clusterUrl + "/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
             sb.append("Description : " + job.getDescription() + "\n");
             sb.append("------------------------------ \n");
             sb.append("Task Summary \n");
@@ -268,7 +282,7 @@ public class JobAlertRunner {
             return;
         }
 
-        String alertLink = String.format("http://%s:5052/spawn2/index.html#alerts/%s", clusterHead, jobAlert.alertId);
+        String alertLink = String.format("%s/spawn2/index.html#alerts/%s", clusterUrl, jobAlert.alertId);
         log.info("Alerting {} :: jobs : {} : {}", jobAlert.alertId, errors.keySet(), reason);
         if (StringUtils.isNotBlank(jobAlert.email)) {
             sendEmailAlert(jobAlert, alertLink, reason, errors);
@@ -368,7 +382,7 @@ public class JobAlertRunner {
         }
 
         for (Map.Entry<String, String> entry : errors.entrySet()) {
-            sb.append(emailSummary(spawn.getJob(entry.getKey()))).append('\n');
+            sb.append(this.emailSummary(spawn.getJob(entry.getKey()))).append('\n');
             sb.append("Error Message\n");
             sb.append(entry.getValue());
             sb.append("\n------------------------------\n");
