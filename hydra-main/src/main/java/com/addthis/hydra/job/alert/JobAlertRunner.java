@@ -292,12 +292,13 @@ public class JobAlertRunner {
         }
     }
 
-    @VisibleForTesting
-    static AlertWebhookRequest getWebhookObject(Spawn spawn,
-                                                AbstractJobAlert jobAlert,
-                                                String alertLink,
-                                                String reason,
-                                                Map<String, String> errors) {
+    @VisibleForTesting static AlertWebhookRequest getWebhookObject(
+            Spawn spawn,
+            AbstractJobAlert jobAlert,
+            String alertLink,
+            String reason,
+            Map<String, String> errors,
+            String clusterUrl) {
 
         // Turn all the jobs in error into a list of information about each job
 
@@ -310,6 +311,7 @@ public class JobAlertRunner {
         errors.forEach((jobUUID, errMsg) -> {
 
             JobError jobError = new JobError();
+            jobError.setJobLink(String.format("%s/spawn2/index.html#jobs/%s", clusterUrl, jobUUID));
             jobError.setId(jobUUID);
             jobError.setError(errMsg);
             jobError.setClusterHead(clusterHead);
@@ -345,7 +347,7 @@ public class JobAlertRunner {
                                   Map<String, String> errors) {
 
         try {
-            byte[] body = objectMapper.writeValueAsBytes(getWebhookObject(spawn, jobAlert, alertLink, reason, errors));
+            byte[] body = objectMapper.writeValueAsBytes(getWebhookObject(spawn, jobAlert, alertLink, reason, errors, clusterUrl));
             HttpResponse response = HttpUtil.httpPost(jobAlert.webhookURL, ContentType.APPLICATION_JSON.getMimeType(), body, 5_000);
             if (response.getStatus() >= 300) {
                 log.error("non-200 status code received for webhook alert for alert {}", jobAlert.alertId);
@@ -625,7 +627,7 @@ public class JobAlertRunner {
 
     @VisibleForTesting
     static class JobError {
-
+        private String jobLink;
         private String id;
         private String description;
         private String clusterHead;
@@ -638,6 +640,15 @@ public class JobAlertRunner {
 
         public JobError() {
 
+        }
+
+        @JsonProperty("job_link")
+        public String getJobLink() {
+            return jobLink;
+        }
+
+        public void setJobLink(String jobLink) {
+            this.jobLink = jobLink;
         }
 
         public String getId() {

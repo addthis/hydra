@@ -141,7 +141,7 @@ public class JobAlertTest {
 
         JobAlertRunner.AlertWebhookRequest obj =
                 JobAlertRunner.getWebhookObject(mockSpawn, runtimeAlert, "http://localhost", "bad reason",
-                                                ImmutableMap.of("test_id", "something horrible happened"));
+                                                ImmutableMap.of("test_id", "something horrible happened"), "https://cluster1:123");
 
         assertEquals("http://localhost", obj.getAlertLink());
         assertEquals("Task runtime exceeded", obj.getAlertType());
@@ -160,6 +160,7 @@ public class JobAlertTest {
         assertEquals("localhost", jobInfo.getClusterHead());
         assertEquals(3, jobInfo.getNodeCount());
         assertEquals(1, jobInfo.getErrorCount());
+        assertEquals("https://cluster1:123/spawn2/index.html#jobs/test_id", jobInfo.getJobLink());
     }
 
     /** Error message should stay unchanged on repeated scan of triggered runtime or rekick exceeded alert */
