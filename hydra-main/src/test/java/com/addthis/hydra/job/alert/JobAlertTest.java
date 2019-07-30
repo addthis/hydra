@@ -160,7 +160,7 @@ public class JobAlertTest {
         assertEquals("localhost", jobInfo.getClusterHead());
         assertEquals(3, jobInfo.getNodeCount());
         assertEquals(1, jobInfo.getErrorCount());
-        assertEquals("https://cluster1:123/spawn2/index.html#jobs/test_id/tests", jobInfo.getJobLink());
+        assertEquals("https://cluster1:123/spawn2/index.html#jobs/test_id/tasks", jobInfo.getJobLink());
     }
 
     /** Error message should stay unchanged on repeated scan of triggered runtime or rekick exceeded alert */
