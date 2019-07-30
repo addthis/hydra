@@ -311,7 +311,7 @@ public class JobAlertRunner {
         errors.forEach((jobUUID, errMsg) -> {
 
             JobError jobError = new JobError();
-            jobError.setJobLink(String.format("%s/spawn2/index.html#jobs/%s", clusterUrl, jobUUID));
+            jobError.setJobLink(String.format("%s/spawn2/index.html#jobs/%s/tasks", clusterUrl, jobUUID));
             jobError.setId(jobUUID);
             jobError.setError(errMsg);
             jobError.setClusterHead(clusterHead);
