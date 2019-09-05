@@ -121,10 +121,12 @@ public class JobsResource implements Closeable {
     private final JobRequestHandler requestHandler;
     private final CodecJackson validationCodec;
     private final CloseableHttpClient httpClient;
+    private final String minionHostnameAllowed;
 
     public JobsResource(Spawn spawn, SpawnServiceConfiguration configuration, JobRequestHandler requestHandler) {
         this.spawn = spawn;
         this.maxLogFileLines = configuration.maxLogFileLines;
+        this.minionHostnameAllowed = configuration.minionHostnameAllowed;
         this.requestHandler = requestHandler;
         this.httpClient = HttpClients.createDefault();
         CodecJackson defaultCodec = Jackson.defaultCodec();
@@ -917,6 +919,9 @@ public class JobsResource implements Closeable {
         try {
             if (minion == null) {
                 body.put("error", "Missing required query parameter 'minion'");
+                return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
+            } else if (!minion.matches(minionHostnameAllowed)) {
+                body.put("error", "This 'minion' is not an allowed host");
                 return Response.status(Response.Status.BAD_REQUEST).entity(body.toString()).build();
             } else if (node == null) {
                 body.put("error", "Missing required query parameter 'node'");
