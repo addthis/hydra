@@ -44,6 +44,7 @@ public class SpawnServiceConfiguration {
     @Nullable public final String keyStorePath;
     @Nullable public final String keyStorePassword;
     @Nullable public final String keyManagerPassword;
+    @Nullable public final String minionHostnameAllowed;
 
     public static final SpawnServiceConfiguration SINGLETON;
 
@@ -70,7 +71,8 @@ public class SpawnServiceConfiguration {
                                      @JsonProperty(value = "groupLogDir") String groupLogDir,
                                      @JsonProperty(value = "keyStorePath") String keyStorePath,
                                      @JsonProperty(value = "keyStorePassword") String keyStorePassword,
-                                     @JsonProperty(value = "keyManagerPassword") String keyManagerPassword) {
+                                     @JsonProperty(value = "keyManagerPassword") String keyManagerPassword,
+                                     @JsonProperty(value = "minionHostnameAllowed") String minionHostnameAllowed){
         this.webPort = webPort;
         this.webPortSSL = webPortSSL;
         this.requireSSL = requireSSL;
@@ -86,6 +88,7 @@ public class SpawnServiceConfiguration {
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword;
         this.keyManagerPassword = keyManagerPassword;
+        this.minionHostnameAllowed = minionHostnameAllowed;
     }
 
 }
