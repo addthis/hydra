@@ -10,7 +10,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.minion.HostLocation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class HostLocationSummary {
+    private static final Logger log = LoggerFactory.getLogger(HostLocationSummary.class);
 
     private final AtomicReference<Map<String, Set<String>>> dataCenterToRackRef;
     private final AtomicReference<Map<String, Set<String>>> rackToPhysicalHostRef;
@@ -49,18 +53,22 @@ public class HostLocationSummary {
     public AvailabilityDomain getPriorityLevel() {
         Map<String, Set<String>> dataCenter = dataCenterToRackRef.get();
         if(dataCenter.size() > 1) {
+            log.info("Priority Level: Datacenter ({})", dataCenter.size());
             return AvailabilityDomain.DATACENTER;
         }
         Map<String, Set<String>> rack = rackToPhysicalHostRef.get();
         if(rack.size() > 1) {
+            log.info("Priority Level: Rack ({})", rack.size());
             return AvailabilityDomain.RACK;
         }
         if(!rack.isEmpty()) {
             Set<String> hosts = rack.entrySet().iterator().next().getValue();
             if (hosts.size() > 1) {
+                log.info("Priority Level: Host ({})", hosts.size());
                 return AvailabilityDomain.HOST;
             }
         }
+        log.info("Priority Level: NONE");
         return AvailabilityDomain.NONE;
     }
 
