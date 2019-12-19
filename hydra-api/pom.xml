@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.7.8-SNAPSHOT</version>
+    <version>5.7.8</version>
   </parent>
 
   <artifactId>hydra-api</artifactId>
