@@ -48,9 +48,10 @@ import org.slf4j.LoggerFactory;
 
 public class JobAlertUtil {
     private static final Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
+    private static final int queryPort = Parameter.intValue("com.addthis.hydra.query.web.QueryServer.webPort", 2222);
     private static final String queryURLBase = "http://" +
                                                Parameter.value("alert.query.host", Parameter.value("spawn.queryhost"))
-                                               + ":2222/query/call";
+                                               + ":" + queryPort + "/query/call";
     private static final String defaultOps = "gather=s";
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
