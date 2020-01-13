@@ -3315,8 +3315,11 @@ public class Spawn implements Codable, AutoCloseable {
                 // Not a valid migration target
                 continue;
             }
-            if (host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid()) &&
-                balancer.isTaskSpreadOutAcrossAd(taskLocation, host.getHostLocation(), task)) {
+            if(isNewTask(task) && !balancer.isTaskSpreadOutAcrossAd(taskLocation, host.getHostLocation(), task)) {
+                // Do not allow a new task to kick if replicas are not spread across availability domains
+                continue;
+            }
+            if(host.canMirrorTasks() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
                 filteredHosts.add(host);
             }
         }
