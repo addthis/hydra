@@ -33,7 +33,7 @@ class JobTaskItem {
 
     @Override
     public boolean equals(Object o) {
-        if (o.getClass() != getClass()) {
+        if (o == null || o.getClass() != getClass()) {
             return false;
         }
         JobTaskItem item2 = (JobTaskItem) o;
