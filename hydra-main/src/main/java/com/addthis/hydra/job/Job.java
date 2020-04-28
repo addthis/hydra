@@ -583,6 +583,7 @@ public final class Job implements IJob {
         return ImmutableList.copyOf(nodes);
     }
 
+    // FIXME must be synchronized - iterating over nodes is not thread-safe
     public List<JobTask> getCopyOfTasksSorted() {
         if (nodes == null) {
             nodes = new ArrayList<>();

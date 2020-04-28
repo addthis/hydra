@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job;
 
+import javax.annotation.Nonnull;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,8 +24,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.addthis.basis.net.HttpUtil;
-import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.LessStrings;
+import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.TokenReplacer;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
@@ -33,7 +35,6 @@ import com.addthis.hydra.data.util.CommentTokenizer;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
-import com.addthis.hydra.job.entity.JobMacroManager;
 import com.addthis.hydra.job.spawn.Spawn;
 
 import com.google.common.base.Joiner;
@@ -42,8 +43,6 @@ import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Nonnull;
 
 public class JobExpand {
 
@@ -314,6 +313,7 @@ public class JobExpand {
                 List<String> mfn = Lists.newArrayList(Splitter.on(' ').split(label));
                 String macroName = mfn.get(0);
                 List<String> tokens = mfn.subList(1, mfn.size());
+                // TODO delete jobhosts handling - it's only used in old macros that are not used by any job
                 if (macroName.equals("jobhosts")) {
                     JobMacro macro = spawn.createJobHostMacro(tokens.get(0), Integer.parseInt(tokens.get(1)));
                     return macro.getMacro();

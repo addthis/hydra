@@ -41,6 +41,7 @@ class JobRekickTask implements Runnable {
             try {
                 if (!spawn.getSystemManager().isQuiesced()) {
                     String[] jobids = null;
+                    // Not needed
                     spawn.acquireJobLock();
                     try {
                         jobids = new String[spawn.spawnState.jobs.size()];

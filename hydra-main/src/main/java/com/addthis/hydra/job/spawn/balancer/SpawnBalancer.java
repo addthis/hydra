@@ -776,6 +776,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
 
     private List<JobTask> findAllTasksAssignedToHost(String failedHostUUID) {
         List<JobTask> rv = new ArrayList<>();
+        // Why?
         spawn.acquireJobLock();
         try {
             for (Job job : spawn.listJobs()) {
@@ -1423,6 +1424,7 @@ public class SpawnBalancer implements Codable, AutoCloseable {
         List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, 1);
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {
+            // Maybe
             spawn.acquireJobLock();
             try {
                 Job job = spawn.getJob(jobID);

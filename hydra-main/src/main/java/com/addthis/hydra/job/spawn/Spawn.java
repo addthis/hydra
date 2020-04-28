@@ -769,6 +769,7 @@ public class Spawn implements Codable, AutoCloseable {
                          String minionType,
                          String command,
                          boolean defaults) throws Exception {
+        // Possibly move lock acquire to just before putJobInSpawnState? Does task assignment need to be guarded by job lock?
         acquireJobLock();
         try {
             Job job = new Job(UUID.randomUUID().toString(), creator);
@@ -853,6 +854,7 @@ public class Spawn implements Codable, AutoCloseable {
         if (jobUUID == null) {
             return null;
         }
+        // Not needed
         acquireJobLock();
         try {
             return spawnState.jobs.get(jobUUID);
@@ -865,6 +867,7 @@ public class Spawn implements Codable, AutoCloseable {
         if (jobUUID == null) {
             return null;
         }
+        // Why? To prevent concurrent calls to getConfig? Synchronize that method!
         acquireJobLock();
         try {
             return jobConfigManager.getConfig(jobUUID);
@@ -901,6 +904,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public Collection<Job> listJobs() {
         List<Job> clones = new ArrayList<>(spawnState.jobs.size());
+        // Not needed
         acquireJobLock();
         try {
             for (Job job : spawnState.jobs.values()) {
@@ -1280,6 +1284,7 @@ public class Spawn implements Codable, AutoCloseable {
             return false;
         }
         Job job;
+        // Maybe
         acquireJobLock();
         try {
             job = getJob(task.getJobUUID());
@@ -1407,6 +1412,8 @@ public class Spawn implements Codable, AutoCloseable {
      * @return True if the task is successfully removed
      */
     public boolean deleteTask(String jobUUID, String hostUuid, Integer node, boolean isReplica) {
+        // Maybe - but probably can be better handled by a lock on the individual job/task?
+        // Why do spawnMQ.sendControlMessage and queueJobTaskUpdateEvent need to be guarded?
         acquireJobLock();
         try {
             if ((jobUUID == null) || (node == null)) {
@@ -1460,6 +1467,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public void queueJobTaskUpdateEvent(IJob job) {
+        // Not needed
         acquireJobLock();
         try {
             jobUpdateQueue.add(job.getId());
@@ -1486,6 +1494,7 @@ public class Spawn implements Codable, AutoCloseable {
     public void updateJob(@Nullable IJob ijob, boolean reviseReplicas) throws Exception {
         checkNotNull(ijob, "ijob");
         Job job = new Job(ijob);
+        // Maybe
         acquireJobLock();
         try {
             checkArgument(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
@@ -1535,6 +1544,7 @@ public class Spawn implements Codable, AutoCloseable {
         if ((job == null) || (job.getParameters() == null)) {
             return dataSources;
         }
+        // Maybe
         acquireJobLock();
         try {
             for (JobParameter param : job.getParameters()) {
@@ -1627,6 +1637,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @return A string description
      */
     public JSONObject fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean orphansOnly) {
+        // Maybe
         acquireJobLock();
         try {
             Job job = getJob(jobId);
@@ -1699,6 +1710,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public JSONArray checkTaskDirJSON(String jobId, int node) {
         JSONArray resultList = new JSONArray();
+        // Maybe
         acquireJobLock();
         try {
             Job job = getJob(jobId);
@@ -1803,6 +1815,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public boolean prepareTaskStatesForRebalance(Job job, JobTask task, boolean isMigration) {
+        // Why?
         acquireJobLock();
         try {
             if (!SpawnBalancer.isInMovableState(task)) {
@@ -1819,6 +1832,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public DeleteStatus forceDeleteJob(String jobUUID) throws Exception {
+        // job lock is over kill - a better option could be to make setEnabled synchronized if concurrent modification to the job is the concern
         acquireJobLock();
         Job job;
         try {
@@ -1834,6 +1848,7 @@ public class Spawn implements Codable, AutoCloseable {
         } finally {
             releaseJobLock();
         }
+        // If job is deleted in another thread, stopJob and killJob will throw exception. Should catch that and return DeleteStatus.JOB_MISSING
         while ((job != null) && (job.getCountActiveTasks() > 0)) {
             stopJob(jobUUID);
             Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
@@ -1845,6 +1860,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public DeleteStatus deleteJob(String jobUUID) throws Exception {
+        // OK
         acquireJobLock();
         try {
             Job job = getJob(jobUUID);
@@ -2079,6 +2095,7 @@ public class Spawn implements Codable, AutoCloseable {
     public void killJob(String jobUUID) throws Exception {
         boolean success = false;
         while (!success && !shuttingDown.get()) {
+            // Maybe
             acquireJobLock();
             try {
                 if (taskQueuesByPriority.tryLock()) {
@@ -2246,6 +2263,7 @@ public class Spawn implements Codable, AutoCloseable {
     public JobMacro createJobHostMacro(String job, int port) {
         String sPort = Integer.valueOf(port).toString();
         Set<String> jobHosts = new TreeSet<>();// best set?
+        // The whole method can be removed
         acquireJobLock();
         try {
             Collection<HostState> hosts = hostManager.listHostStatus(null);
@@ -2285,6 +2303,7 @@ public class Spawn implements Codable, AutoCloseable {
      * sent for a while.
      */
     public void saveAllJobs() {
+        // Maybe
         acquireJobLock();
         try {
             for (Job job : listJobs()) {
@@ -2304,6 +2323,7 @@ public class Spawn implements Codable, AutoCloseable {
      * send job update event to registered listeners (usually http clients)
      */
     private void sendJobUpdateEvent(Job job) {
+        // Maybe
         acquireJobLock();
         try {
             jobConfigManager.updateJob(job);
@@ -2605,6 +2625,7 @@ public class Spawn implements Codable, AutoCloseable {
         boolean success = false;
         while (!success && !shuttingDown.get()) {
             // need the job lock first
+            // Maybe...
             acquireJobLock();
             try {
                 if (taskQueuesByPriority.tryLock()) {
@@ -2699,6 +2720,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     @VisibleForTesting protected void loadJobs() {
+        // Probably can do without
         acquireJobLock();
         try {
             for (IJob iJob : jobConfigManager.loadJobs().values()) {
@@ -2710,6 +2732,7 @@ public class Spawn implements Codable, AutoCloseable {
             releaseJobLock();
         }
         Thread loadDependencies = new Thread(() -> {
+            // FIXME just iterate over the map entries...
             Set<String> jobIds = spawnState.jobs.keySet();
             for (String jobId : jobIds) {
                 IJob job = getJob(jobId);

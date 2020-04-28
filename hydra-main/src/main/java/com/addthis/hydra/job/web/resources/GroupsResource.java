@@ -205,6 +205,7 @@ public class GroupsResource {
             }
             Map<String, List<MinimalJob>> quotas = new HashMap<>();
             long totalBytes = 0;
+            // Why?
             spawn.acquireJobLock();
             try {
                 Iterator<Job> jobIterator = spawn.getSpawnState().jobsIterator();
