@@ -29,8 +29,8 @@ public class AuthenticationManagerStaticTest {
 
     @Test
     public void authentication() {
-        StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), null, null);
-        StaticUser user2 = new StaticUser("user2", null, "password2", null);
+        StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), null, null, false);
+        StaticUser user2 = new StaticUser("user2", null, "password2", null, false);
         List<StaticUser> users1 = ImmutableList.of(user1, user2);
         AuthenticationManagerStatic auth = new AuthenticationManagerStatic(users1,
                                                                            ImmutableList.of(),
@@ -45,9 +45,9 @@ public class AuthenticationManagerStaticTest {
 
     @Test
     public void isAdmin() {
-        StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), null, null);
-        StaticUser user2 = new StaticUser("user2", null, "password2", null);
-        StaticUser user3 = new StaticUser("user3", ImmutableList.of("group2"), "password3", null);
+        StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), null, null, false);
+        StaticUser user2 = new StaticUser("user2", null, "password2", null, false);
+        StaticUser user3 = new StaticUser("user3", ImmutableList.of("group2"), "password3", null, false);
         List<StaticUser> users = ImmutableList.of(user1, user2, user3);
         AuthenticationManagerStatic auth = new AuthenticationManagerStatic(users,
                                                                            ImmutableList.of("group2"),

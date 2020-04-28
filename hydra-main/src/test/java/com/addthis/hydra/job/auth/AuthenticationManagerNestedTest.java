@@ -25,9 +25,9 @@ import static org.junit.Assert.assertTrue;
 
 public class AuthenticationManagerNestedTest {
 
-    private static StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), "unused", null);
-    private static StaticUser user2 = new StaticUser("user2", null, "password2", null);
-    private static StaticUser user3 = new StaticUser("user1", ImmutableList.of("group1"), "password1", null);
+    private static StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), "unused", null, false);
+    private static StaticUser user2 = new StaticUser("user2", null, "password2", null, false);
+    private static StaticUser user3 = new StaticUser("user1", ImmutableList.of("group1"), "password1", null, false);
 
     private static List<StaticUser> innerUsers = ImmutableList.of(user3);
     private static List<StaticUser> outerUsers = ImmutableList.of(user1, user2);
